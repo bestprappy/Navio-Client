@@ -1,84 +1,36 @@
-﻿# Navio Client
-
-> **The frontend application for Navio** — a Next.js-powered trip planning platform with Keycloak authentication, intelligent EV routing, and a Reddit-like community layer.
-
----
-
-## Tech Stack
-
-| Layer             | Technology             | Purpose                                    |
-| ----------------- | ---------------------- | ------------------------------------------ |
-| **Framework**     | Next.js                | SSR/SSG, routing, API layer                |
-| **Auth**          | Keycloak JS / NextAuth | OIDC sign-up/sign-in flow                  |
-| **Validation**    | Zod                    | Client-side form validation                |
-| **Rate Limiting** | Arcjet                 | App-level, auth-aware rate limiting        |
-| **Maps**          | Google Maps / Mapbox   | Route rendering, stop placement, polylines |
-
----
-
-## Authentication & IAM Integration
-
-The client integrates with **Keycloak** (OIDC) for identity management and relies on the backend **IAM module** (inside Trip & Media Service) for authorization and user profile management.
-
-### Authentication Flow
-
-1. **Sign-up / Sign-in** — User authenticates via Keycloak (OIDC). Keycloak issues a JWT containing `sub` (userId), `email`, and `name` claims.
-2. **Token Storage** — JWT is managed by NextAuth / Keycloak JS adapter client-side.
-3. **Authenticated Requests** — Every API call to the backend includes the JWT in the `Authorization: Bearer <token>` header.
-4. **Backend Validation** — Each Spring Boot service independently validates the JWT against Keycloak's JWKS endpoint. The client does **not** handle authorization decisions.
-5. **User Profile Sync** — On first authenticated request, the backend IAM module automatically syncs the user's Keycloak profile to `iam.users` and publishes a `UserRegistered.v1` event to Kafka.
-
-### IAM-Dependent Features
-
-| Feature                     | How IAM Is Involved                                                                                       |
-| --------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **User Profile (`/v1/me`)** | Client fetches/updates the current user's profile and preferences from the IAM module                     |
-| **Trip Access Control**     | IAM's ACL engine (owner/editor/viewer) determines which trips a user can view, edit, or manage            |
-| **Collaborator Management** | Client UI for adding/removing trip collaborators — delegates to IAM ACL grant/revoke endpoints            |
-| **Moderation Tools**        | Ban/unban UI for mod/admin users — calls `/v1/mod/users/{userId}/ban` and `/v1/mod/users/{userId}/unban`  |
-| **Role-Based UI**           | Client conditionally renders admin/mod features based on the user's role from the profile response        |
-| **Public Share Links**      | Share link resolution (`GET /v1/share/{token}`) is the only public route that bypasses JWT authentication |
-
-### Key Endpoints Used by the Client
-
-| Method | Endpoint                         | Auth      | Purpose                         |
-| ------ | -------------------------------- | --------- | ------------------------------- |
-| GET    | `/v1/me`                         | JWT       | Fetch current user profile      |
-| PATCH  | `/v1/me/preferences`             | JWT       | Update notification/theme prefs |
-| POST   | `/v1/mod/users/{userId}/ban`     | Mod/Admin | Ban a user                      |
-| POST   | `/v1/mod/users/{userId}/unban`   | Mod/Admin | Unban a user                    |
-| GET    | `/v1/share/{token}`              | None      | Resolve a public share link     |
-| POST   | `/v1/trips/{tripId}/permissions` | Owner     | Grant collaborator access       |
-| GET    | `/v1/trips/{tripId}/permissions` | Owner     | List trip collaborators         |
-
-### Keycloak Configuration
-
-The client requires the following Keycloak settings:
-
-| Setting           | Description                                    |
-| ----------------- | ---------------------------------------------- |
-| **Realm**         | `tripplanner`                                  |
-| **Client ID**     | OIDC public client registered in Keycloak      |
-| **Issuer URI**    | `http://localhost:8180/realms/tripplanner`     |
-| **JWKS Endpoint** | Auto-discovered from Keycloak OIDC metadata    |
-| **Redirect URIs** | Configured per environment (localhost for dev) |
-
----
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
-```bash
-# Install dependencies
-npm install
+First, run the development server:
 
-# Run development server
+```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
----
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-## Related Documentation
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-- [System Design (Summary)](../docs/Summary.md)
-- [Database Design](../docs/Database.md)
-- [Implementation Guide](../docs/Implementation.md)
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
