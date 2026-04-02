@@ -1,21 +1,22 @@
-import { LandingNavbar } from "@/components/landing/landing.navbar";
-import { LandingHero } from "@/components/landing/landing.hero";
-import { LandingFeatures } from "@/components/landing/landing.features";
-import { LandingHowItWorks } from "@/components/landing/landing.how-it-works";
-import { LandingCta } from "@/components/landing/landing.cta";
-import { LandingFooter } from "@/components/landing/landing.footer";
+import { Footer } from "@/components/footer"
+import { Navbar } from "@/components/navbar"
+
+import { CTA } from "./_components/cta"
+import { Features } from "./_components/features"
+import { Hero } from "./_components/hero"
+import { HowItWorks } from "./_components/how-it-works"
 
 export default function Home() {
   return (
     <>
-      <LandingNavbar />
+      <Navbar />
       <main>
-        <LandingHero />
-        <LandingFeatures />
-        <LandingHowItWorks />
-        <LandingCta />
+        <Hero />
+        <Features />
+        <HowItWorks />
+        <CTA />
       </main>
-      <LandingFooter />
+      <Footer />
     </>
-  );
+  )
 }
