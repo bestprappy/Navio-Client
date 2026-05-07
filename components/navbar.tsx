@@ -1,27 +1,29 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import Link from "next/link"
-import { Menu, X, Zap } from "lucide-react"
+import { useState } from "react";
+import Link from "next/link";
+import { Menu, X } from "lucide-react";
 
-import { Button } from "@/components/ui/button"
-import { buttonVariants } from "@/components/ui/button.variants"
-import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button.variants";
+import { Logo } from "@/components/logo";
+import { cn } from "@/lib/utils";
 
 type NavLink = {
-  label: string
-  href: string
-}
+  label: string;
+  href: string;
+};
 
 const NAV_LINKS: NavLink[] = [
-  { label: "Features", href: "#features" },
-  { label: "How It Works", href: "#how-it-works" },
-  { label: "Community", href: "#community" },
-  { label: "Docs", href: "/docs" },
-]
+  { label: "Home", href: "/" },
+  { label: "Planner", href: "/planner/setup" },
+  { label: "Explore", href: "/explore" },
+  { label: "Community", href: "/commu" },
+  { label: "Help", href: "/help" },
+];
 
 export function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/25 bg-background/70 backdrop-blur-xl backdrop-saturate-150 supports-backdrop-filter:bg-background/50">
@@ -36,8 +38,8 @@ export function Navbar() {
           className="flex items-center gap-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-lg"
         >
           {/* Rounded to xl for consistent design language */}
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary">
-            <Zap className="size-4 text-primary-foreground" aria-hidden="true" />
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
+            <Logo className="size-4" />
           </div>
           <span className="text-lg font-extrabold tracking-tight">Navio</span>
         </Link>
@@ -75,7 +77,9 @@ export function Navbar() {
           variant="ghost"
           size="icon-sm"
           onClick={() => setIsMenuOpen((prev) => !prev)}
-          aria-label={isMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          aria-label={
+            isMenuOpen ? "Close navigation menu" : "Open navigation menu"
+          }
           aria-expanded={isMenuOpen}
           aria-controls="mobile-nav"
         >
@@ -103,7 +107,7 @@ export function Navbar() {
                   className={cn(
                     "block py-3 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-md",
                     // Divider between links — using border-b except last item
-                    index < NAV_LINKS.length - 1 && "border-b border-border/30"
+                    index < NAV_LINKS.length - 1 && "border-b border-border/30",
                   )}
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -131,5 +135,5 @@ export function Navbar() {
         </div>
       )}
     </header>
-  )
+  );
 }

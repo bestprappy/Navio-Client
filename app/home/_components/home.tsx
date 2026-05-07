@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import { useMemo } from 'react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Provider as JotaiProvider, useAtomValue } from 'jotai'
-import dynamic from 'next/dynamic'
-import Link from 'next/link'
-import { Zap, Save, Share2, ChevronLeft } from 'lucide-react'
-import { activeRouteAtom } from './planner.atoms'
-import { PlannerSidebar } from './planner.sidebar'
-import { PlannerPanel } from './planner.panel'
+import { useMemo } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Provider as JotaiProvider, useAtomValue } from "jotai";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { Zap, Save, Share2, ChevronLeft } from "lucide-react";
+import { activeRouteAtom } from "./home.atoms";
+import { HomeSidebar } from "./home.sidebar";
+import { HomePanel } from "./home.panel";
 
 // Mapbox requires browser APIs — skip SSR
-const PlannerMap = dynamic(
-  () => import('./planner.map').then((m) => ({ default: m.PlannerMap })),
-  { ssr: false, loading: () => <MapSkeleton /> }
-)
+const HomeMap = dynamic(
+  () => import("./home.map").then((m) => ({ default: m.HomeMap })),
+  { ssr: false, loading: () => <MapSkeleton /> },
+);
 
 function MapSkeleton() {
   return (
@@ -24,11 +24,11 @@ function MapSkeleton() {
         <span className="text-sm">Loading map…</span>
       </div>
     </div>
-  )
+  );
 }
 
-function PlannerHeader() {
-  const route = useAtomValue(activeRouteAtom)
+function HomeHeader() {
+  const route = useAtomValue(activeRouteAtom);
 
   return (
     <header className="flex items-center gap-4 px-4 h-14 border-b border-border bg-card shrink-0 z-10">
@@ -45,7 +45,9 @@ function PlannerHeader() {
       </Link>
 
       <div className="flex-1 min-w-0 flex items-center justify-center">
-        <h1 className="text-sm font-semibold text-foreground truncate">{route.name}</h1>
+        <h1 className="text-sm font-semibold text-foreground truncate">
+          {route.name}
+        </h1>
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
@@ -65,36 +67,36 @@ function PlannerHeader() {
         </button>
       </div>
     </header>
-  )
+  );
 }
 
-function PlannerLayout() {
+function HomeLayout() {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-background">
-      <PlannerHeader />
+      <HomeHeader />
       <div className="flex flex-1 overflow-hidden">
-        <PlannerSidebar />
-        <PlannerMap />
-        <PlannerPanel />
+        <HomeSidebar />
+        <HomeMap />
+        <HomePanel />
       </div>
     </div>
-  )
+  );
 }
 
-export function Planner() {
+export function Home() {
   const queryClient = useMemo(
     () =>
       new QueryClient({
         defaultOptions: { queries: { staleTime: 60_000, retry: 1 } },
       }),
-    []
-  )
+    [],
+  );
 
   return (
     <JotaiProvider>
       <QueryClientProvider client={queryClient}>
-        <PlannerLayout />
+        <HomeLayout />
       </QueryClientProvider>
     </JotaiProvider>
-  )
+  );
 }
