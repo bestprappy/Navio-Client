@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useAtom, useAtomValue } from 'jotai'
+import { useAtom, useAtomValue } from "jotai";
 import {
   MapPin,
   Navigation,
@@ -9,23 +9,24 @@ import {
   Battery,
   Car,
   Route,
-} from 'lucide-react'
+} from "lucide-react";
 import {
   originInputAtom,
   destinationInputAtom,
   selectedVehicleIdAtom,
   batteryStartAtom,
-} from './planner.atoms'
-import { EV_VEHICLE_MODELS } from './data'
+} from "./home.atoms";
+import { EV_VEHICLE_MODELS } from "./data";
 
-export function PlannerSidebar() {
-  const [origin, setOrigin] = useAtom(originInputAtom)
-  const [destination, setDestination] = useAtom(destinationInputAtom)
-  const [vehicleId, setVehicleId] = useAtom(selectedVehicleIdAtom)
-  const [battery, setBattery] = useAtom(batteryStartAtom)
+export function HomeSidebar() {
+  const [origin, setOrigin] = useAtom(originInputAtom);
+  const [destination, setDestination] = useAtom(destinationInputAtom);
+  const [vehicleId, setVehicleId] = useAtom(selectedVehicleIdAtom);
+  const [battery, setBattery] = useAtom(batteryStartAtom);
 
-  const vehicle = EV_VEHICLE_MODELS.find((v) => v.id === vehicleId) ?? EV_VEHICLE_MODELS[0]
-  const estimatedRangeKm = Math.round((battery / 100) * vehicle.rangeKm)
+  const vehicle =
+    EV_VEHICLE_MODELS.find((v) => v.id === vehicleId) ?? EV_VEHICLE_MODELS[0];
+  const estimatedRangeKm = Math.round((battery / 100) * vehicle.rangeKm);
 
   return (
     <aside
@@ -166,20 +167,24 @@ export function PlannerSidebar() {
           Preferences
         </h2>
         <div className="flex flex-col gap-2">
-          {(['Fastest route', 'Fewest stops', 'Scenic route'] as const).map((pref) => (
-            <label
-              key={pref}
-              className="flex items-center gap-2.5 text-sm text-foreground cursor-pointer group"
-            >
-              <input
-                type="radio"
-                name="route-pref"
-                defaultChecked={pref === 'Fastest route'}
-                className="accent-primary w-4 h-4 cursor-pointer"
-              />
-              <span className="group-hover:text-primary transition-colors">{pref}</span>
-            </label>
-          ))}
+          {(["Fastest route", "Fewest stops", "Scenic route"] as const).map(
+            (pref) => (
+              <label
+                key={pref}
+                className="flex items-center gap-2.5 text-sm text-foreground cursor-pointer group"
+              >
+                <input
+                  type="radio"
+                  name="route-pref"
+                  defaultChecked={pref === "Fastest route"}
+                  className="accent-primary w-4 h-4 cursor-pointer"
+                />
+                <span className="group-hover:text-primary transition-colors">
+                  {pref}
+                </span>
+              </label>
+            ),
+          )}
         </div>
       </section>
 
@@ -200,5 +205,5 @@ export function PlannerSidebar() {
         </button>
       </section>
     </aside>
-  )
+  );
 }

@@ -1,15 +1,15 @@
-import Link from "next/link"
-import { Zap } from "lucide-react"
+import Link from "next/link";
+import { Logo } from "@/components/logo";
 
 type FooterLink = {
-  label: string
-  href: string
-}
+  label: string;
+  href: string;
+};
 
 type FooterSection = {
-  title: string
-  links: FooterLink[]
-}
+  title: string;
+  links: FooterLink[];
+};
 
 const FOOTER_SECTIONS: FooterSection[] = [
   {
@@ -47,7 +47,7 @@ const FOOTER_SECTIONS: FooterSection[] = [
       { label: "Cookies", href: "/cookies" },
     ],
   },
-]
+];
 
 export function Footer() {
   return (
@@ -66,14 +66,16 @@ export function Footer() {
               href="/"
               className="inline-flex items-center gap-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-lg"
             >
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary">
-                <Zap className="size-4 text-primary-foreground" aria-hidden="true" />
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
+                <Logo className="size-4" />
               </div>
-              <span className="text-lg font-extrabold tracking-tight">Navio</span>
+              <span className="text-lg font-extrabold tracking-tight">
+                Navio
+              </span>
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              AI-powered EV trip planning. Smart charging, community routes, and trip media — all
-              in one platform.
+              AI-powered EV trip planning. Smart charging, community routes, and
+              trip media — all in one platform.
             </p>
           </div>
 
@@ -105,9 +107,11 @@ export function Footer() {
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Navio. All rights reserved.
           </p>
-          <p className="text-xs text-muted-foreground/60">Built for the EV revolution.</p>
+          <p className="text-xs text-muted-foreground/60">
+            Built for the EV revolution.
+          </p>
         </div>
       </div>
     </footer>
-  )
+  );
 }
