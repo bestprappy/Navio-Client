@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
-import { Navbar } from "@/components/navbar";
+
 import { PlannerSetupView } from "./_components/planner-setup";
+import { Navbar } from "@/components/navbar";
 
 export const metadata: Metadata = {
   title: "Plan a new trip - Navio",
@@ -9,11 +10,11 @@ export const metadata: Metadata = {
 
 export default function PlannerSetupPage() {
   return (
-    <>
+    <div className="flex h-screen flex-col overflow-hidden">
       <Navbar />
-      <main className="min-h-screen bg-background">
+      <main className="min-h-0 flex-1 overflow-auto">
         <PlannerSetupView />
       </main>
-    </>
+    </div>
   );
 }
