@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button.variants";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 type NavLink = {
@@ -16,7 +17,7 @@ type NavLink = {
 
 const NAV_LINKS: NavLink[] = [
   { label: "Home", href: "/" },
-  { label: "Planner", href: "/planner/setup" },
+  { label: "Planner", href: "/planner" },
   { label: "Explore", href: "/explore" },
   { label: "Community", href: "/commu" },
   { label: "Help", href: "/help" },
@@ -60,6 +61,7 @@ export function Navbar() {
 
         {/* Desktop CTAs */}
         <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle />
           <Link
             href="/sign-in"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
