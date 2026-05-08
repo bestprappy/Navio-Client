@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Navbar } from "@/components/navbar";
-import { ExplorePage } from "./_components/explore-page";
+import { ExplorePage } from "../feature/explore/_components/explore-page";
 
 export const metadata: Metadata = {
   title: "Explore plans - Navio",
