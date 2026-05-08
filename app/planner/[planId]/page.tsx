@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { getDestinationById } from "../_components/data";
-import { PlannerDetail } from "./_components/planner-detail";
+import { getDestinationById } from "../../feature/planner/_components/data";
+import { PlannerDetail } from "../../feature/planner/planId/planner-detail";
 
 type PlannerDetailPageProps = {
   params: Promise<{

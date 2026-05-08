@@ -205,7 +205,7 @@
   --primary-foreground: oklch(0.169 0.024 273.4);
 
   /* Swapped for dark legibility — TColors.accent as secondary */
-  --secondary: oklch(41.805% 0.08791 260.005);
+  --secondary: oklch(48.285% 0.05637 175.864);
   --secondary-foreground: oklch(1 0 0);
 
   /* TColors.secondary mint as accent surface */
@@ -353,6 +353,25 @@
   --brand-fg: var(--primary-foreground);
   --brand-subtle: oklch(from var(--primary) l c h / 0.08);
   --brand-muted: oklch(from var(--primary) l c h / 0.12);
+
+  /* Planner block palette */
+  --planner-block-foreground: oklch(1 0 0);
+  --planner-block-teal: oklch(0.66 0.15 170);
+  --planner-block-cyan: oklch(0.69 0.12 195);
+  --planner-block-blue: oklch(0.62 0.16 245);
+  --planner-block-indigo: oklch(0.58 0.2 275);
+  --planner-block-violet: oklch(0.56 0.18 300);
+  --planner-block-rose: oklch(0.61 0.2 355);
+  --planner-block-coral: oklch(0.66 0.19 28);
+  --planner-block-amber: oklch(0.72 0.16 62);
+  --planner-block-emerald: oklch(0.58 0.16 150);
+  --planner-block-pine: oklch(0.42 0.12 165);
+  --planner-block-navy: oklch(0.42 0.12 245);
+  --planner-block-slate: oklch(0.4 0.08 275);
+  --planner-block-plum: oklch(0.43 0.13 305);
+  --planner-block-wine: oklch(0.47 0.16 350);
+  --planner-block-brick: oklch(0.5 0.16 28);
+  --planner-block-rust: oklch(0.52 0.15 50);
 
   /* Text contrast tiers */
   --text-primary: var(--foreground);

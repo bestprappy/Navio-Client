@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { PlannerSetupView } from "./_components/planner-setup";
+import { PlannerSetupView } from "../feature/planner/planner-setup";
 import { Navbar } from "@/components/navbar";
 
 export const metadata: Metadata = {
