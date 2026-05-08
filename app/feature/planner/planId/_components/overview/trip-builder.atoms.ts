@@ -2,7 +2,7 @@ import { atom } from "jotai";
 
 import { getDistanceKm, getPlaceResults } from "../constants/place.data";
 import { getTripBlockColorByIndex } from "../constants/trip-block-colors";
-import { mockPremadeLists, mockTripBlocks } from "../constants/trip.data";
+import { mockPremadeLists } from "../constants/trip.data";
 import {
   isEvChargerPlaceItem,
   isPlaceItem,
@@ -35,6 +35,11 @@ type RemoveItemPayload = {
 type UpdateBlockTitlePayload = {
   blockId: string;
   title: string;
+};
+
+type UpdateBlockDatePayload = {
+  blockId: string;
+  date: string;
 };
 
 type UpdateBlockColorPayload = {
@@ -93,6 +98,11 @@ type SelectTripPlacePayload = {
   itemId: string;
 };
 
+type AddEvChargerToBlockPayload = {
+  blockId: string;
+  charger: EvCharger;
+};
+
 export type TripPlaceAnchor = PlaceItem & {
   blockId: string;
   blockTitle: string;
@@ -114,6 +124,19 @@ function createClientId(prefix: string): string {
   }
 
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function getTodayDateValue(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function sortBlocksByDate(blocks: TripBlockData[]): TripBlockData[] {
+  return [...blocks].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 function updateBlock(
@@ -192,6 +215,35 @@ function getEstimatedChargeMinutes(maxKw: number): number {
   return 150;
 }
 
+function evChargerToPlaceItem(
+  charger: EvCharger,
+  placeId: string,
+): PlaceItem {
+  return {
+    id: placeId,
+    type: "place",
+    placeId: getChargerPlaceId(charger.id),
+    name: charger.name,
+    description: getEvChargerDescription(charger),
+    address:
+      charger.address ?? charger.location.address ?? "EV charging station",
+    lat: charger.location.lat,
+    lng: charger.location.lng,
+    rating: charger.ratingAvg,
+    evCharger: {
+      connectorTypes: charger.connectorTypes,
+      maxKw: charger.maxKw,
+      totalConnectors: charger.totalConnectors,
+      availableConnectors: charger.availableConnectors,
+      priceText: charger.priceText,
+      openingHoursSummary: getOpeningHoursSummary(charger.openingHours),
+      estimatedChargeMinutes: getEstimatedChargeMinutes(charger.maxKw),
+      operatorName: charger.operatorName,
+    },
+    isVisited: false,
+  };
+}
+
 function getTripPlaceAnchors(
   blocks: TripBlockData[],
   options?: { includeEvChargers?: boolean },
@@ -226,12 +278,12 @@ function getTripPlaceAnchors(
   });
 }
 
-export const tripBlocksAtom = atom<TripBlockData[]>(mockTripBlocks);
-export const activeBlockIdAtom = atom<string | null>(
-  mockTripBlocks[0]?.id ?? null,
-);
+export type TripDateRange = { from?: string; to?: string };
+export const tripDateRangeAtom = atom<TripDateRange>({});
+export const tripBlocksAtom = atom<TripBlockData[]>([]);
+export const activeBlockIdAtom = atom<string | null>(null);
 export const activeSearchAtom = atom<ActiveSearch | null>(null);
-export const openBlockIdsAtom = atom<string[]>(mockTripBlocks.map((b) => b.id));
+export const openBlockIdsAtom = atom<string[]>([]);
 export const evChargerResultsAtom = atom<EvChargerMapResult[]>([]);
 export const selectedEvChargerIdAtom = atom<string | null>(null);
 export const selectedTripPlaceItemIdAtom = atom<string | null>(null);
@@ -416,17 +468,44 @@ export function dedupeEvChargerResults(
 
 export const addTripBlockAtom = atom(null, (get, set) => {
   const blocks = get(tripBlocksAtom);
+  const todayDateValue = getTodayDateValue();
   const nextBlock: TripBlockData = {
     id: createClientId("block"),
-    title: "Add a title",
+    title: todayDateValue,
+    date: todayDateValue,
     colorId: getTripBlockColorByIndex(blocks.length),
     items: [],
   };
 
-  set(tripBlocksAtom, [...blocks, nextBlock]);
+  set(tripBlocksAtom, sortBlocksByDate([...blocks, nextBlock]));
   set(activeBlockIdAtom, nextBlock.id);
   set(openBlockIdsAtom, [...get(openBlockIdsAtom), nextBlock.id]);
 });
+
+export const addTripBlocksForDatesAtom = atom(
+  null,
+  (get, set, dates: string[]) => {
+    const blocks = get(tripBlocksAtom);
+    const newBlocks: TripBlockData[] = dates
+      .filter((date) => !blocks.some((b) => b.date === date))
+      .map((date, i) => ({
+        id: createClientId("block"),
+        title: date,
+        date,
+        colorId: getTripBlockColorByIndex(blocks.length + i),
+        items: [],
+      }));
+
+    if (newBlocks.length === 0) return;
+
+    set(tripBlocksAtom, sortBlocksByDate([...blocks, ...newBlocks]));
+    set(openBlockIdsAtom, [
+      ...get(openBlockIdsAtom),
+      ...newBlocks.map((b) => b.id),
+    ]);
+    set(activeBlockIdAtom, newBlocks[0]?.id ?? get(activeBlockIdAtom));
+  },
+);
 
 export const updateBlockTitleAtom = atom(
   null,
@@ -437,6 +516,22 @@ export const updateBlockTitleAtom = atom(
         ...block,
         title: payload.title,
       })),
+    );
+  },
+);
+
+export const updateBlockDateAtom = atom(
+  null,
+  (get, set, payload: UpdateBlockDatePayload) => {
+    set(
+      tripBlocksAtom,
+      sortBlocksByDate(
+        updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
+          ...block,
+          title: payload.date,
+          date: payload.date,
+        })),
+      ),
     );
   },
 );
@@ -849,6 +944,44 @@ export const addSelectedPlaceToTripAtom = atom(null, (get, set) => {
   set(selectedTripPlaceItemIdAtom, nextPlaceId);
 });
 
+export const addEvChargerToBlockAtom = atom(
+  null,
+  (get, set, payload: AddEvChargerToBlockPayload) => {
+    const chargerPlaceId = getChargerPlaceId(payload.charger.id);
+    const targetBlock = get(tripBlocksAtom).find(
+      (block) => block.id === payload.blockId,
+    );
+    const existingPlace = targetBlock?.items.find(
+      (item) => isPlaceItem(item) && item.placeId === chargerPlaceId,
+    );
+    const nextPlaceId = existingPlace?.id ?? createClientId("place");
+
+    set(
+      tripBlocksAtom,
+      updateBlock(get(tripBlocksAtom), payload.blockId, (block) => {
+        const isAlreadyAdded = block.items.some(
+          (item) => isPlaceItem(item) && item.placeId === chargerPlaceId,
+        );
+
+        if (isAlreadyAdded) {
+          return block;
+        }
+
+        return {
+          ...block,
+          items: [
+            ...block.items,
+            evChargerToPlaceItem(payload.charger, nextPlaceId),
+          ],
+        };
+      }),
+    );
+    set(activeSearchAtom, null);
+    set(selectedEvChargerIdAtom, null);
+    set(selectedTripPlaceItemIdAtom, nextPlaceId);
+  },
+);
+
 export const addSelectedEvChargerToTripAtom = atom(null, (get, set) => {
   const selectedResult = get(selectedEvChargerResultAtom);
 
@@ -879,36 +1012,7 @@ export const addSelectedEvChargerToTripAtom = atom(null, (get, set) => {
 
       return {
         ...block,
-        items: [
-          ...block.items,
-          {
-            id: nextPlaceId,
-            type: "place",
-            placeId: chargerPlaceId,
-            name: charger.name,
-            description: getEvChargerDescription(charger),
-            address:
-              charger.address ??
-              charger.location.address ??
-              "EV charging station",
-            lat: charger.location.lat,
-            lng: charger.location.lng,
-            rating: charger.ratingAvg,
-            evCharger: {
-              connectorTypes: charger.connectorTypes,
-              maxKw: charger.maxKw,
-              totalConnectors: charger.totalConnectors,
-              availableConnectors: charger.availableConnectors,
-              priceText: charger.priceText,
-              openingHoursSummary: getOpeningHoursSummary(
-                charger.openingHours,
-              ),
-              estimatedChargeMinutes: getEstimatedChargeMinutes(charger.maxKw),
-              operatorName: charger.operatorName,
-            },
-            isVisited: false,
-          },
-        ],
+        items: [...block.items, evChargerToPlaceItem(charger, nextPlaceId)],
       };
     }),
   );

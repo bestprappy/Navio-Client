@@ -393,6 +393,14 @@
 }
 
 @layer utilities {
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
   .section-padding {
     padding-inline: var(--section-px);
     padding-block: var(--section-py);

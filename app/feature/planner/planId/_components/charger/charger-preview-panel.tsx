@@ -40,7 +40,9 @@ export function ChargerPreviewPanel({
             EV station
           </span>
           <span className="rounded-sm bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
-            {distanceKm.toFixed(1)} km from trip stop
+            {distanceKm > 0
+              ? `${distanceKm.toFixed(1)} km from trip stop`
+              : "Manual selection"}
           </span>
           {charger.stale ? (
             <span className="rounded-sm bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive">
@@ -85,7 +87,7 @@ export function ChargerPreviewPanel({
           </div>
           <div className="flex items-center gap-2">
             <Star
-              className="size-4 fill-yellow-400 text-yellow-400"
+              className="size-4 fill-warning text-warning"
               aria-hidden="true"
             />
             <span>

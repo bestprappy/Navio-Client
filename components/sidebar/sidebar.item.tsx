@@ -10,6 +10,7 @@ type SidebarItemProps = {
   href: string;
   alert?: number | string;
   icon?: ReactNode;
+  iconClassName?: string;
   isActive?: boolean;
   collapsed?: boolean;
 };
@@ -18,6 +19,7 @@ export default function SidebarItem({
   alert,
   href,
   icon,
+  iconClassName,
   isActive = false,
   title,
   collapsed = false,
@@ -39,9 +41,11 @@ export default function SidebarItem({
         <span
           className={cn(
             "flex size-5 shrink-0 items-center justify-center transition-colors",
-            isActive
-              ? "text-primary"
-              : "text-muted-foreground group-hover:text-foreground",
+            iconClassName
+              ? iconClassName
+              : isActive
+                ? "text-primary"
+                : "text-muted-foreground group-hover:text-foreground",
           )}
         >
           {icon}

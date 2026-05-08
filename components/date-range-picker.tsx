@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import type { DateRange } from "react-day-picker"
-import { format } from "date-fns"
+import { format, isBefore, isSameDay } from "date-fns"
 import { CalendarIcon } from "lucide-react"
 
 import { Calendar } from "@/components/ui/calendar"
@@ -30,6 +30,7 @@ export function DateRangePicker({
   disabled = false,
   className,
 }: DateRangePickerProps) {
+  const [open, setOpen] = React.useState(false)
   const [internal, setInternal] = React.useState<DateRange | undefined>()
   const range = value ?? internal
   const setRange = onChange ?? setInternal
@@ -40,8 +41,23 @@ export function DateRangePicker({
   const triggerClass =
     "flex w-full items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-left transition-colors hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
 
+  function handleDayClick(day: Date) {
+    if (!range?.from || range.to) {
+      setRange({ from: day, to: undefined })
+      return
+    }
+
+    const nextRange =
+      isBefore(day, range.from) && !isSameDay(day, range.from)
+        ? { from: day, to: range.from }
+        : { from: range.from, to: day }
+
+    setRange(nextRange)
+    setOpen(false)
+  }
+
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <div
         className={cn(
           "grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center",
@@ -87,8 +103,8 @@ export function DateRangePicker({
         <Calendar
           mode="range"
           selected={range}
-          onSelect={setRange}
-          numberOfMonths={1}
+          onDayClick={handleDayClick}
+          numberOfMonths={2}
           disabled={{ before: new Date() }}
         />
       </PopoverContent>

@@ -1,9 +1,21 @@
 import type { PremadeList, TripBlockData } from "./types";
 
+function getTodayDateValue(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+const todayDateValue = getTodayDateValue();
+
 export const mockTripBlocks: TripBlockData[] = [
   {
     id: "block-restaurants",
-    title: "Restaurants",
+    title: todayDateValue,
+    date: todayDateValue,
     colorId: "blue",
     items: [],
   },

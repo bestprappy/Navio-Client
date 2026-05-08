@@ -17,29 +17,26 @@ import { cn } from "@/lib/utils";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import { getEvChargersNear } from "./_components/constants/charger.data";
 import { getTripBlockColorById } from "./_components/constants/trip-block-colors";
-import type { TripBlockData } from "./_components/constants/types";
-import { ChargerPreviewPanel } from "./_components/charger/charger-preview-panel";
+import { isEvChargerPlaceItem, isPlaceItem } from "./_components/constants/types";
+import type { EvCharger, TripBlockData } from "./_components/constants/types";
+import { EvStationSidePanel } from "./_components/charger/ev-station-side-panel";
 import {
+  activeBlockIdAtom,
   activeSearchAtom,
-  addSelectedEvChargerToTripAtom,
+  addEvChargerToBlockAtom,
   addSelectedPlaceToTripAtom,
-  clearEvChargerResultsAtom,
   closeActiveSearchAtom,
   closeSelectedTripPlaceAtom,
-  closeSelectedEvChargerAtom,
-  dedupeEvChargerResults,
+  clearEvChargerResultsAtom,
   evChargerErrorAtom,
   evChargerLoadingAtom,
   evChargerResultsAtom,
   selectEvChargerAtom,
-  selectedEvChargerIsAddedAtom,
   selectedEvChargerResultAtom,
   selectedSearchPlaceAtom,
   selectedSearchPlaceIsAddedAtom,
   selectedTripPlaceAtom,
-  selectedTripPlaceAnchorsAtom,
   selectedTripPlaceMarkersAtom,
   selectedTripPlacesAtom,
   selectSearchResultAtom,
@@ -50,6 +47,7 @@ import {
 } from "./_components/overview/trip-builder.atoms";
 import { PlacePreviewPanel } from "./_components/place/place-preview-panel";
 import { TripPlacePreviewPanel } from "./_components/place/trip-place-preview-panel";
+import { GoogleMapsExportButton } from "./_components/routes/google-maps-export-button";
 import { useTripRoutes } from "./_components/routes/trip-route-query";
 import type {
   RouteLineString,
@@ -87,16 +85,15 @@ export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
   const mapRef = useRef<MapRef>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const tripRoutes = useTripRoutes();
+  const activeBlockId = useAtomValue(activeBlockIdAtom);
   const activeSearch = useAtomValue(activeSearchAtom);
   const tripBlocks = useAtomValue(tripBlocksAtom);
   const selectedPlace = useAtomValue(selectedSearchPlaceAtom);
   const selectedTripPlace = useAtomValue(selectedTripPlaceAtom);
   const selectedTripPlaces = useAtomValue(selectedTripPlacesAtom);
   const selectedTripPlaceMarkers = useAtomValue(selectedTripPlaceMarkersAtom);
-  const selectedTripPlaceAnchors = useAtomValue(selectedTripPlaceAnchorsAtom);
   const evChargerResults = useAtomValue(evChargerResultsAtom);
   const selectedEvChargerResult = useAtomValue(selectedEvChargerResultAtom);
-  const isSelectedEvChargerAdded = useAtomValue(selectedEvChargerIsAddedAtom);
   const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
   const evChargerError = useAtomValue(evChargerErrorAtom);
   const isSelectedPlaceAdded = useAtomValue(selectedSearchPlaceIsAddedAtom);
@@ -105,17 +102,24 @@ export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
   const selectTripPlace = useSetAtom(selectTripPlaceAtom);
   const stepSearchResult = useSetAtom(stepSearchResultAtom);
   const addSelectedPlaceToTrip = useSetAtom(addSelectedPlaceToTripAtom);
-  const addSelectedEvChargerToTrip = useSetAtom(addSelectedEvChargerToTripAtom);
+  const addEvChargerToBlock = useSetAtom(addEvChargerToBlockAtom);
   const closeActiveSearch = useSetAtom(closeActiveSearchAtom);
-  const closeSelectedEvCharger = useSetAtom(closeSelectedEvChargerAtom);
+  const clearEvChargerResults = useSetAtom(clearEvChargerResultsAtom);
   const closeSelectedTripPlace = useSetAtom(closeSelectedTripPlaceAtom);
   const setEvChargerResults = useSetAtom(setEvChargerResultsAtom);
-  const clearEvChargerResults = useSetAtom(clearEvChargerResultsAtom);
-  const setEvChargerLoading = useSetAtom(evChargerLoadingAtom);
-  const setEvChargerError = useSetAtom(evChargerErrorAtom);
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const selectedTripPlaceIds = useMemo(
     () => new Set(selectedTripPlaces.map((place) => place.placeId)),
+    [selectedTripPlaces],
+  );
+  const addedChargerIds = useMemo(
+    () =>
+      new Set(
+        selectedTripPlaces
+          .map((place) => place.placeId)
+          .filter((placeId) => placeId.startsWith("ev-charger:"))
+          .map((placeId) => placeId.replace("ev-charger:", "")),
+      ),
     [selectedTripPlaces],
   );
   const blockColorById = useMemo(
@@ -146,70 +150,21 @@ export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
       ? "Routes could not load."
       : null;
 
-  useEffect(() => {
-    let isCancelled = false;
+  const evPanelBlockId =
+    evChargerResults[0]?.targetBlockId ?? activeBlockId ?? null;
+  const evPanelPlaceAnchors = useMemo(() => {
+    if (!evPanelBlockId) return [];
+    const block = tripBlocks.find((b) => b.id === evPanelBlockId);
+    if (!block) return [];
+    return block.items
+      .filter(isPlaceItem)
+      .filter((item) => !isEvChargerPlaceItem(item))
+      .map((item) => ({ id: item.id, lat: item.lat, lng: item.lng }));
+  }, [evPanelBlockId, tripBlocks]);
 
-    if (selectedTripPlaceAnchors.length < 2) {
-      clearEvChargerResults();
-      return;
-    }
-
-    async function fetchEvChargers() {
-      setEvChargerLoading(true);
-      setEvChargerError(null);
-
-      try {
-        const chargersByAnchor = await Promise.all(
-          selectedTripPlaceAnchors.map(async (anchor) => {
-            const list = await getEvChargersNear({
-              lat: anchor.lat,
-              lng: anchor.lng,
-              radiusKm: 8,
-            });
-
-            return {
-              anchor,
-              chargers: list.items,
-            };
-          }),
-        );
-
-        if (isCancelled) {
-          return;
-        }
-
-        setEvChargerResults(dedupeEvChargerResults(chargersByAnchor));
-      } catch (error) {
-        if (isCancelled) {
-          return;
-        }
-
-        console.error("EV chargers failed to load.", {
-          component: "PlannerMap",
-          operation: "loadEvChargers",
-          error,
-        });
-        setEvChargerResults([]);
-        setEvChargerError("EV charging stations could not load.");
-      } finally {
-        if (!isCancelled) {
-          setEvChargerLoading(false);
-        }
-      }
-    }
-
-    fetchEvChargers();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [
-    clearEvChargerResults,
-    selectedTripPlaceAnchors,
-    setEvChargerError,
-    setEvChargerLoading,
-    setEvChargerResults,
-  ]);
+  function addChargerToTrip(blockId: string, charger: EvCharger) {
+    addEvChargerToBlock({ blockId, charger });
+  }
 
   useEffect(() => {
     if (!selectedPlace || !mapRef.current) {
@@ -499,32 +454,29 @@ export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
         })}
       </Map>
 
+      <GoogleMapsExportButton
+        blocks={tripBlocks}
+        className="absolute left-4 top-4 z-10"
+      />
+
       {routeStatusMessage ? (
-        <div className="absolute left-4 top-4 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md">
+        <div className="absolute left-4 top-16 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md">
           {routeStatusMessage}
         </div>
       ) : null}
 
-      {selectedTripPlaceAnchors.length >= 2 &&
-      (isLoadingEvChargers || evChargerError) ? (
+      {isLoadingEvChargers || evChargerError ? (
         <div
           className={cn(
             "absolute left-4 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md",
-            routeStatusMessage ? "top-16" : "top-4",
+            routeStatusMessage ? "top-28" : "top-16",
           )}
         >
           {isLoadingEvChargers ? "Loading EV stations..." : evChargerError}
         </div>
       ) : null}
 
-      {selectedEvChargerResult ? (
-        <ChargerPreviewPanel
-          result={selectedEvChargerResult}
-          isAdded={isSelectedEvChargerAdded}
-          onAddToTrip={() => addSelectedEvChargerToTrip()}
-          onClose={() => closeSelectedEvCharger()}
-        />
-      ) : activeSearch && selectedPlace ? (
+      {activeSearch && selectedPlace ? (
         <PlacePreviewPanel
           place={selectedPlace}
           currentIndex={activeSearch.selectedIndex}
@@ -539,6 +491,20 @@ export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
         <TripPlacePreviewPanel
           place={selectedTripPlace}
           onClose={() => closeSelectedTripPlace()}
+        />
+      ) : null}
+
+      {evChargerResults.length ? (
+        <EvStationSidePanel
+          activeBlockId={activeBlockId}
+          placeAnchors={evPanelPlaceAnchors}
+          results={evChargerResults}
+          selectedResult={selectedEvChargerResult}
+          addedChargerIds={addedChargerIds}
+          onAddCharger={addChargerToTrip}
+          onClose={() => clearEvChargerResults()}
+          onSelect={(chargerId) => selectEvCharger(chargerId)}
+          onUpdateResults={(results) => setEvChargerResults(results)}
         />
       ) : null}
     </div>
@@ -571,49 +537,12 @@ function getRouteFeatureCollection(
 function useRouteColorByBlockId(
   tripBlocks: TripBlockData[],
 ): globalThis.Map<string, string> {
-  const [colorByBlockId, setColorByBlockId] = useState<
-    globalThis.Map<string, string>
-  >(() => new globalThis.Map());
-
-  useEffect(() => {
-    function syncColors() {
-      const styles = window.getComputedStyle(document.documentElement);
-      const nextColors = new globalThis.Map<string, string>();
-
-      tripBlocks.forEach((block) => {
-        const blockColor = getTripBlockColorById(block.colorId);
-        nextColors.set(
-          block.id,
-          resolveCssColor(blockColor.value, styles) ?? DEFAULT_ROUTE_COLOR,
-        );
-      });
-
-      setColorByBlockId(nextColors);
-    }
-
-    syncColors();
-
-    const observer = new MutationObserver(syncColors);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
+  return useMemo(() => {
+    const map = new globalThis.Map<string, string>();
+    tripBlocks.forEach((block) => {
+      const blockColor = getTripBlockColorById(block.colorId);
+      map.set(block.id, blockColor.mapColor);
     });
-
-    return () => observer.disconnect();
+    return map;
   }, [tripBlocks]);
-
-  return colorByBlockId;
-}
-
-function resolveCssColor(
-  color: string,
-  styles: CSSStyleDeclaration,
-): string | null {
-  const variableMatch = color.match(/^var\((--[^)]+)\)$/);
-
-  if (!variableMatch?.[1]) {
-    return color;
-  }
-
-  return styles.getPropertyValue(variableMatch[1]).trim() || null;
 }

@@ -1075,6 +1075,31 @@ const mockEvChargers: EvCharger[] = [
   },
 ];
 
+export function searchEvChargers(query: string): EvCharger[] {
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return mockEvChargers.slice(0, 12);
+  }
+
+  return mockEvChargers
+    .filter((charger) => {
+      const searchableText = [
+        charger.name,
+        charger.operatorName,
+        charger.address,
+        charger.province,
+        charger.connectorTypes.join(" "),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return searchableText.includes(normalizedQuery);
+    })
+    .slice(0, 12);
+}
+
 export async function getEvChargersNear({
   lat,
   lng,

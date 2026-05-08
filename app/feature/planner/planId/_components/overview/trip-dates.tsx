@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { CalendarIcon, Plus } from "lucide-react";
+import { useAtom } from "jotai";
 
 import { DateRangePicker } from "@/components/date-range-picker";
+import { tripDateRangeAtom } from "./trip-builder.atoms";
 
 type TripDatesProps = {
   initialFrom?: string;
@@ -17,23 +19,38 @@ function formatTripDate(date: Date): string {
 }
 
 export function TripDates({ initialFrom, initialTo }: TripDatesProps) {
-  const parsedFrom = initialFrom ? new Date(initialFrom) : undefined;
-  const parsedTo = initialTo ? new Date(initialTo) : undefined;
+  const [dateRange, setDateRange] = useAtom(tripDateRangeAtom);
+  // only show the picker inline when actively editing (no dates yet, or user clicked to change)
+  const [isEditing, setIsEditing] = useState(!initialFrom);
 
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(
-    parsedFrom ? { from: parsedFrom, to: parsedTo } : undefined,
-  );
-  const [showPicker, setShowPicker] = useState(!parsedFrom);
+  useEffect(() => {
+    if (initialFrom) {
+      setDateRange({ from: initialFrom, to: initialTo });
+    }
+    // seed on mount only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const parsedFrom = dateRange.from ? new Date(dateRange.from) : undefined;
+  const parsedTo = dateRange.to ? new Date(dateRange.to) : undefined;
+
+  const pickerValue: DateRange | undefined = parsedFrom
+    ? { from: parsedFrom, to: parsedTo }
+    : undefined;
 
   function handleRangeChange(range: DateRange | undefined) {
-    setDateRange(range);
+    setDateRange({
+      from: range?.from ? format(range.from, "yyyy-MM-dd") : undefined,
+      to: range?.to ? format(range.to, "yyyy-MM-dd") : undefined,
+    });
+    // only close once the user has picked BOTH ends of the range
     if (range?.from && range?.to) {
-      setShowPicker(false);
+      setIsEditing(false);
     }
   }
 
-  const fromLabel = dateRange?.from ? formatTripDate(dateRange.from) : null;
-  const toLabel = dateRange?.to ? formatTripDate(dateRange.to) : null;
+  const fromLabel = parsedFrom ? formatTripDate(parsedFrom) : null;
+  const toLabel = parsedTo ? formatTripDate(parsedTo) : null;
   const dateLabel =
     fromLabel && toLabel
       ? `${fromLabel} – ${toLabel}`
@@ -41,11 +58,11 @@ export function TripDates({ initialFrom, initialTo }: TripDatesProps) {
         ? `From ${fromLabel}`
         : null;
 
-  if (showPicker) {
+  if (isEditing || !parsedFrom) {
     return (
       <div className="mt-2">
         <DateRangePicker
-          value={dateRange}
+          value={pickerValue}
           onChange={handleRangeChange}
           startPlaceholder="Start date"
           endPlaceholder="End date"
@@ -57,7 +74,7 @@ export function TripDates({ initialFrom, initialTo }: TripDatesProps) {
   return (
     <button
       type="button"
-      onClick={() => setShowPicker(true)}
+      onClick={() => setIsEditing(true)}
       className="mt-1 flex items-center gap-2 rounded-md py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
       aria-label={dateLabel ? `Change dates: ${dateLabel}` : "Add dates"}
     >

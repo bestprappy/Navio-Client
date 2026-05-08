@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useAtom } from "jotai";
 import {
   BookOpenText,
+  ClipboardList,
   Compass,
   Home,
   Map,
@@ -39,7 +40,7 @@ export default function SidebarWrapper() {
   return (
     <aside
       className={`sticky top-0 z-30 hidden h-screen shrink-0 overflow-y-auto border-r border-border bg-card shadow-sm transition-all duration-200 ease-in-out md:flex md:flex-col ${
-        collapsed ? "w-16 px-2 py-4" : "w-64 px-3 py-4"
+        collapsed ? "w-16 px-2 py-4" : "w-52 px-3 py-4"
       }`}
     >
       {/* Header: logo + collapse toggle */}
@@ -96,7 +97,6 @@ export default function SidebarWrapper() {
             isActive={isRouteActive("/planner")}
             collapsed={collapsed}
           />
-
           <SidebarItem
             title="Guides"
             href="/guides/new"

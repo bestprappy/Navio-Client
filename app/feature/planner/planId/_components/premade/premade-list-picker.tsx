@@ -55,7 +55,7 @@ export function PremadeListPicker({ blockId }: PremadeListPickerProps) {
   return (
     <div
       ref={wrapperRef}
-      className="relative"
+      className="relative min-w-40 flex-1"
       onKeyDown={handleKeyDown}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
@@ -67,7 +67,7 @@ export function PremadeListPicker({ blockId }: PremadeListPickerProps) {
         type="button"
         variant="outline"
         size="lg"
-        className="rounded-sm py-6"
+        className="w-full rounded-sm border-violet-300 bg-violet-50 py-6 text-violet-700 hover:border-violet-400 hover:bg-violet-100 hover:text-violet-800 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-100 dark:hover:border-violet-300/50 dark:hover:bg-violet-400/20 dark:hover:text-violet-50"
         aria-expanded={isOpen}
         aria-haspopup="menu"
         onClick={() => setIsOpen((current) => !current)}

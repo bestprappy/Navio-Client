@@ -4,12 +4,6 @@ import { createContext, type ReactNode, useContext, useMemo } from "react";
 import { CheckSquare, FileText } from "lucide-react";
 import { useAtomValue, useSetAtom } from "jotai";
 
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -17,16 +11,16 @@ import type { TripBlockData } from "../constants/types";
 import { getTripBlockColorById } from "../constants/trip-block-colors";
 import { AddPlaceInput } from "../place/add-place-input";
 import { PremadeListPicker } from "../premade/premade-list-picker";
+import { AddEvStationButton } from "../charger/add-ev-station-button";
 import {
   activeBlockIdAtom,
   addChecklistToBlockAtom,
   addNoteToBlockAtom,
-  openBlockIdsAtom,
-  toggleBlockOpenAtom,
-  updateBlockTitleAtom,
+  tripDateRangeAtom,
+  updateBlockDateAtom,
 } from "../overview/trip-builder.atoms";
+import { BlockDatePicker } from "./block-date-picker";
 import { BlockOptionsPopover } from "./block-options-popover";
-import { BlockTitle } from "./block-title";
 import { SortableBlockItems } from "./sortable-block-items";
 
 type TripBlockContextValue = {
@@ -55,9 +49,6 @@ type TripBlockRootProps = {
 
 function TripBlockRoot({ block, children, className }: TripBlockRootProps) {
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
-  const openIds = useAtomValue(openBlockIdsAtom);
-  const toggleBlockOpen = useSetAtom(toggleBlockOpenAtom);
-  const isOpen = openIds.includes(block.id);
 
   const contextValue = useMemo<TripBlockContextValue>(
     () => ({ block }),
@@ -66,20 +57,13 @@ function TripBlockRoot({ block, children, className }: TripBlockRootProps) {
 
   return (
     <TripBlockContext.Provider value={contextValue}>
-      <Accordion
-        value={isOpen ? [block.id] : []}
-        onValueChange={() => toggleBlockOpen(block.id)}
-        className={cn("", className)}
+      <div
+        className={cn("flex w-full flex-col", className)}
+        onFocus={() => setActiveBlockId(block.id)}
+        onClick={() => setActiveBlockId(block.id)}
       >
-        <AccordionItem
-          value={block.id}
-          className="border-none"
-          onFocusCapture={() => setActiveBlockId(block.id)}
-          onClick={() => setActiveBlockId(block.id)}
-        >
-          {children}
-        </AccordionItem>
-      </Accordion>
+        {children}
+      </div>
     </TripBlockContext.Provider>
   );
 }
@@ -90,23 +74,19 @@ function TripBlockHeader({ children }: { children: ReactNode }) {
 
 function TripBlockTitle() {
   const { block } = useTripBlockContext();
-  const updateBlockTitle = useSetAtom(updateBlockTitleAtom);
+  const tripDateRange = useAtomValue(tripDateRangeAtom);
+  const updateBlockDate = useSetAtom(updateBlockDateAtom);
   const blockColor = getTripBlockColorById(block.colorId);
 
   return (
-    <div className="flex items-center gap-2 mr-6">
-      <div className="min-w-0 flex-1 ">
-        <AccordionTrigger
-          iconSide="left"
-          className="py-0 text-2xl font-bold text-foreground hover:text-foreground hover:no-underline"
-        >
-          <BlockTitle
-            value={block.title}
-            onChange={(title) => updateBlockTitle({ blockId: block.id, title })}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-          />
-        </AccordionTrigger>
+    <div className="flex items-center gap-2 mx-6">
+      <div className="min-w-0 flex-1">
+        <BlockDatePicker
+          date={block.date}
+          from={tripDateRange.from}
+          to={tripDateRange.to}
+          onDateChange={(date) => updateBlockDate({ blockId: block.id, date })}
+        />
       </div>
       <span
         className="size-3 shrink-0 rounded-full"
@@ -119,7 +99,7 @@ function TripBlockTitle() {
 }
 
 function TripBlockContent({ children }: { children: ReactNode }) {
-  return <AccordionContent className="pb-0">{children}</AccordionContent>;
+  return <div className="pb-0">{children}</div>;
 }
 
 function TripBlockActions() {
@@ -128,29 +108,32 @@ function TripBlockActions() {
   const addChecklistToBlock = useSetAtom(addChecklistToBlockAtom);
 
   return (
-    <div className="mt-6 flex flex-wrap items-center gap-2 mx-8 pl-2 ">
+    <div className="mx-8 mt-6 space-y-3 pl-2">
       <AddPlaceInput blockId={block.id} />
-      <Button
-        type="button"
-        variant="outline"
-        size="lg"
-        className="rounded-sm py-6"
-        onClick={() => addNoteToBlock({ blockId: block.id })}
-      >
-        <FileText className="size-4" aria-hidden="true" />
-        Add notes
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="lg"
-        className="rounded-sm py-6"
-        onClick={() => addChecklistToBlock({ blockId: block.id })}
-      >
-        <CheckSquare className="size-4" aria-hidden="true" />
-        Add checklist
-      </Button>
-      <PremadeListPicker blockId={block.id} />
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="min-w-40 flex-1 rounded-sm border-sky-300 bg-sky-50 py-6 text-sky-700 hover:border-sky-400 hover:bg-sky-100 hover:text-sky-800 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-100 dark:hover:border-sky-300/50 dark:hover:bg-sky-400/20 dark:hover:text-sky-50"
+          onClick={() => addNoteToBlock({ blockId: block.id })}
+        >
+          <FileText className="size-4" aria-hidden="true" />
+          Add notes
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="min-w-40 flex-1 rounded-sm border-yellow-300 bg-yellow-50 py-6 text-yellow-700 hover:border-yellow-400 hover:bg-yellow-100 hover:text-yellow-800 dark:border-yellow-400/30 dark:bg-yellow-400/10 dark:text-yellow-100 dark:hover:border-yellow-300/50 dark:hover:bg-yellow-400/20 dark:hover:text-yellow-50"
+          onClick={() => addChecklistToBlock({ blockId: block.id })}
+        >
+          <CheckSquare className="size-4" aria-hidden="true" />
+          Add checklist
+        </Button>
+        <AddEvStationButton blockId={block.id} />
+        <PremadeListPicker blockId={block.id} />
+      </div>
     </div>
   );
 }

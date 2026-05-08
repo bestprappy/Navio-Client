@@ -129,6 +129,7 @@ export type TripBlockColorId =
 export type TripBlockData = {
   id: string;
   title: string;
+  date: string;
   colorId: TripBlockColorId;
   items: TripBlockItem[];
 };
