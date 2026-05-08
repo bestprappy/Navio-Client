@@ -5,9 +5,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import Map, {
   FullscreenControl,
+  Layer,
   type MapRef,
   Marker,
   NavigationControl,
+  Source,
 } from "react-map-gl/mapbox";
 import { Zap } from "lucide-react";
 
@@ -17,6 +19,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 import { getEvChargersNear } from "./_components/constants/charger.data";
 import { getTripBlockColorById } from "./_components/constants/trip-block-colors";
+import type { TripBlockData } from "./_components/constants/types";
 import { ChargerPreviewPanel } from "./_components/charger/charger-preview-panel";
 import {
   activeSearchAtom,
@@ -47,15 +50,43 @@ import {
 } from "./_components/overview/trip-builder.atoms";
 import { PlacePreviewPanel } from "./_components/place/place-preview-panel";
 import { TripPlacePreviewPanel } from "./_components/place/trip-place-preview-panel";
+import { useTripRoutes } from "./_components/routes/trip-route-query";
+import type {
+  RouteLineString,
+  RouteSegment,
+  RouteSegmentStatus,
+} from "./_components/routes/trip-route.types";
 
 type PlannerMapProps = {
   latitude: number;
   longitude: number;
 };
 
+type RouteFeature = {
+  type: "Feature";
+  properties: {
+    id: string;
+    status: RouteSegmentStatus;
+    routeColor: string;
+    fromName: string;
+    toName: string;
+    durationSeconds: number | null;
+    distanceMeters: number | null;
+  };
+  geometry: RouteLineString;
+};
+
+type RouteFeatureCollection = {
+  type: "FeatureCollection";
+  features: RouteFeature[];
+};
+
+const DEFAULT_ROUTE_COLOR = "#1976d2";
+
 export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
   const mapRef = useRef<MapRef>(null);
   const [mapError, setMapError] = useState<string | null>(null);
+  const tripRoutes = useTripRoutes();
   const activeSearch = useAtomValue(activeSearchAtom);
   const tripBlocks = useAtomValue(tripBlocksAtom);
   const selectedPlace = useAtomValue(selectedSearchPlaceAtom);
@@ -94,12 +125,26 @@ export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
           block.id,
           getTripBlockColorById(block.colorId),
         ]),
-      ),
+    ),
     [tripBlocks],
   );
+  const routeColorByBlockId = useRouteColorByBlockId(tripBlocks);
   const activeSearchColor = activeSearch
     ? blockColorById.get(activeSearch.blockId)
     : null;
+  const routeSegments = useMemo(
+    () => tripRoutes.data?.segments ?? [],
+    [tripRoutes.data?.segments],
+  );
+  const routeGeoJson = useMemo(
+    () => getRouteFeatureCollection(routeSegments, routeColorByBlockId),
+    [routeColorByBlockId, routeSegments],
+  );
+  const routeStatusMessage = tripRoutes.isFetching
+    ? "Calculating routes..."
+    : tripRoutes.isError
+      ? "Routes could not load."
+      : null;
 
   useEffect(() => {
     let isCancelled = false;
@@ -242,7 +287,7 @@ export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
         mapboxAccessToken={mapboxToken}
         initialViewState={{ latitude, longitude, zoom: 11 }}
         style={{ width: "100%", height: "100%" }}
-        mapStyle="mapbox://styles/mapbox/light-v11"
+        mapStyle="mapbox://styles/mapbox/streets-v12"
         onError={(event) => {
           console.error("Planner map failed to load.", {
             component: "PlannerMap",
@@ -254,6 +299,42 @@ export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
       >
         <NavigationControl position="top-right" />
         <FullscreenControl position="top-right" />
+
+        {routeSegments.length ? (
+          <Source id="trip-route" type="geojson" data={routeGeoJson}>
+            <Layer
+              id="trip-route-solid"
+              type="line"
+              source="trip-route"
+              filter={["==", ["get", "status"], "routed"]}
+              layout={{
+                "line-join": "round",
+                "line-cap": "round",
+              }}
+              paint={{
+                "line-color": ["get", "routeColor"],
+                "line-width": 5,
+                "line-opacity": 0.9,
+              }}
+            />
+            <Layer
+              id="trip-route-fallback"
+              type="line"
+              source="trip-route"
+              filter={["==", ["get", "status"], "fallback"]}
+              layout={{
+                "line-join": "round",
+                "line-cap": "round",
+              }}
+              paint={{
+                "line-color": ["get", "routeColor"],
+                "line-width": 4,
+                "line-opacity": 0.65,
+                "line-dasharray": [2, 2],
+              }}
+            />
+          </Source>
+        ) : null}
 
         {selectedTripPlaceMarkers.map((place) => {
           const isSelected = selectedTripPlace?.id === place.id;
@@ -418,9 +499,20 @@ export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
         })}
       </Map>
 
+      {routeStatusMessage ? (
+        <div className="absolute left-4 top-4 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md">
+          {routeStatusMessage}
+        </div>
+      ) : null}
+
       {selectedTripPlaceAnchors.length >= 2 &&
       (isLoadingEvChargers || evChargerError) ? (
-        <div className="absolute left-4 top-4 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md">
+        <div
+          className={cn(
+            "absolute left-4 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md",
+            routeStatusMessage ? "top-16" : "top-4",
+          )}
+        >
           {isLoadingEvChargers ? "Loading EV stations..." : evChargerError}
         </div>
       ) : null}
@@ -451,4 +543,77 @@ export function PlannerMap({ latitude, longitude }: PlannerMapProps) {
       ) : null}
     </div>
   );
+}
+
+function getRouteFeatureCollection(
+  segments: RouteSegment[],
+  routeColorByBlockId: globalThis.Map<string, string>,
+): RouteFeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: segments.map((segment) => ({
+      type: "Feature",
+      properties: {
+        id: segment.id,
+        status: segment.status,
+        routeColor:
+          routeColorByBlockId.get(segment.blockId) ?? DEFAULT_ROUTE_COLOR,
+        fromName: segment.fromName,
+        toName: segment.toName,
+        durationSeconds: segment.durationSeconds ?? null,
+        distanceMeters: segment.distanceMeters ?? null,
+      },
+      geometry: segment.geometry,
+    })),
+  };
+}
+
+function useRouteColorByBlockId(
+  tripBlocks: TripBlockData[],
+): globalThis.Map<string, string> {
+  const [colorByBlockId, setColorByBlockId] = useState<
+    globalThis.Map<string, string>
+  >(() => new globalThis.Map());
+
+  useEffect(() => {
+    function syncColors() {
+      const styles = window.getComputedStyle(document.documentElement);
+      const nextColors = new globalThis.Map<string, string>();
+
+      tripBlocks.forEach((block) => {
+        const blockColor = getTripBlockColorById(block.colorId);
+        nextColors.set(
+          block.id,
+          resolveCssColor(blockColor.value, styles) ?? DEFAULT_ROUTE_COLOR,
+        );
+      });
+
+      setColorByBlockId(nextColors);
+    }
+
+    syncColors();
+
+    const observer = new MutationObserver(syncColors);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, [tripBlocks]);
+
+  return colorByBlockId;
+}
+
+function resolveCssColor(
+  color: string,
+  styles: CSSStyleDeclaration,
+): string | null {
+  const variableMatch = color.match(/^var\((--[^)]+)\)$/);
+
+  if (!variableMatch?.[1]) {
+    return color;
+  }
+
+  return styles.getPropertyValue(variableMatch[1]).trim() || null;
 }

@@ -83,19 +83,20 @@ export default function SidebarWrapper() {
             collapsed={collapsed}
           />
           <SidebarItem
-            title="Planner"
-            href="/planner"
-            icon={<Map className="size-5" />}
-            isActive={isRouteActive("/planner")}
-            collapsed={collapsed}
-          />
-          <SidebarItem
             title="Explore"
             href="/explore"
             icon={<Compass className="size-5" />}
             isActive={isRouteActive("/explore")}
             collapsed={collapsed}
           />
+          <SidebarItem
+            title="Planner"
+            href="/planner"
+            icon={<Map className="size-5" />}
+            isActive={isRouteActive("/planner")}
+            collapsed={collapsed}
+          />
+
           <SidebarItem
             title="Guides"
             href="/guides/new"
