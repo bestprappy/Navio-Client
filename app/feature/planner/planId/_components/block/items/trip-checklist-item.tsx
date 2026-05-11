@@ -14,6 +14,7 @@ import {
   updateChecklistSubItemAtom,
   updateChecklistTitleAtom,
 } from "../../overview/trip-builder.atoms";
+import { PremadeListPicker } from "../../premade/premade-list-picker";
 
 type TripChecklistItemProps = {
   blockId: string;
@@ -106,16 +107,19 @@ export function TripChecklistItem({ blockId, item }: TripChecklistItemProps) {
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-sm"
-              onClick={() => addChecklistSubItem({ blockId, itemId: item.id })}
-            >
-              <Plus className="size-4" aria-hidden="true" />
-              Add item
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-sm"
+                onClick={() => addChecklistSubItem({ blockId, itemId: item.id })}
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                Add item
+              </Button>
+              <PremadeListPicker blockId={blockId} itemId={item.id} />
+            </div>
 
             <Button
               type="button"

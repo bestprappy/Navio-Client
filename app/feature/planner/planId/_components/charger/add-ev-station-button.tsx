@@ -8,8 +8,11 @@ import { Button } from "@/components/ui/button";
 import { searchEvChargers } from "../constants/charger.data";
 import { getDistanceKm } from "../constants/place.data";
 import { isEvChargerPlaceItem, isPlaceItem } from "../constants/types";
+import { activeEvCarAtom } from "../garage/garage.atoms";
+import { isCompatible } from "../garage/ev-calculator";
 import {
   activeBlockIdAtom,
+  activePlannerSidePanelAtom,
   selectEvChargerAtom,
   setEvChargerResultsAtom,
   tripBlocksAtom,
@@ -22,8 +25,10 @@ type AddEvStationButtonProps = {
 export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
   const blocks = useAtomValue(tripBlocksAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
+  const setActivePlannerSidePanel = useSetAtom(activePlannerSidePanelAtom);
   const setEvChargerResults = useSetAtom(setEvChargerResultsAtom);
   const selectEvCharger = useSetAtom(selectEvChargerAtom);
+  const activeEvCar = useAtomValue(activeEvCarAtom);
 
   const block = blocks.find((b) => b.id === blockId);
   const placeAnchors = (block?.items ?? [])
@@ -66,10 +71,24 @@ export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
           distanceKm: minDistance === Infinity ? 0 : minDistance,
         };
       })
-      .sort((a, b) => a.distanceKm - b.distanceKm);
+      .sort((a, b) => {
+        const compatibleA = activeEvCar
+          ? isCompatible(activeEvCar.connectorTypes, a.charger.connectorTypes)
+          : true;
+        const compatibleB = activeEvCar
+          ? isCompatible(activeEvCar.connectorTypes, b.charger.connectorTypes)
+          : true;
+
+        if (compatibleA !== compatibleB) {
+          return compatibleA ? -1 : 1;
+        }
+
+        return a.distanceKm - b.distanceKm;
+      });
 
     setActiveBlockId(blockId);
     setEvChargerResults(results);
+    setActivePlannerSidePanel({ type: "ev-stations", blockId });
 
     const firstCharger = results[0]?.charger;
     if (firstCharger) {

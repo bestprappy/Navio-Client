@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
-import { CalendarPlus, CalendarIcon } from "lucide-react";
+import { CalendarIcon, CalendarPlus } from "lucide-react";
 import { addDays, format, isAfter, parseISO } from "date-fns";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 
@@ -22,6 +22,8 @@ import {
   tripDateRangeAtom,
 } from "../overview/trip-builder.atoms";
 import { TripBlock } from "../block/trip-block";
+import { DayRouteOverview } from "../garage/day-route-overview";
+import { EmptyItineraryCallout } from "./empty-itinerary-callout";
 
 function getNextAvailableBlockDate(
   from: Date,
@@ -39,13 +41,25 @@ function getNextAvailableBlockDate(
   return null;
 }
 
-export function ItinerarySection() {
+type ItinerarySectionProps = {
+  destinationName: string;
+  latitude: number;
+  longitude: number;
+};
+
+export function ItinerarySection({
+  destinationName,
+  latitude,
+  longitude,
+}: ItinerarySectionProps) {
   const blocks = useAtomValue(tripBlocksAtom);
   const [tripDateRange, setTripDateRange] = useAtom(tripDateRangeAtom);
   const addBlocksForDates = useSetAtom(addTripBlocksForDatesAtom);
   const [isEditingDates, setIsEditingDates] = useState(false);
 
-  const tripFrom = tripDateRange.from ? parseISO(tripDateRange.from) : undefined;
+  const tripFrom = tripDateRange.from
+    ? parseISO(tripDateRange.from)
+    : undefined;
   const tripTo = tripDateRange.to ? parseISO(tripDateRange.to) : undefined;
   const pickerValue: DateRange | undefined = tripFrom
     ? { from: tripFrom, to: tripTo }
@@ -79,11 +93,12 @@ export function ItinerarySection() {
         ? format(tripFrom, "MMM d")
         : null;
 
-  const addBlockTitle = !tripFrom || !tripTo
-    ? "Choose a trip date range first"
-    : nextBlockDate
-      ? `Add block for ${format(parseISO(nextBlockDate), "MMM d")}`
-      : "Every date in this trip already has a block";
+  const addBlockTitle =
+    !tripFrom || !tripTo
+      ? "Choose a trip date range first"
+      : nextBlockDate
+        ? `Add block for ${format(parseISO(nextBlockDate), "MMM d")}`
+        : "Every date in this trip already has a block";
 
   return (
     <section className="px-4 py-4 ">
@@ -117,7 +132,10 @@ export function ItinerarySection() {
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
                 >
-                  <CalendarIcon className="size-3.5 shrink-0" aria-hidden="true" />
+                  <CalendarIcon
+                    className="size-3.5 shrink-0"
+                    aria-hidden="true"
+                  />
                   {tripDateLabel}
                 </button>
               )}
@@ -144,17 +162,37 @@ export function ItinerarySection() {
 
           <AccordionContent className="pt-0">
             <div className="space-y-4 pb-10 pt-2">
-              {blocks.map((block) => (
-                <TripBlock.Root key={block.id} block={block} className="mb-12">
-                  <TripBlock.Header>
-                    <TripBlock.Title />
-                  </TripBlock.Header>
-                  <TripBlock.Content>
-                    <TripBlock.Items />
-                    <TripBlock.Actions />
-                  </TripBlock.Content>
-                </TripBlock.Root>
-              ))}
+              {blocks.length === 0 ? (
+                <EmptyItineraryCallout
+                  nextBlockDate={nextBlockDate}
+                  tripDateLabel={tripDateLabel}
+                  onAddBlock={handleAddBlock}
+                  onChooseDates={() => setIsEditingDates(true)}
+                />
+              ) : (
+                blocks.map((block, index) => (
+                  <TripBlock.Root
+                    key={block.id}
+                    block={block}
+                    className="mb-12"
+                  >
+                    <TripBlock.Header>
+                      <TripBlock.Title />
+                    </TripBlock.Header>
+                    <TripBlock.Content>
+                      <TripBlock.Items />
+                      <DayRouteOverview blockId={block.id} blockIndex={index} />
+                      <TripBlock.Actions
+                        placeSearchBias={{
+                          label: destinationName,
+                          lat: latitude,
+                          lng: longitude,
+                        }}
+                      />
+                    </TripBlock.Content>
+                  </TripBlock.Root>
+                ))
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>

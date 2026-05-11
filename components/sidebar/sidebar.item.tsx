@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
+import type { MouseEventHandler, ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,7 @@ type SidebarItemProps = {
   iconClassName?: string;
   isActive?: boolean;
   collapsed?: boolean;
+  onClick?: MouseEventHandler<HTMLAnchorElement>;
 };
 
 export default function SidebarItem({
@@ -21,12 +22,14 @@ export default function SidebarItem({
   icon,
   iconClassName,
   isActive = false,
+  onClick,
   title,
   collapsed = false,
 }: SidebarItemProps) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       aria-current={isActive ? "page" : undefined}
       title={collapsed ? title : undefined}
       className={cn(

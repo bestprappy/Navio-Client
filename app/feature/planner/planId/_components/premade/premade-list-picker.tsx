@@ -8,13 +8,17 @@ import { useSetAtom } from "jotai";
 import { Button } from "@/components/ui/button";
 
 import { mockPremadeLists } from "../constants/trip.data";
-import { addPremadeListToBlockAtom } from "../overview/trip-builder.atoms";
+import {
+  addPremadeListToBlockAtom,
+  addPremadeListToChecklistAtom,
+} from "../overview/trip-builder.atoms";
 
 type PremadeListPickerProps = {
   blockId: string;
+  itemId?: string;
 };
 
-export function PremadeListPicker({ blockId }: PremadeListPickerProps) {
+export function PremadeListPicker({ blockId, itemId }: PremadeListPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<{
     top: number;
@@ -23,6 +27,7 @@ export function PremadeListPicker({ blockId }: PremadeListPickerProps) {
   } | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const addPremadeListToBlock = useSetAtom(addPremadeListToBlockAtom);
+  const addPremadeListToChecklist = useSetAtom(addPremadeListToChecklistAtom);
 
   useEffect(() => {
     if (!isOpen || !wrapperRef.current) return;
@@ -55,7 +60,7 @@ export function PremadeListPicker({ blockId }: PremadeListPickerProps) {
   return (
     <div
       ref={wrapperRef}
-      className="relative min-w-40 flex-1"
+      className={itemId ? "relative" : "relative min-w-40 flex-1"}
       onKeyDown={handleKeyDown}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) {
@@ -66,8 +71,12 @@ export function PremadeListPicker({ blockId }: PremadeListPickerProps) {
       <Button
         type="button"
         variant="outline"
-        size="lg"
-        className="w-full rounded-sm border-violet-300 bg-violet-50 py-6 text-violet-700 hover:border-violet-400 hover:bg-violet-100 hover:text-violet-800 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-100 dark:hover:border-violet-300/50 dark:hover:bg-violet-400/20 dark:hover:text-violet-50"
+        size={itemId ? "sm" : "lg"}
+        className={
+          itemId
+            ? "rounded-sm border-violet-300 bg-violet-50 text-violet-700 hover:border-violet-400 hover:bg-violet-100 hover:text-violet-800 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-100 dark:hover:border-violet-300/50 dark:hover:bg-violet-400/20 dark:hover:text-violet-50"
+            : "w-full rounded-sm border-violet-300 bg-violet-50 py-6 text-violet-700 hover:border-violet-400 hover:bg-violet-100 hover:text-violet-800 dark:border-violet-400/30 dark:bg-violet-400/10 dark:text-violet-100 dark:hover:border-violet-300/50 dark:hover:bg-violet-400/20 dark:hover:text-violet-50"
+        }
         aria-expanded={isOpen}
         aria-haspopup="menu"
         onClick={() => setIsOpen((current) => !current)}
@@ -100,7 +109,15 @@ export function PremadeListPicker({ blockId }: PremadeListPickerProps) {
                 role="menuitem"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => {
-                  addPremadeListToBlock({ blockId, listId: list.id });
+                  if (itemId) {
+                    addPremadeListToChecklist({
+                      blockId,
+                      itemId,
+                      listId: list.id,
+                    });
+                  } else {
+                    addPremadeListToBlock({ blockId, listId: list.id });
+                  }
                   setIsOpen(false);
                 }}
                 className="flex w-full items-start gap-3 rounded-sm px-3 py-2 text-left transition-colors hover:bg-muted focus:outline-none focus:ring-2 focus:ring-ring/30"

@@ -1,8 +1,11 @@
 import { atom } from "jotai";
 
-import { getDistanceKm, getPlaceResults } from "../constants/place.data";
+import { currencyOptions } from "../budget/budget.data";
+import type { CurrencyOption, ExpenseItem } from "../budget/budget.types";
+import { getDistanceKm } from "../constants/place.data";
 import { getTripBlockColorByIndex } from "../constants/trip-block-colors";
 import { mockPremadeLists } from "../constants/trip.data";
+import type { AutoEvChargerInsertion } from "../garage/ev-calculator";
 import {
   isEvChargerPlaceItem,
   isPlaceItem,
@@ -11,7 +14,7 @@ import {
   type ChecklistSubItem,
   type EvCharger,
   type PlaceItem,
-  type PlaceSuggestion,
+  type PlaceSearchResult,
   type PremadeList,
   type TripBlockData,
   type TripBlockColorId,
@@ -20,6 +23,12 @@ import {
 
 type AddPremadeListPayload = {
   blockId: string;
+  listId: string;
+};
+
+type AddPremadeListToChecklistPayload = {
+  blockId: string;
+  itemId: string;
   listId: string;
 };
 
@@ -56,7 +65,7 @@ type UpdateNotePayload = {
 type UpdatePlacePayload = {
   blockId: string;
   itemId: string;
-  updates: Partial<Pick<PlaceItem, "isVisited" | "notes">>;
+  updates: Partial<Pick<PlaceItem, "isVisited" | "notes" | "time" | "timeEnd" | "cost">>;
 };
 
 type UpdateChecklistTitlePayload = {
@@ -83,7 +92,10 @@ type ReorderBlockItemsPayload = {
 
 type StartPlaceSearchPayload = {
   blockId: string;
-  suggestion: PlaceSuggestion;
+  result?: PlaceSearchResult;
+  results?: PlaceSearchResult[];
+  query?: string;
+  selectedIndex?: number;
 };
 
 type SelectSearchResultPayload = {
@@ -103,6 +115,11 @@ type AddEvChargerToBlockPayload = {
   charger: EvCharger;
 };
 
+type AutoAddEvChargersToBlockPayload = {
+  blockId: string;
+  insertions: AutoEvChargerInsertion[];
+};
+
 export type TripPlaceAnchor = PlaceItem & {
   blockId: string;
   blockTitle: string;
@@ -116,6 +133,11 @@ export type EvChargerMapResult = {
   targetBlockId: string;
   targetPlaceId: string;
   distanceKm: number;
+};
+
+export type ActivePlannerSidePanel = {
+  type: "ev-stations";
+  blockId: string;
 };
 
 function createClientId(prefix: string): string {
@@ -218,6 +240,7 @@ function getEstimatedChargeMinutes(maxKw: number): number {
 function evChargerToPlaceItem(
   charger: EvCharger,
   placeId: string,
+  estimatedChargeMinutes = getEstimatedChargeMinutes(charger.maxKw),
 ): PlaceItem {
   return {
     id: placeId,
@@ -230,6 +253,7 @@ function evChargerToPlaceItem(
     lat: charger.location.lat,
     lng: charger.location.lng,
     rating: charger.ratingAvg,
+    reviewCount: charger.ratingCount,
     evCharger: {
       connectorTypes: charger.connectorTypes,
       maxKw: charger.maxKw,
@@ -237,7 +261,7 @@ function evChargerToPlaceItem(
       availableConnectors: charger.availableConnectors,
       priceText: charger.priceText,
       openingHoursSummary: getOpeningHoursSummary(charger.openingHours),
-      estimatedChargeMinutes: getEstimatedChargeMinutes(charger.maxKw),
+      estimatedChargeMinutes,
       operatorName: charger.operatorName,
     },
     isVisited: false,
@@ -281,8 +305,12 @@ function getTripPlaceAnchors(
 export type TripDateRange = { from?: string; to?: string };
 export const tripDateRangeAtom = atom<TripDateRange>({});
 export const tripBlocksAtom = atom<TripBlockData[]>([]);
+export const tripCurrencyAtom = atom<CurrencyOption>(currencyOptions[0]);
+export const tripExpensesAtom = atom<ExpenseItem[]>([]);
 export const activeBlockIdAtom = atom<string | null>(null);
 export const activeSearchAtom = atom<ActiveSearch | null>(null);
+export const activePlannerSidePanelAtom =
+  atom<ActivePlannerSidePanel | null>(null);
 export const openBlockIdsAtom = atom<string[]>([]);
 export const evChargerResultsAtom = atom<EvChargerMapResult[]>([]);
 export const selectedEvChargerIdAtom = atom<string | null>(null);
@@ -420,6 +448,7 @@ export const clearEvChargerResultsAtom = atom(null, (_get, set) => {
   set(selectedEvChargerIdAtom, null);
   set(evChargerLoadingAtom, false);
   set(evChargerErrorAtom, null);
+  set(activePlannerSidePanelAtom, null);
 });
 
 export const selectTripPlaceAtom = atom(
@@ -661,6 +690,49 @@ export const addPremadeListToBlockAtom = atom(
   },
 );
 
+export const addPremadeListToChecklistAtom = atom(
+  null,
+  (get, set, payload: AddPremadeListToChecklistPayload) => {
+    const selectedList = mockPremadeLists.find(
+      (list) => list.id === payload.listId,
+    );
+
+    if (!selectedList) {
+      console.error("Premade list was not found.", {
+        component: "TripBuilder",
+        operation: "addPremadeListToChecklist",
+        listId: payload.listId,
+      });
+      return;
+    }
+
+    const newSubItems = selectedList.items.map((label) => ({
+      id: createClientId("checklist-item"),
+      label,
+      checked: false,
+    }));
+
+    set(
+      tripBlocksAtom,
+      updateItem(
+        get(tripBlocksAtom),
+        payload.blockId,
+        payload.itemId,
+        (item) => {
+          if (item.type !== "checklist") return item;
+          const hasTitle =
+            item.title.trim() !== "" && item.title !== "Add title";
+          return {
+            ...item,
+            title: hasTitle ? item.title : selectedList.title,
+            items: [...item.items, ...newSubItems],
+          };
+        },
+      ),
+    );
+  },
+);
+
 export const removeItemFromBlockAtom = atom(
   null,
   (get, set, payload: RemoveItemPayload) => {
@@ -670,6 +742,9 @@ export const removeItemFromBlockAtom = atom(
         ...block,
         items: block.items.filter((item) => item.id !== payload.itemId),
       })),
+    );
+    set(tripExpensesAtom, (prev) =>
+      prev.filter((e) => e.id !== `place-cost-${payload.itemId}`),
     );
   },
 );
@@ -826,17 +901,26 @@ export const reorderBlockItemsAtom = atom(
 
 export const startPlaceSearchAtom = atom(
   null,
-  (get, set, payload: StartPlaceSearchPayload) => {
-    const results = getPlaceResults(payload.suggestion.searchKey);
+  (_get, set, payload: StartPlaceSearchPayload) => {
+    const results = payload.results ?? (payload.result ? [payload.result] : []);
+
+    if (!results.length) {
+      return;
+    }
+
+    const selectedIndex = Math.min(
+      Math.max(payload.selectedIndex ?? 0, 0),
+      results.length - 1,
+    );
 
     set(activeBlockIdAtom, payload.blockId);
     set(selectedEvChargerIdAtom, null);
     set(selectedTripPlaceItemIdAtom, null);
     set(activeSearchAtom, {
       blockId: payload.blockId,
-      query: payload.suggestion.searchKey,
+      query: payload.query ?? payload.result?.name ?? results[0]?.name ?? "",
       results,
-      selectedIndex: 0,
+      selectedIndex,
     });
   },
 );
@@ -892,6 +976,19 @@ export const closeActiveSearchAtom = atom(null, (_get, set) => {
   set(activeSearchAtom, null);
 });
 
+export const closeSelectedSearchPlaceAtom = atom(null, (get, set) => {
+  const activeSearch = get(activeSearchAtom);
+
+  if (!activeSearch) {
+    return;
+  }
+
+  set(activeSearchAtom, {
+    ...activeSearch,
+    selectedIndex: -1,
+  });
+});
+
 export const addSelectedPlaceToTripAtom = atom(null, (get, set) => {
   const activeSearch = get(activeSearchAtom);
   const selectedPlace = get(selectedSearchPlaceAtom);
@@ -933,6 +1030,7 @@ export const addSelectedPlaceToTripAtom = atom(null, (get, set) => {
             lat: selectedPlace.lat,
             lng: selectedPlace.lng,
             rating: selectedPlace.rating,
+            reviewCount: selectedPlace.reviewCount,
             imageUrl: selectedPlace.imageUrl,
             isVisited: false,
           },
@@ -979,6 +1077,105 @@ export const addEvChargerToBlockAtom = atom(
     set(activeSearchAtom, null);
     set(selectedEvChargerIdAtom, null);
     set(selectedTripPlaceItemIdAtom, nextPlaceId);
+  },
+);
+
+export const autoAddEvChargersToBlockAtom = atom(
+  null,
+  (get, set, payload: AutoAddEvChargersToBlockPayload) => {
+    if (payload.insertions.length === 0) {
+      return;
+    }
+
+    const targetBlock = get(tripBlocksAtom).find(
+      (block) => block.id === payload.blockId,
+    );
+
+    if (!targetBlock) {
+      return;
+    }
+
+    const validBeforeItemIds = new Set(targetBlock.items.map((item) => item.id));
+    const existingChargerIds = new Set(
+      targetBlock.items
+        .filter(isPlaceItem)
+        .filter(isEvChargerPlaceItem)
+        .map((item) => item.placeId.replace("ev-charger:", "")),
+    );
+    const queuedChargerIds = new Set<string>();
+    const insertionsByBeforeItemId = new Map<
+      string,
+      AutoEvChargerInsertion[]
+    >();
+
+    for (const insertion of payload.insertions) {
+      if (
+        !validBeforeItemIds.has(insertion.beforeItemId) ||
+        existingChargerIds.has(insertion.charger.id) ||
+        queuedChargerIds.has(insertion.charger.id)
+      ) {
+        continue;
+      }
+
+      queuedChargerIds.add(insertion.charger.id);
+      const currentInsertions =
+        insertionsByBeforeItemId.get(insertion.beforeItemId) ?? [];
+      insertionsByBeforeItemId.set(insertion.beforeItemId, [
+        ...currentInsertions,
+        insertion,
+      ]);
+    }
+
+    if (insertionsByBeforeItemId.size === 0) {
+      return;
+    }
+
+    let firstInsertedPlaceId: string | null = null;
+
+    set(
+      tripBlocksAtom,
+      updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
+        ...block,
+        items: block.items.flatMap((item) => {
+          const insertions = insertionsByBeforeItemId.get(item.id);
+
+          if (!insertions?.length) {
+            return [item];
+          }
+
+          const chargerItems = [...insertions]
+            .sort((a, b) => a.sequence - b.sequence)
+            .map((insertion) => {
+              const nextPlaceId = createClientId("place");
+
+              if (!firstInsertedPlaceId) {
+                firstInsertedPlaceId = nextPlaceId;
+              }
+
+              return evChargerToPlaceItem(
+                insertion.charger,
+                nextPlaceId,
+                insertion.estimatedChargeMinutes,
+              );
+            });
+
+          return [...chargerItems, item];
+        }),
+      })),
+    );
+
+    set(activeSearchAtom, null);
+    set(selectedEvChargerIdAtom, null);
+    set(activeBlockIdAtom, payload.blockId);
+    set(openBlockIdsAtom, (openIds) =>
+      openIds.includes(payload.blockId)
+        ? openIds
+        : [...openIds, payload.blockId],
+    );
+
+    if (firstInsertedPlaceId) {
+      set(selectedTripPlaceItemIdAtom, firstInsertedPlaceId);
+    }
   },
 );
 

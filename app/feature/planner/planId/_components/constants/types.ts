@@ -108,6 +108,36 @@ export type PlaceSuggestion = {
   searchKey: string;
 };
 
+export type PlaceProvider = "GOOGLE" | "MAPBOX";
+
+export type PlaceAutocompleteSuggestion = {
+  provider: PlaceProvider;
+  providerPlaceId: string;
+  mainText: string;
+  secondaryText: string;
+  types: string[];
+  sessionToken?: string;
+  place?: PlaceSearchResult;
+};
+
+export type PlaceSearchResult = {
+  id: string;
+  provider: PlaceProvider;
+  providerPlaceId: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  phone?: string;
+  website?: string;
+  imageUrl?: string;
+  openingHours?: string;
+  description?: string;
+  rating?: number;
+  reviewCount?: number;
+  category?: string;
+};
+
 export type TripBlockColorId =
   | "teal"
   | "cyan"
@@ -146,9 +176,13 @@ export type PlaceItem = {
   lat: number;
   lng: number;
   rating?: number;
+  reviewCount?: number;
   imageUrl?: string;
   notes?: string;
   isVisited?: boolean;
+  time?: string;
+  timeEnd?: string;
+  cost?: number;
   evCharger?: PlaceItemEvChargerDetails;
 };
 
@@ -180,7 +214,7 @@ export type PremadeList = {
 export type ActiveSearch = {
   blockId: string;
   query: string;
-  results: MockPlace[];
+  results: PlaceSearchResult[];
   selectedIndex: number;
 };
 

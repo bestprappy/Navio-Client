@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 
-import { getDestinationById } from "../../feature/planner/_components/data";
 import { PlannerDetail } from "../../feature/planner/planId/planner-detail";
 
 type PlannerDetailPageProps = {
@@ -12,6 +11,8 @@ type PlannerDetailPageProps = {
     destinationName?: string;
     from?: string;
     to?: string;
+    lat?: string;
+    lng?: string;
   }>;
 };
 
@@ -25,23 +26,24 @@ export default async function PlannerDetailPage({
   searchParams,
 }: PlannerDetailPageProps) {
   await params;
-  const { destinationId, destinationName, from, to } = await searchParams;
+  const { destinationName, from, to, lat, lng } = await searchParams;
 
-  const destination = getDestinationById(destinationId);
-  const resolvedName =
-    destinationName ?? destination?.name ?? "your destination";
-  const coordinates = destination?.coordinates ?? {
-    latitude: 13.7563,
-    longitude: 100.5018,
-  };
+  const latitude =
+    lat !== undefined && Number.isFinite(Number(lat))
+      ? Number(lat)
+      : 13.7563;
+  const longitude =
+    lng !== undefined && Number.isFinite(Number(lng))
+      ? Number(lng)
+      : 100.5018;
 
   return (
     <PlannerDetail
-      destinationName={resolvedName}
+      destinationName={destinationName ?? "your destination"}
       from={from}
       to={to}
-      latitude={coordinates.latitude}
-      longitude={coordinates.longitude}
+      latitude={latitude}
+      longitude={longitude}
     />
   );
 }

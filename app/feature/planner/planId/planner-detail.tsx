@@ -1,10 +1,12 @@
 import { ExploreSection } from "./_components/explore/explore-section";
+import { GarageSection } from "./_components/garage/garage-section";
+import { DayNavSidebar } from "./_components/itinerary/day-nav-sidebar";
 import { ItinerarySection } from "./_components/itinerary/itinerary-section";
-
 import { BudgetSection } from "./_components/budget/budget-section";
 import { TripBuilderErrorBoundary } from "./_components/overview/trip-builder-error-boundary";
 import { TripHero } from "./_components/overview/trip-hero";
 import { TripInfoCard } from "./_components/overview/trip-info-card";
+import { PlannerSidePanelHost } from "./_components/layout/planner-side-panel-host";
 import { PlannerMap } from "./planner-map";
 
 type PlannerDetailProps = {
@@ -23,36 +25,51 @@ export function PlannerDetail({
   longitude,
 }: PlannerDetailProps) {
   return (
-    <div className="flex h-full">
-      {/* Left: scrollable planner panel */}
-      <div className="scrollbar-hide w-[40%] overflow-y-auto border-r border-border/40">
-        <TripHero destinationName={destinationName} />
-        <TripInfoCard
-          destinationName={destinationName}
-          from={from}
-          to={to}
-          members={[{ id: "1", name: "You" }]}
-        />
-        {/* Explore Section */}
-        <ExploreSection
-          destinationName={destinationName}
-          distanceText={`Nearby ${destinationName}`}
-        />
-        {/* Itinerary Section */}
-        <TripBuilderErrorBoundary>
-          <ItinerarySection />
-        </TripBuilderErrorBoundary>
+    <div className="flex h-full min-w-0">
+      {/* Left: day nav + scrollable planner panel */}
+      <div className="flex w-[38%] border-r border-border/40">
+        <DayNavSidebar />
 
-        {/* Budget Sections */}
-        <BudgetSection />
+        <div
+          id="planner-scroll-panel"
+          className="scrollbar-hide flex-1 overflow-y-auto"
+        >
+          <TripHero destinationName={destinationName} />
+          <TripInfoCard
+            destinationName={destinationName}
+            from={from}
+            to={to}
+            members={[{ id: "1", name: "You" }]}
+          />
+          <ExploreSection
+            destinationName={destinationName}
+            distanceText={`Nearby ${destinationName}`}
+          />
+
+          <TripBuilderErrorBoundary>
+            <GarageSection />
+          </TripBuilderErrorBoundary>
+
+          <TripBuilderErrorBoundary>
+            <ItinerarySection
+              destinationName={destinationName}
+              latitude={latitude}
+              longitude={longitude}
+            />
+          </TripBuilderErrorBoundary>
+          <BudgetSection />
+        </div>
       </div>
 
-      {/* Right: full-height map */}
-      <div className="flex-1">
+      {/* Center: full-height map */}
+      <div className="min-w-0 flex-1">
         <TripBuilderErrorBoundary>
           <PlannerMap latitude={latitude} longitude={longitude} />
         </TripBuilderErrorBoundary>
       </div>
+
+      {/* Right: EV side panel — pushes map when open */}
+      <PlannerSidePanelHost />
     </div>
   );
 }

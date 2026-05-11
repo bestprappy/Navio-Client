@@ -21,6 +21,22 @@ type TripPlaceCardProps = {
   position: number;
 };
 
+function formatReviewCount(count: number): string {
+  return new Intl.NumberFormat("en", {
+    notation: count >= 10_000 ? "compact" : "standard",
+    maximumFractionDigits: 1,
+  }).format(count);
+}
+
+function isGooglePlacePhoto(imageUrl?: string): boolean {
+  return Boolean(
+    imageUrl &&
+      (imageUrl.includes("googleusercontent.com") ||
+        imageUrl.includes("places.googleapis.com") ||
+        imageUrl.includes("maps.googleapis.com")),
+  );
+}
+
 export function TripPlaceCard({ blockId, item, position }: TripPlaceCardProps) {
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const removeItemFromBlock = useSetAtom(removeItemFromBlockAtom);
@@ -46,6 +62,7 @@ export function TripPlaceCard({ blockId, item, position }: TripPlaceCardProps) {
           alt=""
           width={640}
           height={240}
+          unoptimized={isGooglePlacePhoto(item.imageUrl)}
           className="h-32 w-full object-cover"
         />
       ) : null}
@@ -67,6 +84,16 @@ export function TripPlaceCard({ blockId, item, position }: TripPlaceCardProps) {
                     aria-hidden="true"
                   />
                   {item.rating.toFixed(1)}
+                  {item.reviewCount ? (
+                    <span className="text-muted-foreground">
+                      ({formatReviewCount(item.reviewCount)})
+                    </span>
+                  ) : null}
+                </span>
+              ) : null}
+              {item.description ? (
+                <span className="inline-flex items-center rounded-sm bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+                  {item.description}
                 </span>
               ) : null}
             </div>
@@ -77,12 +104,6 @@ export function TripPlaceCard({ blockId, item, position }: TripPlaceCardProps) {
             </p>
           </div>
         </div>
-
-        {item.description ? (
-          <p className="rounded-sm bg-muted/60 p-3 text-sm leading-6 text-muted-foreground">
-            From the web: {item.description}
-          </p>
-        ) : null}
 
         <textarea
           value={item.notes ?? ""}

@@ -2,14 +2,13 @@
 
 import { type FormEvent, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { useAtomValue } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 
-import { selectedTripPlacesAtom } from "../overview/trip-builder.atoms";
-import { currencyOptions, expenseCategories, initialExpenses } from "./budget.data";
+import { selectedTripPlacesAtom, tripCurrencyAtom, tripExpensesAtom } from "../overview/trip-builder.atoms";
+import { expenseCategories } from "./budget.data";
 import { createClientId } from "./budget.utils";
 import type {
   BudgetModal,
-  CurrencyOption,
   ExpenseCategory,
   ExpenseItem,
 } from "./budget.types";
@@ -17,10 +16,10 @@ import type {
 export function useBudget() {
   const tripPlaces = useAtomValue(selectedTripPlacesAtom);
   const [activeModal, setActiveModal] = useState<BudgetModal | null>(null);
-  const [currency, setCurrency] = useState<CurrencyOption>(currencyOptions[0]);
+  const [currency, setCurrency] = useAtom(tripCurrencyAtom);
   const [budget, setBudget] = useState(0);
   const [draftBudget, setDraftBudget] = useState("0.00");
-  const [expenses, setExpenses] = useState<ExpenseItem[]>(initialExpenses);
+  const [expenses, setExpenses] = useAtom(tripExpensesAtom);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseName, setExpenseName] = useState("");

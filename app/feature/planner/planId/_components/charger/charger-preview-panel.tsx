@@ -1,6 +1,6 @@
 "use client";
 
-import { BatteryCharging, MapPin, Star, X, Zap } from "lucide-react";
+import { AlertTriangle, BatteryCharging, MapPin, Star, X, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +9,7 @@ import type { EvChargerMapResult } from "../overview/trip-builder.atoms";
 type ChargerPreviewPanelProps = {
   result: EvChargerMapResult;
   isAdded: boolean;
+  isCompatible?: boolean;
   onAddToTrip: () => void;
   onClose: () => void;
 };
@@ -21,6 +22,7 @@ function getOpeningHoursSummary(openingHours: Record<string, unknown>) {
 export function ChargerPreviewPanel({
   result,
   isAdded,
+  isCompatible = true,
   onAddToTrip,
   onClose,
 }: ChargerPreviewPanelProps) {
@@ -47,6 +49,12 @@ export function ChargerPreviewPanel({
           {charger.stale ? (
             <span className="rounded-sm bg-destructive/10 px-2 py-1 text-xs font-semibold text-destructive">
               Stale
+            </span>
+          ) : null}
+          {!isCompatible ? (
+            <span className="inline-flex items-center gap-1 rounded-sm bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">
+              <AlertTriangle className="size-3.5" aria-hidden="true" />
+              Connector mismatch
             </span>
           ) : null}
         </div>
@@ -119,9 +127,14 @@ export function ChargerPreviewPanel({
           size="sm"
           className="rounded-sm"
           onClick={onAddToTrip}
-          disabled={isAdded}
+          disabled={isAdded || !isCompatible}
         >
-          {isAdded ? (
+          {!isCompatible ? (
+            <>
+              <AlertTriangle className="size-3.5" aria-hidden="true" />
+              Not compatible
+            </>
+          ) : isAdded ? (
             "Added"
           ) : (
             <>

@@ -6,41 +6,78 @@ import {
   type ReactNode,
   useCallback,
   useContext,
+  useEffect,
   useId,
   useMemo,
+  useRef,
+  useState,
 } from "react";
-import { Check, MapPin } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Check, Loader2, MapPin } from "lucide-react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 
 import { cn } from "@/lib/utils";
 
 import {
+  fetchDestinationCoordinates,
+  fetchDestinationSuggestions,
+  type DestinationSuggestion,
+} from "./destination-api";
+import {
   destinationActiveIndexAtom,
   destinationQueryAtom,
   destinationSearchOpenAtom,
   destinationValidationErrorAtom,
-  filteredDestinationsAtom,
+  isSelectingDestinationAtom,
   selectedDestinationAtom,
 } from "./planner-setup.atoms";
 import {
   destinationTypeLabels,
   destinationTypes,
+  inferDestinationType,
   type Destination,
   type DestinationType,
 } from "./data";
+
+// --- Session token ---
+
+function generateSessionToken(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+// --- Debounce hook ---
+
+function useDebounced(value: string, delay = 300): string {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
+}
+
+// --- Context ---
 
 type DestinationSearchContextValue = {
   activeIndex: number;
   error: string | null;
   inputId: string;
+  isEmpty: boolean;
   isOpen: boolean;
+  isSearching: boolean;
+  isSelecting: boolean;
   listboxId: string;
-  options: Destination[];
   query: string;
   selectedDestination: Destination | null;
-  getOptionId: (destinationId: string) => string;
+  suggestions: DestinationSuggestion[];
+  getOptionId: (suggestionId: string) => string;
   handleInputKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
-  selectDestination: (destination: Destination) => void;
+  handleSuggestionSelect: (suggestion: DestinationSuggestion) => void;
   setActiveIndex: (index: number) => void;
   setIsOpen: (isOpen: boolean) => void;
   setQuery: (query: string) => void;
@@ -61,6 +98,8 @@ function useDestinationSearchContext() {
   return context;
 }
 
+// --- Root ---
+
 type DestinationSearchRootProps = {
   children: ReactNode;
   inputId?: string;
@@ -73,6 +112,7 @@ function DestinationSearchRoot({
   const generatedId = useId();
   const inputId = providedInputId ?? `destination-search-${generatedId}`;
   const listboxId = `destination-search-listbox-${generatedId}`;
+
   const [query, setQueryAtom] = useAtom(destinationQueryAtom);
   const [selectedDestination, setSelectedDestination] = useAtom(
     selectedDestinationAtom,
@@ -81,7 +121,37 @@ function DestinationSearchRoot({
   const [activeIndex, setActiveIndexAtom] = useAtom(destinationActiveIndexAtom);
   const setError = useSetAtom(destinationValidationErrorAtom);
   const error = useAtomValue(destinationValidationErrorAtom);
-  const options = useAtomValue(filteredDestinationsAtom);
+  const [isSelecting, setIsSelecting] = useAtom(isSelectingDestinationAtom);
+
+  // Session token for Google Places billing — reused for autocomplete + detail
+  const sessionTokenRef = useRef<string>(generateSessionToken());
+
+  // Debounced query drives the API call
+  const debouncedQuery = useDebounced(query);
+  const searchEnabled = debouncedQuery.trim().length >= 2;
+
+  const { data: suggestions = [], isFetching } = useQuery({
+    queryKey: ["destination-search", debouncedQuery.trim()],
+    queryFn: () =>
+      fetchDestinationSuggestions(
+        debouncedQuery.trim(),
+        sessionTokenRef.current,
+      ),
+    enabled: searchEnabled,
+    staleTime: 30_000,
+    gcTime: 60_000,
+    placeholderData: (prev) => prev,
+    retry: 1,
+  });
+
+  const isSearching = searchEnabled && isFetching;
+  const isEmpty =
+    searchEnabled && !isFetching && suggestions.length === 0;
+
+  // Reset active index when suggestions list changes
+  useEffect(() => {
+    setActiveIndexAtom(0);
+  }, [suggestions, setActiveIndexAtom]);
 
   const setQuery = useCallback(
     (nextQuery: string) => {
@@ -104,25 +174,65 @@ function DestinationSearchRoot({
     ],
   );
 
-  const selectDestination = useCallback(
-    (destination: Destination) => {
-      setSelectedDestination(destination);
-      setQueryAtom(destination.name);
+  const handleSuggestionSelect = useCallback(
+    (suggestion: DestinationSuggestion) => {
+      setQueryAtom(suggestion.mainText);
       setIsOpen(false);
       setActiveIndexAtom(0);
       setError(null);
+      setIsSelecting(true);
+
+      const currentToken = sessionTokenRef.current;
+      // Start a fresh session for the next search
+      sessionTokenRef.current = generateSessionToken();
+
+      void (async () => {
+        let coordinates: { latitude: number; longitude: number } | undefined;
+
+        if (suggestion.coordinates) {
+          // Mapbox returns coordinates inline — no extra request needed
+          coordinates = {
+            latitude: suggestion.coordinates.lat,
+            longitude: suggestion.coordinates.lng,
+          };
+        } else {
+          // Google Places requires a separate detail call for coordinates
+          const coords = await fetchDestinationCoordinates(
+            suggestion.providerPlaceId,
+            suggestion.provider,
+            currentToken,
+          );
+
+          if (coords) {
+            coordinates = { latitude: coords.lat, longitude: coords.lng };
+          }
+        }
+
+        setSelectedDestination({
+          id: suggestion.providerPlaceId,
+          provider: suggestion.provider,
+          name: suggestion.mainText,
+          type: inferDestinationType(suggestion.types),
+          country: suggestion.secondaryText,
+          sessionToken: currentToken,
+          coordinates,
+        });
+
+        setIsSelecting(false);
+      })();
     },
     [
       setActiveIndexAtom,
       setError,
       setIsOpen,
+      setIsSelecting,
       setQueryAtom,
       setSelectedDestination,
     ],
   );
 
   const getOptionId = useCallback(
-    (destinationId: string) => `${listboxId}-option-${destinationId}`,
+    (suggestionId: string) => `${listboxId}-option-${suggestionId}`,
     [listboxId],
   );
 
@@ -133,15 +243,15 @@ function DestinationSearchRoot({
         return;
       }
 
-      if (!options.length) {
+      if (!suggestions.length) {
         return;
       }
 
       if (event.key === "ArrowDown") {
         event.preventDefault();
         setIsOpen(true);
-        setActiveIndexAtom((currentIndex) =>
-          currentIndex >= options.length - 1 ? 0 : currentIndex + 1,
+        setActiveIndexAtom((current) =>
+          current >= suggestions.length - 1 ? 0 : current + 1,
         );
         return;
       }
@@ -149,24 +259,27 @@ function DestinationSearchRoot({
       if (event.key === "ArrowUp") {
         event.preventDefault();
         setIsOpen(true);
-        setActiveIndexAtom((currentIndex) =>
-          currentIndex <= 0 ? options.length - 1 : currentIndex - 1,
+        setActiveIndexAtom((current) =>
+          current <= 0 ? suggestions.length - 1 : current - 1,
         );
         return;
       }
 
       if (event.key === "Enter" && isOpen) {
         event.preventDefault();
-        selectDestination(options[activeIndex] ?? options[0]);
+        const target = suggestions[activeIndex] ?? suggestions[0];
+        if (target) {
+          handleSuggestionSelect(target);
+        }
       }
     },
     [
       activeIndex,
+      handleSuggestionSelect,
       isOpen,
-      options,
-      selectDestination,
       setActiveIndexAtom,
       setIsOpen,
+      suggestions,
     ],
   );
 
@@ -175,14 +288,17 @@ function DestinationSearchRoot({
       activeIndex,
       error,
       inputId,
+      isEmpty,
       isOpen,
+      isSearching,
+      isSelecting,
       listboxId,
-      options,
       query,
       selectedDestination,
+      suggestions,
       getOptionId,
       handleInputKeyDown,
-      selectDestination,
+      handleSuggestionSelect,
       setActiveIndex: setActiveIndexAtom,
       setIsOpen,
       setQuery,
@@ -192,16 +308,19 @@ function DestinationSearchRoot({
       error,
       getOptionId,
       handleInputKeyDown,
+      handleSuggestionSelect,
       inputId,
+      isEmpty,
       isOpen,
+      isSearching,
+      isSelecting,
       listboxId,
-      options,
       query,
       selectedDestination,
-      selectDestination,
       setActiveIndexAtom,
       setIsOpen,
       setQuery,
+      suggestions,
     ],
   );
 
@@ -221,6 +340,8 @@ function DestinationSearchRoot({
   );
 }
 
+// --- Input ---
+
 type DestinationSearchInputProps = {
   "aria-label": string;
   errorMessageId?: string;
@@ -238,56 +359,71 @@ function DestinationSearchInput({
     getOptionId,
     inputId,
     isOpen,
+    isSearching,
+    isSelecting,
     listboxId,
-    options,
     query,
     setIsOpen,
     setQuery,
+    suggestions,
     handleInputKeyDown,
   } = useDestinationSearchContext();
-  const activeDestination = options[activeIndex];
+  const activeSuggestion = suggestions[activeIndex];
 
   return (
-    <input
-      id={inputId}
-      type="text"
-      role="combobox"
-      aria-autocomplete="list"
-      aria-controls={listboxId}
-      aria-activedescendant={
-        isOpen && activeDestination ? getOptionId(activeDestination.id) : undefined
-      }
-      aria-expanded={isOpen}
-      aria-invalid={Boolean(error)}
-      aria-label={ariaLabel}
-      aria-describedby={error ? errorMessageId : undefined}
-      value={query}
-      placeholder={placeholder}
-      onChange={(event) => setQuery(event.target.value)}
-      onFocus={() => setIsOpen(true)}
-      onKeyDown={handleInputKeyDown}
-      className={cn(
-        "w-full rounded-sm border border-border bg-background px-4 py-3 text-sm text-foreground shadow-xs transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30",
-        error && "border-destructive focus:ring-destructive/30",
-      )}
-    />
+    <div className="relative">
+      <input
+        id={inputId}
+        type="text"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls={listboxId}
+        aria-activedescendant={
+          isOpen && activeSuggestion
+            ? getOptionId(activeSuggestion.providerPlaceId)
+            : undefined
+        }
+        aria-expanded={isOpen}
+        aria-invalid={Boolean(error)}
+        aria-label={ariaLabel}
+        aria-describedby={error ? errorMessageId : undefined}
+        aria-busy={isSearching}
+        value={query}
+        placeholder={placeholder}
+        onChange={(event) => setQuery(event.target.value)}
+        onFocus={() => setIsOpen(true)}
+        onKeyDown={handleInputKeyDown}
+        className={cn(
+          "w-full rounded-sm border border-border bg-background px-4 py-3 text-sm text-foreground shadow-xs transition-colors placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30",
+          (error) && "border-destructive focus:ring-destructive/30",
+          isSelecting && "opacity-70",
+        )}
+      />
+      {isSearching ? (
+        <Loader2 className="absolute right-3 top-1/2 size-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+      ) : null}
+    </div>
   );
 }
 
+// --- Listbox ---
+
 function DestinationSearchListbox() {
-  const { inputId, isOpen, listboxId, options } =
+  const { inputId, isEmpty, isOpen, isSearching, listboxId, query, suggestions } =
     useDestinationSearchContext();
 
   if (!isOpen) {
     return null;
   }
 
-  const groupedOptions = destinationTypes
+  const groupedSuggestions = destinationTypes
     .map((type) => ({
       type,
-      destinations: options.filter((destination) => destination.type === type),
+      suggestions: suggestions.filter(
+        (s) => inferDestinationType(s.types) === type,
+      ),
     }))
-    .filter((group) => group.destinations.length > 0);
+    .filter((group) => group.suggestions.length > 0);
 
   return (
     <div
@@ -296,76 +432,95 @@ function DestinationSearchListbox() {
       aria-labelledby={inputId}
       className="absolute z-20 mt-2 max-h-80 w-full overflow-y-auto rounded-md border border-border bg-popover p-2 text-popover-foreground shadow-lg"
     >
-      {groupedOptions.length ? (
-        groupedOptions.map((group) => (
+      {isSearching && suggestions.length === 0 ? (
+        <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Searching destinations…
+        </div>
+      ) : isEmpty ? (
+        <div className="px-3 py-4 text-sm text-muted-foreground">
+          No destinations found for &ldquo;{query}&rdquo;.
+        </div>
+      ) : groupedSuggestions.length > 0 ? (
+        groupedSuggestions.map((group) => (
           <DestinationSearchGroup key={group.type} group={group} />
         ))
-      ) : (
-        <div className="px-3 py-4 text-sm text-muted-foreground">
-          No destinations found.
+      ) : query.trim().length < 2 ? (
+        <div className="px-3 py-3 text-sm text-muted-foreground">
+          Type at least 2 characters to search.
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
 
+// --- Group ---
+
 function DestinationSearchGroup({
   group,
 }: {
-  group: { type: DestinationType; destinations: Destination[] };
+  group: { type: DestinationType; suggestions: DestinationSuggestion[] };
 }) {
   return (
     <div className="py-1">
       <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
         {destinationTypeLabels[group.type]}
       </div>
-      {group.destinations.map((destination) => (
+      {group.suggestions.map((suggestion) => (
         <DestinationSearchOption
-          key={destination.id}
-          destination={destination}
+          key={suggestion.providerPlaceId}
+          suggestion={suggestion}
         />
       ))}
     </div>
   );
 }
 
+// --- Option ---
+
 function DestinationSearchOption({
-  destination,
+  suggestion,
 }: {
-  destination: Destination;
+  suggestion: DestinationSuggestion;
 }) {
   const {
     activeIndex,
     getOptionId,
-    options,
     selectedDestination,
-    selectDestination,
+    suggestions,
+    handleSuggestionSelect,
     setActiveIndex,
   } = useDestinationSearchContext();
-  const optionIndex = options.findIndex((option) => option.id === destination.id);
+  const optionIndex = suggestions.findIndex(
+    (s) => s.providerPlaceId === suggestion.providerPlaceId,
+  );
   const isActive = activeIndex === optionIndex;
-  const isSelected = selectedDestination?.id === destination.id;
+  const isSelected = selectedDestination?.id === suggestion.providerPlaceId;
 
   return (
     <button
-      id={getOptionId(destination.id)}
+      id={getOptionId(suggestion.providerPlaceId)}
       type="button"
       role="option"
       aria-selected={isSelected}
       onMouseDown={(event) => event.preventDefault()}
       onMouseEnter={() => setActiveIndex(optionIndex)}
-      onClick={() => selectDestination(destination)}
+      onClick={() => handleSuggestionSelect(suggestion)}
       className={cn(
         "flex w-full items-center gap-3 rounded-sm px-3 py-2 text-left text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring/30",
-        isActive ? "bg-muted text-foreground" : "text-foreground hover:bg-muted/70",
+        isActive
+          ? "bg-muted text-foreground"
+          : "text-foreground hover:bg-muted/70",
       )}
     >
       <MapPin className="size-4 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1">
-        <span className="block font-medium">{destination.name}</span>
-        <span className="block text-xs text-muted-foreground">
-          {destination.country}
-        </span>
+        <span className="block font-medium">{suggestion.mainText}</span>
+        {suggestion.secondaryText ? (
+          <span className="block text-xs text-muted-foreground">
+            {suggestion.secondaryText}
+          </span>
+        ) : null}
       </span>
       {isSelected ? <Check className="size-4 text-primary" /> : null}
     </button>

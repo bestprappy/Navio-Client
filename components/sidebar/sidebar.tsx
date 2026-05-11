@@ -1,32 +1,165 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { format, isValid, parseISO } from "date-fns";
 import {
-  BookOpenText,
-  ClipboardList,
+  CalendarDays,
   Compass,
   Home,
   Map,
+  MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
-  Zap,
 } from "lucide-react";
 
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import useSidebar from "@/hooks/useSidebar";
 import { sidebarCollapsedAtom } from "@/app/configs/constant";
+import type { TripBlockData } from "@/app/feature/planner/planId/_components/constants/types";
+import { getTripBlockColorById } from "@/app/feature/planner/planId/_components/constants/trip-block-colors";
+import {
+  activeBlockIdAtom,
+  tripBlocksAtom,
+} from "@/app/feature/planner/planId/_components/overview/trip-builder.atoms";
+import { cn } from "@/lib/utils";
 
 import SidebarItem from "./sidebar.item";
 import SidebarMenu from "./sidebar.menu";
 
+const PLANNER_SCROLL_PANEL_ID = "planner-scroll-panel";
+
+function isPlannerDetailPath(pathName: string) {
+  return /^\/planner\/[^/]+/.test(pathName);
+}
+
+function scrollPlannerToTop() {
+  document
+    .getElementById(PLANNER_SCROLL_PANEL_ID)
+    ?.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function scrollToTripBlock(blockId: string) {
+  document
+    .getElementById(`trip-block-${blockId}`)
+    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function formatBlockDate(date: string) {
+  const parsedDate = parseISO(date);
+
+  if (!isValid(parsedDate)) {
+    return date;
+  }
+
+  return format(parsedDate, "MMM d");
+}
+
+type ItinerarySidebarNavProps = {
+  activeBlockId: string | null;
+  blocks: TripBlockData[];
+  collapsed: boolean;
+  onSelectBlock: (blockId: string) => void;
+};
+
+function ItinerarySidebarNav({
+  activeBlockId,
+  blocks,
+  collapsed,
+  onSelectBlock,
+}: ItinerarySidebarNavProps) {
+  if (!blocks.length) {
+    return null;
+  }
+
+  return (
+    <div
+      className={cn(
+        "mt-1 flex flex-col gap-1",
+        collapsed ? "items-center" : "ml-5 border-l border-border/70 pl-3",
+      )}
+    >
+      {collapsed ? (
+        <div
+          className="flex size-9 items-center justify-center text-muted-foreground"
+          title="Itinerary"
+          aria-hidden="true"
+        >
+          <CalendarDays className="size-4" />
+        </div>
+      ) : (
+        <p className="mb-1 flex items-center gap-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <CalendarDays className="size-3.5" aria-hidden="true" />
+          Itinerary
+        </p>
+      )}
+
+      {blocks.map((block, index) => {
+        const blockColor = getTripBlockColorById(block.colorId);
+        const dateLabel = formatBlockDate(block.date);
+        const title = `Day ${index + 1} - ${dateLabel}`;
+        const isActive = activeBlockId === block.id;
+
+        return (
+          <button
+            key={block.id}
+            type="button"
+            title={title}
+            aria-label={title}
+            aria-current={isActive ? "date" : undefined}
+            onClick={() => onSelectBlock(block.id)}
+            className={cn(
+              "group flex min-h-9 items-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring/30",
+              collapsed ? "w-9 justify-center px-0" : "w-full gap-2 px-2",
+              isActive
+                ? "bg-secondary text-secondary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <span
+              className={cn(
+                "shrink-0 rounded-full",
+                collapsed ? "size-2.5" : "size-2",
+              )}
+              style={{ backgroundColor: blockColor.value }}
+              aria-hidden="true"
+            />
+            {!collapsed && (
+              <>
+                <span className="min-w-0 flex-1 truncate text-left">
+                  Day {index + 1}
+                </span>
+                <span
+                  className={cn(
+                    "shrink-0 text-xs",
+                    isActive
+                      ? "text-secondary-foreground/80"
+                      : "text-muted-foreground group-hover:text-foreground",
+                  )}
+                >
+                  {dateLabel}
+                </span>
+              </>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SidebarWrapper() {
   const { activeSidebar, setActiveSidebar } = useSidebar();
   const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
+  const blocks = useAtomValue(tripBlocksAtom);
+  const activeBlockId = useAtomValue(activeBlockIdAtom);
+  const setActiveBlockId = useSetAtom(activeBlockIdAtom);
   const pathName = usePathname();
+  const isPlannerDetail = isPlannerDetailPath(pathName);
 
   useEffect(() => {
     setActiveSidebar(pathName);
@@ -36,6 +169,21 @@ export default function SidebarWrapper() {
     if (route === "/") return activeSidebar === "/";
     return activeSidebar === route || activeSidebar.startsWith(`${route}/`);
   };
+
+  function handlePlannerClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (!isPlannerDetail) {
+      return;
+    }
+
+    event.preventDefault();
+    setActiveSidebar(pathName);
+    scrollPlannerToTop();
+  }
+
+  function handleSelectBlock(blockId: string) {
+    setActiveBlockId(blockId);
+    scrollToTripBlock(blockId);
+  }
 
   return (
     <aside
@@ -91,29 +239,31 @@ export default function SidebarWrapper() {
             collapsed={collapsed}
           />
           <SidebarItem
+            title="Community"
+            href="/community"
+            icon={<MessageCircle className="size-5" />}
+            isActive={isRouteActive("/community")}
+            collapsed={collapsed}
+          />
+          <SidebarItem
             title="Planner"
-            href="/planner"
+            href={isPlannerDetail ? pathName : "/planner"}
             icon={<Map className="size-5" />}
             isActive={isRouteActive("/planner")}
+            onClick={handlePlannerClick}
             collapsed={collapsed}
           />
-          <SidebarItem
-            title="Guides"
-            href="/guides/new"
-            icon={<BookOpenText className="size-5" />}
-            isActive={isRouteActive("/guides")}
-            collapsed={collapsed}
-          />
+          {isPlannerDetail ? (
+            <ItinerarySidebarNav
+              activeBlockId={activeBlockId}
+              blocks={blocks}
+              collapsed={collapsed}
+              onSelectBlock={handleSelectBlock}
+            />
+          ) : null}
         </SidebarMenu>
 
-        <SidebarMenu title="EV Tools" collapsed={collapsed}>
-          <SidebarItem
-            title="Charging"
-            href="/charging"
-            icon={<Zap className="size-5" />}
-            isActive={isRouteActive("/charging")}
-            collapsed={collapsed}
-          />
+        <SidebarMenu title="Utility" collapsed={collapsed}>
           <SidebarItem
             title="Settings"
             href="/settings"

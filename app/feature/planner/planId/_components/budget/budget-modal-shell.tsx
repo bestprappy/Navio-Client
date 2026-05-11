@@ -3,10 +3,13 @@
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+
 type BudgetModalShellProps = {
   title: string;
   children: ReactNode;
   leadingAction?: ReactNode;
+  panelClassName?: string;
   onClose: () => void;
 };
 
@@ -14,6 +17,7 @@ export function BudgetModalShell({
   title,
   children,
   leadingAction,
+  panelClassName,
   onClose,
 }: BudgetModalShellProps) {
   return (
@@ -25,7 +29,10 @@ export function BudgetModalShell({
         aria-label="Close budget modal"
       />
       <div
-        className="relative w-full max-w-md rounded-md bg-card p-7 text-card-foreground shadow-2xl"
+        className={cn(
+          "relative w-full max-w-md rounded-md bg-card p-7 text-card-foreground shadow-2xl",
+          panelClassName,
+        )}
         role="dialog"
         aria-modal="true"
         aria-label={title}

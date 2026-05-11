@@ -45,6 +45,17 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
       searchParams.set("to", dateRange.to.toISOString());
     }
 
+    if (selectedDestination.coordinates) {
+      searchParams.set(
+        "lat",
+        String(selectedDestination.coordinates.latitude),
+      );
+      searchParams.set(
+        "lng",
+        String(selectedDestination.coordinates.longitude),
+      );
+    }
+
     router.push(`/planner/${planId}?${searchParams.toString()}`);
   }
 

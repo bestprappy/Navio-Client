@@ -9,8 +9,10 @@ import { cn } from "@/lib/utils";
 
 import type { TripBlockData } from "../constants/types";
 import { getTripBlockColorById } from "../constants/trip-block-colors";
-import { AddPlaceInput } from "../place/add-place-input";
-import { PremadeListPicker } from "../premade/premade-list-picker";
+import {
+  AddPlaceInput,
+  type PlaceSearchBias,
+} from "../place/add-place-input";
 import { AddEvStationButton } from "../charger/add-ev-station-button";
 import {
   activeBlockIdAtom,
@@ -58,7 +60,8 @@ function TripBlockRoot({ block, children, className }: TripBlockRootProps) {
   return (
     <TripBlockContext.Provider value={contextValue}>
       <div
-        className={cn("flex w-full flex-col", className)}
+        id={`trip-block-${block.id}`}
+        className={cn("flex w-full scroll-mt-4 flex-col", className)}
         onFocus={() => setActiveBlockId(block.id)}
         onClick={() => setActiveBlockId(block.id)}
       >
@@ -102,14 +105,18 @@ function TripBlockContent({ children }: { children: ReactNode }) {
   return <div className="pb-0">{children}</div>;
 }
 
-function TripBlockActions() {
+function TripBlockActions({
+  placeSearchBias,
+}: {
+  placeSearchBias?: PlaceSearchBias;
+}) {
   const { block } = useTripBlockContext();
   const addNoteToBlock = useSetAtom(addNoteToBlockAtom);
   const addChecklistToBlock = useSetAtom(addChecklistToBlockAtom);
 
   return (
     <div className="mx-8 mt-6 space-y-3 pl-2">
-      <AddPlaceInput blockId={block.id} />
+      <AddPlaceInput blockId={block.id} searchBias={placeSearchBias} />
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
@@ -132,7 +139,6 @@ function TripBlockActions() {
           Add checklist
         </Button>
         <AddEvStationButton blockId={block.id} />
-        <PremadeListPicker blockId={block.id} />
       </div>
     </div>
   );

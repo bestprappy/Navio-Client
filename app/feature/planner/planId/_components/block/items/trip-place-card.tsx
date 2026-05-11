@@ -29,15 +29,30 @@ import {
   removeItemFromBlockAtom,
   selectedTripPlaceItemIdReadonlyAtom,
   selectTripPlaceAtom,
+  tripCurrencyAtom,
   updatePlaceItemAtom,
 } from "../../overview/trip-builder.atoms";
+import { ChargeSegmentInfo } from "../../routes/charge-segment-info";
+import { PlaceCostPopover } from "./place-cost-popover";
+import { PlaceTimePopover } from "./place-time-popover";
 
 type TripPlaceCardProps = {
   blockId: string;
   blockColorId: TripBlockColorId;
+  blockDate: string;
   item: PlaceItem;
   position: number | null;
+  chargeBatteryFrom?: number;
+  chargeBatteryTo?: number;
 };
+
+function formatDisplayTime(time: string): string {
+  const [hourStr, minuteStr = "00"] = time.split(":");
+  const hour = Number(hourStr);
+  const period = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
+  return `${displayHour}:${minuteStr} ${period}`;
+}
 
 function formatConnectorLabel(connector: EvConnectorType | string): string {
   switch (connector) {
@@ -88,13 +103,29 @@ function getFallbackConnectorText(item: PlaceItem): string | null {
     .join(", ");
 }
 
+function formatReviewCount(count: number): string {
+  return new Intl.NumberFormat("en", {
+    notation: count >= 10_000 ? "compact" : "standard",
+    maximumFractionDigits: 1,
+  }).format(count);
+}
+
+function isGooglePlacePhoto(imageUrl?: string): boolean {
+  return Boolean(
+    imageUrl &&
+    (imageUrl.includes("googleusercontent.com") ||
+      imageUrl.includes("places.googleapis.com") ||
+      imageUrl.includes("maps.googleapis.com")),
+  );
+}
+
 function getChargerSpecs(item: PlaceItem) {
   const maxKw = item.evCharger?.maxKw ?? getFallbackMaxKw(item);
 
   return {
     connectors: item.evCharger?.connectorTypes.length
       ? item.evCharger.connectorTypes.map(formatConnectorLabel).join(", ")
-      : getFallbackConnectorText(item) ?? "Connector info unavailable",
+      : (getFallbackConnectorText(item) ?? "Connector info unavailable"),
     power: maxKw ? `${maxKw} kW` : "Power not listed",
     availability: item.evCharger
       ? item.evCharger.availableConnectors === null
@@ -117,8 +148,11 @@ function getChargerSpecs(item: PlaceItem) {
 export function TripPlaceCard({
   blockId,
   blockColorId,
+  blockDate,
   item,
   position,
+  chargeBatteryFrom,
+  chargeBatteryTo,
 }: TripPlaceCardProps) {
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const removeItemFromBlock = useSetAtom(removeItemFromBlockAtom);
@@ -126,6 +160,7 @@ export function TripPlaceCard({
   const selectedTripPlaceItemId = useAtomValue(
     selectedTripPlaceItemIdReadonlyAtom,
   );
+  const currency = useAtomValue(tripCurrencyAtom);
   const isSelected = selectedTripPlaceItemId === item.id;
   const isEvCharger = isEvChargerPlaceItem(item);
   const blockColor = getTripBlockColorById(blockColorId);
@@ -159,6 +194,7 @@ export function TripPlaceCard({
           alt=""
           width={640}
           height={240}
+          unoptimized={isGooglePlacePhoto(item.imageUrl)}
           className="h-32 w-full object-cover"
         />
       ) : null}
@@ -253,10 +289,7 @@ export function TripPlaceCard({
             </div>
 
             <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
-              <MapPin
-                className="mt-0.5 size-3.5 shrink-0"
-                aria-hidden="true"
-              />
+              <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
               <span>{item.address}</span>
             </p>
           </div>
@@ -264,112 +297,202 @@ export function TripPlaceCard({
           <>
             <div className="flex items-start gap-3">
               <div
-                className="flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                style={markerStyle}
-                aria-label={`Place ${position ?? ""}`.trim()}
+                className={cn(
+                  "flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors duration-200",
+                  item.isVisited && "bg-muted text-muted-foreground",
+                )}
+                style={item.isVisited ? undefined : markerStyle}
+                aria-label={
+                  item.isVisited ? "Visited" : `Place ${position ?? ""}`.trim()
+                }
               >
-                {position}
+                {item.isVisited ? (
+                  <CheckCircle2 className="size-4" aria-hidden="true" />
+                ) : (
+                  position
+                )}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-bold leading-snug text-foreground">
-                    {item.name}
-                  </h3>
-                  {item.rating ? (
-                    <span className="inline-flex items-center gap-1 rounded-sm bg-muted px-2 py-1 text-xs font-medium text-foreground">
-                      <Star
-                        className="size-3 fill-yellow-500 text-yellow-500"
-                        aria-hidden="true"
-                      />
-                      {item.rating.toFixed(1)}
+                <div className="flex justify-between items-center ">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-bold leading-snug text-foreground">
+                      {item.name}
+                    </h3>
+                    {item.rating ? (
+                      <span className="inline-flex items-center gap-1 rounded-sm bg-muted px-2 py-1 text-xs font-medium text-foreground">
+                        <Star
+                          className="size-3 fill-yellow-500 text-yellow-500"
+                          aria-hidden="true"
+                        />
+                        {item.rating.toFixed(1)}
+                        {item.reviewCount ? (
+                          <span className="text-muted-foreground">
+                            ({formatReviewCount(item.reviewCount)})
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : null}
+                  </div>
+                  {item.description ? (
+                    <span className="inline-flex items-center rounded-sm bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+                      {item.description}
                     </span>
                   ) : null}
                 </div>
 
-                <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
-                  <MapPin
-                    className="mt-0.5 size-3.5 shrink-0"
-                    aria-hidden="true"
-                  />
+                <p className="mt-1 flex items-start gap-1.5 text-xs text-muted-foreground">
                   <span>{item.address}</span>
                 </p>
               </div>
             </div>
-
-            {item.description ? (
-              <p className="rounded-sm bg-muted/60 p-3 text-sm leading-6 text-muted-foreground">
-                From the web: {item.description}
-              </p>
-            ) : null}
           </>
         )}
 
-        <textarea
-          value={item.notes ?? ""}
-          onClick={(event) => event.stopPropagation()}
-          onChange={(event) =>
-            updatePlaceItem({
-              blockId,
-              itemId: item.id,
-              updates: { notes: event.target.value },
-            })
-          }
-          placeholder={
-            isEvCharger
-              ? "Add charging notes, bay number, receipt, etc."
-              : "Add notes, links, etc. here"
-          }
-          aria-label={`Notes for ${item.name}`}
-          rows={3}
-          className="min-h-20 w-full resize-y rounded-sm border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
-        />
+        {isSelected ? (
+          <>
+            <textarea
+              value={item.notes ?? ""}
+              onClick={(event) => event.stopPropagation()}
+              onChange={(event) =>
+                updatePlaceItem({
+                  blockId,
+                  itemId: item.id,
+                  updates: { notes: event.target.value },
+                })
+              }
+              placeholder={
+                isEvCharger
+                  ? "Add charging notes, bay number, receipt, etc."
+                  : "Add notes, links, etc. here"
+              }
+              aria-label={`Notes for ${item.name}`}
+              rows={3}
+              className="min-h-20 w-full resize-y rounded-sm border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
+            />
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-          <Button
-            type="button"
-            variant={
-              item.isVisited ? "secondary" : isEvCharger ? "default" : "outline"
-            }
-            size="sm"
-            className="rounded-sm"
-            onClick={(event) => {
-              event.stopPropagation();
-              updatePlaceItem({
-                blockId,
-                itemId: item.id,
-                updates: { isVisited: !item.isVisited },
-              });
-            }}
-          >
-            {isEvCharger ? (
-              <>
-                {item.isVisited ? (
-                  <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                ) : (
-                  <Zap className="size-3.5" aria-hidden="true" />
-                )}
-                {item.isVisited ? "Charging completed" : "Mark as charged"}
-              </>
-            ) : item.isVisited ? (
-              "Visited"
-            ) : (
-              "Mark as visited"
+            {isEvCharger && (
+              <ChargeSegmentInfo
+                batteryFrom={chargeBatteryFrom}
+                batteryTo={chargeBatteryTo}
+              />
             )}
-          </Button>
 
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon-sm"
-            aria-label={`Delete ${item.name}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              removeItemFromBlock({ blockId, itemId: item.id });
-            }}
-          >
-            <Trash2 className="size-4" aria-hidden="true" />
-          </Button>
-        </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant={
+                    item.isVisited
+                      ? "secondary"
+                      : isEvCharger
+                        ? "default"
+                        : "outline"
+                  }
+                  size="sm"
+                  className="rounded-sm p-4"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    updatePlaceItem({
+                      blockId,
+                      itemId: item.id,
+                      updates: { isVisited: !item.isVisited },
+                    });
+                  }}
+                >
+                  {isEvCharger ? (
+                    <>
+                      {item.isVisited ? (
+                        <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                      ) : (
+                        <Zap className="size-3.5" aria-hidden="true" />
+                      )}
+                      {item.isVisited
+                        ? "Charging completed"
+                        : "Mark as charged"}
+                    </>
+                  ) : item.isVisited ? (
+                    "Visited"
+                  ) : (
+                    "Mark as visited"
+                  )}
+                </Button>
+
+                {!isEvCharger ? (
+                  <>
+                    <PlaceTimePopover
+                      blockId={blockId}
+                      itemId={item.id}
+                      time={item.time}
+                      timeEnd={item.timeEnd}
+                    />
+                    <PlaceCostPopover
+                      blockId={blockId}
+                      itemId={item.id}
+                      itemName={item.name}
+                      blockDate={blockDate}
+                      cost={item.cost}
+                    />
+                  </>
+                ) : null}
+              </div>
+
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon-sm"
+                aria-label={`Delete ${item.name}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  removeItemFromBlock({ blockId, itemId: item.id });
+                }}
+              >
+                <Trash2 className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            {isEvCharger && (
+              <ChargeSegmentInfo
+                batteryFrom={chargeBatteryFrom}
+                batteryTo={chargeBatteryTo}
+              />
+            )}
+            {(item.isVisited ||
+              item.time ||
+              item.cost !== undefined ||
+              item.notes) && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {item.isVisited && (
+                    <span className="inline-flex items-center gap-1 rounded-sm bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+                      <CheckCircle2 className="size-3" aria-hidden="true" />
+                      {isEvCharger ? "Charging completed" : "Visited"}
+                    </span>
+                  )}
+                  {item.time && (
+                    <span className="inline-flex py-2  items-center gap-1 rounded-sm bg-sky-500/10 px-3 text-xs font-medium text-sky-700 dark:text-sky-400">
+                      <Clock className="size-3" aria-hidden="true" />
+                      {item.timeEnd
+                        ? `${formatDisplayTime(item.time)} – ${formatDisplayTime(item.timeEnd)}`
+                        : formatDisplayTime(item.time)}
+                    </span>
+                  )}
+                  {item.cost !== undefined && (
+                    <span className="inline-flex items-center gap-1 rounded-sm bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                      {currency.symbol} {item.cost.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+                {item.notes && (
+                  <p className="line-clamp-2 text-xs text-muted-foreground">
+                    {item.notes}
+                  </p>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </article>
   );

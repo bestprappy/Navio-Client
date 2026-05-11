@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useAtomValue } from "jotai";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-import { destinationValidationErrorAtom } from "./planner-setup.atoms";
+import {
+  destinationValidationErrorAtom,
+  isSelectingDestinationAtom,
+} from "./planner-setup.atoms";
 
 type PlannerSetupActionsProps = {
   primaryLabel: string;
@@ -21,19 +24,28 @@ export function PlannerSetupActions({
   secondaryHref,
 }: PlannerSetupActionsProps) {
   const destinationError = useAtomValue(destinationValidationErrorAtom);
+  const isSelecting = useAtomValue(isSelectingDestinationAtom);
 
   return (
     <div className="flex flex-col items-center gap-4 pt-2">
       <Button
         type="submit"
         size="lg"
+        disabled={isSelecting}
         aria-invalid={Boolean(destinationError)}
         className={cn(
           "rounded-full px-8 shadow-md shadow-primary/25",
           destinationError && "shadow-destructive/20",
         )}
       >
-        {primaryLabel}
+        {isSelecting ? (
+          <>
+            <Loader2 className="mr-2 size-4 animate-spin" />
+            Preparing…
+          </>
+        ) : (
+          primaryLabel
+        )}
       </Button>
       {destinationError ? (
         <p className="flex items-center gap-2 text-sm text-destructive">

@@ -15,7 +15,11 @@ export function ThemeToggle({ showLabel = false, className }: ThemeToggleProps) 
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setMounted(true), 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   const isDark = mounted && resolvedTheme === "dark";
 
