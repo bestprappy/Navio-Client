@@ -17,7 +17,7 @@ type ShareDialogContextValue = {
   open: boolean;
   plan: Plan | null;
   onClose: () => void;
-  closeButtonRef: RefObject<HTMLButtonElement>;
+  closeButtonRef: RefObject<HTMLButtonElement | null>;
 };
 
 const ShareDialogContext = createContext<ShareDialogContextValue | null>(null);
@@ -119,7 +119,7 @@ function ShareDialogHeader() {
         onClick={onClose}
         aria-label="Close share dialog"
         ref={closeButtonRef}
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-lg text-muted-foreground transition hover:text-foreground"
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-lg text-muted-foreground transition hover:text-foreground cursor-pointer"
       >
         x
       </button>
@@ -169,7 +169,7 @@ function ShareDialogLink() {
       <button
         type="button"
         onClick={handleCopy}
-        className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
+        className="rounded-full bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground cursor-pointer"
       >
         {copied ? "Copied" : "Copy link"}
       </button>
@@ -192,13 +192,22 @@ function ShareDialogInvite() {
 function ShareDialogActions() {
   return (
     <div className="mt-4 flex items-center justify-center gap-6 text-xs text-muted-foreground">
-      <button type="button" className="font-medium hover:text-foreground">
+      <button
+        type="button"
+        className="font-medium hover:text-foreground cursor-pointer"
+      >
         Facebook
       </button>
-      <button type="button" className="font-medium hover:text-foreground">
+      <button
+        type="button"
+        className="font-medium hover:text-foreground cursor-pointer"
+      >
         X (Twitter)
       </button>
-      <button type="button" className="font-medium hover:text-foreground">
+      <button
+        type="button"
+        className="font-medium hover:text-foreground cursor-pointer"
+      >
         Copy ID
       </button>
     </div>
