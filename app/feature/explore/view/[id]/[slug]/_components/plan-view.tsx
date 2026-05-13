@@ -20,7 +20,7 @@ export function PlanView({ plan }: PlanViewProps) {
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 pb-16 pt-10">
+    <section className="flex w-full flex-col gap-8 px-6 pb-16 pt-8">
       <div className="relative overflow-hidden rounded-3xl border border-border bg-card shadow-sm">
         <div
           className="h-64 w-full bg-cover bg-center"

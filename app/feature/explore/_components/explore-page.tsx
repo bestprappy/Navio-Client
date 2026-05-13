@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useAtom } from "jotai";
+import { Columns2, Grid2x2, LayoutList } from "lucide-react";
 
 import { RECENT_PLANS, TRENDING_PLANS, getPlanById, getUserById } from "./data";
 import { shareDialogOpenAtom, shareDialogPlanIdAtom } from "./explore-atoms";
@@ -20,6 +21,7 @@ import { ShareDialog } from "./share-dialog";
 export function ExplorePage() {
   const [shareOpen, setShareOpen] = useAtom(shareDialogOpenAtom);
   const [sharePlanId, setSharePlanId] = useAtom(shareDialogPlanIdAtom);
+  const [recentView, setRecentView] = useState<1 | 2 | 4>(1);
 
   const sharePlan = useMemo(
     () => (sharePlanId ? (getPlanById(sharePlanId) ?? null) : null),
@@ -78,17 +80,21 @@ export function ExplorePage() {
               >
                 <CarouselContent className="-ml-6 gap-6">
                   {TRENDING_PLANS.map((plan) => (
-                    <CarouselItem key={plan.id} className="basis-[280px] pl-6">
+                    <CarouselItem
+                      key={plan.id}
+                      className="basis-[86%] pl-6 sm:basis-1/2 lg:basis-1/3"
+                    >
                       <PlanCardVertical
                         plan={plan}
                         author={getUserById(plan.authorId)!}
                         onShare={openShare}
+                        variant="trending"
                       />
                     </CarouselItem>
                   ))}
                 </CarouselContent>
-                <CarouselPrevious className="-left-1 top-[9.5rem] md:top-[10rem]" />
-                <CarouselNext className="-right-1 top-[9.5rem] md:top-[10rem]" />
+                <CarouselPrevious className="-left-2 top-[9.5rem] md:top-[10.5rem]" />
+                <CarouselNext className="-right-2 top-[9.5rem] md:top-[10.5rem]" />
               </Carousel>
             </div>
           </section>
@@ -100,26 +106,105 @@ export function ExplorePage() {
               <h2 className="text-lg font-semibold text-foreground">
                 Recent plans
               </h2>
-              <span className="text-xs text-muted-foreground">
-                Fresh from Thailand
-              </span>
+              <div className="relative z-20 inline-flex items-center gap-1 rounded-full border border-border bg-card p-1 shadow-sm">
+                <button
+                  type="button"
+                  aria-label="View one by one"
+                  aria-pressed={recentView === 1}
+                  onClick={() => setRecentView(1)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                    recentView === 1
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <LayoutList className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="View by two"
+                  aria-pressed={recentView === 2}
+                  onClick={() => setRecentView(2)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                    recentView === 2
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Columns2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="View by four"
+                  aria-pressed={recentView === 4}
+                  onClick={() => setRecentView(4)}
+                  className={`flex h-8 w-8 items-center justify-center rounded-full transition ${
+                    recentView === 4
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Grid2x2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            <div className="flex flex-col gap-6">
-              {RECENT_PLANS.map((plan) => {
-                const author = getUserById(plan.authorId);
-                if (!author) {
-                  return null;
-                }
-                return (
-                  <PlanCardHorizontal
-                    key={plan.id}
-                    plan={plan}
-                    author={author}
-                    onShare={openShare}
-                  />
-                );
-              })}
-            </div>
+            {recentView === 1 ? (
+              <div className="flex flex-col gap-6">
+                {RECENT_PLANS.map((plan) => {
+                  const author = getUserById(plan.authorId);
+                  if (!author) {
+                    return null;
+                  }
+                  return (
+                    <PlanCardHorizontal
+                      key={plan.id}
+                      plan={plan}
+                      author={author}
+                      onShare={openShare}
+                      variant="recent1"
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
+            {recentView === 2 ? (
+              <div className="grid gap-6 sm:grid-cols-2">
+                {RECENT_PLANS.map((plan) => {
+                  const author = getUserById(plan.authorId);
+                  if (!author) {
+                    return null;
+                  }
+                  return (
+                    <PlanCardVertical
+                      key={plan.id}
+                      plan={plan}
+                      author={author}
+                      onShare={openShare}
+                      variant="recent2"
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
+            {recentView === 4 ? (
+              <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+                {RECENT_PLANS.map((plan) => {
+                  const author = getUserById(plan.authorId);
+                  if (!author) {
+                    return null;
+                  }
+                  return (
+                    <PlanCardVertical
+                      key={plan.id}
+                      plan={plan}
+                      author={author}
+                      onShare={openShare}
+                      variant="recent4"
+                    />
+                  );
+                })}
+              </div>
+            ) : null}
           </section>
         </ExploreErrorBoundary>
       </div>

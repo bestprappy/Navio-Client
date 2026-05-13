@@ -135,11 +135,19 @@ function ShareDialogPreview() {
   }
 
   return (
-    <div
-      className="mt-4 h-40 w-full rounded-2xl bg-cover bg-center"
-      style={{ backgroundImage: `url(${plan.imageUrl})` }}
-      aria-label={plan.title}
-    />
+    <div className="relative mt-4 overflow-hidden rounded-xl border border-border">
+      <div
+        className="h-52 w-full bg-cover bg-center"
+        style={{ backgroundImage: `url(${plan.imageUrl})` }}
+        aria-label={plan.title}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+      <div className="absolute bottom-3 left-3 right-3">
+        <p className="line-clamp-2 text-lg font-semibold text-white">
+          {plan.title}
+        </p>
+      </div>
+    </div>
   );
 }
 
