@@ -19,7 +19,7 @@ const NAV_LINKS: NavLink[] = [
   { label: "Home", href: "/" },
   { label: "Planner", href: "/planner" },
   { label: "Explore", href: "/explore" },
-  { label: "Community", href: "/commu" },
+  { label: "Community", href: "/community" },
   { label: "Help", href: "/help" },
 ];
 
