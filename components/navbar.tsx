@@ -46,12 +46,12 @@ export function Navbar() {
         </Link>
 
         {/* Desktop nav links */}
-        <ul className="hidden list-none items-center gap-6 md:flex" role="list">
+        <ul className="hidden list-none items-center gap-2 md:flex" role="list">
           {NAV_LINKS.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="rounded-md px-1 py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="rounded-full px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 {link.label}
               </Link>

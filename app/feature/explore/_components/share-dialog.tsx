@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 
-import type { Plan } from "./data";
+import { getPlanHref, type Plan } from "./data";
 
 type ShareDialogContextValue = {
   open: boolean;
@@ -148,7 +148,7 @@ function ShareDialogLink() {
   const [copied, setCopied] = useState(false);
 
   const planUrl = plan
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/explore/view/${plan.id}`
+    ? `${typeof window !== "undefined" ? window.location.origin : ""}${getPlanHref(plan)}`
     : "";
 
   const handleCopy = useCallback(async () => {

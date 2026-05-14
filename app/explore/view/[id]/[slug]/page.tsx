@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
-import { getPlanById } from "../../../_components/data";
-import { PlanView } from "./_components/plan-view";
+import { getPlanById } from "@/app/feature/explore/_components/data";
+import { PlanView } from "@/app/feature/explore/view/[id]/[slug]/_components/plan-view";
 
 type PlanViewPageProps = {
   params: { id: string; slug: string };
