@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { Check, MapPin, UserPlus, Users } from "lucide-react";
 
 import type { CommunityGroup } from "./data";
-import { formatCount, getInitials } from "./data";
+import { formatCount, getInitials, slugifyCommunityValue } from "./data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,10 +28,15 @@ export function CommunityGroupCard({
   joined,
   onToggleJoin,
 }: CommunityGroupCardProps) {
+  const groupHref = `/community/${slugifyCommunityValue(group.name)}`;
+
   return (
     <Card size="sm">
       <CardHeader>
-        <div className="flex items-start gap-3">
+        <Link
+          href={groupHref}
+          className="flex min-w-0 items-start gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        >
           <Avatar>
             <AvatarImage src={group.avatarUrl} alt={group.name} />
             <AvatarFallback>{getInitials(group.name)}</AvatarFallback>
@@ -41,7 +47,7 @@ export function CommunityGroupCard({
               {group.description}
             </CardDescription>
           </div>
-        </div>
+        </Link>
         <CardAction>
           <Button
             type="button"

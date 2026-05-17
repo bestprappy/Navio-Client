@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { CommunityPage } from "@/app/feature/community/_components/community-page";
+import { CommunityPage } from "@/app/feature/community/community-page";
 
 export const metadata: Metadata = {
   title: "Community - Navio",

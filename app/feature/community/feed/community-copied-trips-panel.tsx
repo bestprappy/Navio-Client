@@ -3,8 +3,8 @@
 import { CheckCircle2, Copy, MapPinned, X } from "lucide-react";
 import { useAtom, useAtomValue } from "jotai";
 
-import { copiedTripIdsAtom, copiedTripsAtom } from "./community-atoms";
-import { formatCount } from "./data";
+import { copiedTripIdsAtom, copiedTripsAtom } from "../_components/community-atoms";
+import { formatCount } from "../_components/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

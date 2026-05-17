@@ -10,12 +10,15 @@ import {
   extraCommentsByPostIdAtom,
   joinedGroupIdsAtom,
   selectedCommunityPostIdAtom,
-} from "./community-atoms";
-import { CommunityContextSidebar } from "./community-context-sidebar";
-import { CommunityErrorBoundary } from "./community-error-boundary";
-import { CommunityFeed } from "./community-feed";
-import { getGroupById, mockCommunityGroups, mockCommunityPosts } from "./data";
-import { useCommunityFeed, useCommunityGroups } from "./community-queries";
+} from "./_components/community-atoms";
+import { CommunityContextSidebar } from "./feed/community-context-sidebar";
+import { CommunityErrorBoundary } from "./_components/community-error-boundary";
+import { CommunityFeed } from "./feed/community-feed";
+import { mockCommunityGroups } from "./_components/data";
+import {
+  useCommunityFeed,
+  useCommunityGroups,
+} from "./_components/community-queries";
 
 export function CommunityPage() {
   const searchQuery = useAtomValue(communitySearchQueryAtom);
@@ -37,12 +40,6 @@ export function CommunityPage() {
     groups,
     extraCommentsByPostId,
   );
-  const allPosts = [...createdPosts, ...mockCommunityPosts];
-  const selectedPost =
-    allPosts.find((post) => post.id === selectedPostId) ?? null;
-  const selectedGroup = selectedPost
-    ? getGroupById(selectedPost.groupId, groups)
-    : null;
 
   function toggleJoin(groupId: string) {
     setJoinedGroupIds((previous) =>

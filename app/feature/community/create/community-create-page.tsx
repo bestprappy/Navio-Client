@@ -2,15 +2,13 @@
 
 import { useAtomValue } from "jotai";
 
-import { createPostDraftAtom, createdGroupsAtom } from "./community-atoms";
-
-import { CommunityErrorBoundary } from "./community-error-boundary";
-
-import { mockCommunityGroups } from "./data";
-import { useCommunityGroups } from "./community-queries";
+import { createPostDraftAtom, createdGroupsAtom } from "../_components/community-atoms";
+import { CommunityComposer } from "./community-composer";
+import { CommunityErrorBoundary } from "../_components/community-error-boundary";
+import { CommunityRulesSidebar } from "./community-rules-sidebar";
+import { mockCommunityGroups } from "../_components/data";
+import { useCommunityGroups } from "../_components/community-queries";
 import { Button } from "@/components/ui/button";
-import { CommunityComposer } from "../create/community-composer";
-import { CommunityRulesSidebar } from "../create/community-rules-sidebar";
 
 export function CommunityCreatePage() {
   const createdGroups = useAtomValue(createdGroupsAtom);
