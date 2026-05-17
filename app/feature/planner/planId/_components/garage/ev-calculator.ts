@@ -11,7 +11,13 @@ import {
 import type { EvCar } from "../constants/vehicle.types";
 import type { RouteSegment } from "../routes/trip-route.types";
 
-const DC_CONNECTOR_TYPES = new Set<EvConnectorType>(["CCS2", "CHADEMO", "NACS", "GB_T"]);
+const DC_CONNECTOR_TYPES = new Set<EvConnectorType>([
+  "CCS1",
+  "CCS2",
+  "CHADEMO",
+  "NACS",
+  "GB_T",
+]);
 const AUTO_MIN_ARRIVAL_PCT = 12;
 const AUTO_COMFORT_ARRIVAL_PCT = 24;
 export const AUTO_CHARGE_TARGET_DEFAULT_PCT = 50;
@@ -341,8 +347,10 @@ export function planAutoEvChargers({
       const requiredStop = projectedArrivalPct < AUTO_MIN_ARRIVAL_PCT;
       const strategicStop =
         !requiredStop &&
-        legUsePct >= AUTO_HEAVY_LEG_PCT &&
-        projectedArrivalPct < AUTO_COMFORT_ARRIVAL_PCT + 20;
+        (
+          (legUsePct >= AUTO_HEAVY_LEG_PCT && projectedArrivalPct < AUTO_COMFORT_ARRIVAL_PCT + 20) ||
+          (legUsePct >= 10 && projectedArrivalPct < stopChargeTargetPct)
+        );
 
       if (!requiredStop && !strategicStop) {
         break;

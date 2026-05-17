@@ -2,8 +2,10 @@ import type { EvConnectorType } from "./types";
 import type { EvCar, UserVehicle } from "./vehicle.types";
 
 export const evConnectorOptions: EvConnectorType[] = [
+  "CCS1",
   "CCS2",
   "TYPE2",
+  "J1772",
   "CHADEMO",
   "NACS",
   "GB_T",

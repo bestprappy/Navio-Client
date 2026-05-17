@@ -37,6 +37,10 @@ export function EvStationListCard({
   onSelect,
 }: EvStationListCardProps) {
   const addDisabled = isAdded || !isCompatible;
+  const backgroundImage = charger.imageUrl
+    ? `url(${charger.imageUrl}), url(${visual.imageUrl})`
+    : `url(${visual.imageUrl})`;
+  const imageAlt = charger.imageUrl ? `Photo of ${charger.name}` : visual.alt;
 
   return (
     <article
@@ -53,9 +57,9 @@ export function EvStationListCard({
       >
         <span
           role="img"
-          aria-label={visual.alt}
+          aria-label={imageAlt}
           className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted bg-cover bg-center"
-          style={{ backgroundImage: `url(${visual.imageUrl})` }}
+          style={{ backgroundImage }}
         >
           {isAdded ? (
             <span className="absolute left-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs">

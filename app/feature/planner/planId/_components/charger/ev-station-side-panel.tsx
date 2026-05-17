@@ -8,11 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { PlannerSidePanel } from "../layout/planner-side-panel";
-import { getAllEvChargers, searchEvChargers } from "../constants/charger.data";
-import { getDistanceKm } from "../constants/place.data";
 import type { EvCharger } from "../constants/types";
 import {
   autoAddEvChargersToBlockAtom,
+  evChargerLoadingAtom,
   tripBlocksAtom,
   type EvChargerMapResult,
 } from "../overview/trip-builder.atoms";
@@ -32,23 +31,16 @@ import { BatterySlider } from "../garage/battery-slider";
 
 import { EvStationListCard } from "./ev-station-list-card";
 import { getEvStationVisual } from "./ev-station-panel.data";
-
-type PlaceAnchor = {
-  id: string;
-  lat: number;
-  lng: number;
-};
+import { filterEvChargers } from "./ev-station-api";
 
 type EvStationSidePanelProps = {
   activeBlockId: string | null;
-  placeAnchors: PlaceAnchor[];
   results: EvChargerMapResult[];
   selectedResult: EvChargerMapResult | null;
   addedChargerIds: Set<string>;
   onAddCharger: (blockId: string, charger: EvCharger) => void;
   onClose: () => void;
   onSelect: (chargerId: string) => void;
-  onUpdateResults: (results: EvChargerMapResult[]) => void;
 };
 
 function getPanelBlockId(
@@ -61,56 +53,19 @@ function getPanelBlockId(
   );
 }
 
-function getMinDistanceKm(
-  chargerLocation: { lat: number; lng: number },
-  anchors: PlaceAnchor[],
-): number {
-  if (anchors.length === 0) return 0;
-
-  return anchors.reduce((min, anchor) => {
-    const d = getDistanceKm(
-      { lat: anchor.lat, lng: anchor.lng },
-      chargerLocation,
-    );
-    return d < min ? d : min;
-  }, Infinity);
-}
-
-function getClosestAnchorId(
-  chargerLocation: { lat: number; lng: number },
-  anchors: PlaceAnchor[],
-): string {
-  let bestId = anchors[0]!.id;
-  let bestDist = Infinity;
-
-  for (const anchor of anchors) {
-    const d = getDistanceKm(
-      { lat: anchor.lat, lng: anchor.lng },
-      chargerLocation,
-    );
-    if (d < bestDist) {
-      bestDist = d;
-      bestId = anchor.id;
-    }
-  }
-
-  return bestId;
-}
-
 export function EvStationSidePanel({
   activeBlockId,
-  placeAnchors,
   results,
   selectedResult,
   addedChargerIds,
   onAddCharger,
   onClose,
   onSelect,
-  onUpdateResults,
 }: EvStationSidePanelProps) {
   const [query, setQuery] = useState("");
   const [autoMessage, setAutoMessage] = useState<string | null>(null);
   const activeEvCar = useAtomValue(activeEvCarAtom);
+  const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
   const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
   const chargeStopTargetPct = useAtomValue(chargeStopTargetPctAtom);
   const tripBlocks = useAtomValue(tripBlocksAtom);
@@ -131,9 +86,15 @@ export function EvStationSidePanel({
       car: activeEvCar,
       startingBatteryPct,
       chargeTargetPct: chargeStopTargetPct,
-      chargers: getAllEvChargers(),
+      chargers: results.map((result) => result.charger),
     });
-  }, [activeEvCar, chargeStopTargetPct, startingBatteryPct, targetBlock]);
+  }, [
+    activeEvCar,
+    chargeStopTargetPct,
+    results,
+    startingBatteryPct,
+    targetBlock,
+  ]);
   const autoPlanMinutes = useMemo(
     () =>
       autoPlan?.insertions.reduce(
@@ -153,6 +114,16 @@ export function EvStationSidePanel({
         : autoPlan?.message ?? "Open a day with route places to auto-plan.");
   const selectedCharger =
     selectedResult?.charger ?? results[0]?.charger ?? null;
+  const visibleResults = useMemo(() => {
+    const visibleChargerIds = new Set(
+      filterEvChargers(
+        results.map((result) => result.charger),
+        query,
+      ).map((charger) => charger.id),
+    );
+
+    return results.filter((result) => visibleChargerIds.has(result.charger.id));
+  }, [query, results]);
   const getVehicleCompatibility = (charger: EvCharger) =>
     activeEvCar
       ? isCompatible(activeEvCar.connectorTypes, charger.connectorTypes)
@@ -161,35 +132,11 @@ export function EvStationSidePanel({
   function updateSearch(nextQuery: string) {
     setQuery(nextQuery);
 
-    if (!panelBlockId) {
-      return;
-    }
-
-    const chargers = searchEvChargers(nextQuery);
-    const nextResults = chargers
-      .map((charger) => ({
-        charger,
-        targetBlockId: panelBlockId,
-        targetPlaceId:
-          placeAnchors.length > 0
-            ? getClosestAnchorId(charger.location, placeAnchors)
-            : panelBlockId,
-        distanceKm: getMinDistanceKm(charger.location, placeAnchors),
-      }))
-      .sort((a, b) => {
-        const compatibleA = getVehicleCompatibility(a.charger);
-        const compatibleB = getVehicleCompatibility(b.charger);
-
-        if (compatibleA !== compatibleB) {
-          return compatibleA ? -1 : 1;
-        }
-
-        return a.distanceKm - b.distanceKm;
-      });
-
-    onUpdateResults(nextResults);
-
-    const firstCharger = nextResults[0]?.charger;
+    const nextVisible = filterEvChargers(
+      results.map((result) => result.charger),
+      nextQuery,
+    );
+    const firstCharger = nextVisible[0];
     if (firstCharger) {
       onSelect(firstCharger.id);
     }
@@ -310,9 +257,13 @@ export function EvStationSidePanel({
         </div>
 
         <section aria-label="Nearby EV stations" className="px-4 py-4">
-          {results.length ? (
+          {isLoadingEvChargers ? (
+            <div className="rounded-sm border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground shadow-xs">
+              Finding EV stations near your saved stops...
+            </div>
+          ) : visibleResults.length ? (
             <div className="space-y-3">
-              {results.map((result) => {
+              {visibleResults.map((result) => {
                 const charger = result.charger;
                 const isSelected = selectedCharger?.id === charger.id;
 
