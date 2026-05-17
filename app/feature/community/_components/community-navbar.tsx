@@ -14,7 +14,7 @@ export function CommunityNavbar() {
   const [searchQuery, setSearchQuery] = useAtom(communitySearchQueryAtom);
 
   return (
-    <header className="shrink-0 border-b border-border bg-card">
+    <header className="shrink-0 border-b border-border">
       <div className="flex h-18 items-center gap-3 px-4 lg:px-6">
         <Link
           href="/community"

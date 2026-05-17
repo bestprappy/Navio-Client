@@ -3,15 +3,15 @@
 import { SearchX, Sparkles } from "lucide-react";
 import { useAtom } from "jotai";
 
-import { communityFeedSortAtom } from "./community-atoms";
-import { CommunityPostCard } from "./community-post-card";
+import { communityFeedSortAtom } from "../_components/community-atoms";
+import { CommunityPostCard } from "../_components/community-post-card";
 import type {
   CommunityComment,
   CommunityFeedSort,
   CommunityGroup,
   CommunityPost,
-} from "./data";
-import { getCommentsByPostId, getGroupById, getTripById } from "./data";
+} from "../_components/data";
+import { getCommentsByPostId, getGroupById, getTripById } from "../_components/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

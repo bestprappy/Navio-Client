@@ -1,11 +1,14 @@
 import type { EvCharger, EvConnectorType } from "../constants/types";
 
 const connectorLabels: Record<EvConnectorType, string> = {
+  CCS1: "CCS1",
   CCS2: "CCS2",
   CHADEMO: "CHAdeMO",
   TYPE2: "Type 2",
+  J1772: "J1772",
   NACS: "NACS",
   GB_T: "GB/T",
+  OTHER: "Other",
 };
 
 export function formatConnectorLabel(connector: EvConnectorType): string {

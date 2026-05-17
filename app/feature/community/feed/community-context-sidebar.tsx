@@ -1,20 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { ArrowBigUpDash, MessageCircle, UserPlus } from "lucide-react";
 import { useAtom, useAtomValue } from "jotai";
 
 import {
   createdPostsAtom,
-  joinedGroupIdsAtom,
   recentPostsClearedAtom,
-} from "./community-atoms";
-import type { CommunityGroup, CommunityPost } from "./data";
+} from "../_components/community-atoms";
+import type { CommunityGroup, CommunityPost } from "../_components/data";
 import {
   formatCount,
   formatRelativeTime,
   getInitials,
   mockCommunityPosts,
-} from "./data";
+  slugifyCommunityValue,
+} from "../_components/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -34,22 +35,29 @@ function CommunityJoinItem({
   group: CommunityGroup;
   onJoin: () => void;
 }) {
+  const groupHref = `/community/${slugifyCommunityValue(group.name)}`;
+
   return (
     <div className="flex items-center gap-3 hover:bg-muted/70 my-3 p-4 rounded-sm">
-      <Avatar className="size-8 shrink-0">
-        <AvatarImage src={group.avatarUrl} alt={group.name} />
-        <AvatarFallback className="text-[11px] font-semibold">
-          {getInitials(group.name)}
-        </AvatarFallback>
-      </Avatar>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-foreground">
-          {group.name}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {formatCount(group.memberCount)} members
-        </p>
-      </div>
+      <Link
+        href={groupHref}
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        <Avatar className="size-8 shrink-0">
+          <AvatarImage src={group.avatarUrl} alt={group.name} />
+          <AvatarFallback className="text-[11px] font-semibold">
+            {getInitials(group.name)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground">
+            {group.name}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {formatCount(group.memberCount)} members
+          </p>
+        </div>
+      </Link>
       <Button
         type="button"
         size="sm"
@@ -72,18 +80,31 @@ function RecentPostItem({
   group: CommunityGroup;
   post: CommunityPost;
 }) {
+  const groupHref = `/community/${slugifyCommunityValue(group.name)}`;
+
   return (
     <div className="flex gap-3 py-2.5">
-      <Avatar className="mt-0.5 size-6 shrink-0">
-        <AvatarImage src={group.avatarUrl} alt={group.name} />
-        <AvatarFallback className="text-[10px]">
-          {getInitials(group.name)}
-        </AvatarFallback>
-      </Avatar>
+      <Link
+        href={groupHref}
+        className="mt-0.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        aria-label={`Open ${group.name}`}
+      >
+        <Avatar className="size-6 shrink-0">
+          <AvatarImage src={group.avatarUrl} alt={group.name} />
+          <AvatarFallback className="text-[10px]">
+            {getInitials(group.name)}
+          </AvatarFallback>
+        </Avatar>
+      </Link>
       <div className="min-w-0 flex-1">
         <p className="text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">{group.name}</span>
-          {" · "}
+          <Link
+            href={groupHref}
+            className="rounded-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
+            {group.name}
+          </Link>
+          {" - "}
           {formatRelativeTime(post.createdAt)}
         </p>
         <p className="mt-0.5 line-clamp-2 text-sm font-medium leading-snug text-foreground">
@@ -243,7 +264,7 @@ export function CommunityContextSidebar({
       unjoinedGroups.length === 0 &&
       joinedGroups.length > 0 ? (
         <p className="px-1 text-xs text-muted-foreground">
-          You've joined all available communities.
+          You have joined all available communities.
         </p>
       ) : null}
     </aside>

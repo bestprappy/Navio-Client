@@ -8,6 +8,53 @@ type GooglePlaceSearchResponse = {
   items: GooglePlaceDetailResponse[];
 };
 
+type GoogleEvConnectorType =
+  | "CCS1"
+  | "CCS2"
+  | "CHADEMO"
+  | "TYPE2"
+  | "J1772"
+  | "NACS"
+  | "GB_T"
+  | "OTHER";
+
+type GoogleEvChargerResponse = {
+  id: string;
+  name: string;
+  operatorName: string | null;
+  location: {
+    lat: number;
+    lng: number;
+    address: string | null;
+    placeId: string | null;
+  };
+  address: string | null;
+  province: string | null;
+  connectorTypes: GoogleEvConnectorType[];
+  maxKw: number;
+  totalConnectors: number;
+  availableConnectors: number | null;
+  priceText: string | null;
+  openingHours: Record<string, unknown>;
+  source: "GOOGLE_PLACES";
+  verificationStatus: "GOOGLE_CACHED";
+  status: "active" | "temporarily_closed" | "permanently_closed" | "unknown";
+  ratingAvg: number;
+  ratingCount: number;
+  confidenceScore: number;
+  stale: boolean;
+  imageUrl: string | null;
+};
+
+type GoogleEvChargerSearchResponse = {
+  items: GoogleEvChargerResponse[];
+  meta: {
+    source: "google_places";
+    stale: false;
+    refreshed: true;
+  };
+};
+
 type GooglePlaceSuggestionItem = {
   provider: "GOOGLE";
   providerPlaceId: string;
@@ -304,6 +351,81 @@ export async function fetchGooglePlacesNearby({
   };
 }
 
+export async function fetchGoogleEvChargersNearby({
+  lat,
+  lng,
+  radiusMeters,
+  apiKey,
+}: {
+  lat: string;
+  lng: string;
+  radiusMeters: number;
+  apiKey: string;
+}): Promise<GoogleEvChargerSearchResponse> {
+  const body = {
+    includedTypes: ["electric_vehicle_charging_station"],
+    locationRestriction: {
+      circle: {
+        center: { latitude: Number(lat), longitude: Number(lng) },
+        radius: radiusMeters,
+      },
+    },
+    maxResultCount: 20,
+    rankPreference: "DISTANCE",
+  };
+
+  const response = await fetch(`${GOOGLE_PLACES_BASE_URL}/places:searchNearby`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": apiKey,
+      "X-Goog-FieldMask": [
+        "places.id",
+        "places.displayName",
+        "places.formattedAddress",
+        "places.location",
+        "places.businessStatus",
+        "places.currentOpeningHours",
+        "places.regularOpeningHours",
+        "places.rating",
+        "places.userRatingCount",
+        "places.evChargeOptions",
+        "places.photos",
+      ].join(","),
+    },
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+
+  const data: unknown = await response.json();
+
+  if (!response.ok) {
+    throw new Error(getGoogleErrorMessage(data, response.status));
+  }
+
+  if (!isRecord(data) || !Array.isArray(data.places)) {
+    return {
+      items: [],
+      meta: {
+        source: "google_places",
+        stale: false,
+        refreshed: true,
+      },
+    };
+  }
+
+  return {
+    items: (await Promise.all(
+      data.places.map((place) => mapGoogleEvCharger(place, apiKey)),
+    )).flat(),
+    meta: {
+      source: "google_places",
+      stale: false,
+      refreshed: true,
+    },
+  };
+}
+
 async function mapGooglePlaceDetail(
   value: JsonRecord,
   requestedProviderPlaceId: string,
@@ -358,6 +480,69 @@ function mapGooglePlace(
     rating: getNumber(value.rating),
     reviewCount: getNumber(value.userRatingCount),
   };
+}
+
+async function mapGoogleEvCharger(
+  value: unknown,
+  apiKey: string,
+): Promise<GoogleEvChargerResponse[]> {
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const providerPlaceId = getString(value.id);
+  const displayName = isRecord(value.displayName) ? value.displayName : {};
+  const name = getString(displayName.text);
+  const location = isRecord(value.location) ? value.location : {};
+  const lat = getNumber(location.latitude);
+  const lng = getNumber(location.longitude);
+
+  if (!providerPlaceId || !name || lat === null || lng === null) {
+    return [];
+  }
+
+  const address = getString(value.formattedAddress);
+  const aggregations = getConnectorAggregations(value.evChargeOptions);
+  const connectorTypes = getConnectorTypes(aggregations);
+  const maxKw = getMaxChargeRateKw(aggregations);
+  const totalConnectors = getTotalConnectorCount(
+    value.evChargeOptions,
+    aggregations,
+  );
+  const photoName = getFirstPhotoName(value.photos);
+  const imageUrl = photoName
+    ? await fetchGooglePhotoUri({ photoName, apiKey })
+    : null;
+
+  return [
+    {
+      id: `google:${providerPlaceId}`,
+      name,
+      operatorName: null,
+      location: {
+        lat,
+        lng,
+        address,
+        placeId: providerPlaceId,
+      },
+      address,
+      province: null,
+      connectorTypes,
+      maxKw,
+      totalConnectors,
+      availableConnectors: getAvailableConnectorCount(aggregations),
+      priceText: null,
+      openingHours: getEvOpeningHours(value),
+      source: "GOOGLE_PLACES",
+      verificationStatus: "GOOGLE_CACHED",
+      status: mapBusinessStatus(value.businessStatus),
+      ratingAvg: getNumber(value.rating) ?? 0,
+      ratingCount: getNumber(value.userRatingCount) ?? 0,
+      confidenceScore: aggregations.length ? 0.92 : 0.72,
+      stale: false,
+      imageUrl,
+    },
+  ];
 }
 
 async function fetchGooglePhotoUri({
@@ -430,6 +615,119 @@ function mapGoogleAutocompleteSuggestion(
       sessionToken: sessionToken?.trim() || undefined,
     },
   ];
+}
+
+function getConnectorAggregations(value: unknown): JsonRecord[] {
+  if (!isRecord(value)) {
+    return [];
+  }
+
+  const aggregations =
+    value.connectorAggregation ?? value.connectorAggregations;
+
+  return Array.isArray(aggregations) ? aggregations.filter(isRecord) : [];
+}
+
+function getConnectorTypes(
+  aggregations: JsonRecord[],
+): GoogleEvConnectorType[] {
+  const types = new Set<GoogleEvConnectorType>();
+
+  aggregations.forEach((aggregation) => {
+    const connectorType = mapGoogleEvConnectorType(aggregation.type);
+    if (connectorType) {
+      types.add(connectorType);
+    }
+  });
+
+  return types.size ? [...types] : ["CCS2", "TYPE2"];
+}
+
+function mapGoogleEvConnectorType(
+  value: unknown,
+): GoogleEvConnectorType | null {
+  switch (getString(value)) {
+    case "EV_CONNECTOR_TYPE_CCS_COMBO_1":
+      return "CCS1";
+    case "EV_CONNECTOR_TYPE_CCS_COMBO_2":
+      return "CCS2";
+    case "EV_CONNECTOR_TYPE_CHADEMO":
+      return "CHADEMO";
+    case "EV_CONNECTOR_TYPE_TYPE_2":
+      return "TYPE2";
+    case "EV_CONNECTOR_TYPE_J1772":
+      return "J1772";
+    case "EV_CONNECTOR_TYPE_NACS":
+    case "EV_CONNECTOR_TYPE_TESLA":
+      return "NACS";
+    case "EV_CONNECTOR_TYPE_UNSPECIFIED_GB_T":
+      return "GB_T";
+    case "EV_CONNECTOR_TYPE_OTHER":
+      return "OTHER";
+    default:
+      return null;
+  }
+}
+
+function getMaxChargeRateKw(aggregations: JsonRecord[]): number {
+  const rates = aggregations
+    .map((aggregation) => getNumber(aggregation.maxChargeRateKw))
+    .filter((rate): rate is number => rate !== null && rate > 0);
+
+  return rates.length ? Math.max(...rates) : 22;
+}
+
+function getTotalConnectorCount(
+  evChargeOptions: unknown,
+  aggregations: JsonRecord[],
+): number {
+  const evConnectorCount = isRecord(evChargeOptions)
+    ? getNumber(evChargeOptions.connectorCount)
+    : null;
+  const aggregationCount = aggregations.reduce(
+    (total, aggregation) => total + (getNumber(aggregation.count) ?? 0),
+    0,
+  );
+
+  return Math.max(evConnectorCount ?? aggregationCount, 1);
+}
+
+function getAvailableConnectorCount(aggregations: JsonRecord[]) {
+  let hasAvailability = false;
+  const availableCount = aggregations.reduce((total, aggregation) => {
+    const count = getNumber(aggregation.availableCount);
+    if (count === null) {
+      return total;
+    }
+
+    hasAvailability = true;
+    return total + count;
+  }, 0);
+
+  return hasAvailability ? availableCount : null;
+}
+
+function getEvOpeningHours(value: JsonRecord) {
+  const currentOpeningHours = getOpeningHoursSummary(value.currentOpeningHours);
+
+  if (isRecord(currentOpeningHours) && getString(currentOpeningHours.summary)) {
+    return currentOpeningHours;
+  }
+
+  return getOpeningHoursSummary(value.regularOpeningHours);
+}
+
+function mapBusinessStatus(value: unknown): GoogleEvChargerResponse["status"] {
+  switch (getString(value)) {
+    case "OPERATIONAL":
+      return "active";
+    case "CLOSED_TEMPORARILY":
+      return "temporarily_closed";
+    case "CLOSED_PERMANENTLY":
+      return "permanently_closed";
+    default:
+      return "unknown";
+  }
 }
 
 function getOpeningHoursSummary(value: unknown) {

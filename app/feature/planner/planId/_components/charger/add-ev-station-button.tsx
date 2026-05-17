@@ -5,18 +5,30 @@ import { useAtomValue, useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
 
-import { searchEvChargers } from "../constants/charger.data";
 import { getDistanceKm } from "../constants/place.data";
-import { isEvChargerPlaceItem, isPlaceItem } from "../constants/types";
+import {
+  isEvChargerPlaceItem,
+  isPlaceItem,
+  type EvCharger,
+} from "../constants/types";
 import { activeEvCarAtom } from "../garage/garage.atoms";
 import { isCompatible } from "../garage/ev-calculator";
 import {
   activeBlockIdAtom,
   activePlannerSidePanelAtom,
+  evChargerErrorAtom,
+  evChargerLoadingAtom,
   selectEvChargerAtom,
   setEvChargerResultsAtom,
   tripBlocksAtom,
+  type EvChargerMapResult,
 } from "../overview/trip-builder.atoms";
+import { useTripRoutes } from "../routes/trip-route-query";
+import {
+  DEFAULT_EV_STATION_RADIUS_METERS,
+  fetchEvChargersNear,
+  sampleRoutePolyline,
+} from "./ev-station-api";
 
 type AddEvStationButtonProps = {
   blockId: string;
@@ -24,12 +36,17 @@ type AddEvStationButtonProps = {
 
 export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
   const blocks = useAtomValue(tripBlocksAtom);
+  const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
   const setActivePlannerSidePanel = useSetAtom(activePlannerSidePanelAtom);
+  const setEvChargerError = useSetAtom(evChargerErrorAtom);
+  const setEvChargerLoading = useSetAtom(evChargerLoadingAtom);
   const setEvChargerResults = useSetAtom(setEvChargerResultsAtom);
   const selectEvCharger = useSetAtom(selectEvChargerAtom);
   const activeEvCar = useAtomValue(activeEvCarAtom);
 
+  const tripRoutes = useTripRoutes();
+  const routeSegments = tripRoutes.data?.segments ?? [];
   const block = blocks.find((b) => b.id === blockId);
   const placeAnchors = (block?.items ?? [])
     .filter(isPlaceItem)
@@ -37,62 +54,65 @@ export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
 
   const hasPlaces = placeAnchors.length > 0;
 
-  function openStationList() {
+  async function openStationList() {
     if (!hasPlaces) return;
 
-    const chargers = searchEvChargers("");
-
-    const results = chargers
-      .map((charger) => {
-        const minDistance = placeAnchors.reduce((min, place) => {
-          const d = getDistanceKm(
-            { lat: place.lat, lng: place.lng },
-            charger.location,
-          );
-          return d < min ? d : min;
-        }, Infinity);
-
-        const closestAnchor = placeAnchors.reduce((best, place) => {
-          const d = getDistanceKm(
-            { lat: place.lat, lng: place.lng },
-            charger.location,
-          );
-          const bestD = getDistanceKm(
-            { lat: best.lat, lng: best.lng },
-            charger.location,
-          );
-          return d < bestD ? place : best;
-        });
-
-        return {
-          charger,
-          targetBlockId: blockId,
-          targetPlaceId: closestAnchor.id,
-          distanceKm: minDistance === Infinity ? 0 : minDistance,
-        };
-      })
-      .sort((a, b) => {
-        const compatibleA = activeEvCar
-          ? isCompatible(activeEvCar.connectorTypes, a.charger.connectorTypes)
-          : true;
-        const compatibleB = activeEvCar
-          ? isCompatible(activeEvCar.connectorTypes, b.charger.connectorTypes)
-          : true;
-
-        if (compatibleA !== compatibleB) {
-          return compatibleA ? -1 : 1;
-        }
-
-        return a.distanceKm - b.distanceKm;
-      });
-
     setActiveBlockId(blockId);
-    setEvChargerResults(results);
+    setEvChargerResults([]);
+    setEvChargerError(null);
+    setEvChargerLoading(true);
     setActivePlannerSidePanel({ type: "ev-stations", blockId });
 
-    const firstCharger = results[0]?.charger;
-    if (firstCharger) {
-      selectEvCharger(firstCharger.id);
+    try {
+      const intermediateAnchors = sampleRoutePolyline(routeSegments, blockId, 30);
+      const allAnchors = [...placeAnchors, ...intermediateAnchors];
+
+      const chargersByAnchor = await Promise.all(
+        allAnchors.map(async (anchor) => ({
+          place: anchor,
+          chargers: await fetchEvChargersNear(
+            anchor.lat,
+            anchor.lng,
+            DEFAULT_EV_STATION_RADIUS_METERS,
+          ),
+        })),
+      );
+
+      const results = buildEvChargerResults(chargersByAnchor, blockId).sort(
+        (a, b) => {
+          const compatibleA = activeEvCar
+            ? isCompatible(activeEvCar.connectorTypes, a.charger.connectorTypes)
+            : true;
+          const compatibleB = activeEvCar
+            ? isCompatible(activeEvCar.connectorTypes, b.charger.connectorTypes)
+            : true;
+
+          if (compatibleA !== compatibleB) {
+            return compatibleA ? -1 : 1;
+          }
+
+          return a.distanceKm - b.distanceKm;
+        },
+      );
+
+      setEvChargerResults(results);
+
+      const firstCharger = results[0]?.charger;
+      if (firstCharger) {
+        selectEvCharger(firstCharger.id);
+      } else {
+        setEvChargerError("No EV stations found near this day yet.");
+      }
+    } catch (error) {
+      console.error("EV station search failed.", {
+        component: "AddEvStationButton",
+        operation: "openStationList",
+        blockId,
+        error,
+      });
+      setEvChargerError("EV stations could not be loaded.");
+    } finally {
+      setEvChargerLoading(false);
     }
   }
 
@@ -101,7 +121,7 @@ export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
       type="button"
       variant="outline"
       size="lg"
-      disabled={!hasPlaces}
+      disabled={!hasPlaces || isLoadingEvChargers}
       title={
         hasPlaces
           ? undefined
@@ -111,7 +131,39 @@ export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
       onClick={openStationList}
     >
       <Zap className="size-4" aria-hidden="true" />
-      Add EV station
+      {isLoadingEvChargers ? "Finding EV stations..." : "Add EV station"}
     </Button>
   );
+}
+
+function buildEvChargerResults(
+  chargersByAnchor: Array<{
+    place: { id: string; lat: number; lng: number };
+    chargers: EvCharger[];
+  }>,
+  blockId: string,
+): EvChargerMapResult[] {
+  const byChargerId = new Map<string, EvChargerMapResult>();
+
+  chargersByAnchor.forEach(({ place, chargers }) => {
+    chargers.forEach((charger) => {
+      const distanceKm = getDistanceKm(
+        { lat: place.lat, lng: place.lng },
+        charger.location,
+      );
+      const nextResult = {
+        charger,
+        targetBlockId: blockId,
+        targetPlaceId: place.id,
+        distanceKm,
+      };
+      const existing = byChargerId.get(charger.id);
+
+      if (!existing || distanceKm < existing.distanceKm) {
+        byChargerId.set(charger.id, nextResult);
+      }
+    });
+  });
+
+  return [...byChargerId.values()];
 }

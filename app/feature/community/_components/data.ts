@@ -1,4 +1,5 @@
 export type CommunityFeedSort = "best" | "new" | "top";
+export type CommunityCommentSort = "best" | "new";
 
 export type CommunityUser = {
   id: string;
@@ -64,6 +65,21 @@ export type CommunityBookmark = {
   label: string;
 };
 
+export type CommunityDiscoveryCategory = {
+  id: string;
+  label: string;
+  keywords: string[];
+};
+
+export type CommunityGroupProfile = {
+  groupId: string;
+  bannerUrl: string;
+  summary: string;
+  weeklyVisitorCount: number;
+  weeklyContributionCount: number;
+  moderatorIds: string[];
+};
+
 export type CommunityPost = {
   id: string;
   groupId: string;
@@ -84,6 +100,7 @@ export type CommunityPost = {
 export type CommunityComment = {
   id: string;
   postId: string;
+  parentCommentId?: string;
   authorId: string;
   body: string;
   createdAt: string;
@@ -116,6 +133,50 @@ export const currentCommunityUser: CommunityUser = {
   avatarUrl: "",
   location: "Bangkok, Thailand",
 };
+
+export const communityDiscoveryCategories: CommunityDiscoveryCategory[] = [
+  { id: "all", label: "All", keywords: [] },
+  {
+    id: "food-routes",
+    label: "Food Routes",
+    keywords: ["restaurant", "food", "ramen", "night market"],
+  },
+  {
+    id: "thailand",
+    label: "Thailand",
+    keywords: ["thailand", "bangkok", "chiang mai", "phuket", "khao yai"],
+  },
+  {
+    id: "city-breaks",
+    label: "City Breaks",
+    keywords: ["bangkok", "tokyo", "seoul", "osaka", "singapore"],
+  },
+  {
+    id: "coastal",
+    label: "Coastal",
+    keywords: ["beach", "coastal", "seafood", "phuket", "bali", "vietnam"],
+  },
+  {
+    id: "road-trips",
+    label: "Road Trips",
+    keywords: ["road trip", "ev", "charging", "route"],
+  },
+  {
+    id: "japan",
+    label: "Japan",
+    keywords: ["japan", "tokyo", "osaka", "ramen"],
+  },
+  {
+    id: "cafes",
+    label: "Cafes",
+    keywords: ["cafe", "coffee", "chiang mai", "seoul"],
+  },
+  {
+    id: "official",
+    label: "Official",
+    keywords: ["official"],
+  },
+];
 
 export const communityUsers: CommunityUser[] = [
   currentCommunityUser,
@@ -160,6 +221,9 @@ export const communityUsers: CommunityUser[] = [
     location: "Tokyo, Japan",
   },
 ];
+
+const DEFAULT_COMMUNITY_GROUP_BANNER =
+  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80";
 
 export const mockSharedTrips: SharedTrip[] = [
   {
@@ -331,6 +395,129 @@ export const mockSharedTrips: SharedTrip[] = [
     ],
     tags: ["restaurant", "ramen", "tokyo", "japan"],
     copiedCount: 44,
+  },
+];
+
+export const mockCommunityGroupProfiles: CommunityGroupProfile[] = [
+  {
+    groupId: "group-thailand-restaurants",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "A practical planning room for Thailand food routes, reservations, local timing, and restaurant-heavy itineraries.",
+    weeklyVisitorCount: 62000,
+    weeklyContributionCount: 1400,
+    moderatorIds: ["user-kanya", "user-pim", "user-narin"],
+  },
+  {
+    groupId: "group-bangkok-food",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "Bangkok-specific food route advice for neighborhoods, night markets, river hops, dessert stops, and traffic-aware pacing.",
+    weeklyVisitorCount: 41800,
+    weeklyContributionCount: 920,
+    moderatorIds: ["user-kanya", "user-narin", "user-current"],
+  },
+  {
+    groupId: "group-chiang-mai-cafes",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "Coffee, khao soi, mountain drives, and slower northern Thailand routes with realistic stop counts.",
+    weeklyVisitorCount: 29300,
+    weeklyContributionCount: 610,
+    moderatorIds: ["user-narin", "user-arthit", "user-kanya"],
+  },
+  {
+    groupId: "group-phuket-coast",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1589394815804-964ed0be2eb5?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "Coastal Phuket planning for seafood, sunset viewpoints, beach drives, island detours, and seasonal route checks.",
+    weeklyVisitorCount: 24700,
+    weeklyContributionCount: 470,
+    moderatorIds: ["user-pim", "user-kanya", "user-mika"],
+  },
+  {
+    groupId: "group-thailand-ev-charging",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1593941707882-a5bba14938c7?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "EV road-trip planning across Thailand with charger reliability notes, backup stops, and food pairings.",
+    weeklyVisitorCount: 35600,
+    weeklyContributionCount: 780,
+    moderatorIds: ["user-arthit", "user-narin", "user-current"],
+  },
+  {
+    groupId: "group-tokyo-restaurant-routes",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "Tokyo restaurant crawls, reservation timing, ramen neighborhoods, and compact transit-friendly itineraries.",
+    weeklyVisitorCount: 18400,
+    weeklyContributionCount: 350,
+    moderatorIds: ["user-mika", "user-kanya", "user-pim"],
+  },
+  {
+    groupId: "group-osaka-street-food",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "Osaka food alleys, market timing, takoyaki crawls, and compact station-friendly eating routes.",
+    weeklyVisitorCount: 16400,
+    weeklyContributionCount: 290,
+    moderatorIds: ["user-mika", "user-kanya"],
+  },
+  {
+    groupId: "group-seoul-cafe-hops",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1535189043414-47a3c49a0bed?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "Neighborhood cafe loops, dessert stops, transit timing, and low-stress Seoul planning notes.",
+    weeklyVisitorCount: 14200,
+    weeklyContributionCount: 240,
+    moderatorIds: ["user-mika", "user-narin"],
+  },
+  {
+    groupId: "group-vietnam-coastal-routes",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "Coastal Vietnam route planning for seafood, viewpoints, scooters, trains, and weather windows.",
+    weeklyVisitorCount: 19800,
+    weeklyContributionCount: 360,
+    moderatorIds: ["user-pim", "user-narin"],
+  },
+  {
+    groupId: "group-bali-sunset-stops",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "Bali sunset routes, beach clubs, scooter timing, and restaurant pairings without overpacking the day.",
+    weeklyVisitorCount: 22100,
+    weeklyContributionCount: 410,
+    moderatorIds: ["user-pim", "user-kanya"],
+  },
+  {
+    groupId: "group-singapore-food-courts",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1565967511849-76a60a516170?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "Hawker-center planning, neighborhood food courts, weather-proof walking routes, and transit shortcuts.",
+    weeklyVisitorCount: 17600,
+    weeklyContributionCount: 310,
+    moderatorIds: ["user-kanya", "user-mika"],
+  },
+  {
+    groupId: "group-taiwan-night-markets",
+    bannerUrl:
+      "https://images.unsplash.com/photo-1526481280693-3bfa7568e0f3?auto=format&fit=crop&w=1600&q=80",
+    summary:
+      "Taiwan night market routes, snack pacing, train-friendly city loops, and rainy-evening backups.",
+    weeklyVisitorCount: 15300,
+    weeklyContributionCount: 270,
+    moderatorIds: ["user-narin", "user-mika"],
   },
 ];
 
@@ -631,6 +818,246 @@ export const mockCommunityGroups: CommunityGroup[] = [
     postCount: 92,
     createdById: "user-mika",
   },
+  {
+    id: "group-osaka-street-food",
+    name: "Osaka Street Food",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1528360983277-13d401cdc186?auto=format&fit=crop&w=96&h=96",
+    description:
+      "Takoyaki, okonomiyaki, markets, and station-friendly routes for eating through Osaka.",
+    country: "Japan",
+    places: ["Osaka", "Dotonbori", "Namba", "Shinsekai"],
+    tags: ["osaka", "japan", "food", "street food"],
+    rules: [
+      {
+        id: "osaka-specific-stops",
+        title: "Name exact stops",
+        description:
+          "Include neighborhood, station, or market names so travelers can place the route on a map.",
+      },
+      {
+        id: "osaka-queue-timing",
+        title: "Share queue timing",
+        description:
+          "Popular shops change the route flow, so add the time of day when you visited or checked.",
+      },
+    ],
+    postFlairs: [
+      { id: "flair-osaka-food", label: "Food Route", tone: "food" },
+      { id: "flair-osaka-question", label: "Question", tone: "question" },
+    ],
+    userFlairs: [
+      { id: "user-flair-osaka-local", label: "Osaka Local", tone: "reliable" },
+      { id: "user-flair-market-scout", label: "Market Scout", tone: "food" },
+    ],
+    bookmarks: [
+      { id: "bookmark-dotonbori", label: "Dotonbori route" },
+      { id: "bookmark-osaka-queues", label: "Queue timing" },
+    ],
+    memberCount: 6800,
+    postCount: 77,
+    createdById: "user-mika",
+  },
+  {
+    id: "group-seoul-cafe-hops",
+    name: "Seoul Cafe Hops",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1535189043414-47a3c49a0bed?auto=format&fit=crop&w=96&h=96",
+    description:
+      "Cafe routes, dessert neighborhoods, photo-friendly streets, and transit-aware Seoul days.",
+    country: "South Korea",
+    places: ["Seoul", "Seongsu", "Hongdae", "Ikseon-dong"],
+    tags: ["seoul", "cafe", "coffee", "dessert"],
+    rules: [
+      {
+        id: "seoul-cafe-hours",
+        title: "Check current hours",
+        description:
+          "Cafe hours change often, so mention when your information was last confirmed.",
+      },
+      {
+        id: "seoul-cafe-neighborhood",
+        title: "Keep hops local",
+        description:
+          "Group recommendations by neighborhood unless the transit time is part of the route.",
+      },
+    ],
+    postFlairs: [
+      { id: "flair-seoul-cafe", label: "Cafe Route", tone: "itinerary" },
+      { id: "flair-seoul-question", label: "Question", tone: "question" },
+    ],
+    userFlairs: [
+      { id: "user-flair-seoul-local", label: "Seoul Local", tone: "reliable" },
+      { id: "user-flair-cafe-scout", label: "Cafe Scout", tone: "food" },
+    ],
+    bookmarks: [
+      { id: "bookmark-seongsu", label: "Seongsu cafes" },
+      { id: "bookmark-seoul-rain", label: "Rainy-day backup" },
+    ],
+    memberCount: 5900,
+    postCount: 64,
+    createdById: "user-mika",
+  },
+  {
+    id: "group-vietnam-coastal-routes",
+    name: "Vietnam Coastal Routes",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=96&h=96",
+    description:
+      "Seafood, train hops, scooters, viewpoints, and weather windows along Vietnam's coast.",
+    country: "Vietnam",
+    places: ["Da Nang", "Hoi An", "Nha Trang", "Hue"],
+    tags: ["vietnam", "coastal", "seafood", "road trip"],
+    rules: [
+      {
+        id: "vietnam-weather",
+        title: "Include season context",
+        description:
+          "Coastal routes depend on rain, heat, and sea conditions, so share the travel month.",
+      },
+      {
+        id: "vietnam-transport",
+        title: "State transport mode",
+        description:
+          "Tell others whether the route assumes scooter, car, train, taxi, or walking.",
+      },
+    ],
+    postFlairs: [
+      { id: "flair-vietnam-route", label: "Coastal Route", tone: "itinerary" },
+      { id: "flair-vietnam-food", label: "Seafood", tone: "food" },
+    ],
+    userFlairs: [
+      { id: "user-flair-coast-local", label: "Coast Local", tone: "reliable" },
+      { id: "user-flair-scooter", label: "Scooter Planner", tone: "itinerary" },
+    ],
+    bookmarks: [
+      { id: "bookmark-da-nang", label: "Da Nang notes" },
+      { id: "bookmark-vietnam-weather", label: "Weather windows" },
+    ],
+    memberCount: 7200,
+    postCount: 86,
+    createdById: "user-pim",
+  },
+  {
+    id: "group-bali-sunset-stops",
+    name: "Bali Sunset Stops",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=96&h=96",
+    description:
+      "Beach clubs, sunset viewpoints, scooter timing, and dinner routes around Bali.",
+    country: "Indonesia",
+    places: ["Bali", "Canggu", "Uluwatu", "Ubud"],
+    tags: ["bali", "beach", "sunset", "restaurant"],
+    rules: [
+      {
+        id: "bali-traffic",
+        title: "Mention traffic assumptions",
+        description:
+          "Sunset timing is fragile, so include drive estimates and backup stops.",
+      },
+      {
+        id: "bali-safety",
+        title: "Avoid unsafe access tips",
+        description:
+          "Do not suggest closed paths, risky cliff access, or illegal parking shortcuts.",
+      },
+    ],
+    postFlairs: [
+      { id: "flair-bali-sunset", label: "Sunset Route", tone: "itinerary" },
+      { id: "flair-bali-food", label: "Dinner Stop", tone: "food" },
+    ],
+    userFlairs: [
+      { id: "user-flair-bali-local", label: "Bali Local", tone: "reliable" },
+      { id: "user-flair-sunset-scout", label: "Sunset Scout", tone: "itinerary" },
+    ],
+    bookmarks: [
+      { id: "bookmark-uluwatu", label: "Uluwatu sunset" },
+      { id: "bookmark-bali-traffic", label: "Traffic timing" },
+    ],
+    memberCount: 8100,
+    postCount: 101,
+    createdById: "user-pim",
+  },
+  {
+    id: "group-singapore-food-courts",
+    name: "Singapore Food Courts",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1565967511849-76a60a516170?auto=format&fit=crop&w=96&h=96",
+    description:
+      "Hawker centers, mall food courts, MRT-friendly loops, and heat-proof Singapore eating days.",
+    country: "Singapore",
+    places: ["Singapore", "Maxwell", "Tiong Bahru", "Katong"],
+    tags: ["singapore", "food", "hawker", "city break"],
+    rules: [
+      {
+        id: "singapore-stall-specific",
+        title: "Name the stall",
+        description:
+          "Food court advice should include stall names, nearest MRT, and realistic opening windows.",
+      },
+      {
+        id: "singapore-heat",
+        title: "Plan for heat and rain",
+        description:
+          "Add indoor backups or shade breaks when proposing longer walking routes.",
+      },
+    ],
+    postFlairs: [
+      { id: "flair-singapore-hawker", label: "Hawker Route", tone: "food" },
+      { id: "flair-singapore-question", label: "Question", tone: "question" },
+    ],
+    userFlairs: [
+      { id: "user-flair-sg-local", label: "Singapore Local", tone: "reliable" },
+      { id: "user-flair-hawker-scout", label: "Hawker Scout", tone: "food" },
+    ],
+    bookmarks: [
+      { id: "bookmark-maxwell", label: "Maxwell guide" },
+      { id: "bookmark-mrt-food", label: "MRT food loops" },
+    ],
+    memberCount: 6300,
+    postCount: 71,
+    createdById: "user-kanya",
+  },
+  {
+    id: "group-taiwan-night-markets",
+    name: "Taiwan Night Markets",
+    avatarUrl:
+      "https://images.unsplash.com/photo-1526481280693-3bfa7568e0f3?auto=format&fit=crop&w=96&h=96",
+    description:
+      "Snack pacing, train-friendly night market loops, rainy-evening plans, and Taiwan city hops.",
+    country: "Taiwan",
+    places: ["Taipei", "Taichung", "Tainan", "Kaohsiung"],
+    tags: ["taiwan", "night market", "food", "city break"],
+    rules: [
+      {
+        id: "taiwan-market-pacing",
+        title: "Pace the snack route",
+        description:
+          "Share what to skip, split, or save for later so routes stay realistic.",
+      },
+      {
+        id: "taiwan-transit",
+        title: "Add transit context",
+        description:
+          "Night market routes should include nearest station, taxi assumptions, or walking time.",
+      },
+    ],
+    postFlairs: [
+      { id: "flair-taiwan-market", label: "Night Market", tone: "food" },
+      { id: "flair-taiwan-itinerary", label: "City Loop", tone: "itinerary" },
+    ],
+    userFlairs: [
+      { id: "user-flair-taiwan-local", label: "Taiwan Local", tone: "reliable" },
+      { id: "user-flair-snack-scout", label: "Snack Scout", tone: "food" },
+    ],
+    bookmarks: [
+      { id: "bookmark-taipei-markets", label: "Taipei markets" },
+      { id: "bookmark-taiwan-rain", label: "Rain backups" },
+    ],
+    memberCount: 5700,
+    postCount: 68,
+    createdById: "user-narin",
+  },
 ];
 
 export const mockCommunityPosts: CommunityPost[] = [
@@ -667,6 +1094,78 @@ export const mockCommunityPosts: CommunityPost[] = [
     country: "Thailand",
     sharedTripId: "trip-phuket-seafood",
     flairId: "flair-question",
+  },
+  {
+    id: "post-khao-soi-weekend",
+    groupId: "group-chiang-mai-cafes",
+    authorId: "user-narin",
+    title: "Chiang Mai khao soi crawl without overpacking the day",
+    body:
+      "This trip keeps one main restaurant stop per half-day, then adds cafes and a mountain view. I want it to feel relaxed, not like a checklist.",
+    createdAt: "2026-05-08T12:40:00+07:00",
+    upvotes: 173,
+    commentCount: 11,
+    tags: ["restaurant", "chiang mai", "khao soi", "thailand"],
+    place: "Chiang Mai",
+    country: "Thailand",
+    sharedTripId: "trip-chiang-mai-khao-soi",
+    flairId: "flair-khao-soi",
+    imageUrl:
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "post-khao-soi-weekend",
+    groupId: "group-chiang-mai-cafes",
+    authorId: "user-narin",
+    title: "Chiang Mai khao soi crawl without overpacking the day",
+    body:
+      "This trip keeps one main restaurant stop per half-day, then adds cafes and a mountain view. I want it to feel relaxed, not like a checklist.",
+    createdAt: "2026-05-08T12:40:00+07:00",
+    upvotes: 173,
+    commentCount: 11,
+    tags: ["restaurant", "chiang mai", "khao soi", "thailand"],
+    place: "Chiang Mai",
+    country: "Thailand",
+    sharedTripId: "trip-chiang-mai-khao-soi",
+    flairId: "flair-khao-soi",
+    imageUrl:
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "post-khao-soi-weekend",
+    groupId: "group-chiang-mai-cafes",
+    authorId: "user-narin",
+    title: "Chiang Mai khao soi crawl without overpacking the day",
+    body:
+      "This trip keeps one main restaurant stop per half-day, then adds cafes and a mountain view. I want it to feel relaxed, not like a checklist.",
+    createdAt: "2026-05-08T12:40:00+07:00",
+    upvotes: 173,
+    commentCount: 11,
+    tags: ["restaurant", "chiang mai", "khao soi", "thailand"],
+    place: "Chiang Mai",
+    country: "Thailand",
+    sharedTripId: "trip-chiang-mai-khao-soi",
+    flairId: "flair-khao-soi",
+    imageUrl:
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    id: "post-khao-soi-weekend",
+    groupId: "group-chiang-mai-cafes",
+    authorId: "user-narin",
+    title: "Chiang Mai khao soi crawl without overpacking the day",
+    body:
+      "This trip keeps one main restaurant stop per half-day, then adds cafes and a mountain view. I want it to feel relaxed, not like a checklist.",
+    createdAt: "2026-05-08T12:40:00+07:00",
+    upvotes: 173,
+    commentCount: 11,
+    tags: ["restaurant", "chiang mai", "khao soi", "thailand"],
+    place: "Chiang Mai",
+    country: "Thailand",
+    sharedTripId: "trip-chiang-mai-khao-soi",
+    flairId: "flair-khao-soi",
+    imageUrl:
+      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: "post-khao-soi-weekend",
@@ -777,6 +1276,106 @@ export const mockCommunityComments: CommunityComment[] = [
     upvotes: 18,
   },
   {
+    id: "comment-bangkok-3",
+    postId: "post-bangkok-restaurant-loop",
+    parentCommentId: "comment-bangkok-1",
+    authorId: "user-kanya",
+    body:
+      "Good call. I would also keep the ferry segment optional in case rain slows the river crossing.",
+    createdAt: "2026-05-10T21:36:00+07:00",
+    upvotes: 12,
+  },
+  {
+    id: "comment-bangkok-4",
+    postId: "post-bangkok-restaurant-loop",
+    parentCommentId: "comment-bangkok-1",
+    authorId: "user-arthit",
+    body:
+      "If you drive, parking near the riverside stop is the real bottleneck. Taxi plus walking was easier.",
+    createdAt: "2026-05-10T22:04:00+07:00",
+    upvotes: 8,
+  },
+  {
+    id: "comment-bangkok-5",
+    postId: "post-bangkok-restaurant-loop",
+    parentCommentId: "comment-bangkok-4",
+    authorId: "user-narin",
+    body:
+      "Agreed. We used the same swap and it saved about twenty minutes after dinner.",
+    createdAt: "2026-05-10T22:22:00+07:00",
+    upvotes: 5,
+  },
+  {
+    id: "comment-bangkok-6",
+    postId: "post-bangkok-restaurant-loop",
+    parentCommentId: "comment-bangkok-5",
+    authorId: "user-pim",
+    body:
+      "That makes the late dessert stop more realistic too. I would keep one backup shop pinned.",
+    createdAt: "2026-05-10T22:49:00+07:00",
+    upvotes: 4,
+  },
+  {
+    id: "comment-bangkok-7",
+    postId: "post-bangkok-restaurant-loop",
+    parentCommentId: "comment-bangkok-2",
+    authorId: "user-mika",
+    body:
+      "Yaowarat late is worth it, but I would remove one daytime cafe so the whole route breathes.",
+    createdAt: "2026-05-11T00:12:00+07:00",
+    upvotes: 10,
+  },
+  {
+    id: "comment-bangkok-8",
+    postId: "post-bangkok-restaurant-loop",
+    parentCommentId: "comment-bangkok-2",
+    authorId: "user-current",
+    body:
+      "Would you keep the dessert stop near Chinatown, or move it closer to the hotel area?",
+    createdAt: "2026-05-11T00:40:00+07:00",
+    upvotes: 2,
+  },
+  {
+    id: "comment-bangkok-9",
+    postId: "post-bangkok-restaurant-loop",
+    parentCommentId: "comment-bangkok-8",
+    authorId: "user-kanya",
+    body:
+      "Close to the hotel if the group is new to Bangkok. Chinatown if everyone still has energy.",
+    createdAt: "2026-05-11T01:05:00+07:00",
+    upvotes: 6,
+  },
+  {
+    id: "comment-bangkok-10",
+    postId: "post-bangkok-restaurant-loop",
+    parentCommentId: "comment-bangkok-8",
+    authorId: "user-arthit",
+    body:
+      "I would decide by transit, not dessert quality. The better route is the one people will finish.",
+    createdAt: "2026-05-11T01:24:00+07:00",
+    upvotes: 4,
+  },
+  {
+    id: "comment-bangkok-11",
+    postId: "post-bangkok-restaurant-loop",
+    parentCommentId: "comment-bangkok-8",
+    authorId: "user-pim",
+    body:
+      "One more vote for hotel-adjacent dessert if the route already includes sunset and dinner.",
+    createdAt: "2026-05-11T01:42:00+07:00",
+    upvotes: 3,
+  },
+  {
+    id: "comment-bangkok-12",
+    postId: "post-bangkok-restaurant-loop",
+    parentCommentId: "comment-bangkok-8",
+    authorId: "user-narin",
+    body:
+      "The only exception is if dessert is the whole point of the night. Then keep the fun stop.",
+    createdAt: "2026-05-11T02:03:00+07:00",
+    upvotes: 2,
+  },
+  {
     id: "comment-thailand-1",
     postId: "post-restaurant-thailand-general",
     authorId: "user-kanya",
@@ -855,6 +1454,49 @@ export function getGroupById(
   return groups.find((group) => group.id === groupId) ?? null;
 }
 
+export function getGroupBySlug(
+  slug: string,
+  groups: CommunityGroup[] = mockCommunityGroups,
+): CommunityGroup | null {
+  const decodedSlug = decodeURIComponent(slug);
+
+  return (
+    groups.find((group) => {
+      const nameSlug = slugifyCommunityValue(group.name);
+
+      return (
+        nameSlug === decodedSlug ||
+        nameSlug === slugifyCommunityValue(decodedSlug) ||
+        group.id === decodedSlug
+      );
+    }) ?? null
+  );
+}
+
+export function getGroupProfileByGroupId(
+  groupId: string,
+  group?: CommunityGroup | null,
+): CommunityGroupProfile {
+  const profile = mockCommunityGroupProfiles.find(
+    (item) => item.groupId === groupId,
+  );
+
+  if (profile) {
+    return profile;
+  }
+
+  return {
+    groupId,
+    bannerUrl: DEFAULT_COMMUNITY_GROUP_BANNER,
+    summary:
+      group?.description ??
+      "A Navio community group for sharing practical planning advice.",
+    weeklyVisitorCount: Math.max(0, Math.round((group?.memberCount ?? 0) * 0.2)),
+    weeklyContributionCount: Math.max(0, group?.postCount ?? 0),
+    moderatorIds: [group?.createdById ?? currentCommunityUser.id],
+  };
+}
+
 export function getTripById(tripId: string): SharedTrip | null {
   return mockSharedTrips.find((trip) => trip.id === tripId) ?? null;
 }
@@ -869,6 +1511,38 @@ export function getCommentsByPostId(
       (a, b) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
     );
+}
+
+export function getCommunityPostSlug(post: Pick<CommunityPost, "id" | "title">) {
+  return slugifyCommunityValue(post.title) || post.id;
+}
+
+export function getCommunityPostHref(
+  group: Pick<CommunityGroup, "name">,
+  post: Pick<CommunityPost, "id" | "title">,
+) {
+  return `/community/${slugifyCommunityValue(group.name)}/${getCommunityPostSlug(
+    post,
+  )}`;
+}
+
+export function getPostByGroupAndSlug(
+  groupId: string,
+  slug: string,
+  posts: CommunityPost[] = mockCommunityPosts,
+): CommunityPost | null {
+  const decodedSlug = decodeURIComponent(slug);
+  const normalizedSlug = slugifyCommunityValue(decodedSlug);
+
+  return (
+    posts.find(
+      (post) =>
+        post.groupId === groupId &&
+        (getCommunityPostSlug(post) === decodedSlug ||
+          getCommunityPostSlug(post) === normalizedSlug ||
+          post.id === decodedSlug),
+    ) ?? null
+  );
 }
 
 export function getInitials(name: string): string {

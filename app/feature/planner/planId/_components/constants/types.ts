@@ -24,7 +24,15 @@ export type MockPlace = {
   website?: string;
 };
 
-export type EvConnectorType = "CCS2" | "CHADEMO" | "TYPE2" | "NACS" | "GB_T";
+export type EvConnectorType =
+  | "CCS1"
+  | "CCS2"
+  | "CHADEMO"
+  | "TYPE2"
+  | "J1772"
+  | "NACS"
+  | "GB_T"
+  | "OTHER";
 
 export type EvChargerSource =
   | "GOOGLE_PLACES"
@@ -73,6 +81,7 @@ export type EvCharger = {
   ratingCount: number;
   confidenceScore: number;
   stale: boolean;
+  imageUrl?: string | null;
 };
 
 export type EvChargerList = {

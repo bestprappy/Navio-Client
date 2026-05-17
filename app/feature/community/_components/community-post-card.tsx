@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowBigDownDash,
   ArrowBigUpDash,
@@ -11,6 +13,7 @@ import {
 } from "lucide-react";
 import { useAtom } from "jotai";
 
+import { CommunityFlairBadge } from "./community-flair-badge";
 import {
   downvotedPostIdsAtom,
   joinedGroupIdsAtom,
@@ -18,7 +21,6 @@ import {
 } from "./community-atoms";
 import type {
   CommunityComment,
-  CommunityFlair,
   CommunityGroup,
   CommunityPost,
   SharedTrip,
@@ -26,23 +28,14 @@ import type {
 import {
   formatCount,
   formatRelativeTime,
+  getCommunityPostHref,
   getInitials,
+  getUserById,
+  slugifyCommunityValue,
 } from "./data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const FLAIR_TONE_CLASSES: Record<CommunityFlair["tone"], string> = {
-  reliable:
-    "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 ring-emerald-500/25",
-  question: "bg-blue-500/15 text-blue-700 dark:text-blue-400 ring-blue-500/25",
-  unsourced: "bg-zinc-500/15 text-zinc-600 dark:text-zinc-400 ring-zinc-500/25",
-  speculation:
-    "bg-amber-500/15 text-amber-700 dark:text-amber-400 ring-amber-500/25",
-  itinerary: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 ring-cyan-500/25",
-  food: "bg-orange-500/15 text-orange-700 dark:text-orange-400 ring-orange-500/25",
-  ev: "bg-green-500/15 text-green-700 dark:text-green-400 ring-green-500/25",
-};
 
 type CommunityPostCardProps = {
   post: CommunityPost;
@@ -50,6 +43,8 @@ type CommunityPostCardProps = {
   trip: SharedTrip | null;
   comments: CommunityComment[];
   selected: boolean;
+  metaVariant?: "group" | "author";
+  showJoinAction?: boolean;
   onSelect: (postId: string) => void;
 };
 
@@ -58,8 +53,11 @@ export function CommunityPostCard({
   group,
   comments,
   selected,
+  metaVariant = "group",
+  showJoinAction = true,
   onSelect,
 }: CommunityPostCardProps) {
+  const router = useRouter();
   const [upvotedPostIds, setUpvotedPostIds] = useAtom(upvotedPostIdsAtom);
   const [downvotedPostIds, setDownvotedPostIds] = useAtom(downvotedPostIdsAtom);
   const [joinedGroupIds, setJoinedGroupIds] = useAtom(joinedGroupIdsAtom);
@@ -70,6 +68,16 @@ export function CommunityPostCard({
   const score = post.upvotes + (isUpvoted ? 1 : 0) - (isDownvoted ? 1 : 0);
   const commentTotal = post.commentCount + Math.max(0, comments.length);
   const groupName = group?.name ?? "Unknown group";
+  const author = getUserById(post.authorId);
+  const showGroupMeta = metaVariant === "group";
+  const metaName = showGroupMeta ? groupName : `@${author.handle}`;
+  const metaAvatarUrl = showGroupMeta ? group?.avatarUrl : author.avatarUrl;
+  const metaAvatarAlt = showGroupMeta ? groupName : author.name;
+  const metaInitials = getInitials(showGroupMeta ? groupName : author.name);
+  const groupHref = group
+    ? `/community/${slugifyCommunityValue(group.name)}`
+    : "/community";
+  const postHref = group ? getCommunityPostHref(group, post) : null;
 
   const flair = post.flairId
     ? (group?.postFlairs.find((f) => f.id === post.flairId) ?? null)
@@ -102,34 +110,69 @@ export function CommunityPostCard({
     );
   }
 
+  function openPost() {
+    onSelect(post.id);
+
+    if (postHref) {
+      router.push(postHref);
+    }
+  }
+
   return (
     <div
       role="article"
       tabIndex={0}
-      aria-pressed={selected}
+      aria-current={selected ? "true" : undefined}
       className={cn(
         "mb-3 cursor-pointer rounded-lg bg-background px-4 py-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:px-5",
         selected && "bg-muted/40",
       )}
-      onClick={() => onSelect(post.id)}
+      onClick={openPost}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") onSelect(post.id);
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openPost();
+        }
       }}
     >
       {/* Meta row */}
       <div className="mb-2 flex items-center gap-2">
-        <Avatar className="size-6">
-          <AvatarImage src={group?.avatarUrl} alt={group?.name} />
-          <AvatarFallback className="text-[10px]">
-            {getInitials(group?.name ?? groupName)}
-          </AvatarFallback>
-        </Avatar>
+        {showGroupMeta && group ? (
+          <Link
+            href={groupHref}
+            className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          >
+            <Avatar className="size-6">
+              <AvatarImage src={metaAvatarUrl} alt={metaAvatarAlt} />
+              <AvatarFallback className="text-[10px]">
+                {metaInitials}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-xs font-semibold text-foreground">
+              {metaName}
+            </span>
+          </Link>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Avatar className="size-6">
+              <AvatarImage src={metaAvatarUrl} alt={metaAvatarAlt} />
+              <AvatarFallback className="text-[10px]">
+                {metaInitials}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-xs font-semibold text-foreground">
+              {metaName}
+            </span>
+          </div>
+        )}
+
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
-          <span className="font-semibold text-foreground">{groupName}</span>
           <Dot className="size-3" />
           <span>{formatRelativeTime(post.createdAt)}</span>
         </div>
-        {group ? (
+        {group && showJoinAction ? (
           <Button
             type="button"
             size="sm"
@@ -159,14 +202,7 @@ export function CommunityPostCard({
       {/* Flair */}
       {flair ? (
         <div className="mb-3">
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1",
-              FLAIR_TONE_CLASSES[flair.tone],
-            )}
-          >
-            {flair.label}
-          </span>
+          <CommunityFlairBadge flair={flair} />
         </div>
       ) : null}
 
@@ -254,7 +290,10 @@ export function CommunityPostCard({
         {/* Comments */}
         <button
           type="button"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            openPost();
+          }}
           className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-foreground transition-colors"
         >
           <MessageCircle className="size-3.5" aria-hidden="true" />

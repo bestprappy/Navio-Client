@@ -7,15 +7,15 @@ import { useAtom, useSetAtom } from "jotai";
 import {
   commentDraftsAtom,
   extraCommentsByPostIdAtom,
-} from "./community-atoms";
-import type { CommunityComment, CommunityPost } from "./data";
+} from "../../_components/community-atoms";
+import type { CommunityComment, CommunityPost } from "../../_components/data";
 import {
   currentCommunityUser,
   formatRelativeTime,
   getInitials,
   getTripById,
   getUserById,
-} from "./data";
+} from "../../_components/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

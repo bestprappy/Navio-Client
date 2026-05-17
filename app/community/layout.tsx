@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import { CommunityNavbar } from "@/app/feature/community/_components/community-navbar";
-import { CommunitySidebar } from "@/app/feature/community/_components/community-sidebar";
+import { CommunitySidebar } from "@/app/feature/community/community-sidebar";
 
 type CommunityLayoutProps = {
   children: ReactNode;
