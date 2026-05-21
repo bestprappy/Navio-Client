@@ -12,6 +12,7 @@ import { PlannerSidePanelHost } from "./_components/layout/planner-side-panel-ho
 import { PlannerMap } from "./planner-map";
 
 type PlannerDetailProps = {
+  planId?: string;
   destinationName: string;
   from?: string;
   to?: string;
@@ -21,6 +22,7 @@ type PlannerDetailProps = {
 };
 
 export function PlannerDetail({
+  planId,
   destinationName,
   from,
   to,
@@ -31,6 +33,7 @@ export function PlannerDetail({
   return (
     <div className="flex h-full min-w-0">
       <PlannerTemplateHydrator
+        planId={planId}
         templatePlanId={templatePlanId}
         from={from}
         to={to}
