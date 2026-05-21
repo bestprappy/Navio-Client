@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 import {
   addTripBlocksForDatesAtom,
-  tripBlocksAtom,
+  itineraryBlocksAtom,
   tripDateRangeAtom,
 } from "../overview/trip-builder.atoms";
 import { TripBlock } from "../block/trip-block";
@@ -52,7 +52,7 @@ export function ItinerarySection({
   latitude,
   longitude,
 }: ItinerarySectionProps) {
-  const blocks = useAtomValue(tripBlocksAtom);
+  const blocks = useAtomValue(itineraryBlocksAtom);
   const [tripDateRange, setTripDateRange] = useAtom(tripDateRangeAtom);
   const addBlocksForDates = useSetAtom(addTripBlocksForDatesAtom);
   const [isEditingDates, setIsEditingDates] = useState(false);
@@ -183,6 +183,11 @@ export function ItinerarySection({
                       <TripBlock.Items />
                       <DayRouteOverview blockId={block.id} blockIndex={index} />
                       <TripBlock.Actions
+                        evSearchAnchor={{
+                          id: `destination-${block.id}`,
+                          lat: latitude,
+                          lng: longitude,
+                        }}
                         placeSearchBias={{
                           label: destinationName,
                           lat: latitude,

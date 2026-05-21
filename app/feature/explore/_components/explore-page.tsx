@@ -418,7 +418,7 @@ export function ExplorePage() {
                       plan={plan}
                       author={author}
                       onShare={openShare}
-                      variant="recent1"
+                      variant="featured"
                     />
                   );
                 })}
@@ -438,7 +438,7 @@ export function ExplorePage() {
                       plan={plan}
                       author={author}
                       onShare={openShare}
-                      variant="recent2"
+                      variant="featured"
                     />
                   );
                 })}
@@ -458,7 +458,7 @@ export function ExplorePage() {
                       plan={plan}
                       author={author}
                       onShare={openShare}
-                      variant="recent3"
+                      variant="grid"
                     />
                   );
                 })}

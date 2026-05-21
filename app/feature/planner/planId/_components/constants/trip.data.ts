@@ -14,6 +14,7 @@ const todayDateValue = getTodayDateValue();
 export const mockTripBlocks: TripBlockData[] = [
   {
     id: "block-restaurants",
+    kind: "list",
     title: todayDateValue,
     date: todayDateValue,
     colorId: "blue",

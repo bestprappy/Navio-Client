@@ -13,14 +13,23 @@ import {
 import type {
   DirectionsRequest,
   DirectionsResponse,
+  RoutePointGroup,
   RouteProfile,
 } from "./trip-route.types";
 
-const DEFAULT_ROUTE_PROFILE: RouteProfile = "driving-traffic";
+export const DEFAULT_ROUTE_PROFILE: RouteProfile = "driving-traffic";
 
 export function useTripRoutes(profile: RouteProfile = DEFAULT_ROUTE_PROFILE) {
   const tripBlocks = useAtomValue(tripBlocksAtom);
   const groups = useMemo(() => getTripRouteGroups(tripBlocks), [tripBlocks]);
+
+  return useTripRoutesForGroups(groups, profile);
+}
+
+export function useTripRoutesForGroups(
+  groups: RoutePointGroup[],
+  profile: RouteProfile = DEFAULT_ROUTE_PROFILE,
+) {
   const signature = useMemo(() => getTripRouteSignature(groups), [groups]);
   const hasRouteSegments = groups.length > 0;
 
@@ -36,7 +45,7 @@ export function useTripRoutes(profile: RouteProfile = DEFAULT_ROUTE_PROFILE) {
   });
 }
 
-async function fetchTripRoutes(
+export async function fetchTripRoutes(
   requestBody: DirectionsRequest,
 ): Promise<DirectionsResponse> {
   const response = await fetch("/api/routes/directions", {

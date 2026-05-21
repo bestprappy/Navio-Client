@@ -1,10 +1,17 @@
 "use client";
 
-import { createContext, type ReactNode, useContext, useMemo } from "react";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 import { CheckSquare, FileText } from "lucide-react";
 import { useAtomValue, useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 import type { TripBlockData } from "../constants/types";
@@ -13,13 +20,17 @@ import {
   AddPlaceInput,
   type PlaceSearchBias,
 } from "../place/add-place-input";
-import { AddEvStationButton } from "../charger/add-ev-station-button";
+import {
+  AddEvStationButton,
+  type EvStationSearchAnchor,
+} from "../charger/add-ev-station-button";
 import {
   activeBlockIdAtom,
   addChecklistToBlockAtom,
   addNoteToBlockAtom,
   tripDateRangeAtom,
   updateBlockDateAtom,
+  updateBlockTitleAtom,
 } from "../overview/trip-builder.atoms";
 import { BlockDatePicker } from "./block-date-picker";
 import { BlockOptionsPopover } from "./block-options-popover";
@@ -79,17 +90,70 @@ function TripBlockTitle() {
   const { block } = useTripBlockContext();
   const tripDateRange = useAtomValue(tripDateRangeAtom);
   const updateBlockDate = useSetAtom(updateBlockDateAtom);
+  const updateBlockTitle = useSetAtom(updateBlockTitleAtom);
   const blockColor = getTripBlockColorById(block.colorId);
+  const isListBlock = block.kind === "list";
+  const listTitle = block.title.trim();
+  const [isEditingListTitle, setIsEditingListTitle] = useState(
+    listTitle.length === 0,
+  );
+  const shouldShowListEditor =
+    isListBlock && (isEditingListTitle || listTitle.length === 0);
 
   return (
     <div className="flex items-center gap-2 mx-6">
       <div className="min-w-0 flex-1">
-        <BlockDatePicker
-          date={block.date}
-          from={tripDateRange.from}
-          to={tripDateRange.to}
-          onDateChange={(date) => updateBlockDate({ blockId: block.id, date })}
-        />
+        {shouldShowListEditor ? (
+          <Textarea
+            value={block.title}
+            rows={1}
+            autoFocus
+            aria-label="List title"
+            placeholder='Add a title (e.g. "Restaurants")'
+            onBlur={() => {
+              if (block.title.trim()) {
+                setIsEditingListTitle(false);
+              }
+            }}
+            onChange={(event) =>
+              updateBlockTitle({
+                blockId: block.id,
+                title: event.target.value,
+              })
+            }
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+
+                if (block.title.trim()) {
+                  setIsEditingListTitle(false);
+                }
+              }
+            }}
+            className="min-h-12 resize-none rounded-sm border-transparent bg-muted/50 px-3 py-2 text-xl font-bold leading-tight text-foreground shadow-none placeholder:text-muted-foreground hover:border-border focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+          />
+        ) : isListBlock ? (
+          <button
+            type="button"
+            aria-label={`Edit list title: ${listTitle}`}
+            className="min-h-12 w-full rounded-sm bg-muted/50 px-3 py-2 text-left text-xl font-bold leading-tight text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+            onClick={(event) => {
+              event.stopPropagation();
+              setIsEditingListTitle(true);
+            }}
+          >
+            <span className="line-clamp-2">{listTitle}</span>
+          </button>
+        ) : (
+          <BlockDatePicker
+            date={block.date}
+            from={tripDateRange.from}
+            to={tripDateRange.to}
+            onDateChange={(date) =>
+              updateBlockDate({ blockId: block.id, date })
+            }
+          />
+        )}
       </div>
       <span
         className="size-3 shrink-0 rounded-full"
@@ -106,8 +170,10 @@ function TripBlockContent({ children }: { children: ReactNode }) {
 }
 
 function TripBlockActions({
+  evSearchAnchor,
   placeSearchBias,
 }: {
+  evSearchAnchor?: EvStationSearchAnchor;
   placeSearchBias?: PlaceSearchBias;
 }) {
   const { block } = useTripBlockContext();
@@ -138,8 +204,25 @@ function TripBlockActions({
           <CheckSquare className="size-4" aria-hidden="true" />
           Add checklist
         </Button>
-        <AddEvStationButton blockId={block.id} />
+        <AddEvStationButton
+          blockId={block.id}
+          fallbackAnchor={evSearchAnchor}
+        />
       </div>
+    </div>
+  );
+}
+
+function TripBlockPlaceActions({
+  placeSearchBias,
+}: {
+  placeSearchBias?: PlaceSearchBias;
+}) {
+  const { block } = useTripBlockContext();
+
+  return (
+    <div className="mx-8 mt-4 pl-2">
+      <AddPlaceInput blockId={block.id} searchBias={placeSearchBias} />
     </div>
   );
 }
@@ -156,5 +239,6 @@ export const TripBlock = Object.assign(TripBlockRoot, {
   Title: TripBlockTitle,
   Content: TripBlockContent,
   Actions: TripBlockActions,
+  PlaceActions: TripBlockPlaceActions,
   Items: TripBlockItems,
 });

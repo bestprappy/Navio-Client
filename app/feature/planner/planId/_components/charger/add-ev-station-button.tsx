@@ -32,9 +32,19 @@ import {
 
 type AddEvStationButtonProps = {
   blockId: string;
+  fallbackAnchor?: EvStationSearchAnchor;
 };
 
-export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
+export type EvStationSearchAnchor = {
+  id: string;
+  lat: number;
+  lng: number;
+};
+
+export function AddEvStationButton({
+  blockId,
+  fallbackAnchor,
+}: AddEvStationButtonProps) {
   const blocks = useAtomValue(tripBlocksAtom);
   const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
@@ -52,10 +62,14 @@ export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
     .filter(isPlaceItem)
     .filter((item) => !isEvChargerPlaceItem(item));
 
-  const hasPlaces = placeAnchors.length > 0;
+  const fallbackAnchors = placeAnchors.length === 0 && fallbackAnchor
+    ? [fallbackAnchor]
+    : [];
+  const searchAnchors = [...placeAnchors, ...fallbackAnchors];
+  const canSearch = searchAnchors.length > 0;
 
   async function openStationList() {
-    if (!hasPlaces) return;
+    if (!canSearch) return;
 
     setActiveBlockId(blockId);
     setEvChargerResults([]);
@@ -65,7 +79,7 @@ export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
 
     try {
       const intermediateAnchors = sampleRoutePolyline(routeSegments, blockId, 30);
-      const allAnchors = [...placeAnchors, ...intermediateAnchors];
+      const allAnchors = [...searchAnchors, ...intermediateAnchors];
 
       const chargersByAnchor = await Promise.all(
         allAnchors.map(async (anchor) => ({
@@ -101,7 +115,7 @@ export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
       if (firstCharger) {
         selectEvCharger(firstCharger.id);
       } else {
-        setEvChargerError("No EV stations found near this day yet.");
+        setEvChargerError("No EV stations found near this block yet.");
       }
     } catch (error) {
       console.error("EV station search failed.", {
@@ -121,11 +135,11 @@ export function AddEvStationButton({ blockId }: AddEvStationButtonProps) {
       type="button"
       variant="outline"
       size="lg"
-      disabled={!hasPlaces || isLoadingEvChargers}
+      disabled={!canSearch || isLoadingEvChargers}
       title={
-        hasPlaces
+        canSearch
           ? undefined
-          : "Add at least one place to this day before searching for EV stations"
+          : "Add a place or choose a destination before searching for EV stations"
       }
       className="min-w-40 flex-1 rounded-sm border-primary/30 bg-primary/10 py-6 text-primary hover:border-primary/50 hover:bg-primary/15 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary/40 dark:bg-primary/15 dark:hover:bg-primary/25"
       onClick={openStationList}

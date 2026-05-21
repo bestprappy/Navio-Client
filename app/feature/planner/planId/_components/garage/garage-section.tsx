@@ -6,7 +6,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
 
-import { tripBlocksAtom } from "../overview/trip-builder.atoms";
+import { itineraryBlocksAtom } from "../overview/trip-builder.atoms";
 import { useTripRoutes } from "../routes/trip-route-query";
 import { getVehicleCar } from "../constants/vehicle.data";
 import {
@@ -47,7 +47,7 @@ export function GarageSection() {
   const removeVehicle = useSetAtom(removeVehicleAtom);
   const setStartingBatteryPct = useSetAtom(setStartingBatteryPctAtom);
 
-  const blocks = useAtomValue(tripBlocksAtom);
+  const blocks = useAtomValue(itineraryBlocksAtom);
   const { data: routeData } = useTripRoutes();
 
   const tripSummary = useMemo(() => {

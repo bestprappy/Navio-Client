@@ -2,8 +2,10 @@ import { ExploreSection } from "./_components/explore/explore-section";
 import { GarageSection } from "./_components/garage/garage-section";
 import { DayNavSidebar } from "./_components/itinerary/day-nav-sidebar";
 import { ItinerarySection } from "./_components/itinerary/itinerary-section";
+import { MyListSection } from "./_components/list/my-list-section";
 import { BudgetSection } from "./_components/budget/budget-section";
 import { TripBuilderErrorBoundary } from "./_components/overview/trip-builder-error-boundary";
+import { PlannerTemplateHydrator } from "./_components/overview/planner-template-hydrator";
 import { TripHero } from "./_components/overview/trip-hero";
 import { TripInfoCard } from "./_components/overview/trip-info-card";
 import { PlannerSidePanelHost } from "./_components/layout/planner-side-panel-host";
@@ -15,6 +17,7 @@ type PlannerDetailProps = {
   to?: string;
   latitude: number;
   longitude: number;
+  templatePlanId?: string;
 };
 
 export function PlannerDetail({
@@ -23,9 +26,15 @@ export function PlannerDetail({
   to,
   latitude,
   longitude,
+  templatePlanId,
 }: PlannerDetailProps) {
   return (
     <div className="flex h-full min-w-0">
+      <PlannerTemplateHydrator
+        templatePlanId={templatePlanId}
+        from={from}
+        to={to}
+      />
       {/* Left: day nav + scrollable planner panel */}
       <div className="flex w-[38%] border-r border-border/40">
         <DayNavSidebar />
@@ -48,6 +57,15 @@ export function PlannerDetail({
 
           <TripBuilderErrorBoundary>
             <GarageSection />
+          </TripBuilderErrorBoundary>
+
+          <TripBuilderErrorBoundary>
+            <MyListSection
+              destinationName={destinationName}
+              latitude={latitude}
+              longitude={longitude}
+              createDefaultList={!templatePlanId}
+            />
           </TripBuilderErrorBoundary>
 
           <TripBuilderErrorBoundary>

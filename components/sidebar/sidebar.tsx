@@ -9,11 +9,13 @@ import {
   CalendarDays,
   Compass,
   Home,
+  ListChecks,
   Map,
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
   Settings,
+  type LucideIcon,
 } from "lucide-react";
 
 import { Logo } from "@/components/logo";
@@ -59,19 +61,27 @@ function formatBlockDate(date: string) {
   return format(parsedDate, "MMM d");
 }
 
-type ItinerarySidebarNavProps = {
+type PlannerBlockSidebarGroupProps = {
   activeBlockId: string | null;
   blocks: TripBlockData[];
   collapsed: boolean;
+  getPrimaryLabel: (block: TripBlockData, index: number) => string;
+  getSecondaryLabel?: (block: TripBlockData, index: number) => string | null;
+  Icon: LucideIcon;
   onSelectBlock: (blockId: string) => void;
+  title: string;
 };
 
-function ItinerarySidebarNav({
+function PlannerBlockSidebarGroup({
   activeBlockId,
   blocks,
   collapsed,
+  getPrimaryLabel,
+  getSecondaryLabel,
+  Icon,
   onSelectBlock,
-}: ItinerarySidebarNavProps) {
+  title,
+}: PlannerBlockSidebarGroupProps) {
   if (!blocks.length) {
     return null;
   }
@@ -86,31 +96,34 @@ function ItinerarySidebarNav({
       {collapsed ? (
         <div
           className="flex size-9 items-center justify-center text-muted-foreground"
-          title="Itinerary"
+          title={title}
           aria-hidden="true"
         >
-          <CalendarDays className="size-4" />
+          <Icon className="size-4" />
         </div>
       ) : (
         <p className="mb-1 flex items-center gap-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-          <CalendarDays className="size-3.5" aria-hidden="true" />
-          Itinerary
+          <Icon className="size-3.5" aria-hidden="true" />
+          {title}
         </p>
       )}
 
       {blocks.map((block, index) => {
         const blockColor = getTripBlockColorById(block.colorId);
-        const dateLabel = formatBlockDate(block.date);
-        const title = `Day ${index + 1} - ${dateLabel}`;
+        const primaryLabel = getPrimaryLabel(block, index);
+        const secondaryLabel = getSecondaryLabel?.(block, index) ?? null;
+        const buttonTitle = secondaryLabel
+          ? `${primaryLabel} - ${secondaryLabel}`
+          : primaryLabel;
         const isActive = activeBlockId === block.id;
 
         return (
           <button
             key={block.id}
             type="button"
-            title={title}
-            aria-label={title}
-            aria-current={isActive ? "date" : undefined}
+            title={buttonTitle}
+            aria-label={buttonTitle}
+            aria-current={isActive ? "true" : undefined}
             onClick={() => onSelectBlock(block.id)}
             className={cn(
               "group flex min-h-9 items-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring/30",
@@ -131,18 +144,20 @@ function ItinerarySidebarNav({
             {!collapsed && (
               <>
                 <span className="min-w-0 flex-1 truncate text-left">
-                  Day {index + 1}
+                  {primaryLabel}
                 </span>
-                <span
-                  className={cn(
-                    "shrink-0 text-xs",
-                    isActive
-                      ? "text-secondary-foreground/80"
-                      : "text-muted-foreground group-hover:text-foreground",
-                  )}
-                >
-                  {dateLabel}
-                </span>
+                {secondaryLabel ? (
+                  <span
+                    className={cn(
+                      "shrink-0 text-xs",
+                      isActive
+                        ? "text-secondary-foreground/80"
+                        : "text-muted-foreground group-hover:text-foreground",
+                    )}
+                  >
+                    {secondaryLabel}
+                  </span>
+                ) : null}
               </>
             )}
           </button>
@@ -156,6 +171,8 @@ export default function SidebarWrapper() {
   const { activeSidebar, setActiveSidebar } = useSidebar();
   const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
   const blocks = useAtomValue(tripBlocksAtom);
+  const itineraryBlocks = blocks.filter((block) => block.kind !== "list");
+  const listBlocks = blocks.filter((block) => block.kind === "list");
   const activeBlockId = useAtomValue(activeBlockIdAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
   const pathName = usePathname();
@@ -254,12 +271,32 @@ export default function SidebarWrapper() {
             collapsed={collapsed}
           />
           {isPlannerDetail ? (
-            <ItinerarySidebarNav
-              activeBlockId={activeBlockId}
-              blocks={blocks}
-              collapsed={collapsed}
-              onSelectBlock={handleSelectBlock}
-            />
+            <>
+              <PlannerBlockSidebarGroup
+                activeBlockId={activeBlockId}
+                blocks={listBlocks}
+                collapsed={collapsed}
+                getPrimaryLabel={(block, index) =>
+                  block.title.trim() || `List ${index + 1}`
+                }
+                getSecondaryLabel={(block) =>
+                  `${block.items.length} item${block.items.length === 1 ? "" : "s"}`
+                }
+                Icon={ListChecks}
+                onSelectBlock={handleSelectBlock}
+                title="My List"
+              />
+              <PlannerBlockSidebarGroup
+                activeBlockId={activeBlockId}
+                blocks={itineraryBlocks}
+                collapsed={collapsed}
+                getPrimaryLabel={(_block, index) => `Day ${index + 1}`}
+                getSecondaryLabel={(block) => formatBlockDate(block.date)}
+                Icon={CalendarDays}
+                onSelectBlock={handleSelectBlock}
+                title="Itinerary"
+              />
+            </>
           ) : null}
         </SidebarMenu>
 

@@ -165,8 +165,11 @@ export type TripBlockColorId =
   | "brick"
   | "rust";
 
+export type TripBlockKind = "itinerary" | "list";
+
 export type TripBlockData = {
   id: string;
+  kind?: TripBlockKind;
   title: string;
   date: string;
   colorId: TripBlockColorId;

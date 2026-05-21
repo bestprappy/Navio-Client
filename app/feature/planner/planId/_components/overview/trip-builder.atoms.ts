@@ -161,6 +161,10 @@ function sortBlocksByDate(blocks: TripBlockData[]): TripBlockData[] {
   return [...blocks].sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function isItineraryBlock(block: TripBlockData): boolean {
+  return block.kind !== "list";
+}
+
 function updateBlock(
   blocks: TripBlockData[],
   blockId: string,
@@ -305,8 +309,15 @@ function getTripPlaceAnchors(
 export type TripDateRange = { from?: string; to?: string };
 export const tripDateRangeAtom = atom<TripDateRange>({});
 export const tripBlocksAtom = atom<TripBlockData[]>([]);
+export const itineraryBlocksAtom = atom<TripBlockData[]>((get) =>
+  get(tripBlocksAtom).filter(isItineraryBlock),
+);
+export const myListBlocksAtom = atom<TripBlockData[]>((get) =>
+  get(tripBlocksAtom).filter((block) => block.kind === "list"),
+);
 export const tripCurrencyAtom = atom<CurrencyOption>(currencyOptions[0]);
 export const tripExpensesAtom = atom<ExpenseItem[]>([]);
+export const tripBudgetAtom = atom<number>(0);
 export const activeBlockIdAtom = atom<string | null>(null);
 export const activeSearchAtom = atom<ActiveSearch | null>(null);
 export const activePlannerSidePanelAtom =
@@ -497,12 +508,14 @@ export function dedupeEvChargerResults(
 
 export const addTripBlockAtom = atom(null, (get, set) => {
   const blocks = get(tripBlocksAtom);
+  const itineraryBlocks = blocks.filter(isItineraryBlock);
   const todayDateValue = getTodayDateValue();
   const nextBlock: TripBlockData = {
     id: createClientId("block"),
+    kind: "itinerary",
     title: todayDateValue,
     date: todayDateValue,
-    colorId: getTripBlockColorByIndex(blocks.length),
+    colorId: getTripBlockColorByIndex(itineraryBlocks.length),
     items: [],
   };
 
@@ -511,17 +524,37 @@ export const addTripBlockAtom = atom(null, (get, set) => {
   set(openBlockIdsAtom, [...get(openBlockIdsAtom), nextBlock.id]);
 });
 
+export const addMyListBlockAtom = atom(null, (get, set) => {
+  const blocks = get(tripBlocksAtom);
+  const listBlocks = blocks.filter((block) => block.kind === "list");
+  const todayDateValue = getTodayDateValue();
+  const nextBlock: TripBlockData = {
+    id: createClientId("list"),
+    kind: "list",
+    title: "",
+    date: todayDateValue,
+    colorId: getTripBlockColorByIndex(listBlocks.length),
+    items: [],
+  };
+
+  set(tripBlocksAtom, [nextBlock, ...blocks]);
+  set(activeBlockIdAtom, nextBlock.id);
+  set(openBlockIdsAtom, [...get(openBlockIdsAtom), nextBlock.id]);
+});
+
 export const addTripBlocksForDatesAtom = atom(
   null,
   (get, set, dates: string[]) => {
     const blocks = get(tripBlocksAtom);
+    const itineraryBlocks = blocks.filter(isItineraryBlock);
     const newBlocks: TripBlockData[] = dates
-      .filter((date) => !blocks.some((b) => b.date === date))
+      .filter((date) => !itineraryBlocks.some((b) => b.date === date))
       .map((date, i) => ({
         id: createClientId("block"),
+        kind: "itinerary",
         title: date,
         date,
-        colorId: getTripBlockColorByIndex(blocks.length + i),
+        colorId: getTripBlockColorByIndex(itineraryBlocks.length + i),
         items: [],
       }));
 
@@ -557,7 +590,7 @@ export const updateBlockDateAtom = atom(
       sortBlocksByDate(
         updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
           ...block,
-          title: payload.date,
+          title: block.kind === "list" ? block.title : payload.date,
           date: payload.date,
         })),
       ),

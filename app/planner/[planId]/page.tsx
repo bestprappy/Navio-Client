@@ -13,6 +13,7 @@ type PlannerDetailPageProps = {
     to?: string;
     lat?: string;
     lng?: string;
+    templatePlanId?: string;
   }>;
 };
 
@@ -26,7 +27,8 @@ export default async function PlannerDetailPage({
   searchParams,
 }: PlannerDetailPageProps) {
   await params;
-  const { destinationName, from, to, lat, lng } = await searchParams;
+  const { destinationName, from, to, lat, lng, templatePlanId } =
+    await searchParams;
 
   const latitude =
     lat !== undefined && Number.isFinite(Number(lat))
@@ -44,6 +46,7 @@ export default async function PlannerDetailPage({
       to={to}
       latitude={latitude}
       longitude={longitude}
+      templatePlanId={templatePlanId}
     />
   );
 }

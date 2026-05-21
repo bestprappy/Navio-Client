@@ -15,7 +15,7 @@ import { useAtomValue } from "jotai";
 
 import { cn } from "@/lib/utils";
 
-import { tripBlocksAtom } from "../overview/trip-builder.atoms";
+import { itineraryBlocksAtom } from "../overview/trip-builder.atoms";
 import { useTripRoutes } from "../routes/trip-route-query";
 import {
   isEvChargerPlaceItem,
@@ -38,7 +38,7 @@ type DayRouteOverviewProps = {
 
 export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps) {
   const activeEvCar = useAtomValue(activeEvCarAtom);
-  const blocks = useAtomValue(tripBlocksAtom);
+  const blocks = useAtomValue(itineraryBlocksAtom);
   const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
   const { data: routeData, isLoading, isError } = useTripRoutes();
 

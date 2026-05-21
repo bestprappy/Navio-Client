@@ -263,9 +263,17 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
     () => tripRoutes.data?.segments ?? [],
     [tripRoutes.data?.segments],
   );
-  const routeStatusMessage = tripRoutes.isFetching
+  const selectedRouteBlockId = selectedTripPlace?.blockId ?? null;
+  const visibleRouteSegments = useMemo(
+    () =>
+      selectedRouteBlockId
+        ? routeSegments.filter((segment) => segment.blockId === selectedRouteBlockId)
+        : [],
+    [routeSegments, selectedRouteBlockId],
+  );
+  const routeStatusMessage = selectedRouteBlockId && tripRoutes.isFetching
     ? "Calculating routes..."
-    : tripRoutes.isError
+    : selectedRouteBlockId && tripRoutes.isError
       ? "Routes could not load."
       : null;
   const canAddToTrip = tripBlocks.length > 0;
@@ -338,7 +346,7 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
           />
           <MapResizeHandler sidebarCollapsed={sidebarCollapsed} />
           <RoutePolylinesLayer
-            segments={routeSegments}
+            segments={visibleRouteSegments}
             routeColorByBlockId={routeColorByBlockId}
           />
 

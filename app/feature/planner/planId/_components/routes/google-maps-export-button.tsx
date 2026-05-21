@@ -38,7 +38,7 @@ function getBlockLabel(block: TripBlockData): string {
 }
 
 function getDisplayLinks(blocks: TripBlockData[]): DisplayDirectionsLink[] {
-  return blocks.flatMap((block) => {
+  return blocks.filter((block) => block.kind !== "list").flatMap((block) => {
     const blockLinks = getGoogleMapsDirectionsLinks(block);
     const blockLabel = getBlockLabel(block);
 

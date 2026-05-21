@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { type MouseEvent, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Bookmark, Eye, Heart, MapPin, Share2, Star } from "lucide-react";
 
 import type { Plan, UserProfile } from "./data";
-import { formatCount, getPlanHref } from "./data";
-import { UserBadge } from "./user-badge";
+import { formatCount, getPlanCopyHref, getPlanHref } from "./data";
+import { isInteractiveCardTarget } from "./plan-card-navigation";
+import { UserBadge } from "@/components/user-badge";
+import { cn } from "@/lib/utils";
 
 type PlanCardVerticalProps = {
   plan: Plan;
   author: UserProfile;
   onShare: (planId: string) => void;
-  variant?: "default" | "trending" | "recent2" | "recent3" | "recent4";
+  variant?: "default" | "trending" | "featured" | "grid" | "compact";
 };
 
 export function PlanCardVertical({
@@ -21,58 +24,73 @@ export function PlanCardVertical({
   onShare,
   variant = "default",
 }: PlanCardVerticalProps) {
+  const router = useRouter();
   const href = getPlanHref(plan);
+  const copyHref = getPlanCopyHref(plan);
   const reviewHref = `${href}#reviews`;
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const isRecent2 = variant === "recent2";
-  const imageClassName =
-    variant === "trending"
-      ? "h-64 w-full bg-cover bg-center transition duration-300 group-hover:scale-[1.04]"
-      : variant === "recent2"
-        ? "h-48 w-full bg-cover bg-center transition duration-300 group-hover:scale-[1.02]"
-        : variant === "recent3"
-          ? "aspect-square w-full bg-cover bg-center transition duration-300 group-hover:scale-[1.02]"
-          : variant === "recent4"
-            ? "aspect-square w-full bg-cover bg-center transition duration-300 group-hover:scale-[1.02]"
-            : "h-72 w-full bg-cover bg-center transition duration-300 group-hover:scale-[1.02]";
+  const isCompact = variant === "compact";
 
-  const titleClassName =
-    variant === "trending"
-      ? "text-base font-semibold text-foreground line-clamp-2"
-      : variant === "recent2"
-        ? "text-base font-semibold text-foreground line-clamp-2"
-        : variant === "recent3"
-          ? "text-sm font-semibold text-foreground line-clamp-1"
-          : variant === "recent4"
-            ? "text-sm font-semibold text-foreground line-clamp-1"
-            : "text-sm font-semibold text-foreground";
+  function handleCardClick(event: MouseEvent<HTMLElement>) {
+    if (isInteractiveCardTarget(event.target)) {
+      return;
+    }
 
-  const descriptionClassName =
+    router.push(href);
+  }
+
+  const imageClassName = cn(
+    "w-full bg-cover bg-center transition duration-300",
     variant === "trending"
-      ? "text-sm text-muted-foreground line-clamp-2"
-      : variant === "recent2"
-        ? "text-sm text-muted-foreground line-clamp-2"
-        : variant === "recent3"
-          ? "text-xs text-muted-foreground line-clamp-2"
-          : variant === "recent4"
-            ? "text-xs text-muted-foreground line-clamp-2"
-            : "text-xs text-muted-foreground line-clamp-2";
-  const metaSizeClassName =
-    variant === "recent4"
+      ? "h-64 group-hover:scale-[1.04]"
+      : variant === "featured"
+        ? "h-48 group-hover:scale-[1.02]"
+        : variant === "grid" || variant === "compact"
+          ? "aspect-square group-hover:scale-[1.02]"
+          : "h-72 group-hover:scale-[1.02]",
+  );
+
+  const titleClassName = cn(
+    "font-semibold text-foreground decoration-2 underline-offset-4 transition hover:underline",
+    variant === "trending" || variant === "featured"
+      ? "text-base line-clamp-2"
+      : variant === "grid" || variant === "compact"
+        ? "text-sm line-clamp-1"
+        : "text-sm",
+  );
+
+  const descriptionClassName = cn(
+    "text-muted-foreground line-clamp-2",
+    variant === "grid" || variant === "compact" ? "text-xs" : "text-sm",
+  );
+
+  const metaSizeClassName = cn(
+    variant === "compact"
       ? "text-[11px]"
-      : variant === "recent3"
+      : variant === "grid"
         ? "text-xs"
-        : variant === "recent2"
+        : variant === "featured" || variant === "trending"
           ? "text-sm"
-          : variant === "trending"
-            ? "text-sm"
-            : "text-xs";
+          : "text-xs",
+  );
+
+  const likeButtonClassName = cn(
+    "flex items-center gap-1 rounded-full border border-border/60 px-3 font-medium shadow-sm transition cursor-pointer",
+    isCompact ? "py-2 text-sm" : "py-1.5 text-xs",
+    isLiked
+      ? "bg-destructive/10 text-destructive ring-2 ring-destructive/30"
+      : "bg-card/80 text-muted-foreground hover:text-foreground",
+  );
 
   return (
     <article
-      className={`flex flex-col gap-3 ${variant === "recent4" ? "min-w-0" : "min-w-[260px]"}`}
+      className={cn(
+        "flex flex-col gap-3 cursor-pointer",
+        isCompact ? "min-w-0" : "min-w-[260px]",
+      )}
       data-plan-card
+      onClick={handleCardClick}
     >
       <div className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
         <Link href={href} className="block cursor-pointer">
@@ -92,18 +110,18 @@ export function PlanCardVertical({
               event.stopPropagation();
               setIsSaved((prev) => !prev);
             }}
-            className={`flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer ${
-              isSaved
-                ? "text-emerald-600 ring-2 ring-emerald-300"
-                : "text-foreground"
-            }`}
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer",
+              isSaved && "text-success ring-2 ring-success/30",
+            )}
           >
             <Bookmark
-              className={`h-3.5 w-3.5 ${isSaved ? "fill-current" : ""}`}
+              className={cn("h-3.5 w-3.5", isSaved && "fill-current")}
             />
           </button>
           <button
             type="button"
+            aria-label={`Share ${plan.title}`}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -113,29 +131,31 @@ export function PlanCardVertical({
           >
             <Share2 className="h-4 w-4" />
           </button>
-          <button
-            type="button"
+          <Link
+            href={copyHref}
+            aria-label={`Copy ${plan.title} to planner`}
+            onClick={(event) => event.stopPropagation()}
             className="rounded-full border border-primary/40 bg-background/80 px-4 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur transition hover:bg-background cursor-pointer"
           >
             Copy Plan
-          </button>
+          </Link>
         </div>
       </div>
+
       <div className="space-y-2">
         <Link href={href} className="block w-fit cursor-pointer">
-          <h3
-            className={`${titleClassName} decoration-2 underline-offset-4 transition hover:underline`}
-          >
-            {plan.title}
-          </h3>
+          <h3 className={titleClassName}>{plan.title}</h3>
         </Link>
         <div
-          className={`${metaSizeClassName} flex flex-wrap items-center gap-3 text-muted-foreground`}
+          className={cn(
+            metaSizeClassName,
+            "flex flex-wrap items-center gap-3 text-muted-foreground",
+          )}
         >
           <button
             type="button"
             onClick={(event) => event.preventDefault()}
-            className="flex items-center gap-1 font-medium text-green-800 underline decoration-green-800/70 underline-offset-4 hover:text-green-900 cursor-pointer"
+            className="flex items-center gap-1 font-medium text-success/90 underline decoration-success/70 underline-offset-4 hover:text-success cursor-pointer"
           >
             <MapPin className="h-3.5 w-3.5" />
             <span className="line-clamp-1">{plan.location}</span>
@@ -147,44 +167,40 @@ export function PlanCardVertical({
             <Star className="h-3.5 w-3.5 text-primary" />
             {plan.rating.toFixed(1)} ({plan.reviews.toLocaleString()})
           </Link>
-          {variant !== "trending" && variant !== "recent4" ? (
+          {variant !== "trending" && variant !== "compact" ? (
             <span>{plan.lastUpdated}</span>
           ) : null}
         </div>
         <p className={descriptionClassName}>{plan.description}</p>
-        {variant === "recent4" ? (
+        {variant === "compact" ? (
           <div className="flex items-center justify-between">
-            <p className={`${metaSizeClassName} text-muted-foreground`}>
+            <p className={cn(metaSizeClassName, "text-muted-foreground")}>
               {plan.lastUpdated}
             </p>
             <button
               type="button"
               aria-pressed={isLiked}
               onClick={() => setIsLiked((prev) => !prev)}
-              className={`flex items-center gap-1 rounded-full border border-border/60 px-3 ${
-                isRecent2 ? "py-2 text-sm" : "py-1.5 text-xs"
-              } font-medium shadow-sm transition cursor-pointer ${
-                isLiked
-                  ? "bg-red-50 text-red-600 ring-2 ring-red-300"
-                  : "bg-card/80 text-muted-foreground hover:text-foreground"
-              }`}
+              className={likeButtonClassName}
             >
-              <Heart
-                className={`h-3.5 w-3.5 ${isLiked ? "fill-current" : ""}`}
-              />
+              <Heart className={cn("h-3.5 w-3.5", isLiked && "fill-current")} />
               Like
             </button>
           </div>
         ) : null}
       </div>
+
       <div className="flex items-center justify-between">
         <UserBadge
           user={author}
-          variant={variant === "recent4" ? "compact" : "default"}
+          variant={variant === "compact" ? "compact" : "default"}
         />
-        {variant === "recent4" ? (
+        {variant === "compact" ? (
           <div
-            className={`${metaSizeClassName} flex items-center gap-2 text-muted-foreground`}
+            className={cn(
+              metaSizeClassName,
+              "flex items-center gap-2 text-muted-foreground",
+            )}
           >
             <span className="flex items-center gap-1">
               <Heart className="h-3.5 w-3.5" />
@@ -197,21 +213,18 @@ export function PlanCardVertical({
           </div>
         ) : (
           <div
-            className={`${metaSizeClassName} flex items-center gap-2 text-muted-foreground`}
+            className={cn(
+              metaSizeClassName,
+              "flex items-center gap-2 text-muted-foreground",
+            )}
           >
             <button
               type="button"
               aria-pressed={isLiked}
               onClick={() => setIsLiked((prev) => !prev)}
-              className={`flex items-center gap-1 rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium shadow-sm transition cursor-pointer ${
-                isLiked
-                  ? "bg-red-50 text-red-600 ring-2 ring-red-300"
-                  : "bg-card/80 text-muted-foreground hover:text-foreground"
-              }`}
+              className={likeButtonClassName}
             >
-              <Heart
-                className={`h-3.5 w-3.5 ${isLiked ? "fill-current" : ""}`}
-              />
+              <Heart className={cn("h-3.5 w-3.5", isLiked && "fill-current")} />
               Like
             </button>
             <span className="flex items-center gap-1">

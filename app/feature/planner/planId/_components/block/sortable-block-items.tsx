@@ -54,6 +54,7 @@ function renderBlockItem(
   block: TripBlockData,
   item: TripBlockItem,
   placePosition: number | null,
+  showEvChargeDetails: boolean,
   chargeBatteryFrom?: number,
   chargeBatteryTo?: number,
 ) {
@@ -68,6 +69,7 @@ function renderBlockItem(
           position={placePosition}
           chargeBatteryFrom={chargeBatteryFrom}
           chargeBatteryTo={chargeBatteryTo}
+          showEvChargeDetails={showEvChargeDetails}
         />
       );
     case "note":
@@ -137,6 +139,7 @@ function buildBatteryStateMap(
 export function SortableBlockItems({ block }: SortableBlockItemsProps) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const shouldShowRouting = block.kind !== "list";
   const reorderBlockItems = useSetAtom(reorderBlockItemsAtom);
   const activeEvCar = useAtomValue(activeEvCarAtom);
   const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
@@ -157,14 +160,20 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
     [block.items],
   );
   const batteryStateByItemId = useMemo(() => {
-    if (!activeEvCar) return new Map<string, BatteryState>();
+    if (!shouldShowRouting || !activeEvCar) return new Map<string, BatteryState>();
     return buildBatteryStateMap(
       block.items,
       routeSegmentByToItemId,
       activeEvCar,
       startingBatteryPct,
     );
-  }, [activeEvCar, block.items, routeSegmentByToItemId, startingBatteryPct]);
+  }, [
+    activeEvCar,
+    block.items,
+    routeSegmentByToItemId,
+    shouldShowRouting,
+    startingBatteryPct,
+  ]);
 
   const blockColor = getTripBlockColorById(block.colorId);
 
@@ -225,7 +234,8 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
         const routeablePosition = isRouteableItem
           ? (routeablePositionByItemId.get(item.id) ?? 0)
           : 0;
-        const shouldShowRouteInfo = isRouteableItem && routeablePosition > 1;
+        const shouldShowRouteInfo =
+          shouldShowRouting && isRouteableItem && routeablePosition > 1;
 
         const seg = shouldShowRouteInfo
           ? routeSegmentByToItemId.get(item.id)
@@ -320,6 +330,7 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
                 block,
                 item,
                 placePosition,
+                shouldShowRouting,
                 itemBatteryState?.arrivalPct,
                 itemBatteryState?.departurePct,
               )}

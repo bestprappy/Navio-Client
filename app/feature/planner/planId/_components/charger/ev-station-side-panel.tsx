@@ -259,7 +259,7 @@ export function EvStationSidePanel({
         <section aria-label="Nearby EV stations" className="px-4 py-4">
           {isLoadingEvChargers ? (
             <div className="rounded-sm border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground shadow-xs">
-              Finding EV stations near your saved stops...
+              Finding EV stations near this block...
             </div>
           ) : visibleResults.length ? (
             <div className="space-y-3">

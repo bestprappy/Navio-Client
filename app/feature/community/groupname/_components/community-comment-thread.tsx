@@ -331,9 +331,10 @@ function CommentBranch({
   onReplySubmit,
 }: CommentBranchProps) {
   return (
-    <div className={cn("flex flex-col gap-5", level > 0 && "gap-4")}>
-      {nodes.map((comment) => {
+    <div className={cn("flex flex-col", level === 0 ? "gap-6" : "gap-3")}>
+      {nodes.map((comment, index) => {
         const author = getUserById(comment.authorId);
+        const isLastSibling = index === nodes.length - 1;
         const isCollapsed = collapsedCommentIds.includes(comment.id);
         const visibleReplyCount =
           visibleReplyCountsByCommentId[comment.id] ??
@@ -357,29 +358,57 @@ function CommentBranch({
         const depthLimitReached =
           level >= MAX_INLINE_COMMENT_DEPTH && comment.replies.length > 0;
         const threadContinued = continuedCommentThreadIds.includes(comment.id);
-        const showNestedRail =
-          !isCollapsed && level < MAX_INLINE_COMMENT_DEPTH;
-        const allowNestedIndent = level < MAX_INLINE_COMMENT_DEPTH;
-        const hasParentRail = level > 0 && level <= MAX_INLINE_COMMENT_DEPTH;
+        const hasReplies = comment.replies.length > 0;
+        const showReplies = hasReplies && !isCollapsed;
 
         return (
           <article
             key={comment.id}
             className={cn(
-              "relative min-w-0",
-              hasParentRail &&
-                "before:absolute before:-left-14 before:top-0 before:h-4 before:w-14 before:rounded-bl-2xl before:border-b before:border-l before:border-border",
+              "min-w-0",
+              level > 0 &&
+                "relative before:absolute before:-left-[1.8125rem] before:top-4 before:h-px before:w-6 before:bg-border before:content-['']",
+              level > 0 &&
+                isLastSibling &&
+                "after:pointer-events-none after:absolute after:-left-7 after:top-[18px] after:-bottom-8 after:z-10 after:w-3 after:-translate-x-1/2 after:bg-background after:content-['']",
             )}
           >
-            <div className="flex min-w-0 items-start gap-3">
-              <Avatar className="size-8">
-                <AvatarImage src={author.avatarUrl} alt={author.name} />
-                <AvatarFallback className="text-[11px]">
-                  {getInitials(author.name)}
-                </AvatarFallback>
-              </Avatar>
+            {/* Keep the avatar rail aligned while the row stretches around replies. */}
+            <div className="flex min-w-0 gap-3">
+              <div className="flex shrink-0 flex-col items-center">
+                <Avatar className="size-8">
+                  <AvatarImage src={author.avatarUrl} alt={author.name} />
+                  <AvatarFallback className="text-[11px]">
+                    {getInitials(author.name)}
+                  </AvatarFallback>
+                </Avatar>
 
-              <div className="min-w-0 flex-1">
+                {hasReplies && (
+                  <div className="mt-1.5 flex flex-1 flex-col items-center">
+                    <button
+                      type="button"
+                      onClick={() => onToggleCollapse(comment.id)}
+                      className="z-10 inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      aria-expanded={!isCollapsed}
+                      aria-label={
+                        isCollapsed ? "Expand replies" : "Collapse replies"
+                      }
+                    >
+                      {isCollapsed ? (
+                        <Plus className="size-3" aria-hidden="true" />
+                      ) : (
+                        <Minus className="size-3" aria-hidden="true" />
+                      )}
+                    </button>
+
+                    {showReplies && (
+                      <div className="mt-1 min-h-2 w-px flex-1 border-l border-border" />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1 pb-1">
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className="text-sm font-semibold text-foreground">
                     {author.name}
@@ -419,11 +448,7 @@ function CommentBranch({
                       onCancel={() => onReplyCancel(comment.id)}
                       onSubmit={() => {
                         const body = replyDraft.trim();
-
-                        if (!body) {
-                          return;
-                        }
-
+                        if (!body) return;
                         onReplySubmit(
                           createLocalComment({
                             postId: post.id,
@@ -436,36 +461,8 @@ function CommentBranch({
                   </div>
                 ) : null}
 
-                {comment.replies.length > 0 ? (
-                  <div
-                    className={cn(
-                      "relative mt-3",
-                      allowNestedIndent ? "-ml-7 pl-14" : "pl-0",
-                      showNestedRail &&
-                        "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-px before:bg-border",
-                    )}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onToggleCollapse(comment.id)}
-                      className={cn(
-                        "z-10 inline-flex size-4 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                        allowNestedIndent
-                          ? "absolute -left-2 top-0"
-                          : "mb-2",
-                      )}
-                      aria-expanded={!isCollapsed}
-                      aria-label={
-                        isCollapsed ? "Expand replies" : "Collapse replies"
-                      }
-                    >
-                      {isCollapsed ? (
-                        <Plus className="size-3" aria-hidden="true" />
-                      ) : (
-                        <Minus className="size-3" aria-hidden="true" />
-                      )}
-                    </button>
-
+                {hasReplies ? (
+                  <div className="mt-3">
                     {isCollapsed ? (
                       <Button
                         type="button"
@@ -501,9 +498,7 @@ function CommentBranch({
                           upvotedCommentIds={upvotedCommentIds}
                           downvotedCommentIds={downvotedCommentIds}
                           collapsedCommentIds={collapsedCommentIds}
-                          continuedCommentThreadIds={
-                            continuedCommentThreadIds
-                          }
+                          continuedCommentThreadIds={continuedCommentThreadIds}
                           visibleReplyCountsByCommentId={
                             visibleReplyCountsByCommentId
                           }
@@ -530,11 +525,7 @@ function CommentBranch({
                                 visibleReplyCount + REPLY_INCREMENT,
                               )
                             }
-                            className={cn(
-                              "relative mt-3 h-7 px-2 text-xs text-muted-foreground hover:text-foreground",
-                              showNestedRail &&
-                                "before:absolute before:-left-14 before:top-0 before:h-1/2 before:w-14 before:rounded-bl-2xl before:border-b before:border-l before:border-border",
-                            )}
+                            className="relative mt-3 h-7 px-2 text-xs text-muted-foreground before:pointer-events-none before:absolute before:-left-7 before:-top-3 before:-bottom-3 before:w-3 before:-translate-x-1/2 before:bg-background before:content-[''] hover:text-foreground"
                           >
                             <Plus className="size-3.5" aria-hidden="true" />
                             View {hiddenReplyCount} more{" "}

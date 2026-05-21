@@ -12,6 +12,7 @@ import type {
 
 export function getTripRouteGroups(blocks: TripBlockData[]): RoutePointGroup[] {
   return blocks
+    .filter((block) => block.kind !== "list")
     .map((block) => ({
       blockId: block.id,
       points: block.items.filter(isPlaceItem).map((item) => ({

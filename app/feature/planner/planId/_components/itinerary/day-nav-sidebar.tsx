@@ -28,18 +28,37 @@ export function DayNavSidebar() {
       const currentBlocks = blocksRef.current;
       if (currentBlocks.length === 0) return;
 
-      const containerTop = container!.getBoundingClientRect().top;
+      const containerRect = container.getBoundingClientRect();
       // A block becomes "active" once its top edge crosses the upper 30% of the panel.
-      const threshold = containerTop + container!.clientHeight * 0.3;
+      const threshold = containerRect.top + container.clientHeight * 0.3;
 
-      let nextActiveId: string | null = null;
+      let activeCandidate: { id: string; top: number } | null = null;
+      let nextVisibleCandidate: { id: string; top: number } | null = null;
+
       for (const block of currentBlocks) {
         const el = document.getElementById(`trip-block-${block.id}`);
         if (!el) continue;
-        if (el.getBoundingClientRect().top <= threshold) {
-          nextActiveId = block.id;
+
+        const blockRect = el.getBoundingClientRect();
+
+        if (blockRect.top <= threshold) {
+          if (!activeCandidate || blockRect.top > activeCandidate.top) {
+            activeCandidate = { id: block.id, top: blockRect.top };
+          }
+
+          continue;
+        }
+
+        if (
+          blockRect.top < containerRect.bottom &&
+          (!nextVisibleCandidate || blockRect.top < nextVisibleCandidate.top)
+        ) {
+          nextVisibleCandidate = { id: block.id, top: blockRect.top };
         }
       }
+
+      const nextActiveId =
+        activeCandidate?.id ?? nextVisibleCandidate?.id ?? null;
 
       if (nextActiveId !== null) {
         setActiveBlockId(nextActiveId);
