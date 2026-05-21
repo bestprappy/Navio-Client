@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
-import { Menu, X } from "lucide-react";
+import { Bell, Menu, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button.variants";
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 type NavLink = {
@@ -16,9 +18,9 @@ type NavLink = {
 
 const NAV_LINKS: NavLink[] = [
   { label: "Home", href: "/" },
-  { label: "Planner", href: "/planner/setup" },
+  { label: "Planner", href: "/planner" },
   { label: "Explore", href: "/explore" },
-  { label: "Community", href: "/commu" },
+  { label: "Community", href: "/community" },
   { label: "Help", href: "/help" },
 ];
 
@@ -45,12 +47,12 @@ export function Navbar() {
         </Link>
 
         {/* Desktop nav links */}
-        <ul className="hidden list-none items-center gap-6 md:flex" role="list">
+        <ul className="hidden list-none items-center gap-2 md:flex" role="list">
           {NAV_LINKS.map((link) => (
             <li key={link.href}>
               <Link
                 href={link.href}
-                className="rounded-md px-1 py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="rounded-full px-3 py-1 text-sm text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
               >
                 {link.label}
               </Link>
@@ -58,16 +60,32 @@ export function Navbar() {
           ))}
         </ul>
 
-        {/* Desktop CTAs */}
-        <div className="hidden items-center gap-2 md:flex">
-          <Link
-            href="/sign-in"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+        {/* Desktop actions */}
+        <div className="hidden items-center gap-1 md:flex">
+          <ThemeToggle />
+          <button
+            type="button"
+            aria-label="Notifications"
+            className="relative flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           >
-            Sign In
-          </Link>
-          <Link href="/sign-up" className={cn(buttonVariants({ size: "sm" }))}>
-            Get Started
+            <Bell className="size-4" aria-hidden="true" />
+            <span
+              className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary ring-2 ring-background"
+              aria-hidden="true"
+            />
+          </button>
+          <Link
+            href="/profile"
+            className="ml-0.5 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2"
+            aria-label="Profile"
+          >
+            <Image
+              src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=facearea&w=64&h=64"
+              alt="User profile"
+              width={36}
+              height={36}
+              className="h-full w-full object-cover"
+            />
           </Link>
         </div>
 

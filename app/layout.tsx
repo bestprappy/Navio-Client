@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
+import { QueryProvider } from "@/components/query-provider";
+import { ThemeProvider } from "@/components/theme-provider";
+import { NavigationHistoryTracker } from "@/components/navigation-history";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -26,11 +29,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${plusJakartaSans.variable} ${ibmPlexMono.variable} antialiased`}
       >
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <QueryProvider>
+            <NavigationHistoryTracker />
+            {children}
+          </QueryProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
