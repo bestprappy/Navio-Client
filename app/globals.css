@@ -103,19 +103,19 @@
   --popover-foreground: oklch(0.358 0.041 273.6);
 
   /* TColors.primary — green */
-  --primary: oklch(0.68 0.18 145);
+  --primary: oklch(66.866% 0.09376 216.652);
   --primary-foreground: oklch(1 0 0);
 
   /* TColors.secondary #D4EAE6 (Mint) */
   --secondary: oklch(0.916 0.024 191.8);
-  --secondary-foreground: oklch(0.536 0.076 185.3);
+  --secondary-foreground: oklch(42.767% 0.08327 256.108);
 
   /* TColors.lightContainer & textSecondary */
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(52.804% 0.08553 268.122);
+  --muted-foreground: oklch(50.055% 0.11096 291.59);
 
   /* TColors.accent #30867D (Teal) */
-  --accent: oklch(0.536 0.076 185.3);
+  --accent: oklch(37.578% 0.12505 293.205);
   --accent-foreground: oklch(1 0 0);
 
   /* TColors.error #D32F2F */
@@ -127,7 +127,7 @@
   --input: oklch(0.923 0.03519 267.622);
 
   /* Focus ring uses TColors.primary */
-  --ring: oklch(0.68 0.18 145);
+  --ring: oklch(66.866% 0.09376 216.652);
 
   /* TColors.success #388E3C */
   --success: oklch(0.548 0.124 141.6);
@@ -143,22 +143,22 @@
 
   /* Charts mapped to TColors semantic palette */
   --chart-1: oklch(0.548 0.124 141.6); /* TColors.success */
-  --chart-2: oklch(0.68 0.18 145); /* TColors.primary */
+  --chart-2: oklch(66.866% 0.09376 216.652); /* TColors.primary */
   --chart-3: oklch(0.654 0.174 48.6); /* TColors.warning */
   --chart-4: oklch(0.514 0.141 261.2); /* TColors.info */
-  --chart-5: oklch(0.536 0.076 185.3); /* TColors.accent */
+  --chart-5: oklch(37.578% 0.12505 293.205); /* TColors.accent */
 
   --radius: 1.4rem;
 
   /* TColors.light #EDF0FC sidebar surface */
   --sidebar: oklch(0.957 0.013 273.5);
   --sidebar-foreground: oklch(0.358 0.041 273.6);
-  --sidebar-primary: oklch(0.68 0.18 145);
+  --sidebar-primary: oklch(66.866% 0.09376 216.652);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.916 0.024 191.8);
   --sidebar-accent-foreground: oklch(0.358 0.041 273.6);
   --sidebar-border: oklch(0.884 0 0);
-  --sidebar-ring: oklch(0.68 0.18 145);
+  --sidebar-ring: oklch(66.866% 0.09376 216.652);
 
   --font-sans: Plus Jakarta Sans, sans-serif;
   --font-serif: Lora, serif;
@@ -201,15 +201,15 @@
   --popover-foreground: oklch(1 0 0);
 
   /* TColors.primary — green */
-  --primary: oklch(0.68 0.18 145);
+  --primary: oklch(63.698% 0.09451 221.701);
   --primary-foreground: oklch(0.169 0.024 273.4);
 
   /* Swapped for dark legibility — TColors.accent as secondary */
-  --secondary: oklch(48.285% 0.05637 175.864);
+  --secondary: oklch(38.494% 0.07039 275.25);
   --secondary-foreground: oklch(1 0 0);
 
   /* TColors.secondary mint as accent surface */
-  --accent: oklch(0.707 0.115 250);
+  --accent: oklch(59.318% 0.17754 276.652);
   --accent-foreground: oklch(0.169 0.024 273.4);
 
   /* TColors.darkContainer opacity simulation */
@@ -224,7 +224,7 @@
   --border: oklch(0.358 0.041 273.6);
   --input: oklch(0.358 0.041 273.6);
 
-  --ring: oklch(0.68 0.18 145);
+  --ring: oklch(63.698% 0.09451 221.701);
 
   /* TColors.success brightened for dark visibility */
   --success: oklch(0.6 0.14 141.6);
@@ -240,7 +240,7 @@
 
   /* Charts brightened for dark backgrounds */
   --chart-1: oklch(0.8 0.182 151.7); /* TColors.success */
-  --chart-2: oklch(0.72 0.2 145); /* TColors.primary */
+  --chart-2: oklch(63.698% 0.09451 221.701); /* TColors.primary */
   --chart-3: oklch(0.808 0.104 19.6); /* TColors.warning */
   --chart-4: oklch(0.669 0.157 260.1); /* TColors.info */
   --chart-5: oklch(0.706 0 0); /* TColors.darkGrey */
@@ -391,7 +391,6 @@
     @apply font-sans;
   }
 }
-
 
 @layer utilities {
   .scrollbar-hide {
