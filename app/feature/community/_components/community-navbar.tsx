@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Bell, Plus, Search, X } from "lucide-react";
 import { useAtom } from "jotai";
@@ -7,7 +8,6 @@ import { useAtom } from "jotai";
 import { communitySearchQueryAtom } from "./community-atoms";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 
 export function CommunityNavbar() {
@@ -86,16 +86,19 @@ export function CommunityNavbar() {
             />
           </button>
 
-          <button
-            type="button"
-            aria-label="Open user menu"
-            className="ml-0.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2"
+          <Link
+            href="/profile"
+            className="ml-0.5 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2"
+            aria-label="Profile"
           >
-            <Avatar>
-              <AvatarImage src="" alt="User avatar" />
-              <AvatarFallback>U</AvatarFallback>
-            </Avatar>
-          </button>
+            <Image
+              src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=facearea&w=64&h=64"
+              alt="User profile"
+              width={36}
+              height={36}
+              className="h-full w-full object-cover"
+            />
+          </Link>
         </div>
       </div>
     </header>

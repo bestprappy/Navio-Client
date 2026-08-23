@@ -12,7 +12,15 @@ import { Button } from "@/components/ui/button";
 import { CommunityComposer } from "../create/community-composer";
 import { CommunityRulesSidebar } from "../create/community-rules-sidebar";
 
-export function CommunityCreatePage() {
+type CommunityCreatePageProps = {
+  initialGroupId?: string | null;
+  initialPlanId?: string | null;
+};
+
+export function CommunityCreatePage({
+  initialGroupId = null,
+  initialPlanId = null,
+}: CommunityCreatePageProps) {
   const createdGroups = useAtomValue(createdGroupsAtom);
   const groupsQuery = useCommunityGroups("", createdGroups);
   const groups = groupsQuery.data ?? [...createdGroups, ...mockCommunityGroups];
@@ -39,7 +47,11 @@ export function CommunityCreatePage() {
               : "max-w-2xl"
           }
         >
-          <CommunityComposer groups={groups} />
+          <CommunityComposer
+            groups={groups}
+            initialGroupId={initialGroupId}
+            initialPlanId={initialPlanId}
+          />
           {selectedGroup && <CommunityRulesSidebar group={selectedGroup} />}
         </div>
       </div>

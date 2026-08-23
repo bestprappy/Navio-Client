@@ -14,6 +14,7 @@ import {
   downvotedPostIdsAtom,
   upvotedPostIdsAtom,
 } from "../../_components/community-atoms";
+import { CommunityTripAttachment } from "../../_components/community-trip-attachment";
 import { CommunityFlairBadge } from "../../_components/community-flair-badge";
 import type {
   CommunityComment,
@@ -23,6 +24,7 @@ import type {
 import {
   formatCount,
   formatRelativeTime,
+  getTripById,
   getInitials,
   getUserById,
   slugifyCommunityValue,
@@ -45,6 +47,7 @@ export function CommunityPostDetailCard({
   const [upvotedPostIds, setUpvotedPostIds] = useAtom(upvotedPostIdsAtom);
   const [downvotedPostIds, setDownvotedPostIds] = useAtom(downvotedPostIdsAtom);
   const author = getUserById(post.authorId);
+  const trip = post.sharedTripId ? getTripById(post.sharedTripId) : null;
   const isUpvoted = upvotedPostIds.includes(post.id);
   const isDownvoted = downvotedPostIds.includes(post.id);
   const score = post.upvotes + (isUpvoted ? 1 : 0) - (isDownvoted ? 1 : 0);
@@ -136,6 +139,12 @@ export function CommunityPostDetailCard({
               alt={post.title}
               className="relative z-10 mx-auto h-full w-full object-contain"
             />
+          </div>
+        ) : null}
+
+        {trip ? (
+          <div className="mt-4">
+            <CommunityTripAttachment trip={trip} />
           </div>
         ) : null}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import type { FormEvent } from "react";
+import Link from "next/link";
 import { MessageSquare, Send } from "lucide-react";
 import { useAtom, useSetAtom } from "jotai";
 
@@ -95,7 +96,16 @@ export function CommunityDiscussion({
                     <span className="text-xs text-muted-foreground">
                       {formatRelativeTime(comment.createdAt)}
                     </span>
-                    {trip ? (
+                    {trip?.href ? (
+                      <Link
+                        href={trip.href}
+                        className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      >
+                        <Badge variant="outline" className="max-w-56">
+                          <span className="truncate">mentions {trip.title}</span>
+                        </Badge>
+                      </Link>
+                    ) : trip ? (
                       <Badge variant="outline">mentions {trip.location}</Badge>
                     ) : null}
                   </div>

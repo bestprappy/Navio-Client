@@ -7,6 +7,30 @@ export const metadata: Metadata = {
   description: "Start a discussion or create a new community group.",
 };
 
-export default function CommunityCreateRoute() {
-  return <CommunityCreatePage />;
+type CommunityCreateRouteProps = {
+  searchParams: Promise<{
+    groupId?: string | string[];
+    planId?: string | string[];
+  }>;
+};
+
+function getSearchParamValue(value?: string | string[]): string | null {
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value ?? null;
+}
+
+export default async function CommunityCreateRoute({
+  searchParams,
+}: CommunityCreateRouteProps) {
+  const params = await searchParams;
+
+  return (
+    <CommunityCreatePage
+      initialGroupId={getSearchParamValue(params.groupId)}
+      initialPlanId={getSearchParamValue(params.planId)}
+    />
+  );
 }

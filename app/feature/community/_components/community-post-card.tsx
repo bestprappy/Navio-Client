@@ -14,6 +14,7 @@ import {
 import { useAtom } from "jotai";
 
 import { CommunityFlairBadge } from "./community-flair-badge";
+import { CommunityTripAttachment } from "./community-trip-attachment";
 import {
   downvotedPostIdsAtom,
   joinedGroupIdsAtom,
@@ -51,6 +52,7 @@ type CommunityPostCardProps = {
 export function CommunityPostCard({
   post,
   group,
+  trip,
   comments,
   selected,
   metaVariant = "group",
@@ -227,6 +229,12 @@ export function CommunityPostCard({
             alt={post.title}
             className="relative z-10 mx-auto h-full w-full object-contain"
           />
+        </div>
+      ) : null}
+
+      {trip ? (
+        <div className="mb-3">
+          <CommunityTripAttachment trip={trip} />
         </div>
       ) : null}
 

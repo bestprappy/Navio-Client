@@ -1,3 +1,11 @@
+import {
+  PLANS,
+  getPlanById,
+  getPlanHref,
+  getPlanTemplateBlocks,
+  type Plan,
+} from "@/app/feature/explore/_components/data";
+
 export type CommunityFeedSort = "best" | "new" | "top";
 export type CommunityCommentSort = "best" | "new";
 
@@ -18,12 +26,14 @@ export type SharedTripStop = {
 
 export type SharedTrip = {
   id: string;
+  sourcePlanId?: string;
   title: string;
   location: string;
   country: string;
   durationDays: number;
   summary: string;
   coverImageUrl: string;
+  href?: string;
   authorId: string;
   stops: SharedTripStop[];
   tags: string[];
@@ -57,7 +67,14 @@ export type CommunityRule = {
 export type CommunityFlair = {
   id: string;
   label: string;
-  tone: "reliable" | "question" | "unsourced" | "speculation" | "itinerary" | "food" | "ev";
+  tone:
+    | "reliable"
+    | "question"
+    | "unsourced"
+    | "speculation"
+    | "itinerary"
+    | "food"
+    | "ev";
 };
 
 export type CommunityBookmark = {
@@ -224,6 +241,101 @@ export const communityUsers: CommunityUser[] = [
 
 const DEFAULT_COMMUNITY_GROUP_BANNER =
   "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80";
+
+const EXPLORE_PLAN_AUTHOR_BY_ID: Record<string, string> = {
+  u1: "user-kanya",
+  u2: "user-narin",
+  u3: "user-pim",
+  u4: "user-arthit",
+};
+
+const BANGKOK_RICH_PLAN_ID = "200";
+
+const EXPLORE_PLAN_ID_BY_SHARED_TRIP_ID: Record<string, string> = {
+  "trip-bangkok-food-loop": BANGKOK_RICH_PLAN_ID,
+  "trip-chiang-mai-khao-soi": "101",
+  "trip-phuket-seafood": "102",
+  "trip-khao-yai-charge": "110",
+};
+
+function getPlanCountry(plan: Plan): string {
+  const locationParts = plan.location
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return locationParts.at(-1) ?? "Thailand";
+}
+
+function getPlanDurationDays(plan: Plan): number {
+  const titleDuration = plan.title.match(/(\d+)[-\s]?day/i);
+
+  if (titleDuration?.[1]) {
+    return Number(titleDuration[1]);
+  }
+
+  if (plan.templateStartDate && plan.templateEndDate) {
+    const start = new Date(plan.templateStartDate);
+    const end = new Date(plan.templateEndDate);
+    const diffDays = Math.round(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+    );
+
+    return Math.max(1, diffDays + 1);
+  }
+
+  return plan.tags.some((tag) => tag.toLowerCase().includes("long")) ? 3 : 2;
+}
+
+function getPlanStops(plan: Plan): SharedTripStop[] {
+  const itineraryBlocks = getPlanTemplateBlocks(plan.id).filter(
+    (block) => block.type !== "list",
+  );
+  const stops = itineraryBlocks.flatMap((block, blockIndex) =>
+    block.places
+      .filter((place) => !place.isEvCharger)
+      .slice(0, 2)
+      .map((place) => ({
+        id: place.id,
+        name: place.name,
+        location: plan.province,
+        day: blockIndex + 1,
+      })),
+  );
+
+  if (stops.length > 0) {
+    return stops.slice(0, 6);
+  }
+
+  return [
+    {
+      id: `${plan.id}-anchor`,
+      name: plan.location,
+      location: plan.province,
+      day: 1,
+    },
+  ];
+}
+
+function planToSharedTrip(plan: Plan): SharedTrip {
+  return {
+    id: plan.id,
+    sourcePlanId: plan.id,
+    title: plan.title,
+    location: plan.province,
+    country: getPlanCountry(plan),
+    durationDays: getPlanDurationDays(plan),
+    summary: plan.description,
+    coverImageUrl: plan.imageUrl,
+    href: getPlanHref(plan),
+    authorId: EXPLORE_PLAN_AUTHOR_BY_ID[plan.authorId] ?? "user-kanya",
+    stops: getPlanStops(plan),
+    tags: plan.tags.map((tag) => tag.toLowerCase()),
+    copiedCount: plan.likes,
+  };
+}
+
+export const explorePlanSharedTrips: SharedTrip[] = PLANS.map(planToSharedTrip);
 
 export const mockSharedTrips: SharedTrip[] = [
   {
@@ -606,11 +718,19 @@ export const mockCommunityGroups: CommunityGroup[] = [
       { id: "flair-food-route", label: "Food Route", tone: "food" },
       { id: "flair-question-bkk", label: "Question", tone: "question" },
       { id: "flair-reliable-bkk", label: "Reliable", tone: "reliable" },
-      { id: "flair-speculation-bkk", label: "Speculation", tone: "speculation" },
+      {
+        id: "flair-speculation-bkk",
+        label: "Speculation",
+        tone: "speculation",
+      },
     ],
     userFlairs: [
       { id: "user-flair-bkk-local", label: "Bangkok Local", tone: "reliable" },
-      { id: "user-flair-night-market", label: "Night Market Pro", tone: "food" },
+      {
+        id: "user-flair-night-market",
+        label: "Night Market Pro",
+        tone: "food",
+      },
     ],
     bookmarks: [
       { id: "bookmark-yaowarat", label: "Yaowarat route notes" },
@@ -626,8 +746,7 @@ export const mockCommunityGroups: CommunityGroup[] = [
     name: "Chiang Mai Cafes and Khao Soi",
     avatarUrl:
       "https://images.unsplash.com/photo-1509042239860-f550ce710b93?auto=format&fit=crop&w=96&h=96",
-    description:
-      "Coffee, khao soi, and mountain day routes around Chiang Mai.",
+    description: "Coffee, khao soi, and mountain day routes around Chiang Mai.",
     country: "Thailand",
     places: ["Chiang Mai", "Nimman", "Mae Rim", "Doi Suthep"],
     tags: ["cafe", "restaurant", "chiang mai", "khao soi"],
@@ -659,7 +778,11 @@ export const mockCommunityGroups: CommunityGroup[] = [
     ],
     userFlairs: [
       { id: "user-flair-cafe-hopper", label: "Cafe Hopper", tone: "food" },
-      { id: "user-flair-north-local", label: "Northern Local", tone: "reliable" },
+      {
+        id: "user-flair-north-local",
+        label: "Northern Local",
+        tone: "reliable",
+      },
     ],
     bookmarks: [
       { id: "bookmark-khao-soi", label: "Khao soi list" },
@@ -707,7 +830,11 @@ export const mockCommunityGroups: CommunityGroup[] = [
       { id: "flair-reliable-phuket", label: "Reliable", tone: "reliable" },
     ],
     userFlairs: [
-      { id: "user-flair-island-local", label: "Island Local", tone: "reliable" },
+      {
+        id: "user-flair-island-local",
+        label: "Island Local",
+        tone: "reliable",
+      },
       { id: "user-flair-seafood", label: "Seafood Scout", tone: "food" },
     ],
     bookmarks: [
@@ -968,7 +1095,11 @@ export const mockCommunityGroups: CommunityGroup[] = [
     ],
     userFlairs: [
       { id: "user-flair-bali-local", label: "Bali Local", tone: "reliable" },
-      { id: "user-flair-sunset-scout", label: "Sunset Scout", tone: "itinerary" },
+      {
+        id: "user-flair-sunset-scout",
+        label: "Sunset Scout",
+        tone: "itinerary",
+      },
     ],
     bookmarks: [
       { id: "bookmark-uluwatu", label: "Uluwatu sunset" },
@@ -1047,7 +1178,11 @@ export const mockCommunityGroups: CommunityGroup[] = [
       { id: "flair-taiwan-itinerary", label: "City Loop", tone: "itinerary" },
     ],
     userFlairs: [
-      { id: "user-flair-taiwan-local", label: "Taiwan Local", tone: "reliable" },
+      {
+        id: "user-flair-taiwan-local",
+        label: "Taiwan Local",
+        tone: "reliable",
+      },
       { id: "user-flair-snack-scout", label: "Snack Scout", tone: "food" },
     ],
     bookmarks: [
@@ -1065,27 +1200,26 @@ export const mockCommunityPosts: CommunityPost[] = [
     id: "post-bangkok-restaurant-loop",
     groupId: "group-thailand-restaurants",
     authorId: "user-kanya",
-    title: "Best Bangkok restaurant loop if you only have two nights?",
+    title: "Would you change the Bangkok 5-Day EV Loop food pacing?",
     body:
-      "I built a Bangkok food route that keeps dinner, dessert, and river breaks close together. Would you swap any restaurants around Yaowarat or old town?",
+      "I am using Bangkok 5-Day EV Loop: Temples, markets, riverside, and Ayutthaya day trip as the base. The temple days look solid, but I am debating whether the riverside dinner and Chatuchak market day need more breathing room.",
     createdAt: "2026-05-10T20:35:00+07:00",
     upvotes: 286,
     commentCount: 14,
-    tags: ["restaurant", "bangkok", "thailand", "food"],
+    tags: ["restaurant", "bangkok", "thailand", "food", "ev"],
     place: "Bangkok",
     country: "Thailand",
-    sharedTripId: "trip-bangkok-food-loop",
+    sharedTripId: BANGKOK_RICH_PLAN_ID,
     flairId: "flair-food",
     imageUrl:
-      "https://images.unsplash.com/photo-1508009603885-50cf7c579365?auto=format&fit=crop&w=900&q=80",
+      "https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: "post-restaurant-thailand-general",
     groupId: "group-thailand-restaurants",
     authorId: "user-pim",
     title: "Restaurant-heavy Thailand trip: Bangkok, Chiang Mai, then Phuket",
-    body:
-      "Friends want the trip to be mostly restaurants and local markets. I am comparing north-first vs beach-first routes and would love pacing advice.",
+    body: "Friends want the trip to be mostly restaurants and local markets. I am comparing north-first vs beach-first routes and would love pacing advice.",
     createdAt: "2026-05-09T18:15:00+07:00",
     upvotes: 214,
     commentCount: 9,
@@ -1118,8 +1252,7 @@ export const mockCommunityPosts: CommunityPost[] = [
     groupId: "group-phuket-coast",
     authorId: "user-pim",
     title: "Rawai seafood before or after sunset viewpoints?",
-    body:
-      "I am trying to avoid the worst parking hours. Has anyone copied this kind of Phuket seafood trip and reordered it successfully?",
+    body: "I am trying to avoid the worst parking hours. Has anyone copied this kind of Phuket seafood trip and reordered it successfully?",
     createdAt: "2026-05-07T21:05:00+07:00",
     upvotes: 121,
     commentCount: 7,
@@ -1136,8 +1269,7 @@ export const mockCommunityPosts: CommunityPost[] = [
     groupId: "group-thailand-ev-charging",
     authorId: "user-arthit",
     title: "Khao Yai lunch spots that pair well with reliable charging",
-    body:
-      "I attached a route with charger-friendly restaurant breaks near Pak Chong and Khao Yai. The main question is whether stop two should be before the vineyard.",
+    body: "I attached a route with charger-friendly restaurant breaks near Pak Chong and Khao Yai. The main question is whether stop two should be before the vineyard.",
     createdAt: "2026-05-06T10:20:00+07:00",
     upvotes: 98,
     commentCount: 5,
@@ -1154,8 +1286,7 @@ export const mockCommunityPosts: CommunityPost[] = [
     groupId: "group-tokyo-restaurant-routes",
     authorId: "user-mika",
     title: "Tokyo ramen crawl: too much for two days?",
-    body:
-      "Restaurant search should not stop at Thailand, so here is a Tokyo example. I am keeping neighborhoods compact to avoid transit fatigue.",
+    body: "Restaurant search should not stop at Thailand, so here is a Tokyo example. I am keeping neighborhoods compact to avoid transit fatigue.",
     createdAt: "2026-05-05T09:10:00+09:00",
     upvotes: 87,
     commentCount: 6,
@@ -1171,15 +1302,16 @@ export const mockCommunityPosts: CommunityPost[] = [
     id: "post-bangkok-dessert",
     groupId: "group-bangkok-food",
     authorId: "user-kanya",
-    title: "Where would you place dessert on a Bangkok food route?",
+    title: "Dessert stop in the Bangkok 5-Day EV Loop: riverside or old town?",
     body:
-      "I like dessert after the riverside segment, but some friends say it is better to stay near Chinatown and skip the taxi hop.",
+      "The Bangkok 5-Day EV Loop already has ICONSIAM, Chatuchak, and Ayutthaya baked in. I like dessert after the riverside segment, but some friends say it is better to stay near old town and skip the taxi hop.",
     createdAt: "2026-05-04T22:00:00+07:00",
     upvotes: 69,
     commentCount: 8,
-    tags: ["bangkok", "food", "dessert", "restaurant"],
+    tags: ["bangkok", "food", "dessert", "restaurant", "ev"],
     place: "Bangkok",
     country: "Thailand",
+    sharedTripId: BANGKOK_RICH_PLAN_ID,
     flairId: "flair-question-bkk",
   },
 ];
@@ -1189,17 +1321,16 @@ export const mockCommunityComments: CommunityComment[] = [
     id: "comment-bangkok-1",
     postId: "post-bangkok-restaurant-loop",
     authorId: "user-narin",
-    body:
-      "I copied the loop and would move the riverside dinner earlier. Traffic felt easier before 6 PM.",
+    body: "I copied the 5-day loop and would move the riverside dinner earlier. Traffic felt easier before 6 PM.",
     createdAt: "2026-05-10T21:00:00+07:00",
     upvotes: 22,
+    sharedTripId: BANGKOK_RICH_PLAN_ID,
   },
   {
     id: "comment-bangkok-2",
     postId: "post-bangkok-restaurant-loop",
     authorId: "user-pim",
-    body:
-      "Keep Yaowarat late. The food options feel better after sunset and the route has more energy.",
+    body: "Keep Yaowarat late. The food options feel better after sunset and the route has more energy.",
     createdAt: "2026-05-10T21:18:00+07:00",
     upvotes: 18,
   },
@@ -1208,8 +1339,7 @@ export const mockCommunityComments: CommunityComment[] = [
     postId: "post-bangkok-restaurant-loop",
     parentCommentId: "comment-bangkok-1",
     authorId: "user-kanya",
-    body:
-      "Good call. I would also keep the ferry segment optional in case rain slows the river crossing.",
+    body: "Good call. I would also keep the ferry segment optional in case rain slows the river crossing.",
     createdAt: "2026-05-10T21:36:00+07:00",
     upvotes: 12,
   },
@@ -1218,8 +1348,7 @@ export const mockCommunityComments: CommunityComment[] = [
     postId: "post-bangkok-restaurant-loop",
     parentCommentId: "comment-bangkok-1",
     authorId: "user-arthit",
-    body:
-      "If you drive, parking near the riverside stop is the real bottleneck. Taxi plus walking was easier.",
+    body: "If you drive, parking near the riverside stop is the real bottleneck. Taxi plus walking was easier.",
     createdAt: "2026-05-10T22:04:00+07:00",
     upvotes: 8,
   },
@@ -1228,8 +1357,7 @@ export const mockCommunityComments: CommunityComment[] = [
     postId: "post-bangkok-restaurant-loop",
     parentCommentId: "comment-bangkok-4",
     authorId: "user-narin",
-    body:
-      "Agreed. We used the same swap and it saved about twenty minutes after dinner.",
+    body: "Agreed. We used the same swap and it saved about twenty minutes after dinner.",
     createdAt: "2026-05-10T22:22:00+07:00",
     upvotes: 5,
   },
@@ -1238,8 +1366,7 @@ export const mockCommunityComments: CommunityComment[] = [
     postId: "post-bangkok-restaurant-loop",
     parentCommentId: "comment-bangkok-5",
     authorId: "user-pim",
-    body:
-      "That makes the late dessert stop more realistic too. I would keep one backup shop pinned.",
+    body: "That makes the late dessert stop more realistic too. I would keep one backup shop pinned.",
     createdAt: "2026-05-10T22:49:00+07:00",
     upvotes: 4,
   },
@@ -1248,8 +1375,7 @@ export const mockCommunityComments: CommunityComment[] = [
     postId: "post-bangkok-restaurant-loop",
     parentCommentId: "comment-bangkok-2",
     authorId: "user-mika",
-    body:
-      "Yaowarat late is worth it, but I would remove one daytime cafe so the whole route breathes.",
+    body: "Yaowarat late is worth it, but I would remove one daytime cafe so the whole route breathes.",
     createdAt: "2026-05-11T00:12:00+07:00",
     upvotes: 10,
   },
@@ -1258,8 +1384,7 @@ export const mockCommunityComments: CommunityComment[] = [
     postId: "post-bangkok-restaurant-loop",
     parentCommentId: "comment-bangkok-2",
     authorId: "user-current",
-    body:
-      "Would you keep the dessert stop near Chinatown, or move it closer to the hotel area?",
+    body: "Would you keep the dessert stop near Chinatown, or move it closer to the hotel area?",
     createdAt: "2026-05-11T00:40:00+07:00",
     upvotes: 2,
   },
@@ -1268,8 +1393,7 @@ export const mockCommunityComments: CommunityComment[] = [
     postId: "post-bangkok-restaurant-loop",
     parentCommentId: "comment-bangkok-8",
     authorId: "user-kanya",
-    body:
-      "Close to the hotel if the group is new to Bangkok. Chinatown if everyone still has energy.",
+    body: "Close to the hotel if the group is new to Bangkok. Chinatown if everyone still has energy.",
     createdAt: "2026-05-11T01:05:00+07:00",
     upvotes: 6,
   },
@@ -1278,8 +1402,7 @@ export const mockCommunityComments: CommunityComment[] = [
     postId: "post-bangkok-restaurant-loop",
     parentCommentId: "comment-bangkok-8",
     authorId: "user-arthit",
-    body:
-      "I would decide by transit, not dessert quality. The better route is the one people will finish.",
+    body: "I would decide by transit, not dessert quality. The better route is the one people will finish.",
     createdAt: "2026-05-11T01:24:00+07:00",
     upvotes: 4,
   },
@@ -1288,8 +1411,7 @@ export const mockCommunityComments: CommunityComment[] = [
     postId: "post-bangkok-restaurant-loop",
     parentCommentId: "comment-bangkok-8",
     authorId: "user-pim",
-    body:
-      "One more vote for hotel-adjacent dessert if the route already includes sunset and dinner.",
+    body: "One more vote for hotel-adjacent dessert if the route already includes sunset and dinner.",
     createdAt: "2026-05-11T01:42:00+07:00",
     upvotes: 3,
   },
@@ -1298,8 +1420,7 @@ export const mockCommunityComments: CommunityComment[] = [
     postId: "post-bangkok-restaurant-loop",
     parentCommentId: "comment-bangkok-8",
     authorId: "user-narin",
-    body:
-      "The only exception is if dessert is the whole point of the night. Then keep the fun stop.",
+    body: "The only exception is if dessert is the whole point of the night. Then keep the fun stop.",
     createdAt: "2026-05-11T02:03:00+07:00",
     upvotes: 2,
   },
@@ -1307,8 +1428,7 @@ export const mockCommunityComments: CommunityComment[] = [
     id: "comment-thailand-1",
     postId: "post-restaurant-thailand-general",
     authorId: "user-kanya",
-    body:
-      "North-first works if you want cooler evenings before the Phuket part. Food pacing is easier too.",
+    body: "North-first works if you want cooler evenings before the Phuket part. Food pacing is easier too.",
     createdAt: "2026-05-09T19:02:00+07:00",
     upvotes: 14,
     sharedTripId: "trip-chiang-mai-khao-soi",
@@ -1317,8 +1437,7 @@ export const mockCommunityComments: CommunityComment[] = [
     id: "comment-khao-soi-1",
     postId: "post-khao-soi-weekend",
     authorId: "user-arthit",
-    body:
-      "One restaurant per half-day is the right call. Add a charger check if you drive out to Mae Rim.",
+    body: "One restaurant per half-day is the right call. Add a charger check if you drive out to Mae Rim.",
     createdAt: "2026-05-08T13:15:00+07:00",
     upvotes: 9,
   },
@@ -1326,8 +1445,7 @@ export const mockCommunityComments: CommunityComment[] = [
     id: "comment-phuket-1",
     postId: "post-phuket-seafood",
     authorId: "user-kanya",
-    body:
-      "I would do Rawai after sunset. The route feels less rushed and dinner becomes the anchor.",
+    body: "I would do Rawai after sunset. The route feels less rushed and dinner becomes the anchor.",
     createdAt: "2026-05-07T21:35:00+07:00",
     upvotes: 11,
   },
@@ -1335,8 +1453,7 @@ export const mockCommunityComments: CommunityComment[] = [
     id: "comment-khao-yai-1",
     postId: "post-khao-yai-charging",
     authorId: "user-narin",
-    body:
-      "Lunch before the vineyard was calmer for us. The charger queue was lighter around noon.",
+    body: "Lunch before the vineyard was calmer for us. The charger queue was lighter around noon.",
     createdAt: "2026-05-06T11:00:00+07:00",
     upvotes: 7,
   },
@@ -1344,8 +1461,7 @@ export const mockCommunityComments: CommunityComment[] = [
     id: "comment-tokyo-1",
     postId: "post-tokyo-ramen",
     authorId: "user-kanya",
-    body:
-      "Two days is fine if you skip backtracking. Group by neighborhood and leave one open slot.",
+    body: "Two days is fine if you skip backtracking. Group by neighborhood and leave one open slot.",
     createdAt: "2026-05-05T10:25:00+09:00",
     upvotes: 6,
   },
@@ -1366,7 +1482,7 @@ export const defaultCreatePostDraft: CreatePostDraft = {
   country: "Thailand",
   tags: "",
   attachTrip: true,
-  sharedTripId: "trip-bangkok-food-loop",
+  sharedTripId: BANGKOK_RICH_PLAN_ID,
 };
 
 export function getUserById(userId: string): CommunityUser {
@@ -1419,14 +1535,34 @@ export function getGroupProfileByGroupId(
     summary:
       group?.description ??
       "A Navio community group for sharing practical planning advice.",
-    weeklyVisitorCount: Math.max(0, Math.round((group?.memberCount ?? 0) * 0.2)),
+    weeklyVisitorCount: Math.max(
+      0,
+      Math.round((group?.memberCount ?? 0) * 0.2),
+    ),
     weeklyContributionCount: Math.max(0, group?.postCount ?? 0),
     moderatorIds: [group?.createdById ?? currentCommunityUser.id],
   };
 }
 
 export function getTripById(tripId: string): SharedTrip | null {
+  const plan = getPlanById(tripId);
+
+  if (plan) {
+    return planToSharedTrip(plan);
+  }
+
+  const linkedPlanId = EXPLORE_PLAN_ID_BY_SHARED_TRIP_ID[tripId];
+  const linkedPlan = linkedPlanId ? getPlanById(linkedPlanId) : undefined;
+
+  if (linkedPlan) {
+    return planToSharedTrip(linkedPlan);
+  }
+
   return mockSharedTrips.find((trip) => trip.id === tripId) ?? null;
+}
+
+export function getDiscussableTrips(): SharedTrip[] {
+  return [...explorePlanSharedTrips, ...mockSharedTrips];
 }
 
 export function getCommentsByPostId(
@@ -1441,7 +1577,9 @@ export function getCommentsByPostId(
     );
 }
 
-export function getCommunityPostSlug(post: Pick<CommunityPost, "id" | "title">) {
+export function getCommunityPostSlug(
+  post: Pick<CommunityPost, "id" | "title">,
+) {
   return slugifyCommunityValue(post.title) || post.id;
 }
 

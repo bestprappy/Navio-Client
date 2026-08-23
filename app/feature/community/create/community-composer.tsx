@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, type FormEvent } from "react";
+import { useState, useRef, useEffect, useMemo, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 import {
   Bold,
   Italic,
@@ -18,11 +19,13 @@ import {
   Braces,
   Table2,
   MoreHorizontal,
+  Check,
   ChevronDown,
   Search,
   Upload,
   Tag,
   X,
+  MapPinned,
 } from "lucide-react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 
@@ -31,24 +34,76 @@ import {
   createdPostsAtom,
   joinedGroupIdsAtom,
 } from "../_components/community-atoms";
-import type { CommunityGroup, CommunityPost } from "../_components/data";
+import type {
+  CommunityGroup,
+  CommunityPost,
+  SharedTrip,
+} from "../_components/data";
 import {
   currentCommunityUser,
   defaultCreatePostDraft,
+  explorePlanSharedTrips,
+  getCommunityPostHref,
+  getTripById,
   parseTagList,
   slugifyCommunityValue,
 } from "../_components/data";
 import { CommunityFlairDialog } from "./community-flair-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 type PostTab = "text" | "media" | "link" | "poll";
 
 type CommunityComposerProps = {
   groups: CommunityGroup[];
+  initialGroupId?: string | null;
+  initialPlanId?: string | null;
 };
 
-export function CommunityComposer({ groups }: CommunityComposerProps) {
+function getSuggestedDiscussionGroup(
+  trip: SharedTrip,
+  groups: CommunityGroup[],
+): CommunityGroup | null {
+  const location = trip.location.toLowerCase();
+  const tripTags = new Set(trip.tags.map((tag) => tag.toLowerCase()));
+  const hasTagOverlap = (group: CommunityGroup) =>
+    group.tags.some((tag) => tripTags.has(tag.toLowerCase()));
+  const hasPlaceMatch = (group: CommunityGroup) =>
+    group.places.some((place) => location.includes(place.toLowerCase()));
+  const placeMatches = groups.filter(hasPlaceMatch);
+
+  return (
+    placeMatches.find(
+      (group) =>
+        group.name.toLowerCase().includes(location) && hasTagOverlap(group),
+    ) ??
+    placeMatches.find(hasTagOverlap) ??
+    placeMatches.at(0) ??
+    groups.find(
+      (group) =>
+        group.country.toLowerCase() === trip.country.toLowerCase() &&
+        hasTagOverlap(group),
+    ) ??
+    groups.find(
+      (group) => group.country.toLowerCase() === trip.country.toLowerCase(),
+    ) ??
+    groups.at(0) ??
+    null
+  );
+}
+
+export function CommunityComposer({
+  groups,
+  initialGroupId = null,
+  initialPlanId = null,
+}: CommunityComposerProps) {
+  const router = useRouter();
   const [postDraft, setPostDraft] = useAtom(createPostDraftAtom);
   const setCreatedPosts = useSetAtom(createdPostsAtom);
   const joinedGroupIds = useAtomValue(joinedGroupIdsAtom);
@@ -61,6 +116,10 @@ export function CommunityComposer({ groups }: CommunityComposerProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const appliedPrefillKeyRef = useRef<string | null>(null);
+  const selectableTrips = useMemo(() => explorePlanSharedTrips, []);
+  const queryGroupId = initialGroupId;
+  const queryPlanId = initialPlanId;
 
   useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
@@ -78,6 +137,59 @@ export function CommunityComposer({ groups }: CommunityComposerProps) {
   }, [communityOpen]);
 
   const selectedGroup = groups.find((g) => g.id === postDraft.groupId);
+
+  useEffect(() => {
+    const prefillKey = `${queryGroupId ?? ""}:${queryPlanId ?? ""}`;
+
+    if (
+      appliedPrefillKeyRef.current === prefillKey ||
+      (!queryGroupId && !queryPlanId)
+    ) {
+      return;
+    }
+
+    const queryTrip = queryPlanId
+      ? (selectableTrips.find(
+          (trip) =>
+            trip.id === queryPlanId || trip.sourcePlanId === queryPlanId,
+        ) ?? getTripById(queryPlanId))
+      : null;
+    const explicitGroup = queryGroupId
+      ? groups.find((group) => group.id === queryGroupId)
+      : null;
+    const suggestedGroup = queryTrip
+      ? getSuggestedDiscussionGroup(queryTrip, groups)
+      : null;
+    const nextGroup = explicitGroup ?? suggestedGroup;
+
+    setPostDraft((prev) => ({
+      ...prev,
+      groupId: nextGroup?.id ?? prev.groupId,
+      place: queryTrip?.location ?? nextGroup?.places[0] ?? prev.place,
+      country: queryTrip?.country ?? nextGroup?.country ?? prev.country,
+      tags:
+        queryTrip && !prev.tags.trim()
+          ? queryTrip.tags.slice(0, 5).join(", ")
+          : prev.tags,
+      title:
+        queryTrip && !prev.title.trim()
+          ? `Plan review: ${queryTrip.title}`.slice(0, 300)
+          : prev.title,
+      body:
+        queryTrip && !prev.body.trim()
+          ? "Looking for community feedback on pacing, stop order, charging timing, and local swaps for this Explore plan."
+          : prev.body,
+      attachTrip: queryTrip ? true : prev.attachTrip,
+      sharedTripId: queryTrip ? queryTrip.id : prev.sharedTripId,
+    }));
+    appliedPrefillKeyRef.current = prefillKey;
+  }, [
+    groups,
+    queryGroupId,
+    queryPlanId,
+    selectableTrips,
+    setPostDraft,
+  ]);
 
   const filteredGroups = communitySearch
     ? groups.filter((g) =>
@@ -97,12 +209,42 @@ export function CommunityComposer({ groups }: CommunityComposerProps) {
     setCommunitySearch("");
   }
 
+  function handleAttachTripChange(checked: boolean) {
+    const nextTripId =
+      postDraft.sharedTripId ?? selectableTrips[0]?.id ?? null;
+    const nextTrip = nextTripId
+      ? selectableTrips.find((trip) => trip.id === nextTripId)
+      : null;
+
+    setPostDraft((prev) => ({
+      ...prev,
+      attachTrip: checked,
+      sharedTripId: checked ? nextTripId : null,
+      place: checked && nextTrip ? nextTrip.location : prev.place,
+      country: checked && nextTrip ? nextTrip.country : prev.country,
+    }));
+  }
+
+  function handleSelectTrip(tripId: string) {
+    const trip = selectableTrips.find((item) => item.id === tripId);
+
+    setPostDraft((prev) => ({
+      ...prev,
+      sharedTripId: tripId,
+      place: trip?.location ?? prev.place,
+      country: trip?.country ?? prev.country,
+      tags: prev.tags || trip?.tags.slice(0, 5).join(", ") || prev.tags,
+    }));
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const title = postDraft.title.trim();
     if (!title || !postDraft.groupId) return;
 
     const group = groups.find((g) => g.id === postDraft.groupId);
+    if (!group) return;
+
     const nextPost: CommunityPost = {
       id: `post-local-${slugifyCommunityValue(title)}-${Date.now()}`,
       groupId: postDraft.groupId,
@@ -113,8 +255,8 @@ export function CommunityComposer({ groups }: CommunityComposerProps) {
       upvotes: 1,
       commentCount: 0,
       tags: parseTagList(postDraft.tags),
-      place: postDraft.place || group?.places[0] || "Thailand",
-      country: postDraft.country || group?.country || "Thailand",
+      place: postDraft.place || group.places[0] || "Thailand",
+      country: postDraft.country || group.country || "Thailand",
       sharedTripId:
         postDraft.attachTrip && postDraft.sharedTripId
           ? postDraft.sharedTripId
@@ -125,6 +267,7 @@ export function CommunityComposer({ groups }: CommunityComposerProps) {
     setCreatedPosts((prev) => [nextPost, ...prev]);
     setPostDraft({ ...defaultCreatePostDraft });
     setSelectedFlairId(null);
+    router.push(getCommunityPostHref(group, nextPost));
   }
 
   const canPost =
@@ -195,7 +338,6 @@ export function CommunityComposer({ groups }: CommunityComposerProps) {
                   placeholder="Select a community"
                   value={communitySearch}
                   onChange={(e) => setCommunitySearch(e.target.value)}
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
                   autoFocus
                 />
               </div>
@@ -453,6 +595,14 @@ export function CommunityComposer({ groups }: CommunityComposerProps) {
         </div>
       )}
 
+      <PlanAttachmentSelector
+        trips={selectableTrips}
+        attachTrip={postDraft.attachTrip}
+        selectedTripId={postDraft.sharedTripId}
+        onAttachChange={handleAttachTripChange}
+        onSelectTrip={handleSelectTrip}
+      />
+
       {/* Footer */}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" size="sm">
@@ -463,6 +613,158 @@ export function CommunityComposer({ groups }: CommunityComposerProps) {
         </Button>
       </div>
     </form>
+  );
+}
+
+function PlanAttachmentSelector({
+  trips,
+  attachTrip,
+  selectedTripId,
+  onAttachChange,
+  onSelectTrip,
+}: {
+  trips: SharedTrip[];
+  attachTrip: boolean;
+  selectedTripId: string | null;
+  onAttachChange: (checked: boolean) => void;
+  onSelectTrip: (tripId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedTrip =
+    trips.find((trip) => trip.id === selectedTripId) ?? trips[0] ?? null;
+
+  return (
+    <section
+      aria-label="Plan attachment"
+      className="rounded-lg border border-border bg-card p-3"
+    >
+      <label className="flex cursor-pointer items-start gap-3 text-sm font-medium text-foreground">
+        <Checkbox
+          checked={attachTrip}
+          onCheckedChange={(checked) => onAttachChange(checked === true)}
+          aria-label="Attach an Explore plan"
+          className="mt-0.5"
+        />
+        <span className="min-w-0">
+          <span className="block">Discuss an Explore plan</span>
+          {attachTrip && selectedTrip ? (
+            <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">
+              {selectedTrip.title}
+            </span>
+          ) : null}
+        </span>
+      </label>
+
+      {attachTrip ? (
+        <div className="mt-3 grid gap-3">
+          {trips.length > 0 ? (
+            <>
+              <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-auto min-h-10 w-full justify-between gap-2 rounded-md px-3 py-2 text-left"
+                      aria-label="Select Explore plan"
+                    />
+                  }
+                >
+                  <MapPinned
+                    className="size-4 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                    {selectedTrip?.title ?? "Select an Explore plan"}
+                  </span>
+                  <ChevronDown
+                    className={cn(
+                      "size-4 text-muted-foreground transition-transform",
+                      open && "rotate-180",
+                    )}
+                    aria-hidden="true"
+                  />
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  sideOffset={6}
+                  className="w-(--anchor-width) max-w-[calc(100vw-2rem)] gap-1 p-1"
+                >
+                  <div
+                    role="listbox"
+                    aria-label="Explore plans"
+                    className="max-h-72 overflow-y-auto"
+                  >
+                    {trips.map((trip) => {
+                      const isSelected = trip.id === selectedTrip?.id;
+
+                      return (
+                        <button
+                          key={trip.id}
+                          type="button"
+                          role="option"
+                          aria-selected={isSelected}
+                          className={cn(
+                            "grid w-full grid-cols-[1.25rem_1fr] gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
+                            isSelected && "bg-muted text-foreground",
+                          )}
+                          onClick={() => {
+                            onSelectTrip(trip.id);
+                            setOpen(false);
+                          }}
+                        >
+                          <span className="mt-0.5 flex size-5 items-center justify-center rounded-full border border-border text-primary">
+                            {isSelected ? (
+                              <Check className="size-3" aria-hidden="true" />
+                            ) : null}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium text-foreground">
+                              {trip.title}
+                            </span>
+                            <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                              {trip.durationDays} days in {trip.location}
+                            </span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {selectedTrip ? (
+                <div className="grid gap-3 rounded-md border border-border bg-muted/30 p-3 sm:grid-cols-[5.5rem_1fr]">
+                  <div
+                    role="img"
+                    aria-label={selectedTrip.title}
+                    className="h-20 rounded-md bg-cover bg-center"
+                    style={{
+                      backgroundImage: `url(${selectedTrip.coverImageUrl})`,
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
+                      {selectedTrip.title}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {selectedTrip.durationDays} days in {selectedTrip.location}
+                    </p>
+                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                      {selectedTrip.summary}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+              No Explore plans available.
+            </p>
+          )}
+        </div>
+      ) : null}
+    </section>
   );
 }
 

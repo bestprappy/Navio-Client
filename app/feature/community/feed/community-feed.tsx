@@ -65,7 +65,7 @@ export function CommunityFeed({
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ask, compare, copy, and improve trip plans from Navio travelers.
+            Ask, compare, and improve trip plans from Navio travelers.
           </p>
         </div>
         <div
