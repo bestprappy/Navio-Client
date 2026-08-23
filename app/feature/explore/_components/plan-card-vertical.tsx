@@ -3,12 +3,26 @@
 import { type MouseEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, Eye, Heart, MapPin, Share2, Star } from "lucide-react";
+import {
+  Bookmark,
+  Eye,
+  Heart,
+  MapPin,
+  MessageCircle,
+  Share2,
+  Star,
+} from "lucide-react";
 
 import type { Plan, UserProfile } from "./data";
-import { formatCount, getPlanCopyHref, getPlanHref } from "./data";
+import {
+  formatCount,
+  getPlanCopyHref,
+  getPlanDiscussionHref,
+  getPlanHref,
+} from "./data";
 import { isInteractiveCardTarget } from "./plan-card-navigation";
 import { UserBadge } from "@/components/user-badge";
+import { buttonVariants } from "@/components/ui/button.variants";
 import { cn } from "@/lib/utils";
 
 type PlanCardVerticalProps = {
@@ -27,6 +41,7 @@ export function PlanCardVertical({
   const router = useRouter();
   const href = getPlanHref(plan);
   const copyHref = getPlanCopyHref(plan);
+  const discussionHref = getPlanDiscussionHref(plan);
   const reviewHref = `${href}#reviews`;
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -196,28 +211,54 @@ export function PlanCardVertical({
           variant={variant === "compact" ? "compact" : "default"}
         />
         {variant === "compact" ? (
-          <div
-            className={cn(
-              metaSizeClassName,
-              "flex items-center gap-2 text-muted-foreground",
-            )}
-          >
-            <span className="flex items-center gap-1">
-              <Heart className="h-3.5 w-3.5" />
-              {formatCount(plan.likes)}
-            </span>
-            <span className="flex items-center gap-1">
-              <Eye className="h-3.5 w-3.5" />
-              {formatCount(plan.views)}
-            </span>
+          <div className="flex items-center gap-2">
+            <Link
+              href={discussionHref}
+              aria-label={`Start a discussion about ${plan.title}`}
+              onClick={(event) => event.stopPropagation()}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "rounded-full border-primary/30 px-3 text-primary hover:text-primary",
+              )}
+            >
+              <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              Discuss
+            </Link>
+            <div
+              className={cn(
+                metaSizeClassName,
+                "flex items-center gap-2 text-muted-foreground",
+              )}
+            >
+              <span className="flex items-center gap-1">
+                <Heart className="h-3.5 w-3.5" />
+                {formatCount(plan.likes)}
+              </span>
+              <span className="flex items-center gap-1">
+                <Eye className="h-3.5 w-3.5" />
+                {formatCount(plan.views)}
+              </span>
+            </div>
           </div>
         ) : (
           <div
             className={cn(
               metaSizeClassName,
-              "flex items-center gap-2 text-muted-foreground",
+              "flex flex-wrap items-center justify-end gap-2 text-muted-foreground",
             )}
           >
+            <Link
+              href={discussionHref}
+              aria-label={`Start a discussion about ${plan.title}`}
+              onClick={(event) => event.stopPropagation()}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "rounded-full border-primary/30 px-3 text-primary hover:text-primary",
+              )}
+            >
+              <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              Start Discussion
+            </Link>
             <button
               type="button"
               aria-pressed={isLiked}

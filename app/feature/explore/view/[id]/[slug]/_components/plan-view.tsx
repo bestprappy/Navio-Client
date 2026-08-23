@@ -16,6 +16,7 @@ import {
   CreditCard,
   Loader2,
   MapPin,
+  MessageCircle,
   Plug,
   PlugZap,
   Route,
@@ -36,6 +37,7 @@ import type {
 } from "../../../../_components/data";
 import {
   getPlanCopyHref,
+  getPlanDiscussionHref,
   getUserById,
 } from "../../../../_components/data";
 import {
@@ -1036,7 +1038,10 @@ export function PlanView({ plan }: PlanViewProps) {
   }, [plan?.id, setSelectedPlaceId]);
 
   const author = plan ? getUserById(plan.authorId) : null;
-  const copyHref = plan ? getPlanCopyHref(plan) : "/planner";
+  const copyHref = plan ? getPlanCopyHref(plan) : "/planner/new";
+  const discussionHref = plan
+    ? getPlanDiscussionHref(plan)
+    : "/community/create";
   const allBlocks = useMemo(() => getExplorePlanBlocks(plan), [plan]);
   const tripBlocks = useMemo(() => getExplorePlanTripBlocks(plan), [plan]);
   const routeGroups = useMemo(
@@ -1129,16 +1134,28 @@ export function PlanView({ plan }: PlanViewProps) {
             {plan.rating.toFixed(1)} ({plan.reviews.toLocaleString()} reviews)
           </span>
         </div>
-        <Link
-          href={copyHref}
-          className={cn(
-            buttonVariants({ size: "lg" }),
-            "w-fit rounded-full px-6 shadow-md",
-          )}
-        >
-          <Copy className="size-4" aria-hidden="true" />
-          Copy Plan
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={copyHref}
+            className={cn(
+              buttonVariants({ size: "lg" }),
+              "w-fit rounded-full px-6 shadow-md",
+            )}
+          >
+            <Copy className="size-4" aria-hidden="true" />
+            Copy Plan
+          </Link>
+          <Link
+            href={discussionHref}
+            className={cn(
+              buttonVariants({ variant: "outline", size: "lg" }),
+              "w-fit rounded-full border-primary/30 px-6 text-primary hover:text-primary",
+            )}
+          >
+            <MessageCircle className="size-4" aria-hidden="true" />
+            Start Discussion
+          </Link>
+        </div>
       </div>
 
       {/* Garage — matches GarageSection */}

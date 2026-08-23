@@ -3,12 +3,26 @@
 import { type MouseEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, Eye, Heart, MapPin, Share2, Star } from "lucide-react";
+import {
+  Bookmark,
+  Eye,
+  Heart,
+  MapPin,
+  MessageCircle,
+  Share2,
+  Star,
+} from "lucide-react";
 
 import type { Plan, UserProfile } from "./data";
-import { formatCount, getPlanCopyHref, getPlanHref } from "./data";
+import {
+  formatCount,
+  getPlanCopyHref,
+  getPlanDiscussionHref,
+  getPlanHref,
+} from "./data";
 import { isInteractiveCardTarget } from "./plan-card-navigation";
 import { UserBadge } from "@/components/user-badge";
+import { buttonVariants } from "@/components/ui/button.variants";
 import { cn } from "@/lib/utils";
 
 type PlanCardHorizontalProps = {
@@ -27,6 +41,7 @@ export function PlanCardHorizontal({
   const router = useRouter();
   const href = getPlanHref(plan);
   const copyHref = getPlanCopyHref(plan);
+  const discussionHref = getPlanDiscussionHref(plan);
   const reviewHref = `${href}#reviews`;
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -153,6 +168,18 @@ export function PlanCardHorizontal({
             <UserBadge user={author} />
           </div>
           <div className="flex items-center gap-4 text-base text-muted-foreground">
+            <Link
+              href={discussionHref}
+              aria-label={`Start a discussion about ${plan.title}`}
+              onClick={(event) => event.stopPropagation()}
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "rounded-full border-primary/30 px-3 text-primary hover:text-primary",
+              )}
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              Start Discussion
+            </Link>
             <button
               type="button"
               aria-pressed={isLiked}

@@ -1543,6 +1543,12 @@ export function getPlanCopyHref(plan: Plan): string {
   return `/planner/copied-${plan.id}?${new URLSearchParams(params).toString()}`;
 }
 
+export function getPlanDiscussionHref(plan: Plan): string {
+  return `/community/create?${new URLSearchParams({
+    planId: plan.id,
+  }).toString()}`;
+}
+
 export function getPlanTemplateBlocks(planId: string): PlanTemplateBlock[] {
   const plan = getPlanById(planId);
 
