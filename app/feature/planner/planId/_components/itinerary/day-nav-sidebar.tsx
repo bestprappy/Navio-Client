@@ -23,14 +23,16 @@ export function DayNavSidebar() {
   useEffect(() => {
     const container = document.getElementById("planner-scroll-panel");
     if (!container) return;
+    const scrollContainer = container;
 
     function handleScroll() {
       const currentBlocks = blocksRef.current;
       if (currentBlocks.length === 0) return;
 
-      const containerRect = container.getBoundingClientRect();
+      const containerRect = scrollContainer.getBoundingClientRect();
       // A block becomes "active" once its top edge crosses the upper 30% of the panel.
-      const threshold = containerRect.top + container.clientHeight * 0.3;
+      const threshold =
+        containerRect.top + scrollContainer.clientHeight * 0.3;
 
       let activeCandidate: { id: string; top: number } | null = null;
       let nextVisibleCandidate: { id: string; top: number } | null = null;
@@ -65,10 +67,12 @@ export function DayNavSidebar() {
       }
     }
 
-    container.addEventListener("scroll", handleScroll, { passive: true });
+    scrollContainer.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
     handleScroll();
 
-    return () => container.removeEventListener("scroll", handleScroll);
+    return () => scrollContainer.removeEventListener("scroll", handleScroll);
   }, [setActiveBlockId]);
 
   // Intentionally headless: keeps the active day in sync without rendering a day rail.

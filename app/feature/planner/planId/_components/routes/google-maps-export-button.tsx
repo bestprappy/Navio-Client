@@ -1,6 +1,6 @@
 "use client";
 
-import { type MouseEvent, useMemo, useState } from "react";
+import { type MouseEvent, useEffect, useMemo, useState } from "react";
 import { ExternalLink, MapPin } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -38,19 +38,21 @@ function getBlockLabel(block: TripBlockData): string {
 }
 
 function getDisplayLinks(blocks: TripBlockData[]): DisplayDirectionsLink[] {
-  return blocks.filter((block) => block.kind !== "list").flatMap((block) => {
-    const blockLinks = getGoogleMapsDirectionsLinks(block);
-    const blockLabel = getBlockLabel(block);
+  return blocks
+    .filter((block) => block.kind !== "list")
+    .flatMap((block) => {
+      const blockLinks = getGoogleMapsDirectionsLinks(block);
+      const blockLabel = getBlockLabel(block);
 
-    return blockLinks.map((link, index) => ({
-      ...link,
-      id: `${block.id}-${index}`,
-      label:
-        blockLinks.length === 1
-          ? blockLabel
-          : `${blockLabel} - ${link.label}`,
-    }));
-  });
+      return blockLinks.map((link, index) => ({
+        ...link,
+        id: `${block.id}-${index}`,
+        label:
+          blockLinks.length === 1
+            ? blockLabel
+            : `${blockLabel} - ${link.label}`,
+      }));
+    });
 }
 
 function ExportButtonContent() {
@@ -66,10 +68,19 @@ export function GoogleMapsExportButton({
   blocks,
   className,
 }: GoogleMapsExportButtonProps) {
+  const [isMounted, setIsMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const links = useMemo(() => getDisplayLinks(blocks), [blocks]);
   const disabledTitle =
     "Add at least two places to the itinerary before opening Google Maps.";
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) {
+    return null;
+  }
 
   if (links.length === 0) {
     return (
@@ -145,8 +156,8 @@ export function GoogleMapsExportButton({
           <PopoverHeader>
             <PopoverTitle>Open in Google Maps</PopoverTitle>
             <PopoverDescription>
-              This route is split to keep every stop compatible with Google
-              Maps links.
+              This route is split to keep every stop compatible with Google Maps
+              links.
             </PopoverDescription>
           </PopoverHeader>
 

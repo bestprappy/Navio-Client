@@ -65,7 +65,9 @@ type UpdateNotePayload = {
 type UpdatePlacePayload = {
   blockId: string;
   itemId: string;
-  updates: Partial<Pick<PlaceItem, "isVisited" | "notes" | "time" | "timeEnd" | "cost">>;
+  updates: Partial<
+    Pick<PlaceItem, "isVisited" | "notes" | "time" | "timeEnd" | "cost">
+  >;
 };
 
 type UpdateChecklistTitlePayload = {
@@ -309,6 +311,7 @@ function getTripPlaceAnchors(
 export type TripDateRange = { from?: string; to?: string };
 export const tripDateRangeAtom = atom<TripDateRange>({});
 export const tripBlocksAtom = atom<TripBlockData[]>([]);
+export const activePlannerKeyAtom = atom<string | null>(null);
 export const itineraryBlocksAtom = atom<TripBlockData[]>((get) =>
   get(tripBlocksAtom).filter(isItineraryBlock),
 );
@@ -320,8 +323,9 @@ export const tripExpensesAtom = atom<ExpenseItem[]>([]);
 export const tripBudgetAtom = atom<number>(0);
 export const activeBlockIdAtom = atom<string | null>(null);
 export const activeSearchAtom = atom<ActiveSearch | null>(null);
-export const activePlannerSidePanelAtom =
-  atom<ActivePlannerSidePanel | null>(null);
+export const activePlannerSidePanelAtom = atom<ActivePlannerSidePanel | null>(
+  null,
+);
 export const openBlockIdsAtom = atom<string[]>([]);
 export const evChargerResultsAtom = atom<EvChargerMapResult[]>([]);
 export const selectedEvChargerIdAtom = atom<string | null>(null);
@@ -1128,7 +1132,9 @@ export const autoAddEvChargersToBlockAtom = atom(
       return;
     }
 
-    const validBeforeItemIds = new Set(targetBlock.items.map((item) => item.id));
+    const validBeforeItemIds = new Set(
+      targetBlock.items.map((item) => item.id),
+    );
     const existingChargerIds = new Set(
       targetBlock.items
         .filter(isPlaceItem)

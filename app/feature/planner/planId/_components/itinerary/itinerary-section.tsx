@@ -24,6 +24,7 @@ import {
 import { TripBlock } from "../block/trip-block";
 import { DayRouteOverview } from "../garage/day-route-overview";
 import { EmptyItineraryCallout } from "./empty-itinerary-callout";
+import { InlineAddDivider } from "../inline-add-divider";
 
 function getNextAvailableBlockDate(
   from: Date,
@@ -170,33 +171,45 @@ export function ItinerarySection({
                   onChooseDates={() => setIsEditingDates(true)}
                 />
               ) : (
-                blocks.map((block, index) => (
-                  <TripBlock.Root
-                    key={block.id}
-                    block={block}
-                    className="mb-12"
-                  >
-                    <TripBlock.Header>
-                      <TripBlock.Title />
-                    </TripBlock.Header>
-                    <TripBlock.Content>
-                      <TripBlock.Items />
-                      <DayRouteOverview blockId={block.id} blockIndex={index} />
-                      <TripBlock.Actions
-                        evSearchAnchor={{
-                          id: `destination-${block.id}`,
-                          lat: latitude,
-                          lng: longitude,
-                        }}
-                        placeSearchBias={{
-                          label: destinationName,
-                          lat: latitude,
-                          lng: longitude,
-                        }}
-                      />
-                    </TripBlock.Content>
-                  </TripBlock.Root>
-                ))
+                <>
+                  {blocks.map((block, index) => (
+                    <TripBlock.Root
+                      key={block.id}
+                      block={block}
+                      className="mb-12"
+                    >
+                      <TripBlock.Header>
+                        <TripBlock.Title />
+                      </TripBlock.Header>
+                      <TripBlock.Content>
+                        <TripBlock.Items />
+                        <DayRouteOverview
+                          blockId={block.id}
+                          blockIndex={index}
+                        />
+                        <TripBlock.Actions
+                          evSearchAnchor={{
+                            id: `destination-${block.id}`,
+                            lat: latitude,
+                            lng: longitude,
+                          }}
+                          placeSearchBias={{
+                            label: destinationName,
+                            lat: latitude,
+                            lng: longitude,
+                          }}
+                        />
+                      </TripBlock.Content>
+                    </TripBlock.Root>
+                  ))}
+
+                  {nextBlockDate && (
+                    <InlineAddDivider
+                      onClick={handleAddBlock}
+                      label={`Add block for ${format(parseISO(nextBlockDate), "MMM d")}`}
+                    />
+                  )}
+                </>
               )}
             </div>
           </AccordionContent>

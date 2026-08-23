@@ -3,11 +3,14 @@
 import type { FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAtomValue, useSetAtom } from "jotai";
+import { useMutation } from "@tanstack/react-query";
 
 import { PlannerSetupActions } from "./_components/planner-setup.actions";
+import { createTrip } from "./_components/planner-api";
 import {
   canSubmitPlannerAtom,
   destinationValidationErrorAtom,
+  isCreatingTripAtom,
   plannerDateRangeAtom,
   selectedDestinationAtom,
 } from "./_components/planner-setup.atoms";
@@ -20,6 +23,44 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
   const dateRange = useAtomValue(plannerDateRangeAtom);
   const canSubmit = useAtomValue(canSubmitPlannerAtom);
   const setValidationError = useSetAtom(destinationValidationErrorAtom);
+  const setIsCreatingTrip = useSetAtom(isCreatingTripAtom);
+  const createTripMutation = useMutation({
+    mutationFn: createTrip,
+    onMutate: () => {
+      setValidationError(null);
+      setIsCreatingTrip(true);
+    },
+    onSuccess: (trip) => {
+      const searchParams = new URLSearchParams({
+        destinationId: trip.destinationId,
+        destinationName: trip.destinationName,
+      });
+
+      if (dateRange?.from) searchParams.set("from", dateRange.from.toISOString());
+      if (dateRange?.to) searchParams.set("to", dateRange.to.toISOString());
+      if (trip.destinationLat !== null) {
+        searchParams.set("lat", String(trip.destinationLat));
+      }
+      if (trip.destinationLng !== null) {
+        searchParams.set("lng", String(trip.destinationLng));
+      }
+
+      router.push(`/planner/${trip.id}?${searchParams.toString()}`);
+    },
+    onError: (error) => {
+      console.error("Trip creation failed.", {
+        component: "PlannerSetup",
+        operation: "createTrip",
+        error,
+      });
+      setValidationError(
+        error instanceof Error
+          ? error.message
+          : "Unable to create your trip. Please try again.",
+      );
+    },
+    onSettled: () => setIsCreatingTrip(false),
+  });
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -31,32 +72,18 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
       return;
     }
 
-    const planId = createPlanId();
-    const searchParams = new URLSearchParams({
+    const today = new Date();
+    const startDate = dateRange?.from ?? today;
+    const endDate = dateRange?.to ?? startDate;
+    createTripMutation.mutate({
+      displayName: `Trip to ${selectedDestination.name}`,
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
       destinationId: selectedDestination.id,
       destinationName: selectedDestination.name,
+      destinationLat: selectedDestination.coordinates?.latitude,
+      destinationLng: selectedDestination.coordinates?.longitude,
     });
-
-    if (dateRange?.from) {
-      searchParams.set("from", dateRange.from.toISOString());
-    }
-
-    if (dateRange?.to) {
-      searchParams.set("to", dateRange.to.toISOString());
-    }
-
-    if (selectedDestination.coordinates) {
-      searchParams.set(
-        "lat",
-        String(selectedDestination.coordinates.latitude),
-      );
-      searchParams.set(
-        "lng",
-        String(selectedDestination.coordinates.longitude),
-      );
-    }
-
-    router.push(`/planner/${planId}?${searchParams.toString()}`);
   }
 
   return (
@@ -70,12 +97,11 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
   );
 }
 
-function createPlanId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return `plan-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+function formatDate(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export const PlannerSetup = Object.assign(PlannerSetupRoot, {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { Plus } from "lucide-react";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom, useStore } from "jotai";
 
 import {
   Accordion,
@@ -17,6 +17,8 @@ import {
   addMyListBlockAtom,
   myListBlocksAtom,
 } from "../overview/trip-builder.atoms";
+import { EmptyMyListCallout } from "./empty-my-list-callout";
+import { InlineAddDivider } from "../inline-add-divider";
 
 type MyListSectionProps = {
   destinationName: string;
@@ -33,6 +35,7 @@ export function MyListSection({
 }: MyListSectionProps) {
   const listBlocks = useAtomValue(myListBlocksAtom);
   const addMyListBlock = useSetAtom(addMyListBlockAtom);
+  const store = useStore();
   const hasEnsuredDefaultList = useRef(false);
 
   useEffect(() => {
@@ -44,9 +47,14 @@ export function MyListSection({
       return;
     }
 
+    if (store.get(myListBlocksAtom).length > 0) {
+      hasEnsuredDefaultList.current = true;
+      return;
+    }
+
     hasEnsuredDefaultList.current = true;
     addMyListBlock();
-  }, [addMyListBlock, createDefaultList, listBlocks.length]);
+  }, [addMyListBlock, createDefaultList, listBlocks.length, store]);
 
   return (
     <section className="px-4 py-4">
@@ -76,6 +84,9 @@ export function MyListSection({
           </div>
 
           <AccordionContent className="pt-0">
+            {listBlocks.length === 0 && (
+              <EmptyMyListCallout onCreateList={addMyListBlock} />
+            )}
             <div className="space-y-8 pb-8 pt-2">
               {listBlocks.map((block) => (
                 <TripBlock.Root key={block.id} block={block}>
@@ -99,6 +110,13 @@ export function MyListSection({
                   </TripBlock.Content>
                 </TripBlock.Root>
               ))}
+
+              {listBlocks.length > 0 && (
+                <InlineAddDivider
+                  onClick={addMyListBlock}
+                  label="Add new list"
+                />
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>

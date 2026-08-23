@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 
 import { getPlanById } from "@/app/feature/explore/_components/data";
 import { expenseCategories, currencyOptions } from "../budget/budget.data";
@@ -22,6 +22,7 @@ import {
   selectedEvChargerIdAtom,
   selectedTripPlaceItemIdAtom,
   tripBlocksAtom,
+  activePlannerKeyAtom,
   tripBudgetAtom,
   tripCurrencyAtom,
   tripDateRangeAtom,
@@ -39,17 +40,22 @@ const CATEGORY_MAP: Record<string, string> = {
 };
 
 type PlannerTemplateHydratorProps = {
+  planId?: string;
   templatePlanId?: string;
   from?: string;
   to?: string;
 };
 
 export function PlannerTemplateHydrator({
+  planId,
   templatePlanId,
   from,
   to,
 }: PlannerTemplateHydratorProps) {
+  const blocks = useAtomValue(tripBlocksAtom);
+  const activePlannerKey = useAtomValue(activePlannerKeyAtom);
   const setTripBlocks = useSetAtom(tripBlocksAtom);
+  const setActivePlannerKey = useSetAtom(activePlannerKeyAtom);
   const setOpenBlockIds = useSetAtom(openBlockIdsAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
   const setTripDateRange = useSetAtom(tripDateRangeAtom);
@@ -67,6 +73,14 @@ export function PlannerTemplateHydrator({
   const setTripCurrency = useSetAtom(tripCurrencyAtom);
 
   useEffect(() => {
+    const plannerKey = `${planId ?? "unknown"}:${templatePlanId ?? "new"}:${from ?? ""}:${to ?? ""}`;
+
+    if (activePlannerKey === plannerKey && blocks.length > 0) {
+      return;
+    }
+
+    setActivePlannerKey(plannerKey);
+
     // Always reset all planner state when navigating to a new plan
     setTripBlocks([]);
     setOpenBlockIds([]);
@@ -110,9 +124,7 @@ export function PlannerTemplateHydrator({
     if (plan?.garage) {
       const { garage } = plan;
       const vehicleId = `vehicle-copied-${templatePlanId}`;
-      setUserVehicles([
-        getPlanGarageUserVehicle(vehicleId, garage, 80),
-      ]);
+      setUserVehicles([getPlanGarageUserVehicle(vehicleId, garage, 80)]);
       setActiveVehicleId(vehicleId);
       setStartingBatteryPct(80);
     } else {
@@ -158,9 +170,13 @@ export function PlannerTemplateHydrator({
       setTripExpenses([]);
     }
   }, [
+    activePlannerKey,
+    blocks.length,
     from,
+    planId,
     setActiveBlockId,
     setActiveSearch,
+    setActivePlannerKey,
     setActiveVehicleId,
     setEvChargerError,
     setEvChargerLoading,

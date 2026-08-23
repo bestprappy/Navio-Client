@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 import {
   destinationValidationErrorAtom,
+  isCreatingTripAtom,
   isSelectingDestinationAtom,
 } from "./planner-setup.atoms";
 
@@ -25,23 +26,25 @@ export function PlannerSetupActions({
 }: PlannerSetupActionsProps) {
   const destinationError = useAtomValue(destinationValidationErrorAtom);
   const isSelecting = useAtomValue(isSelectingDestinationAtom);
+  const isCreatingTrip = useAtomValue(isCreatingTripAtom);
+  const isBusy = isSelecting || isCreatingTrip;
 
   return (
     <div className="flex flex-col items-center gap-4 pt-2">
       <Button
         type="submit"
         size="lg"
-        disabled={isSelecting}
+        disabled={isBusy}
         aria-invalid={Boolean(destinationError)}
         className={cn(
           "rounded-full px-8 shadow-md shadow-primary/25",
           destinationError && "shadow-destructive/20",
         )}
       >
-        {isSelecting ? (
+        {isBusy ? (
           <>
             <Loader2 className="mr-2 size-4 animate-spin" />
-            Preparing…
+            {isCreatingTrip ? "Creating trip…" : "Preparing…"}
           </>
         ) : (
           primaryLabel

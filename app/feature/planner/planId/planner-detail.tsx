@@ -6,12 +6,15 @@ import { MyListSection } from "./_components/list/my-list-section";
 import { BudgetSection } from "./_components/budget/budget-section";
 import { TripBuilderErrorBoundary } from "./_components/overview/trip-builder-error-boundary";
 import { PlannerTemplateHydrator } from "./_components/overview/planner-template-hydrator";
+import { PlannerPersistence } from "./_components/overview/planner-persistence";
 import { TripHero } from "./_components/overview/trip-hero";
 import { TripInfoCard } from "./_components/overview/trip-info-card";
 import { PlannerSidePanelHost } from "./_components/layout/planner-side-panel-host";
 import { PlannerMap } from "./planner-map";
 
 type PlannerDetailProps = {
+  planId?: string;
+  destinationId?: string;
   destinationName: string;
   from?: string;
   to?: string;
@@ -21,6 +24,8 @@ type PlannerDetailProps = {
 };
 
 export function PlannerDetail({
+  planId,
+  destinationId,
   destinationName,
   from,
   to,
@@ -31,9 +36,20 @@ export function PlannerDetail({
   return (
     <div className="flex h-full min-w-0">
       <PlannerTemplateHydrator
+        planId={planId}
         templatePlanId={templatePlanId}
         from={from}
         to={to}
+      />
+      <PlannerPersistence
+        planId={planId}
+        destinationId={destinationId}
+        destinationName={destinationName}
+        from={from}
+        to={to}
+        latitude={latitude}
+        longitude={longitude}
+        templatePlanId={templatePlanId}
       />
       {/* Left: day nav + scrollable planner panel */}
       <div className="flex w-[38%] border-r border-border/40">

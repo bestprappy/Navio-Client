@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
 
-import { PlannerHomeView } from "../feature/planner/planner-home";
+import { PlannerSetupView } from "../../feature/planner/planner-setup";
 import { Navbar } from "@/components/navbar";
 
 export const metadata: Metadata = {
-  title: "Your trips - Navio",
-  description: "Review your saved trips or start planning a new EV journey.",
+  title: "Plan a new trip - Navio",
+  description: "Set your destination and dates to start planning your EV trip.",
 };
 
-export default function PlannerHomePage() {
+export default function PlannerSetupPage() {
   return (
     <div className="flex h-screen flex-col overflow-hidden">
       <Navbar />
       <main className="min-h-0 flex-1 overflow-auto">
-        <PlannerHomeView />
+        <PlannerSetupView />
       </main>
     </div>
   );
