@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/components/query-provider";
@@ -40,7 +41,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-            <NavigationHistoryTracker />
+            <Suspense fallback={null}>
+              <NavigationHistoryTracker />
+            </Suspense>
             {children}
           </QueryProvider>
         </ThemeProvider>
