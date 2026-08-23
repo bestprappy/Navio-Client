@@ -204,7 +204,7 @@ export default function SidebarWrapper() {
 
   return (
     <aside
-      className={`sticky top-0 z-30 hidden h-screen shrink-0 overflow-y-auto border-r border-border bg-card shadow-sm transition-all duration-200 ease-in-out md:flex md:flex-col ${
+      className={`sticky top-0 z-30 hidden h-screen shrink-0 overflow-y-auto scrollbar-hide border-r border-border bg-card shadow-sm transition-all duration-200 ease-in-out md:flex md:flex-col ${
         collapsed ? "w-16 px-2 py-4" : "w-52 px-3 py-4"
       }`}
     >
