@@ -6,6 +6,8 @@ The Navio client is a Next.js application for EV-aware trip planning, public tri
 
 The browser calls Spring Cloud Gateway for all `/v1/**` application APIs. Development connects directly to gateway port `8080`; production connects through NGINX, which forwards to the same gateway. The browser does not call domain services, Eureka, Config Server, Keycloak administration endpoints, Ollama, or a hosted model provider directly.
 
+Google Places and Routes web-service calls are made only by Mobility & EV. The interactive basemap remains a browser-side Maps JavaScript API integration and uses a separate public key restricted to approved HTTP referrers and the Maps JavaScript API.
+
 | Frontend capability | Public API | Owning component |
 | --- | --- | --- |
 | Profile, preferences, saved vehicles | `/v1/users/**` | User Management Service |
@@ -35,6 +37,8 @@ npm run dev
 Open [http://localhost:3000](http://localhost:3000).
 
 Available scripts are defined in `package.json`. Keep the gateway base URL and authentication settings in environment configuration; do not embed service addresses, Config Server/Eureka endpoints, secrets, or hosted-AI API keys in browser code.
+
+Use `NAVIO_API_BASE_URL` for the Next.js API proxy and `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` only for browser map rendering. Do not configure `GOOGLE_PLACES_API_KEY`, `GOOGLE_ROUTES_API_KEY`, `GOOGLE_MAPS_SERVER_API_KEY`, or Mapbox web-service credentials in the client environment.
 
 Every API request should accept or generate an `X-Request-Id` and preserve trace response headers needed for support. Client-side error reporting must redact access tokens, cookies, form secrets, and sensitive trip or prompt content before it reaches the centralized observability backend.
 
