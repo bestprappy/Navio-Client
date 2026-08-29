@@ -1,7 +1,12 @@
 import { atom } from "jotai";
 
-import { currencyOptions } from "../budget/budget.data";
-import type { CurrencyOption, ExpenseItem } from "../budget/budget.types";
+import { currencyOptions, getCurrencyOption } from "../budget/budget.data";
+import { roundMoney } from "../budget/budget.utils";
+import type {
+  CurrencyOption,
+  ExpenseItem,
+  TripBudgetState,
+} from "../budget/budget.types";
 import { getDistanceKm } from "../constants/place.data";
 import { getTripBlockColorByIndex } from "../constants/trip-block-colors";
 import { mockPremadeLists } from "../constants/trip.data";
@@ -66,7 +71,10 @@ type UpdatePlacePayload = {
   blockId: string;
   itemId: string;
   updates: Partial<
-    Pick<PlaceItem, "isVisited" | "notes" | "time" | "timeEnd" | "cost">
+    Pick<
+      PlaceItem,
+      "isVisited" | "notes" | "time" | "timeEnd" | "cost" | "evCharger"
+    >
   >;
 };
 
@@ -247,6 +255,8 @@ function evChargerToPlaceItem(
   charger: EvCharger,
   placeId: string,
   estimatedChargeMinutes = getEstimatedChargeMinutes(charger.maxKw),
+  selectionSource: "AUTO" | "MANUAL" = "MANUAL",
+  locked = false,
 ): PlaceItem {
   return {
     id: placeId,
@@ -269,6 +279,8 @@ function evChargerToPlaceItem(
       openingHoursSummary: getOpeningHoursSummary(charger.openingHours),
       estimatedChargeMinutes,
       operatorName: charger.operatorName,
+      selectionSource,
+      locked,
     },
     isVisited: false,
   };
@@ -309,6 +321,13 @@ function getTripPlaceAnchors(
 }
 
 export type TripDateRange = { from?: string; to?: string };
+export type PlannerServerSnapshotUpdate = {
+  tripId: string;
+  blocks: TripBlockData[];
+  budget: TripBudgetState;
+  version: number;
+  savedAt: string;
+};
 export const tripDateRangeAtom = atom<TripDateRange>({});
 export const tripBlocksAtom = atom<TripBlockData[]>([]);
 export const activePlannerKeyAtom = atom<string | null>(null);
@@ -335,6 +354,56 @@ export const selectedTripPlaceItemIdReadonlyAtom = atom((get) =>
 );
 export const evChargerLoadingAtom = atom(false);
 export const evChargerErrorAtom = atom<string | null>(null);
+export const plannerServerSnapshotUpdateAtom =
+  atom<PlannerServerSnapshotUpdate | null>(null);
+
+export const applyPlannerServerSnapshotAtom = atom(
+  null,
+  (_get, set, snapshot: PlannerServerSnapshotUpdate) => {
+    set(tripBlocksAtom, snapshot.blocks);
+    set(tripCurrencyAtom, getCurrencyOption(snapshot.budget.currency));
+    set(tripBudgetAtom, snapshot.budget.amount);
+    set(tripExpensesAtom, snapshot.budget.expenses);
+    set(plannerServerSnapshotUpdateAtom, snapshot);
+  },
+);
+
+export const convertTripCurrencyAtom = atom(
+  null,
+  (
+    get,
+    set,
+    payload: { currency: CurrencyOption; rate: number },
+  ) => {
+    const currentCurrency = get(tripCurrencyAtom);
+    if (currentCurrency.code === payload.currency.code) return;
+    if (!Number.isFinite(payload.rate) || payload.rate <= 0) return;
+
+    const convert = (amount: number) =>
+      roundMoney(amount * payload.rate, payload.currency.code);
+
+    set(tripBudgetAtom, convert(get(tripBudgetAtom)));
+    set(
+      tripExpensesAtom,
+      get(tripExpensesAtom).map((expense) => ({
+        ...expense,
+        amount: convert(expense.amount),
+      })),
+    );
+    set(
+      tripBlocksAtom,
+      get(tripBlocksAtom).map((block) => ({
+        ...block,
+        items: block.items.map((item) =>
+          isPlaceItem(item) && item.cost !== undefined
+            ? { ...item, cost: convert(item.cost) }
+            : item,
+        ),
+      })),
+    );
+    set(tripCurrencyAtom, payload.currency);
+  },
+);
 
 export const toggleBlockOpenAtom = atom(null, (get, set, blockId: string) => {
   const openIds = get(openBlockIdsAtom);
@@ -1195,6 +1264,7 @@ export const autoAddEvChargersToBlockAtom = atom(
                 insertion.charger,
                 nextPlaceId,
                 insertion.estimatedChargeMinutes,
+                "AUTO",
               );
             });
 

@@ -39,7 +39,8 @@ export type EvChargerSource =
   | "OPENCHARGEMAP"
   | "ADMIN_IMPORT"
   | "USER_SUBMITTED"
-  | "PARTNER_API";
+  | "PARTNER_API"
+  | "TRIP_SNAPSHOT";
 
 export type EvChargerVerificationStatus =
   | "UNVERIFIED"
@@ -87,7 +88,7 @@ export type EvCharger = {
 export type EvChargerList = {
   items: EvCharger[];
   meta: {
-    source: "local_cache";
+    source: "local_cache" | "provider_refresh" | "stale_cache";
     tileKey: string;
     stale: boolean;
     refreshed: boolean;
@@ -103,6 +104,8 @@ export type PlaceItemEvChargerDetails = {
   openingHoursSummary: string | null;
   estimatedChargeMinutes: number;
   operatorName: string | null;
+  selectionSource?: "AUTO" | "MANUAL";
+  locked?: boolean;
 };
 
 export type GetEvChargersNearParams = {

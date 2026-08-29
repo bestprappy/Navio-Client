@@ -1,14 +1,24 @@
 "use client";
 
 import { type FormEvent, useMemo, useState } from "react";
-import { format } from "date-fns";
-import { useAtom, useAtomValue } from "jotai";
+import { isValid, parseISO, format } from "date-fns";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useMutation } from "@tanstack/react-query";
 
-import { selectedTripPlacesAtom, tripBudgetAtom, tripCurrencyAtom, tripExpensesAtom } from "../overview/trip-builder.atoms";
-import { expenseCategories } from "./budget.data";
-import { createClientId } from "./budget.utils";
+import { getCurrencyRate } from "@/app/feature/planner/_components/planner-api";
+
+import {
+  convertTripCurrencyAtom,
+  selectedTripPlacesAtom,
+  tripBudgetAtom,
+  tripCurrencyAtom,
+  tripExpensesAtom,
+} from "../overview/trip-builder.atoms";
+import { expenseCategories, getExpenseCategory } from "./budget.data";
+import { createClientId, roundMoney } from "./budget.utils";
 import type {
   BudgetModal,
+  CurrencyOption,
   ExpenseCategory,
   ExpenseItem,
 } from "./budget.types";
@@ -16,7 +26,8 @@ import type {
 export function useBudget() {
   const tripPlaces = useAtomValue(selectedTripPlacesAtom);
   const [activeModal, setActiveModal] = useState<BudgetModal | null>(null);
-  const [currency, setCurrency] = useAtom(tripCurrencyAtom);
+  const currency = useAtomValue(tripCurrencyAtom);
+  const convertTripCurrency = useSetAtom(convertTripCurrencyAtom);
   const [budget, setBudget] = useAtom(tripBudgetAtom);
   const [draftBudget, setDraftBudget] = useState(budget.toFixed(2));
   const [expenses, setExpenses] = useAtom(tripExpensesAtom);
@@ -29,6 +40,18 @@ export function useBudget() {
     expenseCategories[11],
   );
   const [showAllTripItems, setShowAllTripItems] = useState(false);
+  const currencyMutation = useMutation({
+    mutationFn: ({ base, quote }: { base: CurrencyOption; quote: CurrencyOption }) =>
+      getCurrencyRate(base.code, quote.code),
+    onError: (error) => {
+      console.error("Budget currency conversion failed.", {
+        component: "BudgetSection",
+        operation: "convertCurrency",
+        from: currency.code,
+        error,
+      });
+    },
+  });
 
   const totalSpent = useMemo(
     () => expenses.reduce((total, e) => total + e.amount, 0),
@@ -75,10 +98,10 @@ export function useBudget() {
       setEditingExpenseId(expense.id);
       setExpenseAmount(expense.amount.toString());
       setExpenseName(expense.label);
-      setExpenseDate(expense.rawDate);
-      const cat = expenseCategories.find((c) => c.id === expense.categoryId) ?? expenseCategories[11];
+      setExpenseDate(parseExpenseDate(expense.date));
+      const cat = getExpenseCategory(expense.categoryId);
       setSelectedCategory(cat);
-      setSelectedLabel(expense.label !== expense.categoryLabel ? expense.label : cat.label);
+      setSelectedLabel(expense.label !== cat.label ? expense.label : cat.label);
     } else {
       setEditingExpenseId(null);
       resetExpenseDraft();
@@ -88,7 +111,7 @@ export function useBudget() {
 
   function saveExpense(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const amount = Number(expenseAmount);
+    const amount = roundMoney(Number(expenseAmount), currency.code);
     if (!Number.isFinite(amount) || amount <= 0) return;
     const resolvedLabel =
       expenseName.trim() ||
@@ -97,10 +120,7 @@ export function useBudget() {
       amount,
       label: resolvedLabel,
       categoryId: selectedCategory.id,
-      categoryLabel: selectedCategory.label,
-      Icon: selectedCategory.Icon,
-      date: expenseDate ? format(expenseDate, "MMM d, yyyy") : undefined,
-      rawDate: expenseDate,
+      date: expenseDate ? format(expenseDate, "yyyy-MM-dd") : undefined,
     };
     if (editingExpenseId) {
       setExpenses((prev) =>
@@ -122,7 +142,7 @@ export function useBudget() {
 
   function saveBudget(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const amount = Number(draftBudget);
+    const amount = roundMoney(Number(draftBudget), currency.code);
     if (!Number.isFinite(amount) || amount < 0) return;
     setBudget(amount);
     closeModal();
@@ -144,6 +164,19 @@ export function useBudget() {
     setShowAllTripItems((v) => !v);
   }
 
+  async function changeCurrency(option: CurrencyOption) {
+    if (option.code === currency.code || currencyMutation.isPending) return;
+    try {
+      const response = await currencyMutation.mutateAsync({
+        base: currency,
+        quote: option,
+      });
+      convertTripCurrency({ currency: option, rate: response.rate });
+    } catch {
+      // The mutation exposes the user-facing error while leaving every amount unchanged.
+    }
+  }
+
   return {
     tripPlaces,
     recentTripPlaces,
@@ -151,7 +184,11 @@ export function useBudget() {
     setActiveModal,
     editingExpenseId,
     currency,
-    setCurrency,
+    changeCurrency,
+    isConvertingCurrency: currencyMutation.isPending,
+    currencyConversionError: currencyMutation.isError
+      ? "Could not load an exchange rate. Your amounts were not changed."
+      : null,
     budget,
     draftBudget,
     setDraftBudget,
@@ -179,4 +216,10 @@ export function useBudget() {
     selectCategory,
     toggleShowAllTripItems,
   };
+}
+
+function parseExpenseDate(value: string | undefined): Date | undefined {
+  if (!value) return undefined;
+  const parsed = parseISO(value);
+  return isValid(parsed) ? parsed : undefined;
 }

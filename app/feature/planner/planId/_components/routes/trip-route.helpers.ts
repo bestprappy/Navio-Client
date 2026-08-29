@@ -50,7 +50,7 @@ export function getRouteSegmentByToItemId(
   return new Map(segments.map((segment) => [segment.toItemId, segment]));
 }
 
-export function formatRouteDuration(seconds?: number): string {
+export function formatRouteDuration(seconds?: number | null): string {
   if (!seconds || seconds <= 0) {
     return "Travel time unavailable";
   }
@@ -70,7 +70,7 @@ export function formatRouteDuration(seconds?: number): string {
   return `${hours} hr ${minutes} min`;
 }
 
-export function formatRouteDistance(meters?: number): string {
+export function formatRouteDistance(meters?: number | null): string {
   if (!meters || meters <= 0) {
     return "Distance unavailable";
   }
@@ -137,11 +137,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function optionalNumber(value: unknown): boolean {
   return (
+    value === null ||
     typeof value === "undefined" ||
     (typeof value === "number" && Number.isFinite(value))
   );
 }
 
 function optionalString(value: unknown): boolean {
-  return typeof value === "undefined" || typeof value === "string";
+  return (
+    value === null || typeof value === "undefined" || typeof value === "string"
+  );
 }

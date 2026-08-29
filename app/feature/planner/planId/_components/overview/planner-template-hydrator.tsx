@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 
 import { getPlanById } from "@/app/feature/explore/_components/data";
-import { expenseCategories, currencyOptions } from "../budget/budget.data";
+import { currencyOptions, getCurrencyOption } from "../budget/budget.data";
 import { getCopiedPlanBlocks } from "../constants/planner-template";
 import { getPlanGarageUserVehicle } from "../constants/template-ev";
 import {
@@ -136,32 +136,18 @@ export function PlannerTemplateHydrator({
     if (plan?.budget) {
       const { budget } = plan;
 
-      const currencyOption =
-        currencyOptions.find((c) => c.code === budget.currency) ??
-        currencyOptions[0];
+      const currencyOption = getCurrencyOption(budget.currency);
       setTripCurrency(currencyOption);
       setTripBudget(budget.total);
 
       const expenses = budget.items.map((item) => {
         const categoryId = CATEGORY_MAP[item.category] ?? "other";
-        const category =
-          expenseCategories.find((c) => c.id === categoryId) ??
-          expenseCategories[expenseCategories.length - 1];
         return {
           id: `copied-expense-${item.id}`,
           amount: item.amount,
           label: item.name,
-          categoryId: category.id,
-          categoryLabel: category.label,
-          Icon: category.Icon,
-          date: item.date
-            ? new Date(item.date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })
-            : undefined,
-          rawDate: item.date ? new Date(item.date) : undefined,
+          categoryId,
+          date: item.date,
         };
       });
       setTripExpenses(expenses);

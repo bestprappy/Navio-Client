@@ -13,13 +13,17 @@ import {
   Wine,
 } from "lucide-react";
 
-import type { CurrencyOption, ExpenseCategory, ExpenseItem } from "./budget.types";
+import type {
+  CurrencyOption,
+  ExpenseCategory,
+  TripBudgetState,
+} from "./budget.types";
 
 export const currencyOptions: CurrencyOption[] = [
-  { code: "THB", label: "Thai Baht", symbol: "TH" },
+  { code: "THB", label: "Thai Baht", symbol: "฿" },
   { code: "USD", label: "US Dollar", symbol: "$" },
-  { code: "EUR", label: "Euro", symbol: "EUR" },
-  { code: "JPY", label: "Japanese Yen", symbol: "JPY" },
+  { code: "EUR", label: "Euro", symbol: "€" },
+  { code: "JPY", label: "Japanese Yen", symbol: "¥" },
 ];
 
 export const expenseCategories: ExpenseCategory[] = [
@@ -37,4 +41,19 @@ export const expenseCategories: ExpenseCategory[] = [
   { id: "other", label: "Other", Icon: ReceiptText },
 ];
 
-export const initialExpenses: ExpenseItem[] = [];
+export const defaultTripBudget: TripBudgetState = {
+  currency: "THB",
+  amount: 0,
+  expenses: [],
+};
+
+export function getCurrencyOption(code: string): CurrencyOption {
+  return currencyOptions.find((option) => option.code === code) ?? currencyOptions[0];
+}
+
+export function getExpenseCategory(categoryId: string): ExpenseCategory {
+  return (
+    expenseCategories.find((category) => category.id === categoryId) ??
+    expenseCategories[expenseCategories.length - 1]
+  );
+}

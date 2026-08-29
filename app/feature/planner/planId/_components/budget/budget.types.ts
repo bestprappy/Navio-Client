@@ -13,10 +13,7 @@ export type ExpenseItem = {
   amount: number;
   label: string;
   categoryId: string;
-  categoryLabel: string;
-  Icon: LucideIcon;
   date?: string;
-  rawDate?: Date;
 };
 
 export type ExpenseCategory = {
@@ -26,3 +23,9 @@ export type ExpenseCategory = {
 };
 
 export type BudgetModal = "expense" | "item" | "budget" | "settings" | "breakdown";
+
+export type TripBudgetState = {
+  currency: CurrencyCode;
+  amount: number;
+  expenses: ExpenseItem[];
+};

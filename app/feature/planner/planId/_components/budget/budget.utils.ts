@@ -11,7 +11,16 @@ export function formatMoney(amount: number, currency: CurrencyCode): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
-    currencyDisplay: "code",
-    minimumFractionDigits: 2,
+    currencyDisplay: "narrowSymbol",
   }).format(amount);
+}
+
+export function roundMoney(amount: number, currency: CurrencyCode): number {
+  const fractionDigits =
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).resolvedOptions().maximumFractionDigits ?? 2;
+  const factor = 10 ** fractionDigits;
+  return Math.round((amount + Number.EPSILON) * factor) / factor;
 }

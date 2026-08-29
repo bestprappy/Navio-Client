@@ -29,10 +29,15 @@ export function BudgetEditModal({
           <span className="font-semibold text-foreground">{currencySymbol}</span>
           <ChevronDown className="size-4 text-muted-foreground" aria-hidden="true" />
           <input
+            type="number"
             value={draftBudget}
             onChange={(e) => onDraftChange(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-base font-medium text-foreground outline-none"
             inputMode="decimal"
+            min="0"
+            max="999999999999.99"
+            step="any"
+            required
             aria-label="Budget amount"
           />
         </label>
