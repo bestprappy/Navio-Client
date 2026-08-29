@@ -56,10 +56,15 @@ export function ExpenseModal({
           <span className="font-semibold text-foreground">{currencySymbol}</span>
           <ChevronDown className="size-4 text-muted-foreground" aria-hidden="true" />
           <input
+            type="number"
             value={expenseAmount}
             onChange={(e) => onAmountChange(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-base font-medium text-foreground outline-none placeholder:text-muted-foreground"
             inputMode="decimal"
+            min="0.01"
+            max="999999999999.99"
+            step="any"
+            required
             placeholder="0"
             aria-label="Expense amount"
           />
@@ -73,6 +78,7 @@ export function ExpenseModal({
             onChange={(e) => onNameChange(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground"
             placeholder="Expense name (optional)"
+            maxLength={255}
             aria-label="Expense name"
           />
         </label>

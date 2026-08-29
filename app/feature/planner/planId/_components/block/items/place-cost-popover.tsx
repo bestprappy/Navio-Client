@@ -9,6 +9,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { Button } from "@/components/ui/button";
 
 import { BudgetModalShell } from "../../budget/budget-modal-shell";
+import { roundMoney } from "../../budget/budget.utils";
 import {
   tripCurrencyAtom,
   tripExpensesAtom,
@@ -57,7 +58,7 @@ export function PlaceCostPopover({
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const amount = Number(draft);
+    const amount = roundMoney(Number(draft), currency.code);
     if (!Number.isFinite(amount) || amount <= 0) return;
 
     const label = draftName.trim() || itemName;
@@ -69,10 +70,7 @@ export function PlaceCostPopover({
         amount,
         label,
         categoryId: "sightseeing",
-        categoryLabel: "Sightseeing",
-        Icon: Landmark,
-        date: blockDateFormatted,
-        rawDate: blockDateParsed,
+        date: blockDate,
       };
       return prev.some((e) => e.id === expenseId)
         ? prev.map((e) => (e.id === expenseId ? { ...e, ...entry } : e))
@@ -112,10 +110,15 @@ export function PlaceCostPopover({
                     aria-hidden="true"
                   />
                   <input
+                    type="number"
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     className="min-w-0 flex-1 bg-transparent text-base font-medium text-foreground outline-none placeholder:text-muted-foreground"
                     inputMode="decimal"
+                    min="0.01"
+                    max="999999999999.99"
+                    step="any"
+                    required
                     placeholder="0"
                     aria-label="Expense amount"
                     autoFocus
@@ -133,6 +136,7 @@ export function PlaceCostPopover({
                     onChange={(e) => setDraftName(e.target.value)}
                     className="min-w-0 flex-1 bg-transparent text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground"
                     placeholder="Expense name (optional)"
+                    maxLength={255}
                     aria-label="Expense name"
                   />
                 </label>
