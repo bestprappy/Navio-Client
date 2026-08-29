@@ -42,9 +42,11 @@ export type RouteSegment = {
   toName: string;
   status: RouteSegmentStatus;
   geometry: RouteLineString;
-  distanceMeters?: number;
-  durationSeconds?: number;
-  fallbackReason?: string;
+  // The mobility service sends these as JSON null (not omitted) when a segment
+  // has no measured distance/duration or no fallback reason.
+  distanceMeters?: number | null;
+  durationSeconds?: number | null;
+  fallbackReason?: string | null;
 };
 
 export type DirectionsResponse = {

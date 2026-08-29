@@ -5,6 +5,8 @@ import {
   BatteryCharging,
   CheckCircle2,
   Clock,
+  LockKeyhole,
+  LockKeyholeOpen,
   MapPin,
   Plug,
   Trash2,
@@ -144,6 +146,7 @@ export function TripPlaceCard({
       }
     : undefined;
   const chargerSpecs = isEvCharger ? getChargerSpecs(item) : null;
+  const chargerDetails = item.evCharger;
 
   return (
     <article
@@ -182,6 +185,12 @@ export function TripPlaceCard({
                     {chargerSpecs.operator ? (
                       <Badge variant="secondary" className="h-6 rounded-sm">
                         {chargerSpecs.operator}
+                      </Badge>
+                    ) : null}
+                    {chargerDetails?.locked ? (
+                      <Badge variant="outline" className="h-6 rounded-sm">
+                        <LockKeyhole className="size-3" aria-hidden="true" />
+                        Kept during optimization
                       </Badge>
                     ) : null}
                   </div>
@@ -282,32 +291,70 @@ export function TripPlaceCard({
                 batteryTo={chargeBatteryTo}
               />
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-                <Button
-                  type="button"
-                  variant={item.isVisited ? "secondary" : "default"}
-                  size="sm"
-                  className="rounded-sm p-4"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    updatePlaceItem({
-                      blockId,
-                      itemId: item.id,
-                      updates: { isVisited: !item.isVisited },
-                    });
-                  }}
-                >
-                  {item.isVisited ? (
-                    <>
-                      <CheckCircle2 className="size-3.5" aria-hidden="true" />
-                      Charging completed
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="size-3.5" aria-hidden="true" />
-                      Mark as charged
-                    </>
-                  )}
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={item.isVisited ? "secondary" : "default"}
+                    size="sm"
+                    className="rounded-sm p-4"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      updatePlaceItem({
+                        blockId,
+                        itemId: item.id,
+                        updates: { isVisited: !item.isVisited },
+                      });
+                    }}
+                  >
+                    {item.isVisited ? (
+                      <>
+                        <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                        Charging completed
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="size-3.5" aria-hidden="true" />
+                        Mark as charged
+                      </>
+                    )}
+                  </Button>
+                  {chargerDetails ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-sm"
+                      title={
+                        chargerDetails.locked
+                          ? "Allow the optimizer to replace this charger"
+                          : "Keep this charger during route optimization"
+                      }
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        updatePlaceItem({
+                          blockId,
+                          itemId: item.id,
+                          updates: {
+                            evCharger: {
+                              ...chargerDetails,
+                              locked: !chargerDetails.locked,
+                            },
+                          },
+                        });
+                      }}
+                    >
+                      {chargerDetails.locked ? (
+                        <LockKeyhole className="size-3.5" aria-hidden="true" />
+                      ) : (
+                        <LockKeyholeOpen
+                          className="size-3.5"
+                          aria-hidden="true"
+                        />
+                      )}
+                      {chargerDetails.locked ? "Unlock stop" : "Keep stop"}
+                    </Button>
+                  ) : null}
+                </div>
                 <Button
                   type="button"
                   variant="destructive"

@@ -30,6 +30,7 @@ import {
 import { BatterySlider } from "../garage/battery-slider";
 
 import { EvStationListCard } from "./ev-station-list-card";
+import { EvRouteOptimizationPanel } from "./ev-route-optimization-panel";
 import { getEvStationVisual } from "./ev-station-panel.data";
 import { filterEvChargers } from "./ev-station-api";
 
@@ -253,6 +254,12 @@ export function EvStationSidePanel({
                 />
               </div>
             </div>
+            <EvRouteOptimizationPanel
+              blockId={panelBlockId}
+              vehicle={activeEvCar}
+              startingSocPct={startingBatteryPct}
+              targetSocPct={chargeStopTargetPct}
+            />
           </div>
         </div>
 
