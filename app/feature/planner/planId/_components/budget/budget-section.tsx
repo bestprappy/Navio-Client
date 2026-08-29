@@ -7,7 +7,6 @@ import {
   ListChecks,
   Pencil,
   Plus,
-  ReceiptText,
   Settings,
 } from "lucide-react";
 
@@ -180,7 +179,9 @@ export function BudgetSection() {
       {b.activeModal === "settings" && (
         <BudgetSettingsModal
           currency={b.currency}
-          onCurrencyChange={b.setCurrency}
+          onCurrencyChange={b.changeCurrency}
+          isConverting={b.isConvertingCurrency}
+          conversionError={b.currencyConversionError}
           onClose={b.closeModal}
         />
       )}

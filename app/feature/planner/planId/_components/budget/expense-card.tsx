@@ -1,7 +1,9 @@
 "use client";
 
 import { X } from "lucide-react";
+import { format, isValid, parseISO } from "date-fns";
 
+import { getExpenseCategory } from "./budget.data";
 import { formatMoney } from "./budget.utils";
 import type { CurrencyCode, ExpenseItem } from "./budget.types";
 
@@ -13,7 +15,9 @@ type ExpenseCardProps = {
 };
 
 export function ExpenseCard({ expense, currencyCode, onEdit, onDelete }: ExpenseCardProps) {
-  const Icon = expense.Icon;
+  const category = getExpenseCategory(expense.categoryId);
+  const Icon = category.Icon;
+  const displayDate = formatExpenseDate(expense.date);
 
   return (
     <div className="flex items-center rounded-sm border border-border bg-card">
@@ -29,8 +33,8 @@ export function ExpenseCard({ expense, currencyCode, onEdit, onDelete }: Expense
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-foreground">{expense.label}</p>
           <p className="text-xs text-muted-foreground">
-            {expense.categoryLabel}
-            {expense.date ? ` - ${expense.date}` : ""}
+            {category.label}
+            {displayDate ? ` · ${displayDate}` : ""}
           </p>
         </div>
         <p className="text-sm font-bold text-foreground">
@@ -47,4 +51,10 @@ export function ExpenseCard({ expense, currencyCode, onEdit, onDelete }: Expense
       </button>
     </div>
   );
+}
+
+function formatExpenseDate(value: string | undefined): string | null {
+  if (!value) return null;
+  const date = parseISO(value);
+  return isValid(date) ? format(date, "MMM d, yyyy") : null;
 }

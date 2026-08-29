@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Loader2 } from "lucide-react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -13,12 +13,16 @@ import type { CurrencyOption } from "./budget.types";
 type BudgetSettingsModalProps = {
   currency: CurrencyOption;
   onCurrencyChange: (option: CurrencyOption) => void;
+  isConverting: boolean;
+  conversionError: string | null;
   onClose: () => void;
 };
 
 export function BudgetSettingsModal({
   currency,
   onCurrencyChange,
+  isConverting,
+  conversionError,
   onClose,
 }: BudgetSettingsModalProps) {
   const [open, setOpen] = useState(false);
@@ -27,7 +31,11 @@ export function BudgetSettingsModal({
     <BudgetModalShell title="Expense settings" onClose={onClose}>
       <div className="space-y-8">
         <div>
-          <p className="mb-3 text-sm font-bold text-foreground">Default currency</p>
+          <p className="mb-1 text-sm font-bold text-foreground">Default currency</p>
+          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
+            Changing currency converts the budget, expenses, and planned place costs
+            using the latest available reference rate.
+          </p>
           <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger
               render={
@@ -35,6 +43,7 @@ export function BudgetSettingsModal({
                   type="button"
                   className="grid w-full grid-cols-[2.75rem_1fr_auto] items-center rounded-sm border border-border bg-background px-4 py-3"
                   aria-label="Select currency"
+                  disabled={isConverting}
                 />
               }
             >
@@ -63,6 +72,7 @@ export function BudgetSettingsModal({
                     onCurrencyChange(option);
                     setOpen(false);
                   }}
+                  disabled={isConverting}
                 >
                   <span className="w-8 shrink-0 text-base font-semibold text-foreground">
                     {option.symbol}
@@ -77,6 +87,17 @@ export function BudgetSettingsModal({
               ))}
             </PopoverContent>
           </Popover>
+          {isConverting ? (
+            <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground" role="status">
+              <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+              Loading the latest exchange rate…
+            </p>
+          ) : null}
+          {conversionError ? (
+            <p className="mt-3 text-xs font-medium text-destructive" role="alert">
+              {conversionError}
+            </p>
+          ) : null}
         </div>
       </div>
     </BudgetModalShell>

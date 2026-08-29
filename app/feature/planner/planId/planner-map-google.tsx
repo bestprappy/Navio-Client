@@ -263,17 +263,12 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
     () => tripRoutes.data?.segments ?? [],
     [tripRoutes.data?.segments],
   );
-  const selectedRouteBlockId = selectedTripPlace?.blockId ?? null;
-  const visibleRouteSegments = useMemo(
-    () =>
-      selectedRouteBlockId
-        ? routeSegments.filter((segment) => segment.blockId === selectedRouteBlockId)
-        : [],
-    [routeSegments, selectedRouteBlockId],
-  );
-  const routeStatusMessage = selectedRouteBlockId && tripRoutes.isFetching
+  // Every block's road route stays on the map, colour-coded per block, so the
+  // whole trip is readable without having to select a place first.
+  const visibleRouteSegments = routeSegments;
+  const routeStatusMessage = tripRoutes.isFetching
     ? "Calculating routes..."
-    : selectedRouteBlockId && tripRoutes.isError
+    : tripRoutes.isError
       ? "Routes could not load."
       : null;
   const canAddToTrip = tripBlocks.length > 0;

@@ -146,21 +146,16 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
     () => tripRoutes.data?.segments ?? [],
     [tripRoutes.data?.segments],
   );
-  const selectedRouteBlockId = selectedTripPlace?.blockId ?? null;
-  const visibleRouteSegments = useMemo(
-    () =>
-      selectedRouteBlockId
-        ? routeSegments.filter((segment) => segment.blockId === selectedRouteBlockId)
-        : [],
-    [routeSegments, selectedRouteBlockId],
-  );
+  // Every block's road route stays on the map, colour-coded per block, so the
+  // whole trip is readable without having to select a place first.
+  const visibleRouteSegments = routeSegments;
   const routeGeoJson = useMemo(
     () => getRouteFeatureCollection(visibleRouteSegments, routeColorByBlockId),
     [routeColorByBlockId, visibleRouteSegments],
   );
-  const routeStatusMessage = selectedRouteBlockId && tripRoutes.isFetching
+  const routeStatusMessage = tripRoutes.isFetching
     ? "Calculating routes..."
-    : selectedRouteBlockId && tripRoutes.isError
+    : tripRoutes.isError
       ? "Routes could not load."
       : null;
   const canAddToTrip = tripBlocks.length > 0;

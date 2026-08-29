@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, CloudOff, Loader2, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CloudOff, Loader2, RefreshCw } from "lucide-react";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import {
   getPlannerSnapshot,
   isPersistedTripId,
   isPlannerBlocks,
+  isTripBudgetState,
   createTrip,
   PlannerApiError,
   savePlannerSnapshot,
@@ -20,8 +21,17 @@ import {
 import {
   activeBlockIdAtom,
   openBlockIdsAtom,
+  plannerServerSnapshotUpdateAtom,
+  tripBudgetAtom,
   tripBlocksAtom,
+  tripCurrencyAtom,
+  tripExpensesAtom,
 } from "./trip-builder.atoms";
+import {
+  defaultTripBudget,
+  getCurrencyOption,
+} from "../budget/budget.data";
+import type { TripBudgetState } from "../budget/budget.types";
 import type { TripBlockData } from "../constants/types";
 
 const AUTOSAVE_DELAY_MS = 750;
@@ -41,13 +51,17 @@ type PlannerPersistenceProps = {
 type SyncStatus = "loading" | "saved" | "saving" | "error";
 
 type SaveVariables = {
-  blocks: TripBlockData[];
+  state: PlannerState;
   serialized: string;
 };
 
-type PlannerDraft = {
-  version: number;
+type PlannerState = {
   blocks: TripBlockData[];
+  budget: TripBudgetState;
+};
+
+type PlannerDraft = PlannerState & {
+  version: number;
   updatedAt: string;
 };
 
@@ -65,16 +79,37 @@ export function PlannerPersistence({
   const queryClient = useQueryClient();
   const store = useStore();
   const blocks = useAtomValue(tripBlocksAtom);
+  const currency = useAtomValue(tripCurrencyAtom);
+  const budgetAmount = useAtomValue(tripBudgetAtom);
+  const expenses = useAtomValue(tripExpensesAtom);
+  const serverSnapshotUpdate = useAtomValue(plannerServerSnapshotUpdateAtom);
   const setBlocks = useSetAtom(tripBlocksAtom);
+  const setCurrency = useSetAtom(tripCurrencyAtom);
+  const setBudgetAmount = useSetAtom(tripBudgetAtom);
+  const setExpenses = useSetAtom(tripExpensesAtom);
   const setOpenBlockIds = useSetAtom(openBlockIdsAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
+  const setServerSnapshotUpdate = useSetAtom(
+    plannerServerSnapshotUpdateAtom,
+  );
   const [status, setStatus] = useState<SyncStatus>("loading");
   const [syncErrorMessage, setSyncErrorMessage] = useState<string>();
   const isDraftStoredRef = useRef(false);
   const hydratedPlanIdRef = useRef<string | null>(null);
   const lastSavedRef = useRef<string | null>(null);
   const plannerVersionRef = useRef<number | null>(null);
-  const latestBlocksRef = useRef(blocks);
+  const plannerState = useMemo<PlannerState>(
+    () => ({
+      blocks,
+      budget: {
+        currency: currency.code,
+        amount: budgetAmount,
+        expenses,
+      },
+    }),
+    [blocks, budgetAmount, currency.code, expenses],
+  );
+  const latestStateRef = useRef(plannerState);
   const skipAutosaveOnceRef = useRef(false);
   const creationAttemptRef = useRef<string | null>(null);
   const persistedPlanId = isPersistedTripId(planId) ? planId : null;
@@ -112,12 +147,17 @@ export function PlannerPersistence({
   const createMissingTrip = createMissingTripMutation.mutate;
 
   const saveMutation = useMutation({
-    mutationFn: ({ blocks: nextBlocks }: SaveVariables) => {
+    mutationFn: ({ state }: SaveVariables) => {
       const version = plannerVersionRef.current;
       if (version === null) {
         throw new PlannerApiError("Planner version is not loaded yet.", 409);
       }
-      return savePlannerSnapshot(persistedPlanId!, nextBlocks, version);
+      return savePlannerSnapshot(
+        persistedPlanId!,
+        state.blocks,
+        state.budget,
+        version,
+      );
     },
     scope: { id: persistedPlanId ? `planner-autosave-${persistedPlanId}` : "planner-autosave" },
     retry: (failureCount, error) =>
@@ -133,11 +173,12 @@ export function PlannerPersistence({
     onSuccess: (snapshot, variables) => {
       lastSavedRef.current = variables.serialized;
       plannerVersionRef.current = snapshot.version;
-      const latestSerialized = serializeBlocks(latestBlocksRef.current);
+      const latestSerialized = serializePlannerState(latestStateRef.current);
       queryClient.setQueryData<PlannerSnapshot>(queryKey, (current) =>
         current
           ? {
-              blocks: variables.blocks,
+              blocks: variables.state.blocks,
+              budget: variables.state.budget,
               version: snapshot.version,
               savedAt: snapshot.savedAt,
             }
@@ -152,7 +193,7 @@ export function PlannerPersistence({
         const stored = writePlannerDraft(
           persistedPlanId!,
           snapshot.version,
-          latestBlocksRef.current,
+          latestStateRef.current,
         );
         isDraftStoredRef.current = stored;
         setStatus("saving");
@@ -173,7 +214,7 @@ export function PlannerPersistence({
       setStatus("error");
     },
   });
-  const saveBlocks = saveMutation.mutate;
+  const saveState = saveMutation.mutate;
 
   const persistMissingTrip = useCallback(() => {
     if (!planId) return;
@@ -247,31 +288,47 @@ export function PlannerPersistence({
     if (!persistedPlanId || !plannerQuery.data) return;
     if (hydratedPlanIdRef.current === persistedPlanId) return;
 
-    const serverBlocks = plannerQuery.data.blocks;
-    const serverSerialized = serializeBlocks(serverBlocks);
+    const serverState: PlannerState = {
+      blocks: plannerQuery.data.blocks,
+      budget: plannerQuery.data.budget,
+    };
+    const serverSerialized = serializePlannerState(serverState);
     const draft = readPlannerDraft(persistedPlanId);
     const recoverableDraft =
       draft &&
       draft.version === plannerQuery.data.version &&
-      serializeBlocks(draft.blocks) !== serverSerialized
+      serializePlannerState(draft) !== serverSerialized
         ? draft
         : null;
     const currentBlocks = store.get(tripBlocksAtom);
     const shouldUseServerBlocks =
       !recoverableDraft &&
-      (serverBlocks.length > 0 || currentBlocks.length === 0);
-    skipAutosaveOnceRef.current = shouldUseServerBlocks;
-    const hydratedBlocks = recoverableDraft?.blocks ?? serverBlocks;
+      (serverState.blocks.length > 0 || currentBlocks.length === 0);
+    const hydratedState: PlannerState = recoverableDraft
+      ? { blocks: recoverableDraft.blocks, budget: recoverableDraft.budget }
+      : {
+          blocks: shouldUseServerBlocks ? serverState.blocks : currentBlocks,
+          budget: serverState.budget,
+        };
+    skipAutosaveOnceRef.current =
+      !recoverableDraft &&
+      serializePlannerState(hydratedState) === serverSerialized;
+    const hydratedBlocks = hydratedState.blocks;
     if (recoverableDraft || shouldUseServerBlocks) {
       setBlocks(hydratedBlocks);
       setOpenBlockIds(hydratedBlocks.map((block) => block.id));
       setActiveBlockId(hydratedBlocks[0]?.id ?? null);
-      latestBlocksRef.current = hydratedBlocks;
-    } else {
-      latestBlocksRef.current = currentBlocks;
     }
+    setCurrency(getCurrencyOption(hydratedState.budget.currency));
+    setBudgetAmount(hydratedState.budget.amount);
+    setExpenses(hydratedState.budget.expenses);
+    latestStateRef.current = hydratedState;
 
-    if (draft && !recoverableDraft && serializeBlocks(draft.blocks) === serverSerialized) {
+    if (
+      draft &&
+      !recoverableDraft &&
+      serializePlannerState(draft) === serverSerialized
+    ) {
       clearPlannerDraft(persistedPlanId);
     }
     isDraftStoredRef.current = Boolean(recoverableDraft);
@@ -284,13 +341,59 @@ export function PlannerPersistence({
     persistedPlanId,
     plannerQuery.data,
     setActiveBlockId,
+    setBudgetAmount,
     setBlocks,
+    setCurrency,
+    setExpenses,
     setOpenBlockIds,
     store,
   ]);
 
   useEffect(() => {
-    latestBlocksRef.current = blocks;
+    if (
+      !persistedPlanId ||
+      !serverSnapshotUpdate ||
+      serverSnapshotUpdate.tripId !== persistedPlanId
+    ) {
+      return;
+    }
+
+    const serverState: PlannerState = {
+      blocks: serverSnapshotUpdate.blocks,
+      budget: serverSnapshotUpdate.budget,
+    };
+    const serialized = serializePlannerState(serverState);
+    skipAutosaveOnceRef.current = true;
+    latestStateRef.current = serverState;
+    lastSavedRef.current = serialized;
+    plannerVersionRef.current = serverSnapshotUpdate.version;
+    hydratedPlanIdRef.current = persistedPlanId;
+    clearPlannerDraft(persistedPlanId);
+    isDraftStoredRef.current = false;
+    queryClient.setQueryData<PlannerSnapshot>(
+      ["planner", persistedPlanId] as const,
+      {
+        blocks: serverSnapshotUpdate.blocks,
+        budget: serverSnapshotUpdate.budget,
+        version: serverSnapshotUpdate.version,
+        savedAt: serverSnapshotUpdate.savedAt,
+      },
+    );
+    const timeoutId = window.setTimeout(() => {
+      setSyncErrorMessage(undefined);
+      setStatus("saved");
+      setServerSnapshotUpdate(null);
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    persistedPlanId,
+    queryClient,
+    serverSnapshotUpdate,
+    setServerSnapshotUpdate,
+  ]);
+
+  useEffect(() => {
+    latestStateRef.current = plannerState;
     if (!persistedPlanId || hydratedPlanIdRef.current !== persistedPlanId) {
       return;
     }
@@ -299,7 +402,7 @@ export function PlannerPersistence({
       return;
     }
 
-    const serialized = serializeBlocks(blocks);
+    const serialized = serializePlannerState(plannerState);
     if (serialized === lastSavedRef.current) {
       clearPlannerDraft(persistedPlanId);
       isDraftStoredRef.current = false;
@@ -308,19 +411,23 @@ export function PlannerPersistence({
 
     const version = plannerVersionRef.current;
     if (version !== null) {
-      isDraftStoredRef.current = writePlannerDraft(persistedPlanId, version, blocks);
+      isDraftStoredRef.current = writePlannerDraft(
+        persistedPlanId,
+        version,
+        plannerState,
+      );
     }
 
     const statusTimeoutId = window.setTimeout(() => setStatus("saving"), 0);
     const saveTimeoutId = window.setTimeout(() => {
-      saveBlocks({ blocks, serialized });
+      saveState({ state: plannerState, serialized });
     }, AUTOSAVE_DELAY_MS);
 
     return () => {
       window.clearTimeout(statusTimeoutId);
       window.clearTimeout(saveTimeoutId);
     };
-  }, [blocks, persistedPlanId, plannerQuery.isSuccess, saveBlocks]);
+  }, [persistedPlanId, plannerQuery.isSuccess, plannerState, saveState]);
 
   useEffect(() => {
     const tripIsMissing =
@@ -361,10 +468,10 @@ export function PlannerPersistence({
           return;
         }
         plannerVersionRef.current = result.data.version;
-        const nextBlocks = latestBlocksRef.current;
-        saveBlocks({
-          blocks: nextBlocks,
-          serialized: serializeBlocks(nextBlocks),
+        const nextState = latestStateRef.current;
+        saveState({
+          state: nextState,
+          serialized: serializePlannerState(nextState),
         });
       });
       return;
@@ -373,10 +480,10 @@ export function PlannerPersistence({
       void plannerQuery.refetch();
       return;
     }
-    const nextBlocks = latestBlocksRef.current;
-    saveBlocks({
-      blocks: nextBlocks,
-      serialized: serializeBlocks(nextBlocks),
+    const nextState = latestStateRef.current;
+    saveState({
+      state: nextState,
+      serialized: serializePlannerState(nextState),
     });
   }
 
@@ -408,6 +515,9 @@ function PlannerSyncStatus({
   message?: string;
   onRetry?: () => void;
 }) {
+  // The resting "saved" state stays silent; only in-flight and failed syncs surface.
+  if (status === "saved") return null;
+
   const content = {
     loading: {
       icon: <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />,
@@ -416,10 +526,6 @@ function PlannerSyncStatus({
     saving: {
       icon: <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />,
       label: "Saving changes…",
-    },
-    saved: {
-      icon: <Check className="size-3.5" aria-hidden="true" />,
-      label: "All changes saved",
     },
     error: {
       icon: <CloudOff className="size-3.5" aria-hidden="true" />,
@@ -451,8 +557,8 @@ function PlannerSyncStatus({
   );
 }
 
-function serializeBlocks(blocks: TripBlockData[]): string {
-  return JSON.stringify(blocks);
+function serializePlannerState(state: PlannerState): string {
+  return JSON.stringify({ blocks: state.blocks, budget: state.budget });
 }
 
 function readPlannerDraft(planId: string): PlannerDraft | null {
@@ -474,9 +580,14 @@ function readPlannerDraft(planId: string): PlannerDraft | null {
       clearPlannerDraft(planId);
       return null;
     }
+    const budget =
+      "budget" in value && isTripBudgetState(value.budget)
+        ? value.budget
+        : defaultTripBudget;
     return {
       version: value.version,
       blocks: value.blocks,
+      budget,
       updatedAt: value.updatedAt,
     };
   } catch (error) {
@@ -488,12 +599,13 @@ function readPlannerDraft(planId: string): PlannerDraft | null {
 function writePlannerDraft(
   planId: string,
   version: number,
-  blocks: TripBlockData[],
+  state: PlannerState,
 ): boolean {
   try {
     const draft: PlannerDraft = {
       version,
-      blocks,
+      blocks: state.blocks,
+      budget: state.budget,
       updatedAt: new Date().toISOString(),
     };
     window.localStorage.setItem(plannerDraftStorageKey(planId), JSON.stringify(draft));
