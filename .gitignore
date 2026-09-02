@@ -33,6 +33,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# The template carries no secrets and documents required configuration, so it
+# is committed deliberately. Real .env / .env.local files stay ignored above.
+!.env.example
 
 # vercel
 .vercel
