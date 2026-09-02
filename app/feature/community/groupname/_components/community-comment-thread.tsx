@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useSession } from "next-auth/react";
 import {
   ArrowBigDownDash,
   ArrowBigUpDash,
@@ -32,7 +33,6 @@ import type {
   CommunityPost,
 } from "../../_components/data";
 import {
-  currentCommunityUser,
   formatCount,
   formatRelativeTime,
   getInitials,
@@ -42,6 +42,7 @@ import { CommunityCommentComposer } from "./community-comment-composer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { cn } from "@/lib/utils";
 
 type CommunityCommentNode = CommunityComment & {
@@ -58,6 +59,7 @@ type CommunityCommentThreadProps = {
 type CommentBranchProps = {
   nodes: CommunityCommentNode[];
   post: CommunityPost;
+  authenticatedUserId?: string;
   level: number;
   searchActive: boolean;
   upvotedCommentIds: string[];
@@ -207,17 +209,19 @@ function sortCommentTree(
 function createLocalComment({
   postId,
   parentCommentId,
+  authorId,
   body,
 }: {
   postId: string;
   parentCommentId?: string;
+  authorId: string;
   body: string;
 }): CommunityComment {
   return {
     id: `comment-local-${postId}-${Date.now()}`,
     postId,
     parentCommentId,
-    authorId: currentCommunityUser.id,
+    authorId,
     body,
     createdAt: new Date().toISOString(),
     upvotes: 0,
@@ -312,6 +316,7 @@ function CommentToolbar({
 function CommentBranch({
   nodes,
   post,
+  authenticatedUserId,
   level,
   searchActive,
   upvotedCommentIds,
@@ -448,11 +453,12 @@ function CommentBranch({
                       onCancel={() => onReplyCancel(comment.id)}
                       onSubmit={() => {
                         const body = replyDraft.trim();
-                        if (!body) return;
+                        if (!body || !authenticatedUserId) return;
                         onReplySubmit(
                           createLocalComment({
                             postId: post.id,
                             parentCommentId: comment.id,
+                            authorId: authenticatedUserId,
                             body,
                           }),
                         );
@@ -493,6 +499,7 @@ function CommentBranch({
                         <CommentBranch
                           nodes={visibleReplies}
                           post={post}
+                          authenticatedUserId={authenticatedUserId}
                           level={level + 1}
                           searchActive={searchActive}
                           upvotedCommentIds={upvotedCommentIds}
@@ -549,6 +556,8 @@ export function CommunityCommentThread({
   post,
   comments,
 }: CommunityCommentThreadProps) {
+  const { data: session } = useSession();
+  const { requireAuth } = useRequireAuth();
   const [commentSort, setCommentSort] = useAtom(communityCommentSortAtom);
   const [commentSearch, setCommentSearch] = useAtom(communityCommentSearchAtom);
   const [commentDrafts, setCommentDrafts] = useAtom(commentDraftsAtom);
@@ -624,65 +633,72 @@ export function CommunityCommentThread({
 
   function submitRootComment() {
     const body = draft.trim();
+    const authorId = session?.user?.id;
 
-    if (!body) {
+    if (!body || !authorId) {
       return;
     }
 
-    addComment(createLocalComment({ postId: post.id, body }));
-    setCommentDrafts((previous) => ({ ...previous, [post.id]: "" }));
-    setVisibleRootCommentCountsByPostId((previous) => ({
-      ...previous,
-      [post.id]: Math.max(visibleRootCount, ROOT_COMMENT_PAGE_SIZE),
-    }));
+    requireAuth(() => {
+      addComment(createLocalComment({ postId: post.id, authorId, body }));
+      setCommentDrafts((previous) => ({ ...previous, [post.id]: "" }));
+      setVisibleRootCommentCountsByPostId((previous) => ({
+        ...previous,
+        [post.id]: Math.max(visibleRootCount, ROOT_COMMENT_PAGE_SIZE),
+      }));
+    });
   }
 
   function submitReply(comment: CommunityComment) {
-    addComment(comment);
-    const parentCommentId = comment.parentCommentId;
+    requireAuth(() => {
+      addComment(comment);
+      const parentCommentId = comment.parentCommentId;
 
-    if (parentCommentId) {
-      setReplyDraftsByCommentId((previous) => ({
-        ...previous,
-        [parentCommentId]: "",
-      }));
-    }
-    setReplyingToCommentId(null);
-    setCollapsedCommentIds((previous) =>
-      previous.filter((id) => id !== parentCommentId),
-    );
-    if (parentCommentId) {
-      setVisibleReplyCountsByCommentId((previous) => ({
-        ...previous,
-        [parentCommentId]: Math.max(
-          previous[parentCommentId] ?? DEFAULT_VISIBLE_REPLY_COUNT,
-          DEFAULT_VISIBLE_REPLY_COUNT + 1,
-        ),
-      }));
-    }
+      if (parentCommentId) {
+        setReplyDraftsByCommentId((previous) => ({
+          ...previous,
+          [parentCommentId]: "",
+        }));
+      }
+      setReplyingToCommentId(null);
+      setCollapsedCommentIds((previous) =>
+        previous.filter((id) => id !== parentCommentId),
+      );
+      if (parentCommentId) {
+        setVisibleReplyCountsByCommentId((previous) => ({
+          ...previous,
+          [parentCommentId]: Math.max(
+            previous[parentCommentId] ?? DEFAULT_VISIBLE_REPLY_COUNT,
+            DEFAULT_VISIBLE_REPLY_COUNT + 1,
+          ),
+        }));
+      }
+    });
   }
 
   function toggleVote(commentId: string, direction: VoteDirection) {
-    if (direction === "up") {
-      setUpvotedCommentIds((previous) =>
+    requireAuth(() => {
+      if (direction === "up") {
+        setUpvotedCommentIds((previous) =>
+          previous.includes(commentId)
+            ? previous.filter((id) => id !== commentId)
+            : [...previous, commentId],
+        );
+        setDownvotedCommentIds((previous) =>
+          previous.filter((id) => id !== commentId),
+        );
+        return;
+      }
+
+      setDownvotedCommentIds((previous) =>
         previous.includes(commentId)
           ? previous.filter((id) => id !== commentId)
           : [...previous, commentId],
       );
-      setDownvotedCommentIds((previous) =>
+      setUpvotedCommentIds((previous) =>
         previous.filter((id) => id !== commentId),
       );
-      return;
-    }
-
-    setDownvotedCommentIds((previous) =>
-      previous.includes(commentId)
-        ? previous.filter((id) => id !== commentId)
-        : [...previous, commentId],
-    );
-    setUpvotedCommentIds((previous) =>
-      previous.filter((id) => id !== commentId),
-    );
+    });
   }
 
   function toggleCollapse(commentId: string) {
@@ -711,12 +727,17 @@ export function CommunityCommentThread({
         value={draft}
         placeholder="Join the conversation"
         submitLabel="Comment"
-        onChange={(value) =>
-          setCommentDrafts((previous) => ({
-            ...previous,
-            [post.id]: value,
-          }))
-        }
+        onFocus={() => {
+          requireAuth(() => undefined);
+        }}
+        onChange={(value) => {
+          requireAuth(() => {
+            setCommentDrafts((previous) => ({
+              ...previous,
+              [post.id]: value,
+            }));
+          });
+        }}
         onCancel={
           draft
             ? () =>
@@ -787,6 +808,7 @@ export function CommunityCommentThread({
         <CommentBranch
           nodes={rootComments}
           post={post}
+          authenticatedUserId={session?.user?.id}
           level={0}
           searchActive={searchActive}
           upvotedCommentIds={upvotedCommentIds}
@@ -811,7 +833,9 @@ export function CommunityCommentThread({
               [commentId]: nextCount,
             }))
           }
-          onReplyStart={(commentId) => setReplyingToCommentId(commentId)}
+          onReplyStart={(commentId) => {
+            requireAuth(() => setReplyingToCommentId(commentId));
+          }}
           onReplyCancel={(commentId) => {
             setReplyingToCommentId(null);
             updateReplyDraft(commentId, "");

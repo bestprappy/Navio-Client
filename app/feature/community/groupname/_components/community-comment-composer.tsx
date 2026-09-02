@@ -14,6 +14,7 @@ type CommunityCommentComposerProps = {
   onChange: (value: string) => void;
   onSubmit: () => void;
   onCancel?: () => void;
+  onFocus?: () => void;
   autoFocus?: boolean;
 };
 
@@ -25,6 +26,7 @@ export function CommunityCommentComposer({
   onChange,
   onSubmit,
   onCancel,
+  onFocus,
   autoFocus = false,
 }: CommunityCommentComposerProps) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -51,6 +53,7 @@ export function CommunityCommentComposer({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         autoFocus={autoFocus}
+        onFocus={onFocus}
         className="min-h-16 resize-y border-0 bg-transparent px-1.5 py-2 leading-6 shadow-none focus-visible:ring-0"
       />
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
@@ -60,6 +63,8 @@ export function CommunityCommentComposer({
             variant="ghost"
             size="icon-sm"
             aria-label="Attach image"
+            title="Image attachments are not available yet"
+            disabled
           >
             <ImageIcon className="size-4" aria-hidden="true" />
           </Button>
@@ -68,6 +73,8 @@ export function CommunityCommentComposer({
             variant="ghost"
             size="sm"
             aria-label="Add GIF"
+            title="GIF attachments are not available yet"
+            disabled
             className="px-2 text-[11px] font-semibold uppercase"
           >
             GIF
@@ -77,6 +84,8 @@ export function CommunityCommentComposer({
             variant="ghost"
             size="icon-sm"
             aria-label="Format text"
+            title="Rich text formatting is not available yet"
+            disabled
           >
             <Type className="size-4" aria-hidden="true" />
           </Button>

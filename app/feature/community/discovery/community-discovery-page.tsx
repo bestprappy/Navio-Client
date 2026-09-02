@@ -33,6 +33,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 
 const DEFAULT_SECTION_LIMIT = 6;
 const SECTION_INCREMENT = 3;
@@ -208,6 +209,7 @@ function CommunityDiscoveryLoading() {
 }
 
 export function CommunityDiscoveryPage() {
+  const { requireAuth } = useRequireAuth();
   const searchQuery = useAtomValue(communitySearchQueryAtom);
   const createdGroups = useAtomValue(createdGroupsAtom);
   const [selectedCategoryId, setSelectedCategoryId] = useAtom(
@@ -283,11 +285,13 @@ export function CommunityDiscoveryPage() {
   }, [anchorGroup, filteredGroups, recommendedGroups, recommendedVisibleCount]);
 
   function toggleJoin(groupId: string) {
-    setJoinedGroupIds((previous) =>
-      previous.includes(groupId)
-        ? previous.filter((id) => id !== groupId)
-        : [...previous, groupId],
-    );
+    requireAuth(() => {
+      setJoinedGroupIds((previous) =>
+        previous.includes(groupId)
+          ? previous.filter((id) => id !== groupId)
+          : [...previous, groupId],
+      );
+    });
   }
 
   function showMore(sectionId: string) {

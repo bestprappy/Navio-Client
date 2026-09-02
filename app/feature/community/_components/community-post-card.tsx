@@ -36,6 +36,7 @@ import {
 } from "./data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { cn } from "@/lib/utils";
 
 type CommunityPostCardProps = {
@@ -60,6 +61,7 @@ export function CommunityPostCard({
   onSelect,
 }: CommunityPostCardProps) {
   const router = useRouter();
+  const { requireAuth } = useRequireAuth();
   const [upvotedPostIds, setUpvotedPostIds] = useAtom(upvotedPostIdsAtom);
   const [downvotedPostIds, setDownvotedPostIds] = useAtom(downvotedPostIdsAtom);
   const [joinedGroupIds, setJoinedGroupIds] = useAtom(joinedGroupIdsAtom);
@@ -86,30 +88,36 @@ export function CommunityPostCard({
     : null;
 
   function toggleUpvote() {
-    setUpvotedPostIds((prev) =>
-      prev.includes(post.id)
-        ? prev.filter((id) => id !== post.id)
-        : [...prev, post.id],
-    );
-    setDownvotedPostIds((prev) => prev.filter((id) => id !== post.id));
+    requireAuth(() => {
+      setUpvotedPostIds((prev) =>
+        prev.includes(post.id)
+          ? prev.filter((id) => id !== post.id)
+          : [...prev, post.id],
+      );
+      setDownvotedPostIds((prev) => prev.filter((id) => id !== post.id));
+    });
   }
 
   function toggleDownvote() {
-    setDownvotedPostIds((prev) =>
-      prev.includes(post.id)
-        ? prev.filter((id) => id !== post.id)
-        : [...prev, post.id],
-    );
-    setUpvotedPostIds((prev) => prev.filter((id) => id !== post.id));
+    requireAuth(() => {
+      setDownvotedPostIds((prev) =>
+        prev.includes(post.id)
+          ? prev.filter((id) => id !== post.id)
+          : [...prev, post.id],
+      );
+      setUpvotedPostIds((prev) => prev.filter((id) => id !== post.id));
+    });
   }
 
   function toggleJoin() {
     if (!group) return;
-    setJoinedGroupIds((prev) =>
-      prev.includes(group.id)
-        ? prev.filter((id) => id !== group.id)
-        : [...prev, group.id],
-    );
+    requireAuth(() => {
+      setJoinedGroupIds((prev) =>
+        prev.includes(group.id)
+          ? prev.filter((id) => id !== group.id)
+          : [...prev, group.id],
+      );
+    });
   }
 
   function openPost() {

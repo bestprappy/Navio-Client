@@ -5,6 +5,7 @@ import "./globals.css";
 import { QueryProvider } from "@/components/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NavigationHistoryTracker } from "@/components/navigation-history";
+import { AuthSessionProvider } from "@/components/auth-session-provider";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -40,12 +41,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <QueryProvider>
-            <Suspense fallback={null}>
-              <NavigationHistoryTracker />
-            </Suspense>
-            {children}
-          </QueryProvider>
+          <AuthSessionProvider>
+            <QueryProvider>
+              <Suspense fallback={null}>
+                <NavigationHistoryTracker />
+              </Suspense>
+              {children}
+            </QueryProvider>
+          </AuthSessionProvider>
         </ThemeProvider>
       </body>
     </html>

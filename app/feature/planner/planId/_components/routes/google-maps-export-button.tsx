@@ -1,6 +1,11 @@
 "use client";
 
-import { type MouseEvent, useEffect, useMemo, useState } from "react";
+import {
+  type MouseEvent,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { ExternalLink, MapPin } from "lucide-react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -28,6 +33,8 @@ type GoogleMapsExportButtonProps = {
 type DisplayDirectionsLink = GoogleMapsDirectionsLink & {
   id: string;
 };
+
+const subscribeToHydration = () => () => undefined;
 
 function stopMapInteraction(event: MouseEvent<HTMLElement>) {
   event.stopPropagation();
@@ -68,15 +75,15 @@ export function GoogleMapsExportButton({
   blocks,
   className,
 }: GoogleMapsExportButtonProps) {
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useSyncExternalStore(
+    subscribeToHydration,
+    () => true,
+    () => false,
+  );
   const [isOpen, setIsOpen] = useState(false);
   const links = useMemo(() => getDisplayLinks(blocks), [blocks]);
   const disabledTitle =
     "Add at least two places to the itinerary before opening Google Maps.";
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   if (!isMounted) {
     return null;

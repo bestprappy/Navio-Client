@@ -23,6 +23,7 @@ import {
 import { isInteractiveCardTarget } from "./plan-card-navigation";
 import { UserBadge } from "@/components/user-badge";
 import { buttonVariants } from "@/components/ui/button.variants";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { cn } from "@/lib/utils";
 
 type PlanCardHorizontalProps = {
@@ -39,6 +40,7 @@ export function PlanCardHorizontal({
   variant = "default",
 }: PlanCardHorizontalProps) {
   const router = useRouter();
+  const { requireAuth } = useRequireAuth();
   const href = getPlanHref(plan);
   const copyHref = getPlanCopyHref(plan);
   const discussionHref = getPlanDiscussionHref(plan);
@@ -85,7 +87,7 @@ export function PlanCardHorizontal({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              setIsSaved((prev) => !prev);
+              requireAuth(() => setIsSaved((prev) => !prev));
             }}
             className={cn(
               "flex h-8 w-8 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer",
@@ -183,7 +185,9 @@ export function PlanCardHorizontal({
             <button
               type="button"
               aria-pressed={isLiked}
-              onClick={() => setIsLiked((prev) => !prev)}
+              onClick={() =>
+                requireAuth(() => setIsLiked((prev) => !prev))
+              }
               className={cn(
                 "flex items-center gap-1 rounded-full px-2 py-1 transition cursor-pointer",
                 isLiked

@@ -7,10 +7,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import type { CommunityGroup } from "../_components/data";
-import {
-  currentCommunityUser,
-  mockCommunityGroupProfiles,
-} from "../_components/data";
+import { mockCommunityGroupProfiles } from "../_components/data";
 
 type CommunityRulesSidebarProps = {
   group: CommunityGroup;

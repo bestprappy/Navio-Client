@@ -31,6 +31,7 @@ import {
 } from "../../_components/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent } from "@/components/ui/card";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { cn } from "@/lib/utils";
 
 type CommunityPostDetailCardProps = {
@@ -44,6 +45,7 @@ export function CommunityPostDetailCard({
   group,
   comments,
 }: CommunityPostDetailCardProps) {
+  const { requireAuth } = useRequireAuth();
   const [upvotedPostIds, setUpvotedPostIds] = useAtom(upvotedPostIdsAtom);
   const [downvotedPostIds, setDownvotedPostIds] = useAtom(downvotedPostIdsAtom);
   const author = getUserById(post.authorId);
@@ -58,21 +60,29 @@ export function CommunityPostDetailCard({
   const groupHref = `/community/${slugifyCommunityValue(group.name)}`;
 
   function toggleUpvote() {
-    setUpvotedPostIds((previous) =>
-      previous.includes(post.id)
-        ? previous.filter((id) => id !== post.id)
-        : [...previous, post.id],
-    );
-    setDownvotedPostIds((previous) => previous.filter((id) => id !== post.id));
+    requireAuth(() => {
+      setUpvotedPostIds((previous) =>
+        previous.includes(post.id)
+          ? previous.filter((id) => id !== post.id)
+          : [...previous, post.id],
+      );
+      setDownvotedPostIds((previous) =>
+        previous.filter((id) => id !== post.id),
+      );
+    });
   }
 
   function toggleDownvote() {
-    setDownvotedPostIds((previous) =>
-      previous.includes(post.id)
-        ? previous.filter((id) => id !== post.id)
-        : [...previous, post.id],
-    );
-    setUpvotedPostIds((previous) => previous.filter((id) => id !== post.id));
+    requireAuth(() => {
+      setDownvotedPostIds((previous) =>
+        previous.includes(post.id)
+          ? previous.filter((id) => id !== post.id)
+          : [...previous, post.id],
+      );
+      setUpvotedPostIds((previous) =>
+        previous.filter((id) => id !== post.id),
+      );
+    });
   }
 
   return (
