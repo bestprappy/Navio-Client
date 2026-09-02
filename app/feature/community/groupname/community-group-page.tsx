@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { useAtom, useAtomValue } from "jotai";
 
+import { useRequireAuth } from "@/hooks/use-require-auth";
+
 import {
   communityFeedSortAtom,
   createdGroupsAtom,
@@ -339,6 +341,7 @@ function CommunityGroupPostFeed({
 }
 
 export function CommunityGroupPage({ groupName }: CommunityGroupPageProps) {
+  const { requireAuth } = useRequireAuth();
   const createdGroups = useAtomValue(createdGroupsAtom);
   const createdPosts = useAtomValue(createdPostsAtom);
   const extraCommentsByPostId = useAtomValue(extraCommentsByPostIdAtom);
@@ -382,19 +385,23 @@ export function CommunityGroupPage({ groupName }: CommunityGroupPageProps) {
   const muted = mutedGroupIds.includes(group.id);
 
   function toggleJoin() {
-    setJoinedGroupIds((previous) =>
-      previous.includes(groupId)
-        ? previous.filter((id) => id !== groupId)
-        : [...previous, groupId],
-    );
+    requireAuth(() => {
+      setJoinedGroupIds((previous) =>
+        previous.includes(groupId)
+          ? previous.filter((id) => id !== groupId)
+          : [...previous, groupId],
+      );
+    });
   }
 
   function toggleMuted() {
-    setMutedGroupIds((previous) =>
-      previous.includes(groupId)
-        ? previous.filter((id) => id !== groupId)
-        : [...previous, groupId],
-    );
+    requireAuth(() => {
+      setMutedGroupIds((previous) =>
+        previous.includes(groupId)
+          ? previous.filter((id) => id !== groupId)
+          : [...previous, groupId],
+      );
+    });
   }
 
   return (

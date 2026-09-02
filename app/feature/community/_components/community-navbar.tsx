@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { Bell, Plus, Search, X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import { useAtom } from "jotai";
 
 import { communitySearchQueryAtom } from "./community-atoms";
+import { AuthActions } from "@/components/auth-actions";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Input } from "@/components/ui/input";
@@ -73,32 +73,7 @@ export function CommunityNavbar() {
           </Link>
 
           <ThemeToggle />
-
-          <button
-            type="button"
-            aria-label="Notifications"
-            className="relative flex size-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-          >
-            <Bell className="size-4" aria-hidden="true" />
-            <span
-              className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary ring-2 ring-background"
-              aria-hidden="true"
-            />
-          </button>
-
-          <Link
-            href="/profile"
-            className="ml-0.5 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2"
-            aria-label="Profile"
-          >
-            <Image
-              src="https://images.unsplash.com/photo-1502685104226-ee32379fefbe?auto=format&fit=facearea&w=64&h=64"
-              alt="User profile"
-              width={36}
-              height={36}
-              className="h-full w-full object-cover"
-            />
-          </Link>
+          <AuthActions compact />
         </div>
       </div>
     </header>

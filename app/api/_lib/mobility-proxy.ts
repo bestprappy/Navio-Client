@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { auth } from "@/auth";
+
 const UPSTREAM_TIMEOUT_MS = 15_000;
 const REQUEST_HEADERS_TO_FORWARD = [
-  "authorization",
   "content-type",
   "traceparent",
   "tracestate",
@@ -26,6 +27,14 @@ export async function proxyMobilityRequest(
   upstreamPath: string,
   options: MobilityProxyOptions = {},
 ): Promise<Response> {
+  const session = await auth();
+  if (!session?.accessToken || session.error) {
+    return NextResponse.json(
+      { error: "Authentication is required." },
+      { status: 401 },
+    );
+  }
+
   const backendBaseUrl = process.env.NAVIO_API_BASE_URL;
 
   if (!backendBaseUrl) {
@@ -51,7 +60,10 @@ export async function proxyMobilityRequest(
     );
   }
 
-  const headers = createUpstreamHeaders(request.headers);
+  const headers = createUpstreamHeaders(
+    request.headers,
+    session.accessToken,
+  );
 
   try {
     const upstreamResponse = await fetch(upstreamUrl, {
@@ -95,8 +107,13 @@ function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
 }
 
-function createUpstreamHeaders(requestHeaders: Headers): Headers {
-  const headers = new Headers();
+function createUpstreamHeaders(
+  requestHeaders: Headers,
+  accessToken: string,
+): Headers {
+  const headers = new Headers({
+    Authorization: `Bearer ${accessToken}`,
+  });
 
   for (const headerName of REQUEST_HEADERS_TO_FORWARD) {
     const value = requestHeaders.get(headerName);

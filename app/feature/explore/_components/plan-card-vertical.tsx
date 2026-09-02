@@ -23,6 +23,7 @@ import {
 import { isInteractiveCardTarget } from "./plan-card-navigation";
 import { UserBadge } from "@/components/user-badge";
 import { buttonVariants } from "@/components/ui/button.variants";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { cn } from "@/lib/utils";
 
 type PlanCardVerticalProps = {
@@ -39,6 +40,7 @@ export function PlanCardVertical({
   variant = "default",
 }: PlanCardVerticalProps) {
   const router = useRouter();
+  const { requireAuth } = useRequireAuth();
   const href = getPlanHref(plan);
   const copyHref = getPlanCopyHref(plan);
   const discussionHref = getPlanDiscussionHref(plan);
@@ -123,7 +125,7 @@ export function PlanCardVertical({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              setIsSaved((prev) => !prev);
+              requireAuth(() => setIsSaved((prev) => !prev));
             }}
             className={cn(
               "flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer",
@@ -195,7 +197,9 @@ export function PlanCardVertical({
             <button
               type="button"
               aria-pressed={isLiked}
-              onClick={() => setIsLiked((prev) => !prev)}
+              onClick={() =>
+                requireAuth(() => setIsLiked((prev) => !prev))
+              }
               className={likeButtonClassName}
             >
               <Heart className={cn("h-3.5 w-3.5", isLiked && "fill-current")} />
@@ -262,7 +266,9 @@ export function PlanCardVertical({
             <button
               type="button"
               aria-pressed={isLiked}
-              onClick={() => setIsLiked((prev) => !prev)}
+              onClick={() =>
+                requireAuth(() => setIsLiked((prev) => !prev))
+              }
               className={likeButtonClassName}
             >
               <Heart className={cn("h-3.5 w-3.5", isLiked && "fill-current")} />

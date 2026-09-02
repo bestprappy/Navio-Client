@@ -19,8 +19,10 @@ import {
   useCommunityFeed,
   useCommunityGroups,
 } from "./_components/community-queries";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 
 export function CommunityPage() {
+  const { requireAuth } = useRequireAuth();
   const searchQuery = useAtomValue(communitySearchQueryAtom);
   const sort = useAtomValue(communityFeedSortAtom);
   const createdGroups = useAtomValue(createdGroupsAtom);
@@ -42,11 +44,13 @@ export function CommunityPage() {
   );
 
   function toggleJoin(groupId: string) {
-    setJoinedGroupIds((previous) =>
-      previous.includes(groupId)
-        ? previous.filter((id) => id !== groupId)
-        : [...previous, groupId],
-    );
+    requireAuth(() => {
+      setJoinedGroupIds((previous) =>
+        previous.includes(groupId)
+          ? previous.filter((id) => id !== groupId)
+          : [...previous, groupId],
+      );
+    });
   }
 
   return (

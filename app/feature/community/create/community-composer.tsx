@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   Bold,
   Italic,
@@ -40,7 +41,6 @@ import type {
   SharedTrip,
 } from "../_components/data";
 import {
-  currentCommunityUser,
   defaultCreatePostDraft,
   explorePlanSharedTrips,
   getCommunityPostHref,
@@ -104,6 +104,7 @@ export function CommunityComposer({
   initialPlanId = null,
 }: CommunityComposerProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [postDraft, setPostDraft] = useAtom(createPostDraftAtom);
   const setCreatedPosts = useSetAtom(createdPostsAtom);
   const joinedGroupIds = useAtomValue(joinedGroupIdsAtom);
@@ -240,7 +241,8 @@ export function CommunityComposer({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const title = postDraft.title.trim();
-    if (!title || !postDraft.groupId) return;
+    const authorId = session?.user?.id;
+    if (!title || !postDraft.groupId || !authorId) return;
 
     const group = groups.find((g) => g.id === postDraft.groupId);
     if (!group) return;
@@ -248,7 +250,7 @@ export function CommunityComposer({
     const nextPost: CommunityPost = {
       id: `post-local-${slugifyCommunityValue(title)}-${Date.now()}`,
       groupId: postDraft.groupId,
-      authorId: currentCommunityUser.id,
+      authorId,
       title,
       body: postDraft.body.trim(),
       createdAt: new Date().toISOString(),
@@ -271,7 +273,9 @@ export function CommunityComposer({
   }
 
   const canPost =
-    postDraft.title.trim().length > 0 && postDraft.groupId.length > 0;
+    Boolean(session?.user?.id) &&
+    postDraft.title.trim().length > 0 &&
+    postDraft.groupId.length > 0;
 
   const TABS: { id: PostTab; label: string }[] = [
     { id: "text", label: "Text" },
@@ -359,7 +363,9 @@ export function CommunityComposer({
                     N
                   </span>
                   <div className="min-w-0">
-                    <p className="font-medium">u/{currentCommunityUser.handle}</p>
+                    <p className="truncate font-medium">
+                      {session?.user?.name || session?.user?.email || "Your profile"}
+                    </p>
                     <p className="text-xs text-muted-foreground">Your profile</p>
                   </div>
                 </li>
