@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Emits .next/standalone with a self-contained server and only the traced
+  // runtime dependencies, so the container image ships without node_modules.
+  output: "standalone",
   transpilePackages: ['mapbox-gl'],
   images: {
     remotePatterns: [

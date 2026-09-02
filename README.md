@@ -6,7 +6,7 @@ The Navio client is a Next.js application for EV-aware trip planning, public tri
 
 The browser never calls Spring Cloud Gateway directly. It calls same-origin Next.js route handlers under `/api/**`, which act as a backend-for-frontend: they read the Auth.js session server-side, attach the Keycloak access token as a bearer header, and forward to the gateway. `NAVIO_API_BASE_URL` is therefore a server-only variable, and the gateway address is never present in browser code.
 
-This matters for the production topology, where the client runs on Vercel and the gateway on the Navio VM. Because every application API call is server-to-server, the two origins never exchange credentialed cross-origin browser requests: session cookies stay first-party to the Vercel domain and CORS is not on the critical path. The one browser-facing hop to the VM is the OAuth2 redirect to Keycloak, which is a top-level navigation rather than an XHR.
+In production the client runs as a container in the same stack as the gateway, so those forwarded calls stay on the Docker network and never traverse NGINX or the campus network. Browser, client, and API all share one origin, which means no cross-origin requests, no CORS on the critical path, and first-party session cookies. The one browser-facing hop is the OAuth2 redirect to Keycloak, which is a top-level navigation rather than an XHR.
 
 The browser does not call domain services, Eureka, Config Server, Keycloak administration endpoints, Ollama, or a hosted model provider directly.
 
@@ -46,69 +46,61 @@ Use `NAVIO_API_BASE_URL` for the Next.js API proxy and `NEXT_PUBLIC_GOOGLE_MAPS_
 
 Every API request should accept or generate an `X-Request-Id` and preserve trace response headers needed for support. Client-side error reporting must redact access tokens, cookies, form secrets, and sensitive trip or prompt content before it reaches the centralized observability backend.
 
-## Production deployment (Vercel)
+## Production deployment
 
-The client deploys to Vercel; the gateway, Keycloak, and Grafana stay on the
-Navio VM behind NGINX. Full variable reference is in `.env.example`.
+The client ships as a container in the same Compose stack as the gateway,
+Keycloak, and Grafana, served by NGINX at `https://navio.sit.kmutt.ac.th`. It is
+not deployed separately.
 
-### Prerequisites on the VM
+`navio.sit.kmutt.ac.th` resolves to `10.4.56.58`, a private campus address. The
+whole stack is therefore reachable only from the KMUTT network or VPN, and no
+component may depend on being reachable from the public internet. This is why
+the client is co-located rather than hosted externally: an external host's
+servers could not reach the gateway or Keycloak, regardless of whether end users
+are on the VPN, because the API calls are made server-side.
 
-Keycloak must be reachable over HTTPS with a certificate from a **publicly
-trusted CA**. Vercel's server-side token exchange and refresh calls verify the
-chain and will fail closed against a self-signed certificate — sign-in breaks
-with an opaque error. Let's Encrypt is sufficient.
+### Build and image
 
-### 1. Create the project
+`.deploy/docker/web-client.Dockerfile` builds a Next.js standalone server
+(`output: "standalone"` in `next.config.ts`) and runs it as a non-root user on
+port 3000. CI publishes it as `<prefix>-web-client:<sha>` alongside the Java
+service images.
 
-Import the `client` repository in Vercel. Framework preset is detected from
-`vercel.json`, which pins functions to `sin1` (Singapore) — the closest region
-to the Bangkok VM. Leaving the default `iad1` would route every API call
-through Washington DC and back on each request.
+`NEXT_PUBLIC_*` values are inlined by `next build`, so they are **build
+arguments, not runtime environment**. They come from repository secrets in the
+deploy workflow and are baked into the published image — only public,
+referrer-restricted keys are acceptable there. Server-side secrets
+(`AUTH_SECRET`, `AUTH_KEYCLOAK_SECRET`) are runtime environment and never build
+args.
 
-### 2. Set environment variables
+### Runtime configuration
 
-Add these to the **Production** environment:
+Set in `/opt/navio/.env`; the `navio-web` service in `compose.production.yml`
+maps them onto the variables this app reads.
 
-| Variable | Value |
-| --- | --- |
-| `AUTH_SECRET` | Fresh `npx auth secret` output — not the local one |
-| `AUTH_URL` | `https://<project>.vercel.app` |
-| `AUTH_TRUST_HOST` | `true` |
-| `AUTH_KEYCLOAK_ID` | `navio-web` |
-| `AUTH_KEYCLOAK_SECRET` | Must equal `KEYCLOAK_WEB_CLIENT_SECRET` on the VM |
-| `AUTH_KEYCLOAK_ISSUER` | `https://navio.sit.kmutt.ac.th/realms/navio` |
-| `NAVIO_API_BASE_URL` | `https://navio.sit.kmutt.ac.th` |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Referrer-restricted browser key |
-| `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | Optional cloud map style |
+| `.env` variable | Becomes | Notes |
+| --- | --- | --- |
+| `NAVIO_WEB_ORIGIN` | `AUTH_URL` | Public origin; must match the imported redirect URI |
+| `AUTH_SECRET` | `AUTH_SECRET` | `openssl rand -hex 32`, dedicated value |
+| `KEYCLOAK_WEB_CLIENT_SECRET` | `AUTH_KEYCLOAK_SECRET` | Same value Keycloak imported for `navio-web` |
+| `KEYCLOAK_ISSUER_URI` | `AUTH_KEYCLOAK_ISSUER` | Public issuer — tokens carry it as `iss` |
 
-Do not set `NEXT_PUBLIC_PLACE_DATA_SOURCE` in production — it forces mock data.
+Two values are fixed in the Compose file rather than `.env`:
 
-### 3. Point the VM at the Vercel origin
+- `NAVIO_API_BASE_URL=http://api-gateway:8080` — application API calls stay on
+  the Docker network and never traverse NGINX, TLS, or the campus network.
+- `NODE_EXTRA_CA_CERTS=/etc/ssl/navio/fullchain.pem` — server-side OIDC calls go
+  to the public HTTPS issuer, so the deployed certificate is trusted explicitly.
+  Without this a KMUTT-internal or self-signed chain fails Node's verification
+  and sign-in breaks with an opaque error.
 
-In `/opt/navio/.env`, set both to the Vercel production domain, then redeploy so
-Keycloak's realm import picks up the redirect URI:
+### Routing
 
-```
-NAVIO_WEB_ORIGIN=https://<project>.vercel.app
-NAVIO_CORS_ALLOWED_ORIGINS=https://<project>.vercel.app
-```
-
-If the realm already exists, Keycloak will **not** re-import it. Update the
-`navio-web` client's Valid Redirect URIs in the admin console instead, or delete
-the realm and let it reimport.
-
-### 4. Restrict the Google Maps key
-
-Add `https://<project>.vercel.app/*` to the key's HTTP referrer allowlist, or
-the basemap fails to load in production while working locally.
-
-### Preview deployments
-
-Only the production domain is registered as a Keycloak redirect URI. Preview
-builds render fine but **sign-in will fail** on them by design — a wildcard
-redirect URI would let anyone able to deploy a matching subdomain receive
-authorization codes. Test authenticated flows on production, or locally against
-the deployed Keycloak.
+NGINX gives the client every path not claimed by another service. `/v1/`,
+`/grafana/`, `/health`, and the Keycloak paths (`/realms`, `/resources`,
+`/admin`, `/js`, `/.well-known`) match first; `location /` is last and forwards
+everything else — including the client's own `/api/**` BFF routes and
+`/_next/**` assets — to `navio-web:3000`.
 
 ## Architecture references
 
