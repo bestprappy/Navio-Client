@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AuthError } from "next-auth";
 
-import { auth, signIn } from "@/auth";
+import { auth } from "@/auth";
 import { AuthCard } from "@/app/feature/auth/auth-card";
+import { startGoogleAuthentication } from "@/app/feature/auth/google-auth-action";
 import { getSafeCallbackUrl } from "@/lib/auth-navigation";
 
 export const metadata: Metadata = {
-  title: "Sign in - Navio",
-  description: "Sign in securely to plan trips and interact with Navio.",
+  title: "Log in - Navio",
+  description: "Log in securely with Google to continue to Navio.",
 };
 
 type SignInPageProps = {
@@ -24,7 +24,10 @@ function firstValue(value?: string | string[]): string | undefined {
 
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const params = await searchParams;
-  const callbackUrl = getSafeCallbackUrl(firstValue(params.callbackUrl), "/planner");
+  const callbackUrl = getSafeCallbackUrl(
+    firstValue(params.callbackUrl),
+    "/planner",
+  );
   const session = await auth();
 
   if (session?.user && !session.error) {
@@ -33,27 +36,29 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   async function authenticate() {
     "use server";
-
-    try {
-      await signIn("keycloak", { redirectTo: callbackUrl });
-    } catch (error) {
-      if (error instanceof AuthError) {
-        redirect(`/sign-in?error=AuthenticationFailed&callbackUrl=${encodeURIComponent(callbackUrl)}`);
-      }
-      throw error;
-    }
+    await startGoogleAuthentication(callbackUrl, "/sign-in");
   }
 
-  const hasError = Boolean(firstValue(params.error));
   return (
-    <AuthCard
-      action={authenticate}
-      alternateHref={`/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-      alternateLabel="New to Navio? Create an account"
-      description="Continue to your saved trips, planning tools, and community actions."
-      errorMessage={hasError ? "Sign-in could not be completed. Please try again." : null}
-      submitLabel="Continue with Keycloak"
-      title="Welcome back"
-    />
+    <AuthCard.Root
+      eyebrow="Welcome back"
+      title="Log in to your account"
+      description="Continue to your saved journeys, planning tools, and community activity."
+    >
+      <AuthCard.Error
+        message={
+          firstValue(params.error)
+            ? "Sign-in could not be started. Please try again."
+            : null
+        }
+      />
+      <AuthCard.Action action={authenticate} label="Continue with Google" />
+      <AuthCard.SecurityNote />
+      <AuthCard.Footer
+        prompt="Don’t have an account?"
+        href={`/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+        linkLabel="Sign up"
+      />
+    </AuthCard.Root>
   );
 }
