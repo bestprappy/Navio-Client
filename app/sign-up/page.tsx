@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { AuthError } from "next-auth";
 
-import { auth, signIn } from "@/auth";
+import { auth } from "@/auth";
 import { AuthCard } from "@/app/feature/auth/auth-card";
+import { startGoogleAuthentication } from "@/app/feature/auth/google-auth-action";
 import { getSafeCallbackUrl } from "@/lib/auth-navigation";
 
 export const metadata: Metadata = {
   title: "Create account - Navio",
-  description: "Create a secure Navio account through Keycloak.",
+  description: "Create your Navio account securely with Google.",
 };
 
 type SignUpPageProps = {
@@ -24,7 +24,10 @@ function firstValue(value?: string | string[]): string | undefined {
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const params = await searchParams;
-  const callbackUrl = getSafeCallbackUrl(firstValue(params.callbackUrl), "/planner");
+  const callbackUrl = getSafeCallbackUrl(
+    firstValue(params.callbackUrl),
+    "/planner",
+  );
   const session = await auth();
 
   if (session?.user && !session.error) {
@@ -33,31 +36,29 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
 
   async function register() {
     "use server";
-
-    try {
-      await signIn(
-        "keycloak",
-        { redirectTo: callbackUrl },
-        { prompt: "create" },
-      );
-    } catch (error) {
-      if (error instanceof AuthError) {
-        redirect(`/sign-up?error=AuthenticationFailed&callbackUrl=${encodeURIComponent(callbackUrl)}`);
-      }
-      throw error;
-    }
+    await startGoogleAuthentication(callbackUrl, "/sign-up");
   }
 
-  const hasError = Boolean(firstValue(params.error));
   return (
-    <AuthCard
-      action={register}
-      alternateHref={`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-      alternateLabel="Already have an account? Sign in"
-      description="Create your account to save plans, join communities, and contribute."
-      errorMessage={hasError ? "Account creation could not be started. Please try again." : null}
-      submitLabel="Create account with Keycloak"
-      title="Start your Navio journey"
-    />
+    <AuthCard.Root
+      eyebrow="Get started"
+      title="Create your account"
+      description="Save EV journeys, build new routes, and take part in the Navio community."
+    >
+      <AuthCard.Error
+        message={
+          firstValue(params.error)
+            ? "Account creation could not be started. Please try again."
+            : null
+        }
+      />
+      <AuthCard.Action action={register} label="Continue with Google" />
+      <AuthCard.SecurityNote />
+      <AuthCard.Footer
+        prompt="Already have an account?"
+        href={`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+        linkLabel="Log in"
+      />
+    </AuthCard.Root>
   );
 }
