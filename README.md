@@ -10,6 +10,12 @@ In production the client runs as a container in the same stack as the gateway, s
 
 The browser does not call domain services, Eureka, Config Server, Keycloak administration endpoints, Ollama, or a hosted model provider directly.
 
+Email/password login and registration still use Keycloak's browser-based
+Authorization Code flow. The Navio auth pages start the appropriate login or
+registration screen, but raw passwords are submitted only to Keycloak and never
+pass through a Next.js route handler or Server Action. Google remains available
+through the same Keycloak-backed Auth.js provider.
+
 Google Places and Routes web-service calls are made only by Mobility & EV. The interactive basemap remains a browser-side Maps JavaScript API integration and uses a separate public key restricted to approved HTTP referrers and the Maps JavaScript API.
 
 | Frontend capability | Public API | Owning component |

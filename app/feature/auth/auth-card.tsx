@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from "react";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Mail, ShieldCheck } from "lucide-react";
 
 import { AuthSubmitButton } from "./auth-submit-button";
 import { Logo } from "@/components/logo";
@@ -14,6 +14,7 @@ type AuthCardRootProps = PropsWithChildren<{
 type AuthCardActionProps = {
   action: () => Promise<void>;
   label: string;
+  method?: "email" | "google";
 };
 
 type AuthCardErrorProps = {
@@ -112,11 +113,36 @@ function AuthCardRoot({
   );
 }
 
-function AuthCardAction({ action, label }: AuthCardActionProps) {
+function AuthCardAction({
+  action,
+  label,
+  method = "google",
+}: AuthCardActionProps) {
   return (
     <form action={action}>
-      <AuthSubmitButton icon={<GoogleMark />} label={label} />
+      <AuthSubmitButton
+        icon={
+          method === "google" ? (
+            <GoogleMark />
+          ) : (
+            <Mail className="size-5 shrink-0" aria-hidden="true" />
+          )
+        }
+        label={label}
+      />
     </form>
+  );
+}
+
+function AuthCardDivider() {
+  return (
+    <div className="flex items-center gap-3" aria-hidden="true">
+      <span className="h-px flex-1 bg-border" />
+      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        or
+      </span>
+      <span className="h-px flex-1 bg-border" />
+    </div>
   );
 }
 
@@ -135,7 +161,7 @@ function AuthCardError({ message }: AuthCardErrorProps) {
   );
 }
 
-function AuthCardSecurityNote() {
+function AuthCardSecurityNote({ mode }: { mode: "sign-in" | "sign-up" }) {
   return (
     <div className="flex items-start gap-3 rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
       <ShieldCheck
@@ -143,7 +169,9 @@ function AuthCardSecurityNote() {
         aria-hidden="true"
       />
       <p className="leading-6">
-        Secure OAuth 2.0 sign-in. Your Google password always stays with Google.
+        {mode === "sign-up"
+          ? "Email passwords must be at least 12 characters and cannot contain your name or email."
+          : "Your password is handled only by Navio Identity and never reaches Navio application services."}
       </p>
     </div>
   );
@@ -165,6 +193,7 @@ function AuthCardFooter({ href, linkLabel, prompt }: AuthCardFooterProps) {
 
 export const AuthCard = {
   Action: AuthCardAction,
+  Divider: AuthCardDivider,
   Error: AuthCardError,
   Footer: AuthCardFooter,
   Root: AuthCardRoot,

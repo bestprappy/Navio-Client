@@ -3,12 +3,15 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AuthCard } from "@/app/feature/auth/auth-card";
-import { startGoogleAuthentication } from "@/app/feature/auth/google-auth-action";
+import {
+  startEmailAuthentication,
+  startGoogleAuthentication,
+} from "@/app/feature/auth/google-auth-action";
 import { getSafeCallbackUrl } from "@/lib/auth-navigation";
 
 export const metadata: Metadata = {
   title: "Create account - Navio",
-  description: "Create your Navio account securely with Google.",
+  description: "Create your Navio account securely with email or Google.",
 };
 
 type SignUpPageProps = {
@@ -34,9 +37,14 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     redirect(callbackUrl);
   }
 
-  async function register() {
+  async function registerWithGoogle() {
     "use server";
     await startGoogleAuthentication(callbackUrl, "/sign-up");
+  }
+
+  async function registerWithEmail() {
+    "use server";
+    await startEmailAuthentication(callbackUrl, "/sign-up");
   }
 
   return (
@@ -52,8 +60,17 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
             : null
         }
       />
-      <AuthCard.Action action={register} label="Continue with Google" />
-      <AuthCard.SecurityNote />
+      <AuthCard.Action
+        action={registerWithEmail}
+        label="Sign up with email & password"
+        method="email"
+      />
+      <AuthCard.Divider />
+      <AuthCard.Action
+        action={registerWithGoogle}
+        label="Continue with Google"
+      />
+      <AuthCard.SecurityNote mode="sign-up" />
       <AuthCard.Footer
         prompt="Already have an account?"
         href={`/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`}

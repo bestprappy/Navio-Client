@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { signIn } from "@/auth";
 import { getSafeCallbackUrl } from "@/lib/auth-navigation";
 
-type GoogleAuthRoute = "/sign-in" | "/sign-up";
+type AuthRoute = "/sign-in" | "/sign-up";
 
 type RedirectSignal = {
   digest: string;
@@ -22,7 +22,7 @@ function isRedirectSignal(error: unknown): error is RedirectSignal {
 
 export async function startGoogleAuthentication(
   callbackUrl: string,
-  errorRoute: GoogleAuthRoute,
+  errorRoute: AuthRoute,
 ) {
   const safeCallbackUrl = getSafeCallbackUrl(callbackUrl, "/planner");
 
@@ -38,6 +38,37 @@ export async function startGoogleAuthentication(
     }
 
     console.error("GoogleAuthAction failed to start OAuth authentication.", {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown authentication error",
+      route: errorRoute,
+    });
+  }
+
+  redirect(
+    `${errorRoute}?error=AuthenticationFailed&callbackUrl=${encodeURIComponent(safeCallbackUrl)}`,
+  );
+}
+
+export async function startEmailAuthentication(
+  callbackUrl: string,
+  errorRoute: AuthRoute,
+) {
+  const safeCallbackUrl = getSafeCallbackUrl(callbackUrl, "/planner");
+
+  try {
+    await signIn(
+      "keycloak",
+      { redirectTo: safeCallbackUrl },
+      errorRoute === "/sign-up" ? { prompt: "create" } : undefined,
+    );
+  } catch (error) {
+    if (isRedirectSignal(error)) {
+      throw error;
+    }
+
+    console.error("KeycloakAuthAction failed to start email authentication.", {
       error:
         error instanceof Error
           ? error.message

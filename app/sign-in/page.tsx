@@ -3,12 +3,15 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AuthCard } from "@/app/feature/auth/auth-card";
-import { startGoogleAuthentication } from "@/app/feature/auth/google-auth-action";
+import {
+  startEmailAuthentication,
+  startGoogleAuthentication,
+} from "@/app/feature/auth/google-auth-action";
 import { getSafeCallbackUrl } from "@/lib/auth-navigation";
 
 export const metadata: Metadata = {
   title: "Log in - Navio",
-  description: "Log in securely with Google to continue to Navio.",
+  description: "Log in securely with email or Google to continue to Navio.",
 };
 
 type SignInPageProps = {
@@ -34,9 +37,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
     redirect(callbackUrl);
   }
 
-  async function authenticate() {
+  async function authenticateWithGoogle() {
     "use server";
     await startGoogleAuthentication(callbackUrl, "/sign-in");
+  }
+
+  async function authenticateWithEmail() {
+    "use server";
+    await startEmailAuthentication(callbackUrl, "/sign-in");
   }
 
   return (
@@ -52,8 +60,17 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
             : null
         }
       />
-      <AuthCard.Action action={authenticate} label="Continue with Google" />
-      <AuthCard.SecurityNote />
+      <AuthCard.Action
+        action={authenticateWithEmail}
+        label="Continue with email & password"
+        method="email"
+      />
+      <AuthCard.Divider />
+      <AuthCard.Action
+        action={authenticateWithGoogle}
+        label="Continue with Google"
+      />
+      <AuthCard.SecurityNote mode="sign-in" />
       <AuthCard.Footer
         prompt="Don’t have an account?"
         href={`/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}`}
