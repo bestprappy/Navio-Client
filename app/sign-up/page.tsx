@@ -62,7 +62,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
       />
       <AuthCard.Action
         action={registerWithEmail}
-        label="Sign up with email & password"
+        label="Sign up with email"
         method="email"
       />
       <AuthCard.Divider />

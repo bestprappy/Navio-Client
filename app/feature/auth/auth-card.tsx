@@ -170,7 +170,7 @@ function AuthCardSecurityNote({ mode }: { mode: "sign-in" | "sign-up" }) {
       />
       <p className="leading-6">
         {mode === "sign-up"
-          ? "Email passwords must be at least 12 characters and cannot contain your name or email."
+          ? "Verify your email first, then create a password with at least 12 characters that does not contain your name or email."
           : "Your password is handled only by Navio Identity and never reaches Navio application services."}
       </p>
     </div>
