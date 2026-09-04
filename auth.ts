@@ -25,18 +25,44 @@ function isKeycloakTokenResponse(value: unknown): value is KeycloakTokenResponse
 
 function getKeycloakEnvironment() {
   const issuer = process.env.AUTH_KEYCLOAK_ISSUER;
+  const internalIssuer = process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? issuer;
   const clientId = process.env.AUTH_KEYCLOAK_ID;
   const clientSecret = process.env.AUTH_KEYCLOAK_SECRET;
 
-  if (!issuer || !clientId || !clientSecret) {
+  if (!issuer || !internalIssuer || !clientId || !clientSecret) {
     throw new Error("Keycloak authentication is not configured.");
   }
 
   return {
     issuer: issuer.replace(/\/$/, ""),
+    internalIssuer: internalIssuer.replace(/\/$/, ""),
     clientId,
     clientSecret,
   };
+}
+
+function createKeycloakProvider() {
+  const issuer = process.env.AUTH_KEYCLOAK_ISSUER?.replace(/\/$/, "");
+  const internalIssuer = process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER?.replace(
+    /\/$/,
+    "",
+  );
+
+  return Keycloak({
+    issuer,
+    authorization: issuer
+      ? {
+          url: `${issuer}/protocol/openid-connect/auth`,
+          params: { scope: "openid email profile" },
+        }
+      : { params: { scope: "openid email profile" } },
+    token: internalIssuer
+      ? `${internalIssuer}/protocol/openid-connect/token`
+      : undefined,
+    userinfo: internalIssuer
+      ? `${internalIssuer}/protocol/openid-connect/userinfo`
+      : undefined,
+  });
 }
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
@@ -45,9 +71,10 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
   }
 
   try {
-    const { issuer, clientId, clientSecret } = getKeycloakEnvironment();
+    const { internalIssuer, clientId, clientSecret } =
+      getKeycloakEnvironment();
     const response = await fetch(
-      `${issuer}/protocol/openid-connect/token`,
+      `${internalIssuer}/protocol/openid-connect/token`,
       {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -89,8 +116,9 @@ async function revokeKeycloakSession(refreshToken?: string) {
   }
 
   try {
-    const { issuer, clientId, clientSecret } = getKeycloakEnvironment();
-    await fetch(`${issuer}/protocol/openid-connect/logout`, {
+    const { internalIssuer, clientId, clientSecret } =
+      getKeycloakEnvironment();
+    await fetch(`${internalIssuer}/protocol/openid-connect/logout`, {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -108,13 +136,7 @@ async function revokeKeycloakSession(refreshToken?: string) {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [
-    Keycloak({
-      authorization: {
-        params: { scope: "openid email profile" },
-      },
-    }),
-  ],
+  providers: [createKeycloakProvider()],
   pages: {
     signIn: "/sign-in",
     error: "/sign-in",

@@ -12,7 +12,8 @@ type AuthCardRootProps = PropsWithChildren<{
 }>;
 
 type AuthCardActionProps = {
-  action: () => Promise<void>;
+  callbackUrl: string;
+  errorRoute: "/sign-in" | "/sign-up";
   label: string;
   method?: "email" | "google";
 };
@@ -114,23 +115,25 @@ function AuthCardRoot({
 }
 
 function AuthCardAction({
-  action,
+  callbackUrl,
+  errorRoute,
   label,
   method = "google",
 }: AuthCardActionProps) {
   return (
-    <form action={action}>
-      <AuthSubmitButton
-        icon={
-          method === "google" ? (
-            <GoogleMark />
-          ) : (
-            <Mail className="size-5 shrink-0" aria-hidden="true" />
-          )
-        }
-        label={label}
-      />
-    </form>
+    <AuthSubmitButton
+      callbackUrl={callbackUrl}
+      errorRoute={errorRoute}
+      icon={
+        method === "google" ? (
+          <GoogleMark />
+        ) : (
+          <Mail className="size-5 shrink-0" aria-hidden="true" />
+        )
+      }
+      label={label}
+      method={method}
+    />
   );
 }
 

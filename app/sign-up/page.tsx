@@ -3,10 +3,6 @@ import { redirect } from "next/navigation";
 
 import { auth } from "@/auth";
 import { AuthCard } from "@/app/feature/auth/auth-card";
-import {
-  startEmailAuthentication,
-  startGoogleAuthentication,
-} from "@/app/feature/auth/google-auth-action";
 import { getSafeCallbackUrl } from "@/lib/auth-navigation";
 
 export const metadata: Metadata = {
@@ -37,16 +33,6 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
     redirect(callbackUrl);
   }
 
-  async function registerWithGoogle() {
-    "use server";
-    await startGoogleAuthentication(callbackUrl, "/sign-up");
-  }
-
-  async function registerWithEmail() {
-    "use server";
-    await startEmailAuthentication(callbackUrl, "/sign-up");
-  }
-
   return (
     <AuthCard.Root
       eyebrow="Get started"
@@ -61,13 +47,15 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
         }
       />
       <AuthCard.Action
-        action={registerWithEmail}
+        callbackUrl={callbackUrl}
+        errorRoute="/sign-up"
         label="Sign up with email"
         method="email"
       />
       <AuthCard.Divider />
       <AuthCard.Action
-        action={registerWithGoogle}
+        callbackUrl={callbackUrl}
+        errorRoute="/sign-up"
         label="Continue with Google"
       />
       <AuthCard.SecurityNote mode="sign-up" />
