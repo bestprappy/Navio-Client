@@ -5,7 +5,9 @@ import Link from "next/link";
 import { CircleAlert, RotateCcw } from "lucide-react";
 
 import { Logo } from "@/components/logo";
+import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button.variants";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 type AuthPageErrorProps = {
@@ -22,8 +24,8 @@ export function AuthPageError({ error, reset }: AuthPageErrorProps) {
   }, [error]);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-background via-secondary/30 to-primary/10 p-4 sm:p-6">
-      <section className="flex w-full max-w-md flex-col items-center rounded-3xl border border-border/70 bg-card p-6 text-center shadow-xl sm:p-8">
+    <main className="flex min-h-dvh items-center justify-center bg-linear-to-br from-background via-secondary/30 to-primary/10 p-4 sm:p-6">
+      <Card className="w-full max-w-md items-center rounded-3xl p-6 text-center shadow-xl ring-border/70 sm:p-8">
         <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
           <Logo className="size-6" />
         </span>
@@ -39,14 +41,10 @@ export function AuthPageError({ error, reset }: AuthPageErrorProps) {
           Navio and try again in a moment.
         </p>
         <div className="mt-8 flex w-full flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            onClick={reset}
-            className={cn(buttonVariants({ size: "lg" }), "flex-1")}
-          >
+          <Button type="button" size="lg" onClick={reset} className="flex-1">
             <RotateCcw className="size-4" aria-hidden="true" />
             Try again
-          </button>
+          </Button>
           <Link
             href="/"
             className={cn(
@@ -57,7 +55,7 @@ export function AuthPageError({ error, reset }: AuthPageErrorProps) {
             Back to Navio
           </Link>
         </div>
-      </section>
+      </Card>
     </main>
   );
 }

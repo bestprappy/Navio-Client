@@ -4,6 +4,9 @@ import { ArrowLeft, Mail, ShieldCheck } from "lucide-react";
 
 import { AuthSubmitButton } from "./auth-submit-button";
 import { Logo } from "@/components/logo";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button.variants";
+import { cn } from "@/lib/utils";
 
 type AuthCardRootProps = PropsWithChildren<{
   description: string;
@@ -16,6 +19,7 @@ type AuthCardActionProps = {
   errorRoute: "/sign-in" | "/sign-up";
   label: string;
   method?: "email" | "google";
+  tone?: "primary" | "secondary";
 };
 
 type AuthCardErrorProps = {
@@ -63,7 +67,7 @@ function AuthCardRoot({
   title,
 }: AuthCardRootProps) {
   return (
-    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-gradient-to-br from-background via-secondary/30 to-primary/10 p-4 sm:p-6">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-linear-to-br from-background via-secondary/30 to-primary/10 p-4 sm:p-6">
       <div
         aria-hidden="true"
         className="absolute -left-24 top-16 size-64 rounded-full bg-primary/10 blur-3xl"
@@ -73,43 +77,48 @@ function AuthCardRoot({
         className="absolute -bottom-24 -right-20 size-72 rounded-full bg-accent/10 blur-3xl"
       />
 
-      <section className="relative flex w-full max-w-lg flex-col rounded-3xl border border-border/70 bg-card/95 p-6 shadow-xl backdrop-blur sm:p-8">
-        <Link
-          href="/"
-          className="mb-8 inline-flex w-fit items-center gap-2 rounded-lg text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
-        >
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back to Navio
-        </Link>
+      <Card className="relative w-full max-w-lg gap-0 rounded-3xl py-6 shadow-xl ring-border/70 backdrop-blur sm:py-8">
+        <CardHeader className="px-6 sm:px-8">
+          <Link
+            href="/"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "mb-8 w-fit gap-2 px-2 text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <ArrowLeft className="size-4" aria-hidden="true" />
+            Back to Navio
+          </Link>
 
-        <div className="mb-8 flex items-center gap-3">
-          <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
-            <Logo className="size-6" />
-          </span>
-          <div>
-            <p className="text-lg font-extrabold tracking-tight text-foreground">
-              Navio
-            </p>
-            <p className="text-sm text-muted-foreground">
-              EV journeys, made simple
-            </p>
+          <div className="mb-8 flex items-center gap-3">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
+              <Logo className="size-6" />
+            </span>
+            <div>
+              <p className="text-lg font-extrabold tracking-tight text-foreground">
+                Navio
+              </p>
+              <p className="text-sm text-muted-foreground">
+                EV journeys, made simple
+              </p>
+            </div>
           </div>
-        </div>
 
-        <header className="mb-8">
           <p className="mb-2 text-sm font-bold uppercase tracking-wider text-primary">
             {eyebrow}
           </p>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+          <h1 className="font-heading text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
             {title}
           </h1>
           <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground sm:text-base">
             {description}
           </p>
-        </header>
+        </CardHeader>
 
-        <div className="flex flex-col gap-5">{children}</div>
-      </section>
+        <CardContent className="mt-8 flex flex-col gap-5 px-6 sm:px-8">
+          {children}
+        </CardContent>
+      </Card>
     </main>
   );
 }
@@ -119,6 +128,7 @@ function AuthCardAction({
   errorRoute,
   label,
   method = "google",
+  tone = "secondary",
 }: AuthCardActionProps) {
   return (
     <AuthSubmitButton
@@ -133,6 +143,7 @@ function AuthCardAction({
       }
       label={label}
       method={method}
+      tone={tone}
     />
   );
 }
@@ -173,7 +184,7 @@ function AuthCardSecurityNote({ mode }: { mode: "sign-in" | "sign-up" }) {
       />
       <p className="leading-6">
         {mode === "sign-up"
-          ? "Verify your email first, then create a password with at least 12 characters that does not contain your name or email."
+          ? "Create a password with at least 12 characters that does not contain your name or email address."
           : "Your password is handled only by Navio Identity and never reaches Navio application services."}
       </p>
     </div>
@@ -186,7 +197,10 @@ function AuthCardFooter({ href, linkLabel, prompt }: AuthCardFooterProps) {
       {prompt}{" "}
       <Link
         href={href}
-        className="rounded-md font-bold text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
+        className={cn(
+          buttonVariants({ variant: "link", size: "sm" }),
+          "h-auto px-0 font-bold",
+        )}
       >
         {linkLabel}
       </Link>

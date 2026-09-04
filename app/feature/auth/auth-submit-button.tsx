@@ -5,12 +5,15 @@ import { LoaderCircle } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+
 type AuthSubmitButtonProps = {
   callbackUrl: string;
   errorRoute: "/sign-in" | "/sign-up";
   icon: ReactNode;
   label: string;
   method: "email" | "google";
+  tone: "primary" | "secondary";
 };
 
 export function AuthSubmitButton({
@@ -19,6 +22,7 @@ export function AuthSubmitButton({
   icon,
   label,
   method,
+  tone,
 }: AuthSubmitButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -48,6 +52,7 @@ export function AuthSubmitButton({
         method,
         route: errorRoute,
       });
+      setPending(false);
       router.replace(
         `${errorRoute}?error=AuthenticationFailed&callbackUrl=${encodeURIComponent(callbackUrl)}`,
       );
@@ -55,12 +60,13 @@ export function AuthSubmitButton({
   }
 
   return (
-    <button
+    <Button
       type="button"
+      size="lg"
+      variant={tone === "primary" ? "default" : "outline"}
       onClick={startAuthentication}
       disabled={pending}
-      aria-disabled={pending}
-      className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-border bg-card px-6 text-sm font-bold text-card-foreground shadow-sm transition hover:-translate-y-0.5 hover:bg-muted hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0"
+      className="h-12 w-full gap-3 rounded-xl px-6 text-sm font-semibold disabled:cursor-wait"
     >
       {pending ? (
         <LoaderCircle className="size-5 animate-spin" aria-hidden="true" />
@@ -68,6 +74,6 @@ export function AuthSubmitButton({
         icon
       )}
       {pending ? "Connecting securely…" : label}
-    </button>
+    </Button>
   );
 }

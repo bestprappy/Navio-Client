@@ -51,6 +51,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         errorRoute="/sign-in"
         label="Continue with email & password"
         method="email"
+        tone="primary"
       />
       <AuthCard.Divider />
       <AuthCard.Action

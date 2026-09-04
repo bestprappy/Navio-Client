@@ -51,6 +51,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
         errorRoute="/sign-up"
         label="Sign up with email"
         method="email"
+        tone="primary"
       />
       <AuthCard.Divider />
       <AuthCard.Action
