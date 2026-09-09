@@ -103,6 +103,7 @@ export type PlaceItemEvChargerDetails = {
   priceText: string | null;
   openingHoursSummary: string | null;
   estimatedChargeMinutes: number;
+  targetBatteryPct?: number | null;
   operatorName: string | null;
   selectionSource?: "AUTO" | "MANUAL";
   locked?: boolean;
@@ -170,12 +171,22 @@ export type TripBlockColorId =
 
 export type TripBlockKind = "itinerary" | "list";
 
+export type TripDestination = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  country?: string;
+};
+
 export type TripBlockData = {
   id: string;
   kind: TripBlockKind;
   title: string;
   date: string;
   colorId: TripBlockColorId;
+  /** An explicit destination change; following days inherit it. */
+  destination?: TripDestination | null;
   items: TripBlockItem[];
 };
 

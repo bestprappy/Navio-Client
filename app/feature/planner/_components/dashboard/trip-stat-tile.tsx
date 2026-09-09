@@ -22,13 +22,13 @@ export function TripStatTile({
   return (
     <div
       className={cn(
-        "flex flex-col gap-2 rounded-[var(--card-radius-lg)] border border-border/60 bg-background/60 p-4",
+        "flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-background/60 p-4 [&:nth-child(2)_svg]:text-info [&:nth-child(3)_svg]:text-success [&:nth-child(4)_svg]:text-accent",
         "shadow-2xs transition-shadow duration-200 hover:shadow-sm",
         className,
       )}
     >
       <span className="flex items-center gap-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-        <Icon aria-hidden="true" className="size-3.5" />
+        <Icon aria-hidden="true" className="size-4 shrink-0 text-primary" />
         {label}
       </span>
       {isLoading ? (

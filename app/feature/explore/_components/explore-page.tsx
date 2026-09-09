@@ -178,24 +178,27 @@ export function ExplorePage() {
   );
 
   return (
-    <div className="relative overflow-hidden">
-      <div className="pointer-events-none absolute left-0 top-24 h-56 w-56 rounded-full bg-primary/5 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 top-32 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
-
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-6 pb-16 pt-14">
-        <header className="flex flex-col items-center gap-4 text-center">
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Explore trips in Thailand
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
-            Discover trending routes and recent plans shared by the community.
-          </p>
-          <div className="relative w-full max-w-2xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex min-w-0 flex-1 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
+    <div>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 pb-16 pt-10 sm:px-6 sm:pt-12">
+        <header className="flex flex-col gap-5">
+          <div className="max-w-2xl">
+            <p className="text-xs font-semibold uppercase tracking-normal text-primary">
+              Explore
+            </p>
+            <h1 className="mt-2 text-3xl font-extrabold leading-tight text-foreground sm:text-4xl">
+              Trips worth copying, editing, and discussing.
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground sm:text-base">
+              Find Thailand routes shared by the community, then copy the parts
+              that fit your own EV journey.
+            </p>
+          </div>
+          <div className="relative w-full">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex min-w-0 flex-1 rounded-lg border border-border bg-card px-4 py-3 shadow-sm focus-within:ring-2 focus-within:ring-ring/30">
                 <input
                   type="text"
-                  placeholder="Search a destination"
+                  placeholder="Search destinations, places, or trip styles"
                   aria-label="Search a destination"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
@@ -205,10 +208,10 @@ export function ExplorePage() {
               <button
                 type="button"
                 onClick={() => setIsFilterOpen((prev) => !prev)}
-                className={`flex items-center gap-2 rounded-2xl border border-border px-4 py-3 text-sm font-medium transition hover:bg-muted cursor-pointer ${
+                className={`flex min-h-11 items-center justify-center gap-2 rounded-lg border border-border px-4 text-sm font-medium transition hover:bg-muted cursor-pointer sm:w-auto ${
                   isFilterOpen
                     ? "bg-muted text-foreground"
-                    : "text-muted-foreground"
+                    : "bg-card text-muted-foreground"
                 }`}
                 aria-expanded={isFilterOpen}
                 aria-controls="explore-filter-menu"
@@ -220,12 +223,12 @@ export function ExplorePage() {
             {isFilterOpen ? (
               <div
                 id="explore-filter-menu"
-                className="absolute right-0 top-full z-30 mt-3 w-full rounded-2xl border border-border bg-card p-4 shadow-xl"
+                className="absolute right-0 top-full z-30 mt-3 w-full rounded-lg border border-border bg-card p-4 shadow-xl sm:max-w-2xl"
               >
-                <div className="flex flex-col gap-4">
+                <div className="grid gap-4 sm:grid-cols-3">
                   {FILTER_GROUPS.map((group) => (
                     <div key={group.title} className="space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
                         {group.title}
                       </p>
                       {group.sections.map((section) => (
@@ -268,7 +271,7 @@ export function ExplorePage() {
         {!isFiltering ? (
           <ExploreErrorBoundary fallbackTitle="Trending plans unavailable">
             <section className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-end justify-between gap-4">
                 <h2 className="text-lg font-semibold text-foreground">
                   Trending plans
                 </h2>
@@ -311,7 +314,7 @@ export function ExplorePage() {
                         scrollTrendingPlans(-1);
                       }
                     }}
-                    className="absolute -left-5 top-32 z-30 flex h-10 w-10 -translate-y-1/2 cursor-pointer touch-manipulation items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition hover:bg-muted hover:text-foreground active:-translate-y-[54%] active:scale-[0.98] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
+                    className="absolute left-2 top-32 z-30 flex h-10 w-10 -translate-y-1/2 cursor-pointer touch-manipulation items-center justify-center rounded-full border border-border bg-background/95 text-foreground shadow-sm transition hover:bg-muted hover:text-foreground active:-translate-y-[54%] active:scale-[0.98] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 sm:-left-5"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
@@ -329,7 +332,7 @@ export function ExplorePage() {
                         scrollTrendingPlans(1);
                       }
                     }}
-                    className="absolute -right-5 top-32 z-30 flex h-10 w-10 -translate-y-1/2 cursor-pointer touch-manipulation items-center justify-center rounded-full border border-border bg-background text-foreground shadow-sm transition hover:bg-muted hover:text-foreground active:-translate-y-[54%] active:scale-[0.98] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
+                    className="absolute right-2 top-32 z-30 flex h-10 w-10 -translate-y-1/2 cursor-pointer touch-manipulation items-center justify-center rounded-full border border-border bg-background/95 text-foreground shadow-sm transition hover:bg-muted hover:text-foreground active:-translate-y-[54%] active:scale-[0.98] focus-visible:border-ring focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 sm:-right-5"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -341,7 +344,7 @@ export function ExplorePage() {
 
         <ExploreErrorBoundary fallbackTitle="Recent plans unavailable">
           <section className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
                   {resultsLabel}

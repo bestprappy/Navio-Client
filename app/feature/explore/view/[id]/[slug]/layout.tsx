@@ -33,27 +33,27 @@ export default async function ExplorePlanLayout({
   const plan = getPlanById(id);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background lg:h-screen lg:flex-row">
-      <aside className="flex min-h-0 w-full flex-col border-r border-border bg-card/70 lg:w-1/2">
-        <div className="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-3">
+    <div className="flex min-h-dvh flex-col bg-background lg:h-dvh lg:flex-row lg:overflow-hidden">
+      <aside className="flex min-h-0 min-w-0 w-full flex-col border-r border-border bg-card/70 lg:w-1/2">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border/60 px-4 py-3">
           <Link href="/" className="flex items-center gap-2">
             <div className="flex size-8 items-center justify-center rounded-full bg-primary/10">
               <Logo className="size-4" />
             </div>
             <span className="text-sm font-semibold text-foreground">Navio</span>
           </Link>
-          <nav className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
+          <nav className="order-3 flex w-full items-center justify-between gap-1 overflow-x-auto text-sm text-muted-foreground">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="rounded-full px-3 py-1 transition hover:bg-muted hover:text-foreground"
+                className="rounded-full px-2 py-2 transition hover:bg-muted hover:text-foreground"
               >
                 {link.label}
               </Link>
             ))}
           </nav>
-          <div className="hidden items-center gap-1 md:flex">
+          <div className="flex items-center gap-1">
             <ThemeToggle />
             <button
               type="button"
@@ -81,7 +81,7 @@ export default async function ExplorePlanLayout({
             </Link>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto">{children}</div>
+        <div className="min-h-0 min-w-0 flex-1 lg:overflow-y-auto lg:overscroll-contain">{children}</div>
       </aside>
       <section className="relative h-[45vh] w-full bg-muted/10 lg:h-auto lg:min-w-0 lg:w-1/2">
         <PlanMap plan={plan} />

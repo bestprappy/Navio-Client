@@ -40,7 +40,6 @@ export function getTripBlockColorById(
 }
 
 export function getTripBlockColorByIndex(index: number): TripBlockColorId {
-  const color = tripBlockColorOptions[index % tripBlockColorOptions.length];
-
-  return color?.id ?? defaultTripBlockColorId;
+  const defaultPalette: TripBlockColorId[] = ["teal", "cyan", "blue", "emerald", "amber", "pine", "navy", "slate"];
+  return defaultPalette[index % defaultPalette.length] ?? defaultTripBlockColorId;
 }

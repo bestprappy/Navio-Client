@@ -11,6 +11,7 @@ import {
   extraCommentsByPostIdAtom,
 } from "../_components/community-atoms";
 import { CommunityErrorBoundary } from "../_components/community-error-boundary";
+import { CommunityWorkspace } from "../_components/community-workspace";
 import {
   useCommunityFeed,
   useCommunityGroups,
@@ -143,22 +144,19 @@ export function CommunityDiscussionPage({
 
   return (
     <CommunityErrorBoundary>
-      <div className="min-h-full bg-background">
-        <div className="mx-auto flex w-full max-w-[92rem] flex-col gap-6 p-4 sm:p-6">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-            <div className="flex min-w-0 flex-col gap-5">
+      <CommunityWorkspace>
+        <CommunityWorkspace.Content>
               <CommunityPostDetailCard
                 post={post}
                 group={group}
                 comments={comments}
               />
               <CommunityCommentThread post={post} comments={comments} />
-            </div>
-
+        </CommunityWorkspace.Content>
+        <CommunityWorkspace.Aside>
             <CommunityGroupSidebar group={group} profile={profile} />
-          </div>
-        </div>
-      </div>
+        </CommunityWorkspace.Aside>
+      </CommunityWorkspace>
     </CommunityErrorBoundary>
   );
 }

@@ -6,7 +6,6 @@ import {
   ArrowRight,
   CalendarRange,
   CheckSquare,
-  MapPin,
   Sparkles,
   Zap,
 } from "lucide-react";
@@ -22,10 +21,13 @@ import {
   formatCountdown,
   formatTripDateRange,
   getTripDayCount,
-  getTripLocationLabel,
   getTripStatus,
 } from "./trip-dashboard.utils";
 import { useTripPlanStats } from "./use-trip-plan-stats";
+import { TripNameEditor } from "../../planId/_components/overview/trip-name-editor";
+import { TripScenery } from "./scenery";
+import { TripDestinationLabel } from "./trip-destination-label";
+import { getTripCountry } from "../trip-destinations";
 
 type TripHeroCardProps = {
   trip: TripResponse;
@@ -37,8 +39,8 @@ export function TripHeroCard({ trip, className }: TripHeroCardProps) {
   const dateRange = useMemo(() => formatTripDateRange(trip), [trip]);
   const dayCount = useMemo(() => getTripDayCount(trip), [trip]);
   const href = useMemo(() => buildTripHref(trip), [trip]);
-  const location = useMemo(() => getTripLocationLabel(trip), [trip]);
   const { data: stats, isPending } = useTripPlanStats(trip.id);
+  const destinations = [...new Set([trip.destinationName, ...(stats?.destinations ?? [])])];
 
   const checklistLabel =
     stats && stats.checklistTotalCount > 0
@@ -48,23 +50,15 @@ export function TripHeroCard({ trip, className }: TripHeroCardProps) {
   return (
     <article
       className={cn(
-        "relative overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card shadow-lg",
+        "@container/tripcard relative overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card shadow-sm",
         className,
       )}
-      aria-labelledby={`trip-hero-title-${trip.id}`}
+      aria-label="Featured trip"
     >
-      {/* Top light source: brand wash behind the header block */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-56 bg-linear-to-b from-primary/25 via-primary/8 to-transparent"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-foreground/20 to-transparent"
-      />
-
-      <div className="relative flex flex-col gap-6 p-6 sm:p-8">
-        <header className="flex flex-col gap-3">
+      <div className="relative flex flex-col">
+        <header className="relative isolate flex min-h-60 flex-col justify-center gap-4 overflow-hidden border-b border-border p-5 sm:p-7">
+          <TripScenery destinations={[...destinations, getTripCountry(trip)]} />
+          <div className="relative z-10 flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <TripStatusBadge status={status} />
             <span className="text-xs font-medium text-muted-foreground">
@@ -72,20 +66,11 @@ export function TripHeroCard({ trip, className }: TripHeroCardProps) {
             </span>
           </div>
 
-          <h2
-            id={`trip-hero-title-${trip.id}`}
-            className="text-2xl leading-tight font-extrabold text-foreground sm:text-3xl"
-          >
-            {trip.displayName}
-          </h2>
-
-          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <MapPin aria-hidden="true" className="size-4 shrink-0" />
-            <span className="truncate">{location || "Destination pending"}</span>
-          </p>
+          <TripNameEditor planId={trip.id} trip={trip} destinationName={trip.destinationName} heading="h2" />
+          <TripDestinationLabel destinations={destinations} />
+          </div>
         </header>
-
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 p-5 @xs/tripcard:grid-cols-2 sm:p-7">
           <TripStatTile
             icon={CalendarRange}
             label="Dates"
@@ -98,7 +83,7 @@ export function TripHeroCard({ trip, className }: TripHeroCardProps) {
             value={String(stats?.placeCount ?? 0)}
             hint={
               stats && stats.blockCount > 0
-                ? `${stats.blockCount} planned block${stats.blockCount === 1 ? "" : "s"}`
+                ? `${stats.blockCount} itinerary day${stats.blockCount === 1 ? "" : "s"}`
                 : "Nothing added yet"
             }
             isLoading={isPending}
@@ -119,7 +104,7 @@ export function TripHeroCard({ trip, className }: TripHeroCardProps) {
           />
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-border bg-muted/30 p-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
           <p className="text-xs text-muted-foreground">
             Last updated {formatUpdatedAt(trip.updatedAt)}
           </p>

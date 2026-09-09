@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAtomValue } from "jotai";
 
@@ -17,6 +17,8 @@ import type {
   RouteProfile,
 } from "./trip-route.types";
 
+const subscribeToHydration = () => () => {};
+
 export const DEFAULT_ROUTE_PROFILE: RouteProfile = "driving-traffic";
 
 export function useTripRoutes(profile: RouteProfile = DEFAULT_ROUTE_PROFILE) {
@@ -30,6 +32,7 @@ export function useTripRoutesForGroups(
   groups: RoutePointGroup[],
   profile: RouteProfile = DEFAULT_ROUTE_PROFILE,
 ) {
+  const hydrated = useSyncExternalStore(subscribeToHydration, () => true, () => false);
   const signature = useMemo(() => getTripRouteSignature(groups), [groups]);
   const hasRouteSegments = groups.length > 0;
 
@@ -40,7 +43,7 @@ export function useTripRoutesForGroups(
         profile,
         groups,
       }),
-    enabled: hasRouteSegments,
+    enabled: hasRouteSegments && hydrated,
     staleTime: 5 * 60_000,
   });
 }

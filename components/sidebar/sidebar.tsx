@@ -1,7 +1,8 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { format, isValid, parseISO } from "date-fns";
@@ -27,6 +28,7 @@ import { getTripBlockColorById } from "@/app/feature/planner/planId/_components/
 import {
   activeBlockIdAtom,
   tripBlocksAtom,
+  openBlockIdsAtom,
 } from "@/app/feature/planner/planId/_components/overview/trip-builder.atoms";
 import { cn } from "@/lib/utils";
 
@@ -82,6 +84,8 @@ function PlannerBlockSidebarGroup({
   onSelectBlock,
   title,
 }: PlannerBlockSidebarGroupProps) {
+  const [showAll, setShowAll] = useState(false);
+  const visibleBlocks = showAll ? blocks : blocks.filter((block, index) => index < 5 || block.id === activeBlockId);
   if (!blocks.length) {
     return null;
   }
@@ -108,7 +112,8 @@ function PlannerBlockSidebarGroup({
         </p>
       )}
 
-      {blocks.map((block, index) => {
+      {visibleBlocks.map((block) => {
+        const index = blocks.findIndex((item) => item.id === block.id);
         const blockColor = getTripBlockColorById(block.colorId);
         const primaryLabel = getPrimaryLabel(block, index);
         const secondaryLabel = getSecondaryLabel?.(block, index) ?? null;
@@ -163,6 +168,7 @@ function PlannerBlockSidebarGroup({
           </button>
         );
       })}
+      {blocks.length > 5 && <button type="button" aria-expanded={showAll} className="min-h-10 rounded-lg px-2 text-xs font-medium text-primary hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={() => setShowAll(!showAll)}>{showAll ? "Show less" : `Show all ${blocks.length}`}</button>}
     </div>
   );
 }
@@ -176,6 +182,8 @@ export default function SidebarWrapper() {
   const activeBlockId = useAtomValue(activeBlockIdAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
   const pathName = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const setOpenBlocks = useSetAtom(openBlockIdsAtom);
   const isPlannerDetail = isPlannerDetailPath(pathName);
 
   useEffect(() => {
@@ -199,46 +207,34 @@ export default function SidebarWrapper() {
 
   function handleSelectBlock(blockId: string) {
     setActiveBlockId(blockId);
-    scrollToTripBlock(blockId);
+    setOpenBlocks((ids) => ids.includes(blockId) ? ids : [...ids, blockId]);
+    setMobileOpen(false);
+    requestAnimationFrame(() => scrollToTripBlock(blockId));
   }
 
   return (
+    <>
+    <header className="z-40 flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4 md:hidden">
+      <Link href="/" aria-label="Navio home" className="flex items-center gap-2 font-semibold"><Logo className="size-6" />Navio</Link>
+      <div className="flex items-center gap-2"><ThemeToggle /><button type="button" aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen} className="flex size-10 items-center justify-center rounded-lg hover:bg-muted" onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? <PanelLeftClose className="size-5" /> : <PanelLeftOpen className="size-5" />}</button></div>
+    </header>
     <aside
-      className={`sticky top-0 z-30 hidden h-screen shrink-0 overflow-y-auto scrollbar-hide border-r border-border bg-card shadow-sm transition-all duration-200 ease-in-out md:flex md:flex-col ${
-        collapsed ? "w-16 px-2 py-4" : "w-52 px-3 py-4"
+      className={`absolute bottom-0 left-0 top-14 z-30 shrink-0 flex-col overflow-hidden border-r border-border bg-card shadow-sm md:static md:flex md:h-full ${mobileOpen ? "flex" : "hidden"} ${
+        collapsed ? "w-24 px-2 py-3" : "w-56 px-3 py-3"
       }`}
     >
-      {/* Header: logo + collapse toggle */}
-      <div
-        className={`flex items-center py-2 ${collapsed ? "justify-center px-0" : "gap-3 px-3"}`}
-      >
-        {!collapsed && (
-          <>
-            <Logo className="size-8 shrink-0" />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-extrabold text-foreground">Navio</p>
-              <p className="text-xs text-muted-foreground">EV trip planner</p>
-            </div>
-          </>
-        )}
-
-        <button
-          onClick={() => setCollapsed((prev) => !prev)}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
-        >
-          {collapsed ? (
-            <PanelLeftOpen className="size-4" />
-          ) : (
-            <PanelLeftClose className="size-4" />
-          )}
-        </button>
+      <div className="flex shrink-0 items-center justify-between gap-1 border-b border-border/50 pb-3">
+        <Link href="/" aria-label="Navio home" className="flex min-w-0 items-center gap-2 rounded-lg p-1 focus-visible:ring-2 focus-visible:ring-ring">
+          <Logo className="size-7 shrink-0" />
+          {!collapsed && <span className="min-w-0"><span className="block text-sm font-bold">Navio</span><span className="block text-xs text-muted-foreground">EV trip planner</span></span>}
+        </Link>
+        <button type="button" onClick={() => setCollapsed((previous) => !previous)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">{collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}</button>
       </div>
 
       {/* Nav */}
       <nav
         aria-label="Primary navigation"
-        className="mt-6 flex flex-1 flex-col gap-6"
+        className="mt-3 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain"
       >
         <SidebarMenu title="Travel" collapsed={collapsed}>
           <SidebarItem
@@ -322,7 +318,7 @@ export default function SidebarWrapper() {
             <ThemeToggle showLabel className="w-full justify-start px-3" />
             <div className="rounded-md border border-border bg-background p-3">
               <p className="text-xs font-semibold text-foreground">
-                Demo workspace
+                Your trip workspace
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Plan routes, dates, and map stops from one place.
@@ -332,5 +328,6 @@ export default function SidebarWrapper() {
         )}
       </div>
     </aside>
+    </>
   );
 }

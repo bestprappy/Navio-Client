@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   ArrowBigDownDash,
@@ -134,8 +135,8 @@ export function CommunityPostCard({
       tabIndex={0}
       aria-current={selected ? "true" : undefined}
       className={cn(
-        "mb-3 cursor-pointer rounded-lg bg-background px-4 py-3 transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:px-5",
-        selected && "bg-muted/40",
+        "mb-3 cursor-pointer rounded-lg border border-transparent bg-background px-4 py-3 transition-colors hover:border-border/70 hover:bg-muted/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 sm:px-5",
+        selected && "border-border bg-muted/35",
       )}
       onClick={openPost}
       onKeyDown={(e) => {
@@ -146,11 +147,11 @@ export function CommunityPostCard({
       }}
     >
       {/* Meta row */}
-      <div className="mb-2 flex items-center gap-2">
+      <div className="mb-2 flex min-w-0 items-center gap-2">
         {showGroupMeta && group ? (
           <Link
             href={groupHref}
-            className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+            className="flex min-w-0 items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
           >
@@ -160,7 +161,7 @@ export function CommunityPostCard({
                 {metaInitials}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs font-semibold text-foreground">
+            <span className="truncate text-xs font-semibold text-foreground">
               {metaName}
             </span>
           </Link>
@@ -172,7 +173,7 @@ export function CommunityPostCard({
                 {metaInitials}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs font-semibold text-foreground">
+            <span className="truncate text-xs font-semibold text-foreground">
               {metaName}
             </span>
           </div>
@@ -205,7 +206,7 @@ export function CommunityPostCard({
       </div>
 
       {/* Title */}
-      <h2 className="mb-2 text-2xl font-semibold leading-snug text-foreground sm:text-[15px]">
+      <h2 className="mb-2 text-base font-semibold leading-snug text-foreground sm:text-lg">
         {post.title}
       </h2>
 
@@ -223,18 +224,20 @@ export function CommunityPostCard({
 
       {/* Image */}
       {post.imageUrl ? (
-        <div className="relative mb-3 h-[280px] overflow-hidden rounded-lg sm:h-[320px]">
-          {/* Blurred background fill */}
-          <img
+        <div className="relative mb-3 h-[220px] overflow-hidden rounded-lg border border-border/60 bg-muted sm:h-[320px]">
+          <Image
             src={post.imageUrl}
             alt=""
             aria-hidden="true"
+            fill
+            sizes="(max-width: 768px) 100vw, 720px"
             className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl brightness-75"
           />
-          {/* Foreground: contained, centered */}
-          <img
+          <Image
             src={post.imageUrl}
             alt={post.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 720px"
             className="relative z-10 mx-auto h-full w-full object-contain"
           />
         </div>
@@ -246,9 +249,7 @@ export function CommunityPostCard({
         </div>
       ) : null}
 
-      {/* Action bar */}
       <div className="flex flex-wrap items-center gap-1">
-        {/* Vote pill */}
         <div
           className="flex items-center overflow-hidden rounded-full bg-muted"
           onClick={(e) => e.stopPropagation()}
@@ -303,7 +304,6 @@ export function CommunityPostCard({
           </button>
         </div>
 
-        {/* Comments */}
         <button
           type="button"
           onClick={(e) => {
@@ -316,7 +316,6 @@ export function CommunityPostCard({
           {formatCount(commentTotal)} discussions
         </button>
 
-        {/* Share */}
         <button
           type="button"
           onClick={(e) => e.stopPropagation()}

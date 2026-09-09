@@ -22,8 +22,8 @@ export const ExploreCard = React.forwardRef<HTMLDivElement, ExploreCardProps>(
       <div
         ref={ref}
         className={cn(
-          " group relative w-30 h-70 p-3 shrink-0 snap-start overflow-hidden rounded-xl border border-border shadow-md",
-          "transition-all duration-300 ease-in-out hover:shadow-2xl ",
+          "group relative w-full h-56 shrink-0 snap-start overflow-hidden rounded-xl border border-border shadow-md",
+          "transition-shadow duration-200 hover:shadow-lg ",
           className,
         )}
         {...props}
@@ -35,7 +35,7 @@ export const ExploreCard = React.forwardRef<HTMLDivElement, ExploreCardProps>(
             alt={title}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
           />
         ) : (
           <div className="absolute inset-0" style={{ background: gradient }} />
@@ -46,11 +46,11 @@ export const ExploreCard = React.forwardRef<HTMLDivElement, ExploreCardProps>(
 
         {/* Content */}
         <div className="relative flex h-full flex-col justify-end p-4 text-white">
-          <div className="transition-transform duration-500 ease-in-out group-hover:-translate-y-8">
+          <div className="transition-transform duration-500 ease-in-out group-hover:-translate-y-1">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-1">
               {source}
             </p>
-            <h3 className="text-sm font-bold leading-snug">{title}</h3>
+            <h3 className="text-base font-semibold leading-snug">{title}</h3>
             <p className="mt-1 text-xs text-white/70">{subtitle}</p>
           </div>
         </div>

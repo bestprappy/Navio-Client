@@ -4,6 +4,13 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Slim, quiet scrollbars retain a visible thumb for mouse and keyboard users. */
+* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+*::-webkit-scrollbar { width: 5px; height: 5px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--border); border-radius: 1rem; }
+*::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -62,7 +69,7 @@
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
   --font-serif: Lora, serif;
-  --radius: 1.4rem;
+  --radius: 1rem;
 
   --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
   --tracking-tight: calc(var(--tracking-normal) - 0.025em);
@@ -93,29 +100,29 @@
 
 :root {
   /* TColors.light & textPrimary */
-  --background: oklch(0.98 0.013 273.5);
-  --foreground: oklch(0.358 0.041 273.6);
+  --background: oklch(0.978 0.004 250);
+  --foreground: oklch(0.28 0.018 255);
 
   /* TColors.white */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.358 0.041 273.6);
+  --card-foreground: oklch(0.28 0.018 255);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.358 0.041 273.6);
+  --popover-foreground: oklch(0.28 0.018 255);
 
   /* TColors.primary — green */
-  --primary: oklch(66.866% 0.09376 216.652);
+  --primary: oklch(0.49 0.085 205);
   --primary-foreground: oklch(1 0 0);
 
   /* TColors.secondary #D4EAE6 (Mint) */
-  --secondary: oklch(0.916 0.024 191.8);
-  --secondary-foreground: oklch(42.767% 0.08327 256.108);
+  --secondary: oklch(0.94 0.023 195);
+  --secondary-foreground: oklch(0.36 0.05 205);
 
   /* TColors.lightContainer & textSecondary */
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(50.055% 0.11096 291.59);
+  --muted: oklch(0.955 0.005 250);
+  --muted-foreground: oklch(0.47 0.018 255);
 
   /* TColors.accent #30867D (Teal) */
-  --accent: oklch(37.578% 0.12505 293.205);
+  --accent: oklch(0.46 0.055 80);
   --accent-foreground: oklch(1 0 0);
 
   /* TColors.error #D32F2F */
@@ -123,18 +130,18 @@
   --destructive-foreground: oklch(1 0 0);
 
   /* TColors.borderPrimary #D9D9D9 & borderSecondary #E6E6E6 */
-  --border: oklch(0.89 0.03519 267.622);
-  --input: oklch(0.923 0.03519 267.622);
+  --border: oklch(0.81 0.016 230);
+  --input: oklch(0.69 0.025 230);
 
   /* Focus ring uses TColors.primary */
-  --ring: oklch(66.866% 0.09376 216.652);
+  --ring: oklch(0.49 0.085 205);
 
   /* TColors.success #388E3C */
   --success: oklch(0.548 0.124 141.6);
   --success-foreground: oklch(1 0 0);
 
   /* TColors.warning #F57C00 */
-  --warning: oklch(0.654 0.174 48.6);
+  --warning: oklch(0.49 0.105 65);
   --warning-foreground: oklch(1 0 0);
 
   /* TColors.info #1976D2 */
@@ -143,22 +150,22 @@
 
   /* Charts mapped to TColors semantic palette */
   --chart-1: oklch(0.548 0.124 141.6); /* TColors.success */
-  --chart-2: oklch(66.866% 0.09376 216.652); /* TColors.primary */
+  --chart-2: oklch(0.49 0.085 205); /* TColors.primary */
   --chart-3: oklch(0.654 0.174 48.6); /* TColors.warning */
   --chart-4: oklch(0.514 0.141 261.2); /* TColors.info */
-  --chart-5: oklch(37.578% 0.12505 293.205); /* TColors.accent */
+  --chart-5: oklch(0.48 0.13 285); /* TColors.accent */
 
-  --radius: 1.4rem;
+  --radius: 1rem;
 
   /* TColors.light #EDF0FC sidebar surface */
-  --sidebar: oklch(0.957 0.013 273.5);
-  --sidebar-foreground: oklch(0.358 0.041 273.6);
-  --sidebar-primary: oklch(66.866% 0.09376 216.652);
+  --sidebar: oklch(0.965 0.004 250);
+  --sidebar-foreground: oklch(0.28 0.018 255);
+  --sidebar-primary: oklch(0.49 0.085 205);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.916 0.024 191.8);
-  --sidebar-accent-foreground: oklch(0.358 0.041 273.6);
+  --sidebar-accent: oklch(0.94 0.023 195);
+  --sidebar-accent-foreground: oklch(0.28 0.018 255);
   --sidebar-border: oklch(0.884 0 0);
-  --sidebar-ring: oklch(66.866% 0.09376 216.652);
+  --sidebar-ring: oklch(0.49 0.085 205);
 
   --font-sans: Plus Jakarta Sans, sans-serif;
   --font-serif: Lora, serif;
@@ -170,7 +177,7 @@
   --shadow-spread: 0px;
   --shadow-offset-x: 0px;
   --shadow-offset-y: 2px;
-  --letter-spacing: -0.025em;
+  --letter-spacing: 0;
   --spacing: 0.27rem;
 
   --shadow-2xs: 0px 2px 3px 0px hsl(0 0% 0% / 0.08);
@@ -186,76 +193,76 @@
   --shadow-xl:
     0px 2px 3px 0px hsl(0 0% 0% / 0.16), 0px 8px 10px -1px hsl(0 0% 0% / 0.16);
   --shadow-2xl: 0px 2px 3px 0px hsl(0 0% 0% / 0.4);
-  --tracking-normal: -0.025em;
+  --tracking-normal: 0;
 }
 
 .dark {
   /* TColors.dark #121725 */
-  --background: oklch(0.169 0.024 273.4);
-  --foreground: oklch(0.957 0.013 273.5);
+  --background: oklch(0.21 0.021 230);
+  --foreground: oklch(0.965 0.004 250);
 
   /* Elevated surface above TColors.dark */
-  --card: oklch(0.22 0.024 273.4);
+  --card: oklch(0.28 0.025 230);
   --card-foreground: oklch(1 0 0);
-  --popover: oklch(0.22 0.024 273.4);
+  --popover: oklch(0.31 0.025 230);
   --popover-foreground: oklch(1 0 0);
 
   /* TColors.primary — green */
-  --primary: oklch(63.698% 0.09451 221.701);
-  --primary-foreground: oklch(0.169 0.024 273.4);
+  --primary: oklch(0.77 0.095 190);
+  --primary-foreground: oklch(0.185 0.012 255);
 
   /* Swapped for dark legibility — TColors.accent as secondary */
-  --secondary: oklch(38.494% 0.07039 275.25);
+  --secondary: oklch(0.305 0.032 195);
   --secondary-foreground: oklch(1 0 0);
 
   /* TColors.secondary mint as accent surface */
-  --accent: oklch(59.318% 0.17754 276.652);
-  --accent-foreground: oklch(0.169 0.024 273.4);
+  --accent: oklch(0.79 0.065 80);
+  --accent-foreground: oklch(0.185 0.012 255);
 
   /* TColors.darkContainer opacity simulation */
-  --muted: oklch(0.25 0.024 273.4);
-  --muted-foreground: oklch(0.7 0.02 273.8);
+  --muted: oklch(0.335 0.024 230);
+  --muted-foreground: oklch(0.745 0.015 250);
 
   /* TColors.buttonPrimary #FF4B4B (bright red for dark) */
   --destructive: oklch(0.638 0.208 25.1);
   --destructive-foreground: oklch(1 0 0);
 
   /* TColors.textPrimary as border for dark mode */
-  --border: oklch(0.358 0.041 273.6);
-  --input: oklch(0.358 0.041 273.6);
+  --border: oklch(0.42 0.022 235);
+  --input: oklch(0.54 0.025 235);
 
-  --ring: oklch(63.698% 0.09451 221.701);
+  --ring: oklch(0.77 0.095 190);
 
   /* TColors.success brightened for dark visibility */
-  --success: oklch(0.6 0.14 141.6);
-  --success-foreground: oklch(0.169 0.024 273.4);
+  --success: oklch(0.76 0.09 145);
+  --success-foreground: oklch(0.185 0.012 255);
 
   /* TColors.warning brightened for dark visibility */
-  --warning: oklch(0.7 0.18 48.6);
-  --warning-foreground: oklch(0.169 0.024 273.4);
+  --warning: oklch(0.79 0.105 75);
+  --warning-foreground: oklch(0.185 0.012 255);
 
   /* TColors.info brightened for dark visibility */
-  --info: oklch(0.6 0.15 261.2);
-  --info-foreground: oklch(0.169 0.024 273.4);
+  --info: oklch(0.76 0.09 235);
+  --info-foreground: oklch(0.185 0.012 255);
 
   /* Charts brightened for dark backgrounds */
   --chart-1: oklch(0.8 0.182 151.7); /* TColors.success */
-  --chart-2: oklch(63.698% 0.09451 221.701); /* TColors.primary */
+  --chart-2: oklch(0.77 0.095 190); /* TColors.primary */
   --chart-3: oklch(0.808 0.104 19.6); /* TColors.warning */
   --chart-4: oklch(0.669 0.157 260.1); /* TColors.info */
   --chart-5: oklch(0.706 0 0); /* TColors.darkGrey */
 
   /* Darkest nav layer — below TColors.dark */
-  --sidebar: oklch(0.169 0.024 273.4);
-  --sidebar-foreground: oklch(0.957 0.013 273.5);
+  --sidebar: oklch(0.185 0.012 255);
+  --sidebar-foreground: oklch(0.965 0.004 250);
   --sidebar-primary: oklch(0.68 0.18 145);
-  --sidebar-primary-foreground: oklch(0.169 0.024 273.4);
-  --sidebar-accent: oklch(0.25 0.024 273.4);
-  --sidebar-accent-foreground: oklch(0.957 0.013 273.5);
-  --sidebar-border: oklch(0.358 0.041 273.6);
+  --sidebar-primary-foreground: oklch(0.185 0.012 255);
+  --sidebar-accent: oklch(0.285 0.015 255);
+  --sidebar-accent-foreground: oklch(0.965 0.004 250);
+  --sidebar-border: oklch(0.42 0.022 235);
   --sidebar-ring: oklch(0.68 0.18 145);
 
-  --radius: 1.4rem;
+  --radius: 1rem;
   --font-sans: Plus Jakarta Sans, sans-serif;
   --font-serif: Lora, serif;
   --font-mono: IBM Plex Mono, monospace;
@@ -266,7 +273,7 @@
   --shadow-spread: 0px;
   --shadow-offset-x: 0px;
   --shadow-offset-y: 2px;
-  --letter-spacing: -0.025em;
+  --letter-spacing: 0;
   --spacing: 0.27rem;
 
   --shadow-2xs: 0px 2px 3px 0px hsl(0 0% 0% / 0.08);

@@ -35,9 +35,9 @@ type CommunityFeedProps = {
 };
 
 const SORT_OPTIONS: { value: CommunityFeedSort; label: string }[] = [
-  { value: "best", label: "Best" },
-  { value: "new", label: "New" },
-  { value: "top", label: "Top" },
+  { value: "best", label: "For you" },
+  { value: "new", label: "Latest" },
+  { value: "top", label: "Top rated" },
 ];
 
 export function CommunityFeed({
@@ -54,22 +54,22 @@ export function CommunityFeed({
 
   return (
     <section className="flex min-w-0 flex-col gap-4" aria-label="Community feed">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-extrabold tracking-tight text-foreground">
+            <h1 className="text-2xl font-extrabold leading-tight text-foreground">
               Trip discussions
             </h1>
             {searchQuery ? (
               <Badge variant="secondary">Search: {searchQuery}</Badge>
             ) : null}
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
             Ask, compare, and improve trip plans from Navio travelers.
           </p>
         </div>
         <div
-          className="inline-flex rounded-lg border border-border bg-card p-1"
+          className="inline-flex rounded-full border border-border bg-card p-1 shadow-xs"
           role="tablist"
           aria-label="Sort community feed"
         >
@@ -95,7 +95,7 @@ export function CommunityFeed({
           <CardHeader>
             <CardTitle>Feed unavailable</CardTitle>
             <CardDescription>
-              The mock community feed could not load. Try refreshing the page.
+              We couldn’t load the discussions. Please refresh the page to try again.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -122,8 +122,7 @@ export function CommunityFeed({
             <div>
               <h2 className="font-semibold text-foreground">No matches yet</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Try searching for restaurant, restaurant Thailand, Bangkok food,
-                or EV charging.
+                Try a place, a topic such as Bangkok food, or EV charging.
               </p>
             </div>
           </CardContent>
@@ -136,7 +135,7 @@ export function CommunityFeed({
             <Sparkles className="size-3.5" aria-hidden="true" />
             {posts.length} discussion{posts.length === 1 ? "" : "s"} found
           </div>
-          <div className="">
+          <div className="rounded-lg border border-border/50 bg-card p-1 shadow-sm">
             {posts.map((post) => {
               const group = getGroupById(post.groupId, groups);
               const trip = post.sharedTripId

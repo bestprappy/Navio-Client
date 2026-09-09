@@ -26,6 +26,7 @@ import {
   selectedCommunityPostIdAtom,
 } from "../_components/community-atoms";
 import { CommunityErrorBoundary } from "../_components/community-error-boundary";
+import { CommunityWorkspace } from "../_components/community-workspace";
 import { CommunityGroupSidebar } from "./_components/community-group-sidebar";
 import { CommunityPostCard } from "../_components/community-post-card";
 import {
@@ -64,9 +65,9 @@ type CommunityGroupPageProps = {
 };
 
 const SORT_OPTIONS: { value: CommunityFeedSort; label: string }[] = [
-  { value: "best", label: "Best" },
-  { value: "new", label: "New" },
-  { value: "top", label: "Top" },
+  { value: "best", label: "For you" },
+  { value: "new", label: "Latest" },
+  { value: "top", label: "Top rated" },
 ];
 
 function getGroupPosts(posts: CommunityPost[], groupId: string) {
@@ -118,7 +119,7 @@ function CommunityGroupHero({
   onToggleMuted: () => void;
 }) {
   return (
-    <section className="overflow-hidden rounded-lg bg-background">
+    <section className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
       <div className="relative h-32 bg-muted sm:h-44">
         <img
           src={bannerUrl}
@@ -129,7 +130,7 @@ function CommunityGroupHero({
       </div>
 
       <div className="px-4 pb-4 sm:px-6 sm:pb-5">
-        <div className="flex flex-row items-center justify-between gap-4 pt-3">
+        <div className="flex flex-wrap items-start justify-between gap-4 pt-3">
           <div className="flex min-w-0 items-center gap-3">
             <Avatar className="-mt-12 size-20 shrink-0 border-4 border-background bg-card shadow-sm sm:-mt-14 sm:size-24">
               <AvatarImage src={group.avatarUrl} alt={group.name} />
@@ -139,7 +140,7 @@ function CommunityGroupHero({
             </Avatar>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+                <h1 className="break-words text-xl font-bold leading-tight tracking-tight text-foreground sm:text-2xl">
                   {group.name}
                 </h1>
                 {group.isOfficial ? (
@@ -153,7 +154,7 @@ function CommunityGroupHero({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
             <Link
               href={`/community/create?groupId=${group.id}`}
               className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -272,7 +273,7 @@ function CommunityGroupPostFeed({
           <CardHeader>
             <CardTitle>Posts unavailable</CardTitle>
             <CardDescription>
-              The mock group feed could not load. Try refreshing the page.
+              We couldn’t load the group’s posts. Please refresh the page to try again.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -302,7 +303,7 @@ function CommunityGroupPostFeed({
             <div>
               <CardTitle>No group posts yet</CardTitle>
               <CardDescription className="mt-1">
-                Start a discussion to make this group feel alive.
+                Ask a question or share a travel tip to start the conversation.
               </CardDescription>
             </div>
           </CardContent>
@@ -406,8 +407,8 @@ export function CommunityGroupPage({ groupName }: CommunityGroupPageProps) {
 
   return (
     <CommunityErrorBoundary>
-      <div className="min-h-full bg-background">
-        <div className="mx-auto flex w-full max-w-[92rem] flex-col gap-6 p-4 sm:p-6">
+      <CommunityWorkspace>
+        <CommunityWorkspace.Content>
           <CommunityGroupHero
             group={group}
             bannerUrl={profile.bannerUrl}
@@ -417,7 +418,6 @@ export function CommunityGroupPage({ groupName }: CommunityGroupPageProps) {
             onToggleMuted={toggleMuted}
           />
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <CommunityGroupPostFeed
               group={group}
               posts={groupPosts}
@@ -427,11 +427,11 @@ export function CommunityGroupPage({ groupName }: CommunityGroupPageProps) {
               isError={feedQuery.isError || groupsQuery.isError}
               onSelectPost={setSelectedPostId}
             />
-
+        </CommunityWorkspace.Content>
+        <CommunityWorkspace.Aside>
             <CommunityGroupSidebar group={group} profile={profile} />
-          </div>
-        </div>
-      </div>
+        </CommunityWorkspace.Aside>
+      </CommunityWorkspace>
     </CommunityErrorBoundary>
   );
 }

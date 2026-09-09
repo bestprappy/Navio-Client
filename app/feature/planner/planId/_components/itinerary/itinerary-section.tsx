@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
+import { useTripMetadata, useUpdateTripMetadata } from "../../../_components/use-trip-metadata";
+import { DayDestinationPicker } from "./day-destination-picker";
+import { resolveDayDestinations } from "./day-destinations";
+import type { TripDestination } from "../constants/types";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon, CalendarPlus } from "lucide-react";
 import { addDays, format, isAfter, parseISO } from "date-fns";
@@ -20,6 +25,9 @@ import {
   addTripBlocksForDatesAtom,
   itineraryBlocksAtom,
   tripDateRangeAtom,
+  tripBlocksAtom,
+  openBlockIdsAtom,
+  toggleBlockOpenAtom,
 } from "../overview/trip-builder.atoms";
 import { TripBlock } from "../block/trip-block";
 import { DayRouteOverview } from "../garage/day-route-overview";
@@ -54,6 +62,26 @@ export function ItinerarySection({
   longitude,
 }: ItinerarySectionProps) {
   const blocks = useAtomValue(itineraryBlocksAtom);
+  const params = useParams<{ planId?: string }>();
+  const metadata = useTripMetadata(params.planId);
+  const updateMetadata = useUpdateTripMetadata(params.planId);
+  const setBlocks = useSetAtom(tripBlocksAtom);
+  const [openIds, setOpenIds] = useAtom(openBlockIdsAtom);
+  const toggleOpen = useSetAtom(toggleBlockOpenAtom);
+  const initialDestination: TripDestination = {
+    id: metadata.data?.destinationId ?? destinationName,
+    name: metadata.data?.destinationName ?? destinationName,
+    lat: metadata.data?.destinationLat ?? latitude,
+    lng: metadata.data?.destinationLng ?? longitude,
+  };
+  const destinations = resolveDayDestinations(blocks, initialDestination);
+  const firstBlockId = [...blocks].sort((a, b) => a.date.localeCompare(b.date))[0]?.id;
+  async function changeDestination(blockId: string, destination: TripDestination | null) {
+    if (blockId === firstBlockId && destination) {
+      await updateMetadata.mutateAsync({ destinationId: destination.id, destinationName: destination.name, destinationLat: destination.lat, destinationLng: destination.lng, destinationCountry: destination.country });
+    }
+    setBlocks((current) => current.map((block) => block.id === blockId ? { ...block, destination } : block));
+  }
   const [tripDateRange, setTripDateRange] = useAtom(tripDateRangeAtom);
   const addBlocksForDates = useSetAtom(addTripBlocksForDatesAtom);
   const [isEditingDates, setIsEditingDates] = useState(false);
@@ -98,14 +126,14 @@ export function ItinerarySection({
     !tripFrom || !tripTo
       ? "Choose a trip date range first"
       : nextBlockDate
-        ? `Add block for ${format(parseISO(nextBlockDate), "MMM d")}`
-        : "Every date in this trip already has a block";
+        ? `Add day for ${format(parseISO(nextBlockDate), "MMM d")}`
+        : "Every date in this trip already has a day";
 
   return (
     <section className="px-4 py-4 ">
       <Accordion defaultValue={["itinerary"]}>
         <AccordionItem value="itinerary" className="border-none">
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <AccordionTrigger
               iconSide="left"
               className="items-center py-0 text-2xl font-bold text-foreground hover:text-primary hover:no-underline"
@@ -113,14 +141,14 @@ export function ItinerarySection({
               Itinerary
             </AccordionTrigger>
 
-            <div className="mr-6 flex items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               {isEditingDates || !tripDateLabel ? (
                 <DateRangePicker
                   value={pickerValue}
                   onChange={handleRangeChange}
                   startPlaceholder="Start date"
                   endPlaceholder="End date"
-                  className="w-full min-w-xs max-w-[25rem]"
+                  className="w-full min-w-0 max-w-[25rem]"
                 />
               ) : (
                 <button
@@ -156,7 +184,7 @@ export function ItinerarySection({
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <CalendarPlus className="size-3.5" aria-hidden="true" />
-                Add block
+                Add day
               </button>
             </div>
           </div>
@@ -172,16 +200,27 @@ export function ItinerarySection({
                 />
               ) : (
                 <>
-                  {blocks.map((block, index) => (
-                    <TripBlock.Root
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <button type="button" className="min-h-10 rounded-lg px-3 text-sm text-primary hover:bg-muted" onClick={() => setOpenIds((ids) => [...new Set([...ids, ...blocks.map((block) => block.id)])])}>Expand all days</button>
+                    <button type="button" className="min-h-10 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted" onClick={() => setOpenIds((ids) => ids.filter((id) => !blocks.some((block) => block.id === id)))}>Collapse all days</button>
+                  </div>
+                  {blocks.map((block, index) => {
+                    const destination = destinations.get(block.id) ?? initialDestination;
+                    const isOpen = openIds.includes(block.id);
+                    return <TripBlock.Root
                       key={block.id}
                       block={block}
-                      className="mb-12"
+                      className="mb-6 rounded-xl border border-border bg-card/35 p-3 @lg/planner:p-4"
                     >
                       <TripBlock.Header>
                         <TripBlock.Title />
+                        <DayDestinationPicker destination={destination} isFirstDay={block.id === firstBlockId} isOverride={!!block.destination} onChange={(next) => changeDestination(block.id, next)} />
+                        <button type="button" aria-expanded={isOpen} aria-controls={`day-content-${block.id}`} className="flex min-h-10 w-full items-center justify-between rounded-lg px-2 text-sm text-primary hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={() => toggleOpen(block.id)}>
+                          <span>{block.items.length} {block.items.length === 1 ? "item" : "items"}</span><span>{isOpen ? "Show less" : "Show more"}</span>
+                        </button>
                       </TripBlock.Header>
-                      <TripBlock.Content>
+                      <div id={`day-content-${block.id}`} hidden={!isOpen}>
+                      {isOpen && <TripBlock.Content>
                         <TripBlock.Items />
                         <DayRouteOverview
                           blockId={block.id}
@@ -190,23 +229,24 @@ export function ItinerarySection({
                         <TripBlock.Actions
                           evSearchAnchor={{
                             id: `destination-${block.id}`,
-                            lat: latitude,
-                            lng: longitude,
+                            lat: destination.lat,
+                            lng: destination.lng,
                           }}
                           placeSearchBias={{
-                            label: destinationName,
-                            lat: latitude,
-                            lng: longitude,
+                            label: destination.name,
+                            lat: destination.lat,
+                            lng: destination.lng,
                           }}
                         />
-                      </TripBlock.Content>
-                    </TripBlock.Root>
-                  ))}
+                      </TripBlock.Content>}
+                      </div>
+                    </TripBlock.Root>;
+                  })}
 
                   {nextBlockDate && (
                     <InlineAddDivider
                       onClick={handleAddBlock}
-                      label={`Add block for ${format(parseISO(nextBlockDate), "MMM d")}`}
+                      label={`Add day for ${format(parseISO(nextBlockDate), "MMM d")}`}
                     />
                   )}
                 </>

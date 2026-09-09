@@ -2,12 +2,13 @@
 
 import { useMemo, useState } from "react";
 import { CheckCircle2, Loader2, Route, Sparkles } from "lucide-react";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import { useMutation } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 
 import {
   applyTripEvOptimization,
+  getPlannerSnapshot,
   isPersistedTripId,
   PlannerApiError,
   previewTripEvOptimization,
@@ -18,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 import type { EvCar } from "../constants/vehicle.types";
-import { applyPlannerServerSnapshotAtom } from "../overview/trip-builder.atoms";
+import { applyPlannerServerSnapshotAtom, tripBlocksAtom } from "../overview/trip-builder.atoms";
 
 type EvRouteOptimizationPanelProps = {
   blockId: string | null;
@@ -69,6 +70,7 @@ export function EvRouteOptimizationPanel({
   const params = useParams<{ planId: string }>();
   const tripId = isPersistedTripId(params.planId) ? params.planId : null;
   const applyServerSnapshot = useSetAtom(applyPlannerServerSnapshotAtom);
+  const blocks = useAtomValue(tripBlocksAtom);
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
   const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
 
@@ -94,12 +96,18 @@ export function EvRouteOptimizationPanel({
     previewState && previewState.key === requestKey ? previewState : null;
 
   const previewMutation = useMutation({
-    mutationFn: (request: EvOptimizationRequestPayload) => {
+    mutationFn: async (request: EvOptimizationRequestPayload) => {
       if (!tripId) {
         throw new PlannerApiError(
           "Save this trip before using EV route optimization.",
           400,
         );
+      }
+      const snapshot = await getPlannerSnapshot(tripId);
+      const needsTargets = blocks.some((block) => block.items.some((item) => item.type === "place" && item.evCharger?.targetBatteryPct != null));
+      const needsDestinations = blocks.some((block) => block.destination);
+      if ((needsTargets && !snapshot.capabilities?.includes("charge-targets")) || (needsDestinations && !snapshot.capabilities?.includes("day-destinations"))) {
+        throw new PlannerApiError("Route optimization needs the server update to preserve your destination changes and charging targets. You can continue editing your itinerary.", 409);
       }
       return previewTripEvOptimization(tripId, request);
     },

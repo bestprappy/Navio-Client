@@ -60,7 +60,7 @@ export function PlanCardHorizontal({
   return (
     <article
       className={cn(
-        "grid gap-6 border-b border-border/40 pb-8",
+        "grid min-w-0 gap-5 border-b border-border/40 pb-8",
         isFeatured
           ? "md:grid-cols-[minmax(280px,420px)_1fr]"
           : "md:grid-cols-[1fr_1fr]",
@@ -68,7 +68,7 @@ export function PlanCardHorizontal({
       )}
       onClick={handleCardClick}
     >
-      <div className="group relative overflow-hidden rounded-lg">
+      <div className="group relative overflow-hidden rounded-lg border border-border/60 bg-card shadow-sm">
         <Link href={href} className="block cursor-pointer">
           <div
             className={cn(
@@ -79,7 +79,7 @@ export function PlanCardHorizontal({
             aria-label={plan.title}
           />
         </Link>
-        <div className="absolute right-3 top-3 z-20 flex items-center gap-2">
+        <div className="absolute inset-x-3 top-3 z-20 flex items-center justify-end gap-2">
           <button
             type="button"
             aria-pressed={isSaved}
@@ -90,7 +90,7 @@ export function PlanCardHorizontal({
               requireAuth(() => setIsSaved((prev) => !prev));
             }}
             className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer",
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer",
               isSaved && "text-success ring-2 ring-success/30",
             )}
           >
@@ -106,7 +106,7 @@ export function PlanCardHorizontal({
               event.stopPropagation();
               onShare(plan.id);
             }}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer"
           >
             <Share2 className="h-4 w-4" />
           </button>
@@ -114,20 +114,20 @@ export function PlanCardHorizontal({
             href={copyHref}
             aria-label={`Copy ${plan.title} to planner`}
             onClick={(event) => event.stopPropagation()}
-            className="rounded-full border border-primary/40 bg-background/85 px-4 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur transition hover:bg-background cursor-pointer"
+            className="hidden rounded-full border border-primary/40 bg-background/85 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur transition hover:bg-background cursor-pointer sm:inline-flex"
           >
-            Copy Plan
+            Copy
           </Link>
         </div>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-4">
         <div className="space-y-3">
           <Link href={href} className="block w-fit cursor-pointer">
             <h3
               className={cn(
                 "font-semibold text-foreground decoration-2 underline-offset-4 transition hover:underline",
-                isFeatured ? "text-xl sm:text-2xl" : "text-2xl",
+                isFeatured ? "text-xl sm:text-2xl" : "text-xl sm:text-2xl",
               )}
             >
               {plan.title}
@@ -135,7 +135,7 @@ export function PlanCardHorizontal({
           </Link>
           <div
             className={cn(
-              "flex flex-wrap items-center gap-4 text-muted-foreground",
+              "flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground",
               isFeatured ? "text-sm sm:text-base" : "text-lg",
             )}
           >
@@ -145,7 +145,7 @@ export function PlanCardHorizontal({
               className="flex items-center gap-1 font-medium text-success/90 underline decoration-success/70 underline-offset-4 hover:text-success cursor-pointer"
             >
               <MapPin className="h-4 w-4" />
-              {plan.location}
+              <span className="max-w-56 truncate">{plan.location}</span>
             </button>
             <Link
               href={reviewHref}
@@ -165,22 +165,23 @@ export function PlanCardHorizontal({
             {plan.description}
           </p>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-4">
           <div className="text-base">
             <UserBadge user={author} />
           </div>
-          <div className="flex items-center gap-4 text-base text-muted-foreground">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <Link
               href={discussionHref}
               aria-label={`Start a discussion about ${plan.title}`}
               onClick={(event) => event.stopPropagation()}
               className={cn(
                 buttonVariants({ variant: "outline", size: "sm" }),
-                "rounded-full border-primary/30 px-3 text-primary hover:text-primary",
+                "rounded-full border-primary/30 px-3 text-primary hover:text-primary max-sm:px-2",
               )}
             >
               <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              Start Discussion
+              <span className="hidden sm:inline">Start Discussion</span>
+              <span className="sm:hidden">Discuss</span>
             </Link>
             <button
               type="button"

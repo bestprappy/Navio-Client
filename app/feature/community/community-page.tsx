@@ -13,6 +13,7 @@ import {
 } from "./_components/community-atoms";
 import { CommunityContextSidebar } from "./feed/community-context-sidebar";
 import { CommunityErrorBoundary } from "./_components/community-error-boundary";
+import { CommunityWorkspace } from "./_components/community-workspace";
 import { CommunityFeed } from "./feed/community-feed";
 import { mockCommunityGroups } from "./_components/data";
 import {
@@ -55,9 +56,8 @@ export function CommunityPage() {
 
   return (
     <CommunityErrorBoundary>
-      <div className="min-h-full bg-background">
-        <div className="mx-auto flex w-full max-w-[92rem] flex-col gap-6 p-4 sm:p-6">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+      <CommunityWorkspace>
+        <CommunityWorkspace.Content>
             <CommunityFeed
               posts={feedQuery.data ?? []}
               groups={groups}
@@ -68,7 +68,8 @@ export function CommunityPage() {
               isError={feedQuery.isError}
               onSelectPost={setSelectedPostId}
             />
-
+        </CommunityWorkspace.Content>
+        <CommunityWorkspace.Aside>
             <CommunityContextSidebar
               groups={groups}
               joinedGroupIds={joinedGroupIds}
@@ -76,9 +77,8 @@ export function CommunityPage() {
               groupsError={groupsQuery.isError}
               onToggleJoin={toggleJoin}
             />
-          </div>
-        </div>
-      </div>
+        </CommunityWorkspace.Aside>
+      </CommunityWorkspace>
     </CommunityErrorBoundary>
   );
 }

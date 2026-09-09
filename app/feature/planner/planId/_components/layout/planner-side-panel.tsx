@@ -111,7 +111,7 @@ function PlannerSidePanelRoot({
         aria-label={ariaLabel}
         aria-labelledby={titleId}
         className={cn(
-          "flex h-full w-[30%] min-w-0 flex-col border-l border-border bg-background text-foreground shadow-2xl outline-none animate-in slide-in-from-right-6 duration-200",
+          "absolute inset-y-0 right-0 z-30 flex h-full w-full max-w-md min-w-0 flex-col border-l border-border bg-background text-foreground shadow-2xl outline-none animate-in slide-in-from-right-6 duration-200",
           className,
         )}
         onKeyDown={(event) => {

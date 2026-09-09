@@ -14,7 +14,7 @@ export function TripHero({ destinationName, coverImageUrl }: TripHeroProps) {
 
   return (
     <div
-      className="relative h-[15rem] w-full overflow-hidden"
+      className="relative h-48 w-full overflow-hidden @lg/planner:h-56"
       role="img"
       aria-label={`Cover photo for trip to ${destinationName}`}
     >
@@ -23,6 +23,7 @@ export function TripHero({ destinationName, coverImageUrl }: TripHeroProps) {
           src={imageUrl}
           alt={`Cover photo for trip to ${destinationName}`}
           fill
+          sizes="(max-width: 1023px) 100vw, 50vw"
           className="object-cover"
           priority
         />

@@ -1,73 +1,118 @@
-import Link from "next/link"
-import { ArrowRight, MapPin, Zap } from "lucide-react"
+import Link from "next/link";
+import {
+  ArrowRight,
+  BatteryCharging,
+  Clock3,
+  Route,
+  Zap,
+} from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button.variants"
-import { cn } from "@/lib/utils"
-import { Footer } from "@/components/footer"
-import { Navbar } from "@/components/navbar"
+import { buttonVariants } from "@/components/ui/button.variants";
+import { cn } from "@/lib/utils";
+import { Footer } from "@/components/footer";
+import { Navbar } from "@/components/navbar";
 
-import { features, stats, steps } from "./_components/data"
-import { FeatureCard } from "./_components/features.card"
-import { HowItWorksStep } from "./_components/how-it-works.step"
+import { features, stats, steps } from "./_components/data";
+import { FeatureCard } from "./_components/features.card";
+import { HowItWorksStep } from "./_components/how-it-works.step";
 
-const CHARGING_STOPS = ["Santa Cruz", "Monterey", "Carmel"] as const
+const CHARGING_STOPS = ["Saraburi", "Pak Chong", "Khao Yai"] as const;
 
 function TripPlannerMockup() {
   return (
-    <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-card shadow-xl ring-1 ring-foreground/8">
-      <div className="flex items-center gap-1.5 border-b border-border/40 bg-muted/60 px-4 py-3">
-        <div className="size-2.5 rounded-full bg-destructive/40" aria-hidden="true" />
-        <div className="size-2.5 rounded-full bg-chart-3/40" aria-hidden="true" />
-        <div className="size-2.5 rounded-full bg-chart-1/40" aria-hidden="true" />
-        <span className="ml-3 font-mono text-xs text-muted-foreground">
-          navio.app — trip planner
-        </span>
+    <div className="w-full max-w-md overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+      <div
+        className="relative min-h-44 bg-cover bg-center"
+        style={{
+          backgroundImage:
+            "linear-gradient(180deg, rgb(0 0 0 / 0.04), rgb(0 0 0 / 0.58)), url(https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80)",
+        }}
+      >
+        <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+          <p className="text-xs font-semibold uppercase tracking-normal text-white/75">
+            Live route preview
+          </p>
+          <h2 className="mt-1 text-2xl font-extrabold leading-tight">
+            Bangkok to Khao Yai
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+            <span className="rounded-full bg-white/18 px-2.5 py-1 backdrop-blur">
+              196 km
+            </span>
+            <span className="rounded-full bg-white/18 px-2.5 py-1 backdrop-blur">
+              3 stops
+            </span>
+            <span className="rounded-full bg-white/18 px-2.5 py-1 backdrop-blur">
+              78% range
+            </span>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-5 p-5">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
-            Route
-          </p>
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-3 rounded-xl bg-muted/70 px-3 py-2.5 ring-1 ring-foreground/5">
-              <MapPin className="size-4 shrink-0 text-primary" aria-hidden="true" />
-              <span className="text-sm font-medium">San Francisco, CA</span>
-            </div>
-            <div className="flex items-center justify-center py-0.5">
-              <div className="h-4 w-px bg-border/60" aria-hidden="true" />
-            </div>
-            <div className="flex items-center gap-3 rounded-xl bg-muted/70 px-3 py-2.5 ring-1 ring-foreground/5">
-              <MapPin className="size-4 shrink-0 text-primary" aria-hidden="true" />
-              <span className="text-sm font-medium">Big Sur, CA</span>
-            </div>
-          </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { label: "Drive", value: "3h 10m", icon: Route },
+            { label: "Charge", value: "42m", icon: BatteryCharging },
+            { label: "Depart", value: "08:30", icon: Clock3 },
+          ].map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <div
+                key={item.label}
+                className="rounded-lg border border-border/70 bg-background px-3 py-2.5"
+              >
+                <Icon className="mb-2 size-4 text-primary" aria-hidden="true" />
+                <p className="text-[11px] font-medium text-muted-foreground">
+                  {item.label}
+                </p>
+                <p className="mt-0.5 text-sm font-bold text-foreground">
+                  {item.value}
+                </p>
+              </div>
+            );
+          })}
         </div>
 
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
-            <Zap className="mr-1 inline size-3 text-primary" aria-hidden="true" />
-            {CHARGING_STOPS.length} Charging Stops Found
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {CHARGING_STOPS.map((stop) => (
-              <span
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+              Charging plan
+            </p>
+            <span className="text-xs font-bold text-success">Ready</span>
+          </div>
+          <div className="space-y-2">
+            {CHARGING_STOPS.map((stop, index) => (
+              <div
                 key={stop}
-                className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary ring-1 ring-primary/15"
+                className="flex items-center gap-3 rounded-lg border border-border/70 bg-background px-3 py-2.5"
               >
-                <Zap className="size-3" aria-hidden="true" />
-                {stop}
-              </span>
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Zap className="size-4" aria-hidden="true" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {stop}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Stop {index + 1} - DC fast charging
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+                  {index === 0 ? "18m" : "12m"}
+                </span>
+              </div>
             ))}
           </div>
         </div>
 
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/70">
-              Battery Range
+            <p className="text-xs font-semibold uppercase tracking-normal text-muted-foreground">
+              Battery range
             </p>
-            <span className="text-xs font-bold text-primary">Sufficient ✓</span>
+            <span className="text-xs font-bold text-primary">78%</span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div
@@ -77,26 +122,13 @@ function TripPlannerMockup() {
               aria-valuenow={78}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-label="Battery: 78% — sufficient for this route"
+              aria-label="Battery range: 78 percent"
             />
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>0 mi</span>
-            <span>280 mi range</span>
-          </div>
         </div>
-
-        <button
-          type="button"
-          tabIndex={-1}
-          aria-hidden="true"
-          className="w-full rounded-xl bg-primary px-4 py-3 text-center text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
-        >
-          Start Navigation →
-        </button>
       </div>
     </div>
-  )
+  );
 }
 
 export default function Home() {
@@ -104,45 +136,45 @@ export default function Home() {
     <>
       <Navbar />
       <main>
-        {/* Hero */}
         <section className="section-padding">
-          <div className="container-max grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
+          <div className="container-max grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(320px,440px)] lg:gap-20">
             <div className="flex flex-col gap-7">
               <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary ring-1 ring-primary/15">
                 <Zap className="size-3" aria-hidden="true" />
-                AI-Powered EV Trip Planning
+                EV trip planning for Thailand
               </span>
-              <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl lg:text-[3.5rem]">
-                Navigate Every{" "}
-                <span className="text-primary">EV Adventure</span>
+              <h1 className="max-w-3xl text-4xl font-extrabold leading-[1.08] sm:text-5xl lg:text-[3.5rem]">
+                Plan routes, charging stops, and trip notes in one place.
               </h1>
               <p className="max-w-lg text-lg leading-relaxed text-muted-foreground">
-                Plan EV trips with AI-optimized routes, smart charging stops, and community-driven
-                insights — all in one platform built for the electric era.
+                Navio helps EV drivers build practical routes, compare charging
+                options, and reuse plans shared by other travelers.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/sign-up"
+                  href="/planner"
                   className={cn(buttonVariants({ size: "lg" }), "gap-2")}
                 >
-                  Start Planning Free
+                  Start planning
                   <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
                 <Link
-                  href="#how-it-works"
+                  href="/explore"
                   className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
                 >
-                  See How It Works
+                  Browse trips
                 </Link>
               </div>
               <div className="border-t border-border/40 pt-6">
-                <div className="flex flex-wrap gap-x-8 gap-y-4">
+                <div className="grid grid-cols-2 gap-4 sm:flex sm:flex-wrap sm:gap-x-8 sm:gap-y-4">
                   {stats.map((stat) => (
-                    <div key={stat.label} className="flex flex-col gap-0.5">
+                    <div key={stat.label} className="min-w-0">
                       <p className="text-2xl font-extrabold leading-none text-foreground">
                         {stat.value}
                       </p>
-                      <p className="text-xs text-muted-foreground">{stat.label}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {stat.label}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -154,16 +186,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Features */}
         <section id="features" className="section-padding bg-muted/40">
           <div className="container-max">
-            <div className="mb-14 text-center">
-              <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Everything You Need for EV Travel
+            <div className="mb-12 max-w-2xl">
+              <h2 className="text-3xl font-extrabold sm:text-4xl">
+                Built around the trip, not just the map.
               </h2>
-              <p className="mx-auto mt-3 max-w-2xl text-lg leading-relaxed text-muted-foreground">
-                From AI route planning to community route sharing — Navio gives EV drivers the tools
-                to explore with confidence.
+              <p className="mt-3 text-lg leading-relaxed text-muted-foreground">
+                Route details, chargers, media, and community context stay
+                connected as the plan changes.
               </p>
             </div>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -179,15 +210,15 @@ export default function Home() {
           </div>
         </section>
 
-        {/* How It Works */}
         <section id="how-it-works" className="section-padding">
           <div className="container-max">
-            <div className="mb-14 text-center">
-              <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Up and Running in Minutes
+            <div className="mb-12 max-w-2xl">
+              <h2 className="text-3xl font-extrabold sm:text-4xl">
+                A clearer way to prepare an EV journey.
               </h2>
-              <p className="mx-auto mt-3 max-w-xl text-lg leading-relaxed text-muted-foreground">
-                Three simple steps stand between you and your next EV adventure.
+              <p className="mt-3 text-lg leading-relaxed text-muted-foreground">
+                Start with a destination, refine the route, then keep the
+                finished plan ready for discussion or reuse.
               </p>
             </div>
             <div className="grid gap-8 sm:grid-cols-3 sm:gap-10 lg:gap-14">
@@ -203,60 +234,55 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CTA */}
         <section id="community" className="section-padding">
           <div className="container-max">
-            <div className="relative overflow-hidden rounded-3xl bg-primary px-8 py-16 text-center sm:px-16">
-              <div
-                className="absolute -left-16 -top-16 size-64 rounded-full bg-primary-foreground/15 blur-3xl"
-                aria-hidden="true"
-              />
-              <div
-                className="absolute -bottom-16 -right-16 size-64 rounded-full bg-primary-foreground/15 blur-3xl"
-                aria-hidden="true"
-              />
-              <div
-                className="absolute inset-x-0 top-0 h-px bg-primary-foreground/20"
-                aria-hidden="true"
-              />
-              <div className="relative z-10 flex flex-col items-center gap-6">
-                <div className="flex size-14 items-center justify-center rounded-2xl bg-primary-foreground/15 ring-1 ring-primary-foreground/25">
-                  <Zap className="size-7 text-primary-foreground" aria-hidden="true" />
+            <div className="grid overflow-hidden rounded-xl border border-border bg-foreground text-background shadow-xl lg:grid-cols-[1fr_0.9fr]">
+              <div className="flex flex-col justify-center gap-6 p-8 sm:p-12">
+                <div className="flex size-12 items-center justify-center rounded-lg bg-background/10 ring-1 ring-background/15">
+                  <Zap className="size-6 text-primary" aria-hidden="true" />
                 </div>
-                <h2 className="max-w-2xl text-3xl font-extrabold tracking-tight text-primary-foreground sm:text-4xl">
-                  Ready to Plan Your Next EV Adventure?
+                <h2 className="max-w-2xl text-3xl font-extrabold sm:text-4xl">
+                  Keep the next route easy to adjust.
                 </h2>
-                <p className="max-w-lg text-lg leading-relaxed text-primary-foreground/85">
-                  Join thousands of EV drivers already using Navio to explore smarter, charge
-                  confidently, and share the journey.
+                <p className="max-w-lg text-lg leading-relaxed text-background/75">
+                  Build a trip, add stops as plans change, and bring community
+                  advice into the same workspace.
                 </p>
-                <div className="flex flex-wrap justify-center gap-3">
+                <div className="flex flex-wrap gap-3">
                   <Link
-                    href="/sign-up"
+                    href="/planner"
                     className={cn(
                       buttonVariants({ size: "lg" }),
-                      "bg-primary-foreground text-primary hover:bg-primary-foreground/90 focus-visible:ring-primary-foreground/50 border-transparent",
+                      "border-transparent bg-background text-foreground hover:bg-background/90 focus-visible:ring-background/50",
                     )}
                   >
-                    Get Started Free
+                    Open planner
                     <ArrowRight className="size-4" aria-hidden="true" />
                   </Link>
                   <Link
-                    href="#features"
+                    href="/explore"
                     className={cn(
                       buttonVariants({ variant: "outline", size: "lg" }),
-                      "border-primary-foreground/35 bg-transparent text-primary-foreground hover:bg-primary-foreground/12 hover:text-primary-foreground focus-visible:ring-primary-foreground/50",
+                      "border-background/25 bg-transparent text-background hover:bg-background/10 hover:text-background focus-visible:ring-background/50",
                     )}
                   >
-                    Explore Features
+                    Browse plans
                   </Link>
                 </div>
               </div>
+              <div
+                className="min-h-64 bg-cover bg-center lg:min-h-full"
+                style={{
+                  backgroundImage:
+                    "url(https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=900&q=80)",
+                }}
+                aria-hidden="true"
+              />
             </div>
           </div>
         </section>
       </main>
       <Footer />
     </>
-  )
+  );
 }

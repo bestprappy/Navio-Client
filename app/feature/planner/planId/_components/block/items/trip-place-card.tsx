@@ -2,13 +2,11 @@
 
 import type { CSSProperties } from "react";
 import {
-  BatteryCharging,
   CheckCircle2,
   Clock,
   LockKeyhole,
   LockKeyholeOpen,
   MapPin,
-  Plug,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -20,7 +18,6 @@ import { cn } from "@/lib/utils";
 
 import { getTripBlockColorById } from "../../constants/trip-block-colors";
 import {
-  type EvConnectorType,
   isEvChargerPlaceItem,
   type PlaceItem,
   type TripBlockColorId,
@@ -32,6 +29,8 @@ import {
   tripCurrencyAtom,
   updatePlaceItemAtom,
 } from "../../overview/trip-builder.atoms";
+import { StationChargingControl } from "../../charger/station-charging-control";
+import { StationSpecifications } from "../../charger/station-specifications";
 import { ChargeSegmentInfo } from "../../routes/charge-segment-info";
 import { PlaceCardVisual } from "./place-card-visual";
 import { PlaceCostPopover } from "./place-cost-popover";
@@ -54,66 +53,6 @@ function formatDisplayTime(time: string): string {
   const period = hour >= 12 ? "PM" : "AM";
   const displayHour = hour % 12 === 0 ? 12 : hour % 12;
   return `${displayHour}:${minuteStr} ${period}`;
-}
-
-function formatConnectorLabel(connector: EvConnectorType | string): string {
-  switch (connector) {
-    case "TYPE2":
-      return "Type 2";
-    case "CHADEMO":
-      return "CHAdeMO";
-    case "GB_T":
-      return "GB/T";
-    default:
-      return connector;
-  }
-}
-
-function getEstimatedChargeMinutes(maxKw: number): number {
-  if (maxKw >= 100) return 35;
-  if (maxKw >= 50) return 50;
-  if (maxKw >= 22) return 90;
-  return 150;
-}
-
-function getFallbackMaxKw(item: PlaceItem): number | null {
-  const match = item.description?.match(/up to\s+(\d+)\s*kW/i);
-  const value = match ? Number(match[1]) : Number.NaN;
-  return Number.isFinite(value) ? value : null;
-}
-
-function getFallbackConnectorText(item: PlaceItem): string | null {
-  const match = item.description?.match(/station\s+-\s+(.+?)\s+-\s+up to/i);
-  if (!match?.[1]) return null;
-  return match[1]
-    .split(",")
-    .map((connector) => formatConnectorLabel(connector.trim()))
-    .join(", ");
-}
-
-function getChargerSpecs(item: PlaceItem) {
-  const maxKw = item.evCharger?.maxKw ?? getFallbackMaxKw(item);
-  return {
-    connectors: item.evCharger?.connectorTypes.length
-      ? item.evCharger.connectorTypes.map(formatConnectorLabel).join(", ")
-      : (getFallbackConnectorText(item) ?? "Connector info unavailable"),
-    power: maxKw ? `${maxKw} kW` : "Power not listed",
-    availability: item.evCharger
-      ? item.evCharger.availableConnectors === null
-        ? `${item.evCharger.totalConnectors} plugs`
-        : `${item.evCharger.availableConnectors} / ${item.evCharger.totalConnectors} plugs`
-      : "Availability not listed",
-    chargeTime:
-      item.evCharger?.estimatedChargeMinutes || maxKw
-        ? `${
-            item.evCharger?.estimatedChargeMinutes ??
-            getEstimatedChargeMinutes(maxKw ?? 0)
-          } min`
-        : "Time not listed",
-    price: item.evCharger?.priceText ?? "Price not listed",
-    open: item.evCharger?.openingHoursSummary ?? "Hours not listed",
-    operator: item.evCharger?.operatorName,
-  };
 }
 
 export function TripPlaceCard({
@@ -145,13 +84,12 @@ export function TripPlaceCard({
         boxShadow: `0 0 0 2px color-mix(in oklch, ${blockColor.value} 28%, transparent)`,
       }
     : undefined;
-  const chargerSpecs = isEvCharger ? getChargerSpecs(item) : null;
   const chargerDetails = item.evCharger;
 
   return (
     <article
       className={cn(
-        "cursor-pointer overflow-hidden rounded-sm border shadow-xs transition-all duration-300 ease-in-out active:scale-95",
+        "min-w-0 cursor-pointer overflow-hidden rounded-xl border shadow-2xs transition-colors",
         isEvCharger
           ? "border-primary/30 bg-primary/5 ring-1 ring-primary/10"
           : "border-border bg-card",
@@ -163,7 +101,7 @@ export function TripPlaceCard({
       {isEvCharger ? (
         /* ── EV charger branch ── */
         <div className="space-y-4 p-4">
-          {chargerSpecs ? (
+          {isEvCharger ? (
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <div
@@ -180,11 +118,11 @@ export function TripPlaceCard({
                       className="h-6 rounded-sm border-primary/30 bg-background/70 px-2 text-primary"
                     >
                       <Zap className="size-3" aria-hidden="true" />
-                      Charging Stop
+                      Charging stop
                     </Badge>
-                    {chargerSpecs.operator ? (
+                    {chargerDetails?.operatorName ? (
                       <Badge variant="secondary" className="h-6 rounded-sm">
-                        {chargerSpecs.operator}
+                        {chargerDetails?.operatorName}
                       </Badge>
                     ) : null}
                     {chargerDetails?.locked ? (
@@ -194,70 +132,16 @@ export function TripPlaceCard({
                       </Badge>
                     ) : null}
                   </div>
-                  <h3 className="mt-2 text-base font-bold leading-snug text-foreground">
+                  <h3 className="mt-2 break-words text-base font-semibold leading-snug text-foreground">
                     {item.name}
                   </h3>
                 </div>
               </div>
 
-              <div className="grid gap-2 rounded-sm border border-primary/15 bg-background/80 p-3 text-sm">
-                <div className="flex items-start gap-2">
-                  <Plug
-                    className="mt-0.5 size-4 shrink-0 text-primary"
-                    aria-hidden="true"
-                  />
-                  <span className="font-medium text-foreground">
-                    Connector:
-                  </span>
-                  <span className="text-muted-foreground">
-                    {chargerSpecs.connectors}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <BatteryCharging
-                    className="mt-0.5 size-4 shrink-0 text-primary"
-                    aria-hidden="true"
-                  />
-                  <span className="font-medium text-foreground">Power:</span>
-                  <span className="text-muted-foreground">
-                    {chargerSpecs.power}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Zap
-                    className="mt-0.5 size-4 shrink-0 text-primary"
-                    aria-hidden="true"
-                  />
-                  <span className="font-medium text-foreground">
-                    Available plugs:
-                  </span>
-                  <span className="text-muted-foreground">
-                    {chargerSpecs.availability}
-                  </span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Clock
-                    className="mt-0.5 size-4 shrink-0 text-primary"
-                    aria-hidden="true"
-                  />
-                  <span className="font-medium text-foreground">
-                    Estimated charging time:
-                  </span>
-                  <span className="text-muted-foreground">
-                    {chargerSpecs.chargeTime}
-                  </span>
-                </div>
-                <div className="grid gap-1 border-t border-border/70 pt-2 text-muted-foreground">
-                  <div>
-                    <span className="font-medium text-foreground">Price:</span>{" "}
-                    {chargerSpecs.price}
-                  </div>
-                  <div>
-                    <span className="font-medium text-foreground">Open:</span>{" "}
-                    {chargerSpecs.open}
-                  </div>
-                </div>
-              </div>
+              <StationSpecifications item={item} />
+              {chargerDetails && (
+                <StationChargingControl blockId={blockId} itemId={item.id} stationName={item.name} details={chargerDetails} arrivalPct={chargeBatteryFrom} />
+              )}
 
               <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
                 <MapPin

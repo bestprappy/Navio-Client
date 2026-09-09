@@ -10,9 +10,9 @@ export default function PlannerDetailLayout({
   children,
 }: PlannerDetailLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-dvh flex-col overflow-hidden md:flex-row">
       <SidebarWrapper />
-      <main className="min-h-0 flex-1 overflow-hidden">{children}</main>
+      <main className="min-h-0 min-w-0 flex-1 overflow-hidden">{children}</main>
     </div>
   );
 }

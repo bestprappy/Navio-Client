@@ -278,6 +278,7 @@ function evChargerToPlaceItem(
       priceText: charger.priceText,
       openingHoursSummary: getOpeningHoursSummary(charger.openingHours),
       estimatedChargeMinutes,
+      targetBatteryPct: 100,
       operatorName: charger.operatorName,
       selectionSource,
       locked,

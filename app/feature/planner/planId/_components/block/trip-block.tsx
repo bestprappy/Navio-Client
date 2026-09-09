@@ -83,7 +83,7 @@ function TripBlockRoot({ block, children, className }: TripBlockRootProps) {
 }
 
 function TripBlockHeader({ children }: { children: ReactNode }) {
-  return <div className="mx-3 mb-4 space-y-3">{children}</div>;
+  return <div className="mx-0 mb-4 space-y-3">{children}</div>;
 }
 
 function TripBlockTitle() {
@@ -101,7 +101,7 @@ function TripBlockTitle() {
     isListBlock && (isEditingListTitle || listTitle.length === 0);
 
   return (
-    <div className="flex items-center gap-2 mx-6">
+    <div className="flex items-center gap-2">
       <div className="min-w-0 flex-1">
         {shouldShowListEditor ? (
           <Textarea
@@ -181,24 +181,24 @@ function TripBlockActions({
   const addChecklistToBlock = useSetAtom(addChecklistToBlockAtom);
 
   return (
-    <div className="mx-8 mt-6 space-y-3 pl-2">
+    <div className="mx-0 mt-5 space-y-3">
       <AddPlaceInput blockId={block.id} searchBias={placeSearchBias} />
       <div className="flex flex-wrap items-center gap-2">
         <Button
           type="button"
           variant="outline"
           size="lg"
-          className="min-w-40 flex-1 rounded-sm border-sky-300 bg-sky-50 py-6 text-sky-700 hover:border-sky-400 hover:bg-sky-100 hover:text-sky-800 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-100 dark:hover:border-sky-300/50 dark:hover:bg-sky-400/20 dark:hover:text-sky-50"
+          className="min-w-28 flex-1 rounded-lg border-info/25 bg-info/5 py-5 text-info hover:bg-info/10"
           onClick={() => addNoteToBlock({ blockId: block.id })}
         >
           <FileText className="size-4" aria-hidden="true" />
-          Add notes
+          Add a note
         </Button>
         <Button
           type="button"
           variant="outline"
           size="lg"
-          className="min-w-40 flex-1 rounded-sm border-yellow-300 bg-yellow-50 py-6 text-yellow-700 hover:border-yellow-400 hover:bg-yellow-100 hover:text-yellow-800 dark:border-yellow-400/30 dark:bg-yellow-400/10 dark:text-yellow-100 dark:hover:border-yellow-300/50 dark:hover:bg-yellow-400/20 dark:hover:text-yellow-50"
+          className="min-w-28 flex-1 rounded-lg border-warning/25 bg-warning/5 py-5 text-warning hover:bg-warning/10"
           onClick={() => addChecklistToBlock({ blockId: block.id })}
         >
           <CheckSquare className="size-4" aria-hidden="true" />
@@ -221,7 +221,7 @@ function TripBlockPlaceActions({
   const { block } = useTripBlockContext();
 
   return (
-    <div className="mx-8 mt-4 pl-2">
+    <div className="mx-0 mt-4">
       <AddPlaceInput blockId={block.id} searchBias={placeSearchBias} />
     </div>
   );

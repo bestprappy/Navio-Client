@@ -9,11 +9,11 @@ type CommunityLayoutProps = {
 
 export default function CommunityLayout({ children }: CommunityLayoutProps) {
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
+    <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-background">
       <CommunityNavbar />
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         <CommunitySidebar />
-        <main className="min-w-0 flex-1 overflow-y-auto" id="community-content">
+        <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain" id="community-content">
           {children}
         </main>
       </div>
