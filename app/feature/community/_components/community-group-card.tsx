@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Check, MapPin, UserPlus, Users } from "lucide-react";
+import { MapPin, Users } from "lucide-react";
 
 import type { CommunityGroup } from "./data";
 import { formatCount, getInitials, slugifyCommunityValue } from "./data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { CommunityMembershipButton } from "./community-membership-button";
 import {
   Card,
   CardAction,
@@ -19,16 +19,10 @@ import {
 
 type CommunityGroupCardProps = {
   group: CommunityGroup;
-  joined: boolean;
-  onToggleJoin: (groupId: string) => void;
 };
 
-export function CommunityGroupCard({
-  group,
-  joined,
-  onToggleJoin,
-}: CommunityGroupCardProps) {
-  const groupHref = `/community/${slugifyCommunityValue(group.name)}`;
+export function CommunityGroupCard({ group }: CommunityGroupCardProps) {
+  const groupHref = `/community/${group.slug ?? slugifyCommunityValue(group.name)}`;
 
   return (
     <Card size="sm">
@@ -49,16 +43,7 @@ export function CommunityGroupCard({
           </div>
         </Link>
         <CardAction>
-          <Button
-            type="button"
-            size="sm"
-            variant={joined ? "secondary" : "outline"}
-            aria-pressed={joined}
-            onClick={() => onToggleJoin(group.id)}
-          >
-            {joined ? <Check aria-hidden="true" /> : <UserPlus aria-hidden="true" />}
-            {joined ? "Joined" : "Join"}
-          </Button>
+          <CommunityMembershipButton group={group} />
         </CardAction>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -75,7 +60,10 @@ export function CommunityGroupCard({
         </div>
         <div className="flex flex-wrap gap-2">
           {group.tags.slice(0, 4).map((tag) => (
-            <Badge key={tag} variant={group.isOfficial ? "secondary" : "outline"}>
+            <Badge
+              key={tag}
+              variant={group.isOfficial ? "secondary" : "outline"}
+            >
               {tag}
             </Badge>
           ))}

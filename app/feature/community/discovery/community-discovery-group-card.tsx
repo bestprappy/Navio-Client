@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Check, MapPin, UserPlus, Users } from "lucide-react";
+import { MapPin, Users } from "lucide-react";
 
 import type { CommunityGroup } from "../_components/data";
 import {
@@ -11,35 +11,17 @@ import {
 } from "../_components/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { CommunityMembershipButton } from "../_components/community-membership-button";
 import { Card, CardContent } from "@/components/ui/card";
 
 type CommunityDiscoveryGroupCardProps = {
   group: CommunityGroup;
-  joined: boolean;
-  weeklyVisitorCount: number;
-  onToggleJoin: (groupId: string) => void;
 };
-
-function formatVisitorCount(value: number): string {
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1).replace(".0", "")}M`;
-  }
-
-  if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(1).replace(".0", "")}K`;
-  }
-
-  return value.toString();
-}
 
 export function CommunityDiscoveryGroupCard({
   group,
-  joined,
-  weeklyVisitorCount,
-  onToggleJoin,
 }: CommunityDiscoveryGroupCardProps) {
-  const groupHref = `/community/${slugifyCommunityValue(group.name)}`;
+  const groupHref = `/community/${group.slug ?? slugifyCommunityValue(group.name)}`;
 
   return (
     <Card
@@ -71,27 +53,12 @@ export function CommunityDiscoveryGroupCard({
                 ) : null}
               </div>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {formatVisitorCount(weeklyVisitorCount)} weekly visitors
+                {formatCount(group.postCount)} posts
               </p>
             </div>
           </Link>
 
-          <Button
-            type="button"
-            size="sm"
-            variant={joined ? "secondary" : "outline"}
-            aria-pressed={joined}
-            aria-label={`${joined ? "Leave" : "Join"} ${group.name}`}
-            className="h-8 shrink-0 rounded-full px-3"
-            onClick={() => onToggleJoin(group.id)}
-          >
-            {joined ? (
-              <Check className="size-3.5" aria-hidden="true" />
-            ) : (
-              <UserPlus className="size-3.5" aria-hidden="true" />
-            )}
-            {joined ? "Joined" : "Join"}
-          </Button>
+          <CommunityMembershipButton group={group} />
         </div>
 
         <Link

@@ -1,24 +1,24 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CalendarDays, Globe2, Mail, TrendingUp, Users } from "lucide-react";
+import { CalendarDays, Globe2, TrendingUp, Users } from "lucide-react";
 
 import type {
   CommunityGroup,
   CommunityGroupProfile,
 } from "../../_components/data";
-import { formatCount, getInitials, getUserById } from "../../_components/data";
+import { formatCount, getInitials } from "../../_components/data";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { CommunityFlairBadge } from "../../_components/community-flair-badge";
+import { CommunityUserLabel } from "../../_components/community-user-label";
 
 type CommunityGroupSidebarProps = {
   group: CommunityGroup;
@@ -48,9 +48,7 @@ export function CommunityGroupSidebar({
   group,
   profile,
 }: CommunityGroupSidebarProps) {
-  const moderators = Array.from(new Set(profile.moderatorIds)).map((id) =>
-    getUserById(id),
-  );
+  const moderators = Array.from(new Set(profile.moderatorIds));
 
   return (
     <aside
@@ -115,6 +113,9 @@ export function CommunityGroupSidebar({
         </CardContent>
 
         <SidebarSection title="Post flair">
+          {group.postFlairs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No post flairs yet.</p>
+          ) : null}
           <div className="flex flex-wrap gap-2" role="list">
             {group.postFlairs.map((flair) => (
               <span key={flair.id} role="listitem">
@@ -125,7 +126,11 @@ export function CommunityGroupSidebar({
         </SidebarSection>
 
         <SidebarSection title="Rules">
+          {group.rules.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No rules added yet.</p>
+          ) : null}
           <Accordion
+            key={group.rules.map((rule) => rule.id).join("|")}
             defaultValue={group.rules[0] ? [group.rules[0].id] : []}
             className="gap-1"
           >
@@ -151,47 +156,44 @@ export function CommunityGroupSidebar({
           </Accordion>
         </SidebarSection>
 
+        <SidebarSection title="Resources">
+          <ul className="space-y-2 text-sm">
+            {group.bookmarks.map((resource) => (
+              <li key={resource.id}>
+                {resource.url && /^https?:\/\//.test(resource.url) ? (
+                  <a
+                    href={resource.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-words text-primary underline underline-offset-4"
+                  >
+                    {resource.label}
+                  </a>
+                ) : (
+                  resource.label
+                )}
+              </li>
+            ))}
+          </ul>
+          {group.bookmarks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No resources yet.</p>
+          ) : null}
+        </SidebarSection>
         <SidebarSection title="Moderators" className="pb-4">
-          <Button
-            type="button"
-            variant="secondary"
-            className="mb-4 w-full rounded-full"
-          >
-            <Mail className="size-4" aria-hidden="true" />
-            Message mods
-          </Button>
-
           <div className="space-y-3">
-            {moderators.map((moderator, index) => {
-              const flair = group.userFlairs[index % group.userFlairs.length];
-
-              return (
-                <div key={moderator.id} className="flex items-center gap-3">
-                  <Avatar className="size-9">
-                    <AvatarImage
-                      src={moderator.avatarUrl}
-                      alt={moderator.name}
-                    />
-                    <AvatarFallback className="text-[11px]">
-                      {getInitials(moderator.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      @{moderator.handle}
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {flair ? (
-                        <CommunityFlairBadge
-                          flair={flair}
-                          className="h-4 px-1.5 text-[10px]"
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {moderators.map((id) => (
+              <div key={id} className="flex min-w-0 items-center gap-3">
+                <Avatar className="size-9 shrink-0">
+                  <AvatarFallback>{getInitials(id)}</AvatarFallback>
+                </Avatar>
+                <CommunityUserLabel userId={id} />
+              </div>
+            ))}
+            {moderators.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No moderators listed.
+              </p>
+            ) : null}
           </div>
         </SidebarSection>
       </Card>

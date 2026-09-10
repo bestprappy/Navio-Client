@@ -7,16 +7,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import type { CommunityGroup } from "../_components/data";
-import { mockCommunityGroupProfiles } from "../_components/data";
 
 type CommunityRulesSidebarProps = {
   group: CommunityGroup;
 };
 
 export function CommunityRulesSidebar({ group }: CommunityRulesSidebarProps) {
-  const profile = mockCommunityGroupProfiles.find(
-    (p) => p.groupId === group.id,
-  );
+  const profile = group.profile;
 
   return (
     <aside className="flex flex-col gap-4" aria-label="Community information">

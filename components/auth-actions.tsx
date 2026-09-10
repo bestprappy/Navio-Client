@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button.variants";
+import { currentUserProfileQueryKey, getMyProfile } from "@/lib/profile-api";
 import { cn } from "@/lib/utils";
 
 type AuthActionsProps = {
@@ -20,36 +21,6 @@ type AuthActionsProps = {
   mobile?: boolean;
   onNavigate?: () => void;
 };
-
-type CurrentUserProfile = {
-  id: string;
-  displayName: string;
-  email: string;
-};
-
-function isCurrentUserProfile(value: unknown): value is CurrentUserProfile {
-  if (!value || typeof value !== "object") return false;
-  const profile = value as Record<string, unknown>;
-  return (
-    typeof profile.id === "string" &&
-    typeof profile.displayName === "string" &&
-    typeof profile.email === "string"
-  );
-}
-
-async function getCurrentUserProfile(): Promise<CurrentUserProfile> {
-  const response = await fetch("/api/users/me", {
-    cache: "no-store",
-    credentials: "same-origin",
-  });
-  const body: unknown = await response.json();
-
-  if (!response.ok || !isCurrentUserProfile(body)) {
-    throw new Error("The current user profile could not be loaded.");
-  }
-
-  return body;
-}
 
 function getInitials(name?: string | null, email?: string | null) {
   const value = name?.trim() || email?.trim() || "User";
@@ -69,9 +40,11 @@ export function AuthActions({
   onNavigate,
 }: AuthActionsProps) {
   const { data: session, status } = useSession();
+  // Same key and fetcher as the profile settings page, so saving a new display
+  // name there updates the name shown here without another request.
   const profileQuery = useQuery({
-    queryKey: ["current-user-profile", session?.user?.id],
-    queryFn: getCurrentUserProfile,
+    queryKey: currentUserProfileQueryKey(session?.user?.id),
+    queryFn: getMyProfile,
     enabled: status === "authenticated",
     staleTime: 5 * 60 * 1000,
     retry: 1,
@@ -133,9 +106,13 @@ export function AuthActions({
         className,
       )}
     >
-      <div
+      <Link
+        href="/settings/profile"
+        title="Profile settings"
+        onClick={onNavigate}
+        aria-label={`Open profile settings for ${userLabel}`}
         className={cn(
-          "flex min-w-0 items-center gap-2",
+          "flex min-w-0 items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           mobile && "rounded-lg border border-border p-3",
         )}
       >
@@ -152,7 +129,7 @@ export function AuthActions({
             {userLabel}
           </span>
         ) : null}
-      </div>
+      </Link>
       <Button
         type="button"
         variant={mobile ? "outline" : "ghost"}

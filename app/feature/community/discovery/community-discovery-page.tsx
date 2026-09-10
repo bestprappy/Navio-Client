@@ -1,15 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { Compass, SearchX, Sparkles } from "lucide-react";
+import { Compass, SearchX } from "lucide-react";
 import { useAtom, useAtomValue } from "jotai";
 
 import {
   communityDiscoveryCategoryAtom,
   communityDiscoveryVisibleCountsAtom,
   communitySearchQueryAtom,
-  createdGroupsAtom,
-  joinedGroupIdsAtom,
 } from "../_components/community-atoms";
 import { CommunityErrorBoundary } from "../_components/community-error-boundary";
 import { useCommunityGroups } from "../_components/community-queries";
@@ -17,11 +15,7 @@ import type {
   CommunityDiscoveryCategory,
   CommunityGroup,
 } from "../_components/data";
-import {
-  communityDiscoveryCategories,
-  getGroupProfileByGroupId,
-  mockCommunityGroups,
-} from "../_components/data";
+import { communityDiscoveryCategories } from "../_components/data";
 import { CommunityDiscoveryGroupCard } from "./community-discovery-group-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,11 +23,11 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { useRequireAuth } from "@/hooks/use-require-auth";
+import { CommunityGroupDialog } from "../create/community-group-dialog";
+import { CommunityQueryError } from "../_components/community-query-state";
 
 const DEFAULT_SECTION_LIMIT = 6;
 const SECTION_INCREMENT = 3;
@@ -42,10 +36,8 @@ type DiscoverySectionProps = {
   title: string;
   description: string;
   groups: CommunityGroup[];
-  joinedGroupIds: string[];
   visibleCount: number;
   onShowMore: () => void;
-  onToggleJoin: (groupId: string) => void;
 };
 
 function normalizeDiscoveryValue(value: string): string {
@@ -58,8 +50,9 @@ function normalizeDiscoveryValue(value: string): string {
 
 function getSelectedCategory(categoryId: string): CommunityDiscoveryCategory {
   return (
-    communityDiscoveryCategories.find((category) => category.id === categoryId) ??
-    {
+    communityDiscoveryCategories.find(
+      (category) => category.id === categoryId,
+    ) ?? {
       id: "all",
       label: "All",
       keywords: [],
@@ -126,10 +119,8 @@ function CommunityDiscoverySection({
   title,
   description,
   groups,
-  joinedGroupIds,
   visibleCount,
   onShowMore,
-  onToggleJoin,
 }: DiscoverySectionProps) {
   const visibleGroups = groups.slice(0, visibleCount);
 
@@ -153,17 +144,7 @@ function CommunityDiscoverySection({
 
       <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
         {visibleGroups.map((group) => {
-          const profile = getGroupProfileByGroupId(group.id, group);
-
-          return (
-            <CommunityDiscoveryGroupCard
-              key={group.id}
-              group={group}
-              joined={joinedGroupIds.includes(group.id)}
-              weeklyVisitorCount={profile.weeklyVisitorCount}
-              onToggleJoin={onToggleJoin}
-            />
-          );
+          return <CommunityDiscoveryGroupCard key={group.id} group={group} />;
         })}
       </div>
 
@@ -208,23 +189,26 @@ function CommunityDiscoveryLoading() {
   );
 }
 
-export function CommunityDiscoveryPage() {
-  const { requireAuth } = useRequireAuth();
+export function CommunityDiscoveryPage({
+  variant = "discovery",
+}: {
+  variant?: "discovery" | "popular";
+}) {
   const searchQuery = useAtomValue(communitySearchQueryAtom);
-  const createdGroups = useAtomValue(createdGroupsAtom);
   const [selectedCategoryId, setSelectedCategoryId] = useAtom(
     communityDiscoveryCategoryAtom,
   );
   const [visibleCounts, setVisibleCounts] = useAtom(
     communityDiscoveryVisibleCountsAtom,
   );
-  const [joinedGroupIds, setJoinedGroupIds] = useAtom(joinedGroupIdsAtom);
 
   const selectedCategory = getSelectedCategory(selectedCategoryId);
-  const groupsQuery = useCommunityGroups(searchQuery, createdGroups);
-  const groups = useMemo(
-    () => groupsQuery.data ?? [...createdGroups, ...mockCommunityGroups],
-    [createdGroups, groupsQuery.data],
+  const groupsQuery = useCommunityGroups(searchQuery);
+  const groups = useMemo(() => groupsQuery.data, [groupsQuery.data]);
+
+  const joinedGroupIds = useMemo(
+    () => groups.filter((group) => group.joined).map((group) => group.id),
+    [groups],
   );
 
   const filteredGroups = useMemo(
@@ -248,10 +232,7 @@ export function CommunityDiscoveryPage() {
     });
   }, [filteredGroups, joinedGroupIds]);
 
-  const recommendedVisibleCount = getVisibleCount(
-    visibleCounts,
-    "recommended",
-  );
+  const recommendedVisibleCount = getVisibleCount(visibleCounts, "recommended");
 
   const anchorGroup = useMemo(
     () =>
@@ -284,16 +265,6 @@ export function CommunityDiscoveryPage() {
       );
   }, [anchorGroup, filteredGroups, recommendedGroups, recommendedVisibleCount]);
 
-  function toggleJoin(groupId: string) {
-    requireAuth(() => {
-      setJoinedGroupIds((previous) =>
-        previous.includes(groupId)
-          ? previous.filter((id) => id !== groupId)
-          : [...previous, groupId],
-      );
-    });
-  }
-
   function showMore(sectionId: string) {
     setVisibleCounts((previous) => ({
       ...previous,
@@ -310,10 +281,14 @@ export function CommunityDiscoveryPage() {
               <div>
                 <div className="mb-2 flex items-center gap-2 text-sm font-medium text-muted-foreground">
                   <Compass className="size-4" aria-hidden="true" />
-                  Community discovery
+                  {variant === "popular"
+                    ? "Popular communities"
+                    : "Community discovery"}
                 </div>
                 <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-                  Explore Communities
+                  {variant === "popular"
+                    ? "Popular Communities"
+                    : "Explore Communities"}
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
                   Find travel groups that match the routes, places, and planning
@@ -321,9 +296,12 @@ export function CommunityDiscoveryPage() {
                 </p>
               </div>
 
-              <Badge variant="secondary" className="h-7 px-3">
-                {filteredGroups.length} available
-              </Badge>
+              <div className="flex flex-wrap items-center gap-3">
+                <Badge variant="secondary">
+                  {groupsQuery.total} communities
+                </Badge>
+                <CommunityGroupDialog />
+              </div>
             </div>
 
             <div
@@ -354,16 +332,20 @@ export function CommunityDiscoveryPage() {
           </header>
 
           {groupsQuery.isLoading ? <CommunityDiscoveryLoading /> : null}
-
-          {groupsQuery.isError ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Discovery is unavailable</CardTitle>
-                <CardDescription>
-                  The community catalog could not load. Try refreshing the page.
-                </CardDescription>
-              </CardHeader>
-            </Card>
+          <CommunityQueryError
+            error={groupsQuery.error}
+            onRetry={() => void groupsQuery.refetch()}
+          />
+          {groupsQuery.hasNextPage ? (
+            <Button
+              variant="outline"
+              disabled={groupsQuery.isFetchingNextPage}
+              onClick={() => void groupsQuery.fetchNextPage()}
+            >
+              {groupsQuery.isFetchingNextPage
+                ? "Loading..."
+                : "Load more communities"}
+            </Button>
           ) : null}
 
           {!groupsQuery.isLoading &&
@@ -390,13 +372,15 @@ export function CommunityDiscoveryPage() {
           filteredGroups.length > 0 ? (
             <div className="flex flex-col gap-8">
               <CommunityDiscoverySection
-                title="Recommended for you"
+                title={
+                  variant === "popular"
+                    ? "Popular groups"
+                    : "Recommended for you"
+                }
                 description="Groups with strong activity and close overlap with your joined communities."
                 groups={recommendedGroups}
-                joinedGroupIds={joinedGroupIds}
                 visibleCount={recommendedVisibleCount}
                 onShowMore={() => showMore("recommended")}
-                onToggleJoin={toggleJoin}
               />
 
               {similarGroups.length > 0 && anchorGroup ? (
@@ -404,28 +388,10 @@ export function CommunityDiscoveryPage() {
                   title={`More like ${anchorGroup.name}`}
                   description="Neighboring groups based on shared places, tags, and route style."
                   groups={similarGroups}
-                  joinedGroupIds={joinedGroupIds}
                   visibleCount={getVisibleCount(visibleCounts, "similar")}
                   onShowMore={() => showMore("similar")}
-                  onToggleJoin={toggleJoin}
                 />
-              ) : (
-                <Card>
-                  <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-                    <Sparkles
-                      className="size-8 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    <div>
-                      <CardTitle>You reached the edge of this shelf</CardTitle>
-                      <CardDescription className="mt-1">
-                        Switch categories to discover a different set of travel
-                        groups.
-                      </CardDescription>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              ) : null}
             </div>
           ) : null}
         </div>

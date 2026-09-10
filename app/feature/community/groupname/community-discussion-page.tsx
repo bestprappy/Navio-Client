@@ -6,22 +6,21 @@ import { ArrowLeft, SearchX } from "lucide-react";
 import { useAtomValue } from "jotai";
 
 import {
-  createdGroupsAtom,
   createdPostsAtom,
   extraCommentsByPostIdAtom,
 } from "../_components/community-atoms";
-import { CommunityErrorBoundary } from "../_components/community-error-boundary";
+import { useCommunityGroup } from "../_components/community-group-queries";
+import { toCommunityGroup } from "../_components/community-api";
 import {
-  useCommunityFeed,
-  useCommunityGroups,
-} from "../_components/community-queries";
+  CommunityGroupLoading,
+  CommunityQueryError,
+} from "../_components/community-query-state";
+import { CommunityErrorBoundary } from "../_components/community-error-boundary";
+import { useCommunityFeed } from "../_components/community-queries";
 import {
   getCommentsByPostId,
-  getGroupBySlug,
   getGroupProfileByGroupId,
   getPostByGroupAndSlug,
-  mockCommunityGroups,
-  mockCommunityPosts,
 } from "../_components/data";
 import { CommunityCommentThread } from "./_components/community-comment-thread";
 import { CommunityGroupSidebar } from "./_components/community-group-sidebar";
@@ -80,19 +79,15 @@ export function CommunityDiscussionPage({
   groupName,
   discussionTitle,
 }: CommunityDiscussionPageProps) {
-  const createdGroups = useAtomValue(createdGroupsAtom);
   const createdPosts = useAtomValue(createdPostsAtom);
   const extraCommentsByPostId = useAtomValue(extraCommentsByPostIdAtom);
 
-  const groupsQuery = useCommunityGroups("", createdGroups);
+  const groupsQuery = useCommunityGroup(groupName);
   const groups = useMemo(
-    () => groupsQuery.data ?? [...createdGroups, ...mockCommunityGroups],
-    [createdGroups, groupsQuery.data],
+    () => (groupsQuery.data ? [toCommunityGroup(groupsQuery.data)] : []),
+    [groupsQuery.data],
   );
-  const group = useMemo(
-    () => getGroupBySlug(groupName, groups),
-    [groupName, groups],
-  );
+  const group = groups[0];
 
   const feedQuery = useCommunityFeed(
     "",
@@ -101,17 +96,28 @@ export function CommunityDiscussionPage({
     groups,
     extraCommentsByPostId,
   );
-  const posts = useMemo(
-    () => feedQuery.data ?? [...createdPosts, ...mockCommunityPosts],
-    [createdPosts, feedQuery.data],
-  );
+  const posts = useMemo(() => feedQuery.data ?? [], [feedQuery.data]);
   const post = useMemo(
     () =>
-      group
-        ? getPostByGroupAndSlug(group.id, discussionTitle, posts)
-        : null,
+      group ? getPostByGroupAndSlug(group.id, discussionTitle, posts) : null,
     [discussionTitle, group, posts],
   );
+
+  if (groupsQuery.isPending || feedQuery.isLoading)
+    return (
+      <div className="p-6">
+        <CommunityGroupLoading />
+      </div>
+    );
+  if (groupsQuery.error)
+    return (
+      <div className="p-6">
+        <CommunityQueryError
+          error={groupsQuery.error}
+          onRetry={() => void groupsQuery.refetch()}
+        />
+      </div>
+    );
 
   if (!group) {
     return (
@@ -145,6 +151,10 @@ export function CommunityDiscussionPage({
     <CommunityErrorBoundary>
       <div className="min-h-full bg-background">
         <div className="mx-auto flex w-full max-w-[92rem] flex-col gap-6 p-4 sm:p-6">
+          <p role="status" className="text-sm text-muted-foreground">
+            Local preview: posts and comments are visible only in this session
+            and are not published.
+          </p>
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
             <div className="flex min-w-0 flex-col gap-5">
               <CommunityPostDetailCard

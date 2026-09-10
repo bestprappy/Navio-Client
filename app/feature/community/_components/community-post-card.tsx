@@ -5,21 +5,16 @@ import { useRouter } from "next/navigation";
 import {
   ArrowBigDownDash,
   ArrowBigUpDash,
-  Check,
   Dot,
   MessageCircle,
   Share2,
-  UserPlus,
 } from "lucide-react";
 import { useAtom } from "jotai";
 
+import { CommunityMembershipButton } from "./community-membership-button";
 import { CommunityFlairBadge } from "./community-flair-badge";
 import { CommunityTripAttachment } from "./community-trip-attachment";
-import {
-  downvotedPostIdsAtom,
-  joinedGroupIdsAtom,
-  upvotedPostIdsAtom,
-} from "./community-atoms";
+import { downvotedPostIdsAtom, upvotedPostIdsAtom } from "./community-atoms";
 import type {
   CommunityComment,
   CommunityGroup,
@@ -35,7 +30,6 @@ import {
   slugifyCommunityValue,
 } from "./data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { cn } from "@/lib/utils";
 
@@ -64,11 +58,9 @@ export function CommunityPostCard({
   const { requireAuth } = useRequireAuth();
   const [upvotedPostIds, setUpvotedPostIds] = useAtom(upvotedPostIdsAtom);
   const [downvotedPostIds, setDownvotedPostIds] = useAtom(downvotedPostIdsAtom);
-  const [joinedGroupIds, setJoinedGroupIds] = useAtom(joinedGroupIdsAtom);
 
   const isUpvoted = upvotedPostIds.includes(post.id);
   const isDownvoted = downvotedPostIds.includes(post.id);
-  const isJoined = group ? joinedGroupIds.includes(group.id) : false;
   const score = post.upvotes + (isUpvoted ? 1 : 0) - (isDownvoted ? 1 : 0);
   const commentTotal = post.commentCount + Math.max(0, comments.length);
   const groupName = group?.name ?? "Unknown group";
@@ -79,7 +71,7 @@ export function CommunityPostCard({
   const metaAvatarAlt = showGroupMeta ? groupName : author.name;
   const metaInitials = getInitials(showGroupMeta ? groupName : author.name);
   const groupHref = group
-    ? `/community/${slugifyCommunityValue(group.name)}`
+    ? `/community/${group.slug ?? slugifyCommunityValue(group.name)}`
     : "/community";
   const postHref = group ? getCommunityPostHref(group, post) : null;
 
@@ -106,17 +98,6 @@ export function CommunityPostCard({
           : [...prev, post.id],
       );
       setUpvotedPostIds((prev) => prev.filter((id) => id !== post.id));
-    });
-  }
-
-  function toggleJoin() {
-    if (!group) return;
-    requireAuth(() => {
-      setJoinedGroupIds((prev) =>
-        prev.includes(group.id)
-          ? prev.filter((id) => id !== group.id)
-          : [...prev, group.id],
-      );
     });
   }
 
@@ -183,24 +164,13 @@ export function CommunityPostCard({
           <span>{formatRelativeTime(post.createdAt)}</span>
         </div>
         {group && showJoinAction ? (
-          <Button
-            type="button"
-            size="sm"
-            variant={isJoined ? "secondary" : "outline"}
-            aria-pressed={isJoined}
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleJoin();
-            }}
-            className="ml-auto hidden h-7 px-3 text-xs sm:inline-flex"
+          <div
+            className="ml-auto"
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
           >
-            {isJoined ? (
-              <Check className="size-3" aria-hidden="true" />
-            ) : (
-              <UserPlus className="size-3" aria-hidden="true" />
-            )}
-            {isJoined ? "Joined" : "Join"}
-          </Button>
+            <CommunityMembershipButton group={group} />
+          </div>
         ) : null}
       </div>
 

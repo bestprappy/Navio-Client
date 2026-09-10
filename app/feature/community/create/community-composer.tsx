@@ -28,12 +28,11 @@ import {
   X,
   MapPinned,
 } from "lucide-react";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 
 import {
   createPostDraftAtom,
   createdPostsAtom,
-  joinedGroupIdsAtom,
 } from "../_components/community-atoms";
 import type {
   CommunityGroup,
@@ -107,7 +106,6 @@ export function CommunityComposer({
   const { data: session } = useSession();
   const [postDraft, setPostDraft] = useAtom(createPostDraftAtom);
   const setCreatedPosts = useSetAtom(createdPostsAtom);
-  const joinedGroupIds = useAtomValue(joinedGroupIdsAtom);
 
   const [activeTab, setActiveTab] = useState<PostTab>("text");
   const [communityOpen, setCommunityOpen] = useState(false);
@@ -184,13 +182,7 @@ export function CommunityComposer({
       sharedTripId: queryTrip ? queryTrip.id : prev.sharedTripId,
     }));
     appliedPrefillKeyRef.current = prefillKey;
-  }, [
-    groups,
-    queryGroupId,
-    queryPlanId,
-    selectableTrips,
-    setPostDraft,
-  ]);
+  }, [groups, queryGroupId, queryPlanId, selectableTrips, setPostDraft]);
 
   const filteredGroups = communitySearch
     ? groups.filter((g) =>
@@ -211,8 +203,7 @@ export function CommunityComposer({
   }
 
   function handleAttachTripChange(checked: boolean) {
-    const nextTripId =
-      postDraft.sharedTripId ?? selectableTrips[0]?.id ?? null;
+    const nextTripId = postDraft.sharedTripId ?? selectableTrips[0]?.id ?? null;
     const nextTrip = nextTripId
       ? selectableTrips.find((trip) => trip.id === nextTripId)
       : null;
@@ -312,7 +303,9 @@ export function CommunityComposer({
                   <span className="text-[10px] font-bold">r</span>
                 )}
               </span>
-              <span className="max-w-[160px] truncate">{selectedGroup.name}</span>
+              <span className="max-w-[160px] truncate">
+                {selectedGroup.name}
+              </span>
             </>
           ) : (
             <>
@@ -364,15 +357,19 @@ export function CommunityComposer({
                   </span>
                   <div className="min-w-0">
                     <p className="truncate font-medium">
-                      {session?.user?.name || session?.user?.email || "Your profile"}
+                      {session?.user?.name ||
+                        session?.user?.email ||
+                        "Your profile"}
                     </p>
-                    <p className="text-xs text-muted-foreground">Your profile</p>
+                    <p className="text-xs text-muted-foreground">
+                      Your profile
+                    </p>
                   </div>
                 </li>
               )}
 
               {filteredGroups.map((group) => {
-                const isJoined = joinedGroupIds.includes(group.id);
+                const isJoined = Boolean(group.joined);
                 const isSelected = postDraft.groupId === group.id;
                 return (
                   <li
@@ -468,27 +465,31 @@ export function CommunityComposer({
         >
           <Tag className="size-3" aria-hidden="true" />
           Add flair and tags
-          <span className="text-destructive" aria-hidden="true">*</span>
+          <span className="text-destructive" aria-hidden="true">
+            *
+          </span>
         </button>
 
-        {selectedFlairId && selectedGroup && (() => {
-          const flair = selectedGroup.postFlairs.find(
-            (f) => f.id === selectedFlairId,
-          );
-          return flair ? (
-            <span className="flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
-              {flair.label}
-              <button
-                type="button"
-                onClick={() => setSelectedFlairId(null)}
-                aria-label={`Remove ${flair.label} flair`}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <X className="size-3" aria-hidden="true" />
-              </button>
-            </span>
-          ) : null;
-        })()}
+        {selectedFlairId &&
+          selectedGroup &&
+          (() => {
+            const flair = selectedGroup.postFlairs.find(
+              (f) => f.id === selectedFlairId,
+            );
+            return flair ? (
+              <span className="flex items-center gap-1 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
+                {flair.label}
+                <button
+                  type="button"
+                  onClick={() => setSelectedFlairId(null)}
+                  aria-label={`Remove ${flair.label} flair`}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-3" aria-hidden="true" />
+                </button>
+              </span>
+            ) : null;
+          })()}
       </div>
 
       {flairDialogOpen && selectedGroup && (
@@ -562,9 +563,7 @@ export function CommunityComposer({
             e.preventDefault();
             setIsDragging(false);
           }}
-          onClick={() =>
-            document.getElementById("post-media-upload")?.click()
-          }
+          onClick={() => document.getElementById("post-media-upload")?.click()}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               document.getElementById("post-media-upload")?.click();
@@ -572,7 +571,10 @@ export function CommunityComposer({
           }}
         >
           <span className="flex size-10 items-center justify-center rounded-full border border-border bg-card shadow-sm">
-            <Upload className="size-4 text-muted-foreground" aria-hidden="true" />
+            <Upload
+              className="size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
           </span>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-[var(--color-brand)]">
@@ -615,7 +617,7 @@ export function CommunityComposer({
           Save Draft
         </Button>
         <Button type="submit" size="sm" disabled={!canPost}>
-          Post
+          Preview post
         </Button>
       </div>
     </form>
@@ -754,7 +756,8 @@ function PlanAttachmentSelector({
                       {selectedTrip.title}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {selectedTrip.durationDays} days in {selectedTrip.location}
+                      {selectedTrip.durationDays} days in{" "}
+                      {selectedTrip.location}
                     </p>
                     <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
                       {selectedTrip.summary}

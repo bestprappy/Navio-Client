@@ -48,8 +48,8 @@ export class CommunityErrorBoundary extends Component<
               {this.props.fallbackTitle ?? "Community could not load"}
             </CardTitle>
             <CardDescription>
-              Refresh the page and try again. Your mock session data may need to
-              be recreated.
+              Refresh the page and try again. Your saved communities remain
+              available.
             </CardDescription>
           </CardHeader>
           <CardContent>

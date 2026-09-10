@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowBigUpDash, MessageCircle, UserPlus } from "lucide-react";
+import { ArrowBigUpDash, MessageCircle } from "lucide-react";
 import { useAtom, useAtomValue } from "jotai";
 
 import {
@@ -17,7 +17,8 @@ import {
   slugifyCommunityValue,
 } from "../_components/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { CommunityMembershipButton } from "../_components/community-membership-button";
+import { CommunityMyGroups } from "../_components/community-my-groups";
 import { cn } from "@/lib/utils";
 
 type CommunityContextSidebarProps = {
@@ -25,17 +26,10 @@ type CommunityContextSidebarProps = {
   joinedGroupIds: string[];
   groupsLoading: boolean;
   groupsError: boolean;
-  onToggleJoin: (groupId: string) => void;
 };
 
-function CommunityJoinItem({
-  group,
-  onJoin,
-}: {
-  group: CommunityGroup;
-  onJoin: () => void;
-}) {
-  const groupHref = `/community/${slugifyCommunityValue(group.name)}`;
+function CommunityJoinItem({ group }: { group: CommunityGroup }) {
+  const groupHref = `/community/${group.slug ?? slugifyCommunityValue(group.name)}`;
 
   return (
     <div className="flex items-center gap-3 hover:bg-muted/70 my-3 p-4 rounded-sm">
@@ -58,17 +52,7 @@ function CommunityJoinItem({
           </p>
         </div>
       </Link>
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        className="h-7 shrink-0 px-3 text-xs"
-        onClick={onJoin}
-        aria-label={`Join ${group.name}`}
-      >
-        <UserPlus className="size-3" aria-hidden="true" />
-        Join
-      </Button>
+      <CommunityMembershipButton group={group} />
     </div>
   );
 }
@@ -80,7 +64,7 @@ function RecentPostItem({
   group: CommunityGroup;
   post: CommunityPost;
 }) {
-  const groupHref = `/community/${slugifyCommunityValue(group.name)}`;
+  const groupHref = `/community/${group.slug ?? slugifyCommunityValue(group.name)}`;
 
   return (
     <div className="flex gap-3 py-2.5">
@@ -138,7 +122,6 @@ export function CommunityContextSidebar({
   joinedGroupIds,
   groupsLoading,
   groupsError,
-  onToggleJoin,
 }: CommunityContextSidebarProps) {
   const [cleared, setCleared] = useAtom(recentPostsClearedAtom);
   const createdPosts = useAtomValue(createdPostsAtom);
@@ -173,6 +156,7 @@ export function CommunityContextSidebar({
         "xl:pr-1",
       )}
     >
+      <CommunityMyGroups />
       {/* Recent Posts */}
       {joinedGroups.length > 0 ? (
         <section
@@ -216,10 +200,7 @@ export function CommunityContextSidebar({
 
       {/* Popular Communities */}
       {unjoinedGroups.length > 0 || groupsLoading || groupsError ? (
-        <section
-          aria-label="Popular communities"
-          className="px-4 py-3"
-        >
+        <section aria-label="Popular communities" className="px-4 py-3">
           <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Popular Communities
           </h2>
@@ -247,11 +228,7 @@ export function CommunityContextSidebar({
           {!groupsLoading && !groupsError ? (
             <div className="">
               {unjoinedGroups.map((group) => (
-                <CommunityJoinItem
-                  key={group.id}
-                  group={group}
-                  onJoin={() => onToggleJoin(group.id)}
-                />
+                <CommunityJoinItem key={group.id} group={group} />
               ))}
             </div>
           ) : null}

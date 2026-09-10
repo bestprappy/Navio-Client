@@ -16,9 +16,10 @@ const RESPONSE_HEADERS_TO_FORWARD = [
 export async function proxyAuthenticatedApiRequest(
   request: Request,
   upstreamPath: string,
+  options: { allowAnonymous?: boolean } = {},
 ): Promise<Response> {
   const session = await auth();
-  if (!session?.accessToken || session.error) {
+  if ((!session?.accessToken || session.error) && !options.allowAnonymous) {
     return NextResponse.json(
       { message: "Authentication is required." },
       { status: 401 },
@@ -53,13 +54,16 @@ export async function proxyAuthenticatedApiRequest(
 
   const headers = new Headers({
     Accept: "application/json",
-    Authorization: `Bearer ${session.accessToken}`,
   });
+  if (session?.accessToken && !session.error) {
+    headers.set("Authorization", `Bearer ${session.accessToken}`);
+  }
   const contentType = request.headers.get("content-type");
   if (contentType) headers.set("Content-Type", contentType);
 
   try {
-    const hasRequestBody = request.method !== "GET" && request.method !== "HEAD";
+    const hasRequestBody =
+      request.method !== "GET" && request.method !== "HEAD";
     const response = await fetch(upstreamUrl, {
       method: request.method,
       headers,
@@ -72,6 +76,7 @@ export async function proxyAuthenticatedApiRequest(
       const value = response.headers.get(headerName);
       if (value) responseHeaders.set(headerName, value);
     }
+    responseHeaders.set("Cache-Control", "private, no-store");
 
     const hasNoBody = response.status === 204 || response.status === 304;
     return new Response(hasNoBody ? null : await response.arrayBuffer(), {

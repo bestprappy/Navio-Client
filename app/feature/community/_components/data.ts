@@ -41,6 +41,11 @@ export type SharedTrip = {
 };
 
 export type CommunityGroup = {
+  slug?: string;
+  joined?: boolean;
+  muted?: boolean;
+  role?: "member" | "moderator" | "admin" | null;
+  profile?: CommunityGroupProfile;
   id: string;
   name: string;
   description: string;
@@ -80,6 +85,7 @@ export type CommunityFlair = {
 export type CommunityBookmark = {
   id: string;
   label: string;
+  url?: string | null;
 };
 
 export type CommunityDiscoveryCategory = {
@@ -1201,8 +1207,7 @@ export const mockCommunityPosts: CommunityPost[] = [
     groupId: "group-thailand-restaurants",
     authorId: "user-kanya",
     title: "Would you change the Bangkok 5-Day EV Loop food pacing?",
-    body:
-      "I am using Bangkok 5-Day EV Loop: Temples, markets, riverside, and Ayutthaya day trip as the base. The temple days look solid, but I am debating whether the riverside dinner and Chatuchak market day need more breathing room.",
+    body: "I am using Bangkok 5-Day EV Loop: Temples, markets, riverside, and Ayutthaya day trip as the base. The temple days look solid, but I am debating whether the riverside dinner and Chatuchak market day need more breathing room.",
     createdAt: "2026-05-10T20:35:00+07:00",
     upvotes: 286,
     commentCount: 14,
@@ -1234,8 +1239,7 @@ export const mockCommunityPosts: CommunityPost[] = [
     groupId: "group-chiang-mai-cafes",
     authorId: "user-narin",
     title: "Chiang Mai khao soi crawl without overpacking the day",
-    body:
-      "This trip keeps one main restaurant stop per half-day, then adds cafes and a mountain view. I want it to feel relaxed, not like a checklist.",
+    body: "This trip keeps one main restaurant stop per half-day, then adds cafes and a mountain view. I want it to feel relaxed, not like a checklist.",
     createdAt: "2026-05-08T12:40:00+07:00",
     upvotes: 173,
     commentCount: 11,
@@ -1303,8 +1307,7 @@ export const mockCommunityPosts: CommunityPost[] = [
     groupId: "group-bangkok-food",
     authorId: "user-kanya",
     title: "Dessert stop in the Bangkok 5-Day EV Loop: riverside or old town?",
-    body:
-      "The Bangkok 5-Day EV Loop already has ICONSIAM, Chatuchak, and Ayutthaya baked in. I like dessert after the riverside segment, but some friends say it is better to stay near old town and skip the taxi hop.",
+    body: "The Bangkok 5-Day EV Loop already has ICONSIAM, Chatuchak, and Ayutthaya baked in. I like dessert after the riverside segment, but some friends say it is better to stay near old town and skip the taxi hop.",
     createdAt: "2026-05-04T22:00:00+07:00",
     upvotes: 69,
     commentCount: 8,
@@ -1506,7 +1509,7 @@ export function getGroupBySlug(
 
   return (
     groups.find((group) => {
-      const nameSlug = slugifyCommunityValue(group.name);
+      const nameSlug = group.slug ?? slugifyCommunityValue(group.name);
 
       return (
         nameSlug === decodedSlug ||
@@ -1521,6 +1524,18 @@ export function getGroupProfileByGroupId(
   groupId: string,
   group?: CommunityGroup | null,
 ): CommunityGroupProfile {
+  if (group?.slug) {
+    return (
+      group.profile ?? {
+        groupId,
+        bannerUrl: "",
+        summary: group.description,
+        weeklyVisitorCount: 0,
+        weeklyContributionCount: 0,
+        moderatorIds: [],
+      }
+    );
+  }
   const profile = mockCommunityGroupProfiles.find(
     (item) => item.groupId === groupId,
   );
@@ -1584,10 +1599,10 @@ export function getCommunityPostSlug(
 }
 
 export function getCommunityPostHref(
-  group: Pick<CommunityGroup, "name">,
+  group: Pick<CommunityGroup, "name" | "slug">,
   post: Pick<CommunityPost, "id" | "title">,
 ) {
-  return `/community/${slugifyCommunityValue(group.name)}/${getCommunityPostSlug(
+  return `/community/${group.slug ?? slugifyCommunityValue(group.name)}/${getCommunityPostSlug(
     post,
   )}`;
 }

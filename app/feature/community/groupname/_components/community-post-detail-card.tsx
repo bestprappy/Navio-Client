@@ -57,7 +57,7 @@ export function CommunityPostDetailCard({
   const flair = post.flairId
     ? (group.postFlairs.find((item) => item.id === post.flairId) ?? null)
     : null;
-  const groupHref = `/community/${slugifyCommunityValue(group.name)}`;
+  const groupHref = `/community/${group.slug ?? slugifyCommunityValue(group.name)}`;
 
   function toggleUpvote() {
     requireAuth(() => {
@@ -79,9 +79,7 @@ export function CommunityPostDetailCard({
           ? previous.filter((id) => id !== post.id)
           : [...previous, post.id],
       );
-      setUpvotedPostIds((previous) =>
-        previous.filter((id) => id !== post.id),
-      );
+      setUpvotedPostIds((previous) => previous.filter((id) => id !== post.id));
     });
   }
 

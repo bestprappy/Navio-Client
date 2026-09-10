@@ -12,7 +12,6 @@ import {
   getCommentsByPostId,
   getGroupById,
   getTripById,
-  mockCommunityGroups,
   mockCommunityPosts,
 } from "./data";
 
@@ -59,18 +58,6 @@ function hasAllTokens(searchText: string, tokens: string[]): boolean {
   }
 
   return tokens.every((token) => searchText.includes(token));
-}
-
-function getGroupSearchText(group: CommunityGroup): string {
-  return normalizeValue(
-    [
-      group.name,
-      group.description,
-      group.country,
-      ...group.places,
-      ...group.tags,
-    ].join(" "),
-  );
 }
 
 function getTripSearchText(tripId?: string): string {
@@ -122,37 +109,6 @@ function getPostSearchText(
   );
 }
 
-function getGroupSearchScore(group: CommunityGroup, query: string): number {
-  const normalizedQuery = normalizeValue(query);
-  const tokens = getSearchTokens(query);
-
-  if (!tokens.length) {
-    return group.isOfficial ? 6 : 0;
-  }
-
-  const name = normalizeValue(group.name);
-  const description = normalizeValue(group.description);
-  const country = normalizeValue(group.country);
-  const places = normalizeValue(group.places.join(" "));
-  const tags = normalizeValue(group.tags.join(" "));
-
-  if (!hasAllTokens(getGroupSearchText(group), tokens)) {
-    return -1;
-  }
-
-  return tokens.reduce((score, token) => {
-    let nextScore = score;
-
-    if (name.includes(token)) nextScore += 12;
-    if (tags.includes(token)) nextScore += 8;
-    if (country.includes(token)) nextScore += 7;
-    if (places.includes(token)) nextScore += 6;
-    if (description.includes(token)) nextScore += 3;
-
-    return nextScore;
-  }, name.includes(normalizedQuery) ? 10 : 0);
-}
-
 function getPostSearchScore(
   post: CommunityPost,
   groups: CommunityGroup[],
@@ -189,20 +145,23 @@ function getPostSearchScore(
       .join(" "),
   );
 
-  return tokens.reduce((score, token) => {
-    let nextScore = score;
+  return tokens.reduce(
+    (score, token) => {
+      let nextScore = score;
 
-    if (title.includes(token)) nextScore += 14;
-    if (tags.includes(token)) nextScore += 10;
-    if (place.includes(token)) nextScore += 8;
-    if (country.includes(token)) nextScore += 8;
-    if (groupText.includes(token)) nextScore += 7;
-    if (tripText.includes(token)) nextScore += 6;
-    if (body.includes(token)) nextScore += 4;
-    if (commentText.includes(token)) nextScore += 2;
+      if (title.includes(token)) nextScore += 14;
+      if (tags.includes(token)) nextScore += 10;
+      if (place.includes(token)) nextScore += 8;
+      if (country.includes(token)) nextScore += 8;
+      if (groupText.includes(token)) nextScore += 7;
+      if (tripText.includes(token)) nextScore += 6;
+      if (body.includes(token)) nextScore += 4;
+      if (commentText.includes(token)) nextScore += 2;
 
-    return nextScore;
-  }, searchText.includes(normalizedQuery) ? 12 : 0);
+      return nextScore;
+    },
+    searchText.includes(normalizedQuery) ? 12 : 0,
+  );
 }
 
 function sortPosts(
@@ -246,41 +205,7 @@ function getExtraCommentsSignature(
     .join("|");
 }
 
-export function useCommunityGroups(
-  query: string,
-  createdGroups: CommunityGroup[],
-) {
-  return useQuery({
-    queryKey: [
-      "community",
-      "groups",
-      query,
-      getCreatedIdsSignature(createdGroups),
-    ],
-    queryFn: async () => {
-      await waitForMockNetwork();
-
-      const groups = [...createdGroups, ...mockCommunityGroups];
-      const scores = new Map(
-        groups.map((group) => [group.id, getGroupSearchScore(group, query)]),
-      );
-      const tokens = getSearchTokens(query);
-
-      return groups
-        .filter((group) => !tokens.length || (scores.get(group.id) ?? -1) >= 0)
-        .sort((a, b) => {
-          const scoreA = scores.get(a.id) ?? 0;
-          const scoreB = scores.get(b.id) ?? 0;
-
-          return (
-            scoreB - scoreA ||
-            Number(Boolean(b.isOfficial)) - Number(Boolean(a.isOfficial)) ||
-            b.memberCount - a.memberCount
-          );
-        });
-    },
-  });
-}
+export { useCommunityGroups } from "./community-group-queries";
 
 export function useCommunityFeed(
   query: string,
@@ -302,7 +227,9 @@ export function useCommunityFeed(
     queryFn: async () => {
       await waitForMockNetwork();
 
-      const posts = [...createdPosts, ...mockCommunityPosts];
+      const posts = [...createdPosts, ...mockCommunityPosts].filter((post) =>
+        groups.some((group) => group.id === post.groupId),
+      );
       const extraComments = Object.values(extraCommentsByPostId).flat();
       const scores = new Map(
         posts.map((post) => [

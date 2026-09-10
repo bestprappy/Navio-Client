@@ -11,7 +11,11 @@ import type {
   CommunityGroup,
   CommunityPost,
 } from "../_components/data";
-import { getCommentsByPostId, getGroupById, getTripById } from "../_components/data";
+import {
+  getCommentsByPostId,
+  getGroupById,
+  getTripById,
+} from "../_components/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,7 +57,10 @@ export function CommunityFeed({
   const [sort, setSort] = useAtom(communityFeedSortAtom);
 
   return (
-    <section className="flex min-w-0 flex-col gap-4" aria-label="Community feed">
+    <section
+      className="flex min-w-0 flex-col gap-4"
+      aria-label="Community feed"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -65,12 +72,13 @@ export function CommunityFeed({
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Ask, compare, and improve trip plans from Navio travelers.
+            Local preview: posts, comments, and votes stay in this session and
+            are not published.
           </p>
         </div>
         <div
           className="inline-flex rounded-lg border border-border bg-card p-1"
-          role="tablist"
+          role="group"
           aria-label="Sort community feed"
         >
           {SORT_OPTIONS.map((option) => (
@@ -79,8 +87,7 @@ export function CommunityFeed({
               type="button"
               size="sm"
               variant={sort === option.value ? "secondary" : "ghost"}
-              role="tab"
-              aria-selected={sort === option.value}
+              aria-pressed={sort === option.value}
               onClick={() => setSort(option.value)}
               className={cn(sort === option.value && "shadow-xs")}
             >
@@ -95,7 +102,7 @@ export function CommunityFeed({
           <CardHeader>
             <CardTitle>Feed unavailable</CardTitle>
             <CardDescription>
-              The mock community feed could not load. Try refreshing the page.
+              The discussion preview could not load. Try refreshing the page.
             </CardDescription>
           </CardHeader>
         </Card>
@@ -118,12 +125,17 @@ export function CommunityFeed({
       {!isLoading && !isError && posts.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-            <SearchX className="size-8 text-muted-foreground" aria-hidden="true" />
+            <SearchX
+              className="size-8 text-muted-foreground"
+              aria-hidden="true"
+            />
             <div>
-              <h2 className="font-semibold text-foreground">No matches yet</h2>
+              <h2 className="font-semibold text-foreground">
+                No discussion previews yet
+              </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Try searching for restaurant, restaurant Thailand, Bangkok food,
-                or EV charging.
+                Discover a community or create a local post preview to try the
+                discussion experience.
               </p>
             </div>
           </CardContent>
