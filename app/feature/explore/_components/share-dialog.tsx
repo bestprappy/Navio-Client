@@ -97,7 +97,7 @@ function ShareDialogContent({ children }: { children: ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <div
-        className="w-full max-w-xl rounded-3xl border border-border bg-card p-6 shadow-2xl"
+        className="max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-3xl border border-border bg-card p-6 shadow-2xl"
         role="dialog"
         aria-modal="true"
         aria-label="Share this plan"
@@ -135,11 +135,19 @@ function ShareDialogPreview() {
   }
 
   return (
-    <div
-      className="mt-4 h-40 w-full rounded-2xl bg-cover bg-center"
-      style={{ backgroundImage: `url(${plan.imageUrl})` }}
-      aria-label={plan.title}
-    />
+    <div className="relative mt-4 overflow-hidden rounded-xl border border-border">
+      <div
+        className="h-52 w-full bg-cover bg-center"
+        style={{ backgroundImage: `url(${plan.imageUrl})` }}
+        aria-label={plan.title}
+      />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-foreground/90 via-foreground/30 to-transparent" />
+      <div className="absolute bottom-3 left-3 right-3">
+        <p className="line-clamp-2 text-lg font-semibold text-background">
+          {plan.title}
+        </p>
+      </div>
+    </div>
   );
 }
 

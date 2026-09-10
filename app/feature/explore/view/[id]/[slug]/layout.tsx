@@ -35,14 +35,19 @@ export default async function ExplorePlanLayout({
   return (
     <div className="flex min-h-screen flex-col bg-background lg:h-screen lg:flex-row">
       <aside className="flex min-h-0 w-full flex-col border-r border-border bg-card/70 lg:w-1/2">
-        <div className="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-3">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-full bg-primary/10">
-              <Logo className="size-4" />
-            </div>
-            <span className="text-sm font-semibold text-foreground">Navio</span>
+        <div className="sticky top-0 z-40 flex items-center justify-between gap-4 border-b border-border/40 bg-background/80 px-4 py-3 backdrop-blur">
+          <Link
+            href="/"
+            aria-label="Navio home"
+            className="flex items-center gap-2 rounded-full border border-border bg-card/80 px-2.5 py-1 text-foreground transition hover:bg-card"
+          >
+            <Logo className="size-4" />
+            <span className="text-sm font-semibold tracking-tight">Navio</span>
           </Link>
-          <nav className="hidden items-center gap-2 text-sm text-muted-foreground md:flex">
+          <nav
+            aria-label="Post navigation"
+            className="hidden items-center gap-2 text-xs font-medium text-muted-foreground md:flex"
+          >
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
@@ -83,7 +88,7 @@ export default async function ExplorePlanLayout({
         </div>
         <div className="flex-1 overflow-y-auto">{children}</div>
       </aside>
-      <section className="relative h-[45vh] w-full bg-muted/10 lg:h-auto lg:min-w-0 lg:w-1/2">
+      <section className="relative h-[45vh] w-full bg-muted/20 lg:h-auto lg:min-w-0 lg:w-1/2">
         <PlanMap plan={plan} />
       </section>
     </div>

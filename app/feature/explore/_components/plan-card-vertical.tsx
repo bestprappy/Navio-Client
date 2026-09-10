@@ -47,7 +47,6 @@ export function PlanCardVertical({
   const reviewHref = `${href}#reviews`;
   const [isLiked, setIsLiked] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-  const isCompact = variant === "compact";
 
   function handleCardClick(event: MouseEvent<HTMLElement>) {
     if (isInteractiveCardTarget(event.target)) {
@@ -60,7 +59,7 @@ export function PlanCardVertical({
   const imageClassName = cn(
     "w-full bg-cover bg-center transition duration-300",
     variant === "trending"
-      ? "h-64 group-hover:scale-[1.04]"
+      ? "aspect-3/4 group-hover:scale-[1.04]"
       : variant === "featured"
         ? "h-48 group-hover:scale-[1.02]"
         : variant === "grid" || variant === "compact"
@@ -93,8 +92,7 @@ export function PlanCardVertical({
   );
 
   const likeButtonClassName = cn(
-    "flex items-center gap-1 rounded-full border border-border/60 px-3 font-medium shadow-sm transition cursor-pointer",
-    isCompact ? "py-2 text-sm" : "py-1.5 text-xs",
+    "flex items-center gap-1 rounded-full border border-border/60 px-3 py-1.5 text-xs font-medium shadow-sm transition cursor-pointer",
     isLiked
       ? "bg-destructive/10 text-destructive ring-2 ring-destructive/30"
       : "bg-card/80 text-muted-foreground hover:text-foreground",
@@ -102,10 +100,7 @@ export function PlanCardVertical({
 
   return (
     <article
-      className={cn(
-        "flex flex-col gap-3 cursor-pointer",
-        isCompact ? "min-w-0" : "min-w-[260px]",
-      )}
+      className="flex min-w-0 flex-col gap-3 cursor-pointer"
       data-plan-card
       onClick={handleCardClick}
     >
@@ -117,7 +112,7 @@ export function PlanCardVertical({
             aria-label={plan.title}
           />
         </Link>
-        <div className="absolute right-3 top-3 z-20 flex items-center gap-2">
+        <div className="absolute inset-x-3 top-3 z-20 flex flex-wrap items-center justify-end gap-2">
           <button
             type="button"
             aria-pressed={isSaved}
@@ -190,7 +185,7 @@ export function PlanCardVertical({
         </div>
         <p className={descriptionClassName}>{plan.description}</p>
         {variant === "compact" ? (
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className={cn(metaSizeClassName, "text-muted-foreground")}>
               {plan.lastUpdated}
             </p>
@@ -209,13 +204,13 @@ export function PlanCardVertical({
         ) : null}
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <UserBadge
           user={author}
           variant={variant === "compact" ? "compact" : "default"}
         />
         {variant === "compact" ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href={discussionHref}
               aria-label={`Start a discussion about ${plan.title}`}

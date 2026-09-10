@@ -79,7 +79,7 @@ export function PlanCardHorizontal({
             aria-label={plan.title}
           />
         </Link>
-        <div className="absolute right-3 top-3 z-20 flex items-center gap-2">
+        <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
           <button
             type="button"
             aria-pressed={isSaved}

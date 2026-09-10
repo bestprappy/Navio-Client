@@ -24,18 +24,18 @@ export function UserBadge({ user, variant = "default" }: UserBadgeProps) {
   const isCompact = variant === "compact";
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2">
       <Avatar className={isCompact ? "size-7" : "size-8"}>
         <AvatarImage src={user.avatarUrl} alt={user.name} />
         <AvatarFallback className={isCompact ? "text-[10px]" : "text-xs"}>
           {getInitials(user.name)}
         </AvatarFallback>
       </Avatar>
-      <div>
+      <div className={isCompact ? "min-w-0" : undefined}>
         <p
           className={cn(
             "font-medium text-foreground",
-            isCompact ? "text-xs" : "text-sm",
+            isCompact ? "max-w-28 truncate text-xs" : "text-sm",
           )}
         >
           {user.name}
