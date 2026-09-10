@@ -11,7 +11,6 @@ import {
 } from "../_components/community-atoms";
 import { useCommunityGroup } from "../_components/community-group-queries";
 import { toCommunityGroup } from "../_components/community-api";
-import { CommunityErrorBoundary } from "../_components/community-error-boundary";
 import { CommunityWorkspace } from "../_components/community-workspace";
 import {
   CommunityGroupLoading,
