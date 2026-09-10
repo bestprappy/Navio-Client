@@ -86,8 +86,8 @@ const REPLY_INCREMENT = 3;
 const MAX_INLINE_COMMENT_DEPTH = 6;
 
 const COMMENT_SORT_OPTIONS: { value: CommunityCommentSort; label: string }[] = [
-  { value: "best", label: "Best" },
-  { value: "new", label: "New" },
+  { value: "best", label: "Top" },
+  { value: "new", label: "Latest" },
 ];
 
 function normalizeSearchValue(value: string) {
@@ -774,7 +774,7 @@ export function CommunityCommentThread({
           </div>
         </div>
 
-        <div className="relative min-w-0 flex-1 sm:max-w-xs">
+        <div className="relative w-full min-w-0 sm:w-auto sm:max-w-xs sm:flex-1">
           <label htmlFor={`comment-search-${post.id}`} className="sr-only">
             Search comments
           </label>

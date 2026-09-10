@@ -1,3 +1,8 @@
+"use client";
+
+import { useTripMetadata } from "../_components/use-trip-metadata";
+import { getTripCountry } from "../_components/trip-destinations";
+import { PlannerWorkspace } from "./_components/layout/planner-workspace";
 import { ExploreSection } from "./_components/explore/explore-section";
 import { GarageSection } from "./_components/garage/garage-section";
 import { DayNavSidebar } from "./_components/itinerary/day-nav-sidebar";
@@ -33,8 +38,48 @@ export function PlannerDetail({
   longitude,
   templatePlanId,
 }: PlannerDetailProps) {
+  const metadata = useTripMetadata(planId);
+  const tripDestinationName = metadata.data?.destinationName ?? destinationName;
+  const tripLatitude = metadata.data?.destinationLat ?? latitude;
+  const tripLongitude = metadata.data?.destinationLng ?? longitude;
   return (
-    <div className="flex h-full min-w-0">
+    <PlannerWorkspace itinerary={<>
+          <TripHero destinationName={tripDestinationName} />
+          <TripInfoCard
+            planId={planId}
+            destinationName={tripDestinationName}
+            from={from}
+            to={to}
+            members={[{ id: "1", name: "You" }]}
+          />
+          <ExploreSection
+            destinationName={tripDestinationName}
+            country={getTripCountry({ destinationName: tripDestinationName, destinationCountry: metadata.data?.destinationCountry ?? null })}
+          />
+
+          <TripBuilderErrorBoundary>
+            <GarageSection />
+          </TripBuilderErrorBoundary>
+
+          <TripBuilderErrorBoundary>
+            <MyListSection
+              destinationName={tripDestinationName}
+              latitude={tripLatitude}
+              longitude={tripLongitude}
+              createDefaultList={!templatePlanId}
+            />
+          </TripBuilderErrorBoundary>
+
+          <TripBuilderErrorBoundary>
+            <ItinerarySection
+              destinationName={tripDestinationName}
+              latitude={tripLatitude}
+              longitude={tripLongitude}
+            />
+          </TripBuilderErrorBoundary>
+          <BudgetSection />
+
+</>} map={<TripBuilderErrorBoundary><PlannerMap latitude={tripLatitude} longitude={tripLongitude} /></TripBuilderErrorBoundary>} details={<PlannerSidePanelHost />}>
       <PlannerTemplateHydrator
         planId={planId}
         templatePlanId={templatePlanId}
@@ -51,59 +96,7 @@ export function PlannerDetail({
         longitude={longitude}
         templatePlanId={templatePlanId}
       />
-      {/* Left: day nav + scrollable planner panel */}
-      <div className="flex w-[38%] border-r border-border/40">
-        <DayNavSidebar />
-
-        <div
-          id="planner-scroll-panel"
-          className="scrollbar-hide flex-1 overflow-y-auto"
-        >
-          <TripHero destinationName={destinationName} />
-          <TripInfoCard
-            destinationName={destinationName}
-            from={from}
-            to={to}
-            members={[{ id: "1", name: "You" }]}
-          />
-          <ExploreSection
-            destinationName={destinationName}
-            distanceText={`Nearby ${destinationName}`}
-          />
-
-          <TripBuilderErrorBoundary>
-            <GarageSection />
-          </TripBuilderErrorBoundary>
-
-          <TripBuilderErrorBoundary>
-            <MyListSection
-              destinationName={destinationName}
-              latitude={latitude}
-              longitude={longitude}
-              createDefaultList={!templatePlanId}
-            />
-          </TripBuilderErrorBoundary>
-
-          <TripBuilderErrorBoundary>
-            <ItinerarySection
-              destinationName={destinationName}
-              latitude={latitude}
-              longitude={longitude}
-            />
-          </TripBuilderErrorBoundary>
-          <BudgetSection />
-        </div>
-      </div>
-
-      {/* Center: full-height map */}
-      <div className="min-w-0 flex-1">
-        <TripBuilderErrorBoundary>
-          <PlannerMap latitude={latitude} longitude={longitude} />
-        </TripBuilderErrorBoundary>
-      </div>
-
-      {/* Right: EV side panel — pushes map when open */}
-      <PlannerSidePanelHost />
-    </div>
+      <DayNavSidebar />
+    </PlannerWorkspace>
   );
 }

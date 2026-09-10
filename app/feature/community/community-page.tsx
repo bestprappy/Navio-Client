@@ -11,6 +11,7 @@ import {
 } from "./_components/community-atoms";
 import { CommunityContextSidebar } from "./feed/community-context-sidebar";
 import { CommunityErrorBoundary } from "./_components/community-error-boundary";
+import { CommunityWorkspace } from "./_components/community-workspace";
 import { CommunityFeed } from "./feed/community-feed";
 import {
   useCommunityFeed,
@@ -42,8 +43,8 @@ export function CommunityPage() {
 
   return (
     <CommunityErrorBoundary>
-      <div className="min-h-full bg-background">
-        <div className="mx-auto flex w-full max-w-[92rem] flex-col gap-6 p-4 sm:p-6">
+      <CommunityWorkspace>
+        <CommunityWorkspace.Content>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Button
               variant="outline"
@@ -58,27 +59,16 @@ export function CommunityPage() {
             error={groupsQuery.error}
             onRetry={() => void groupsQuery.refetch()}
           />
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-            <CommunityFeed
-              posts={feedQuery.data ?? []}
-              groups={groups}
-              extraCommentsByPostId={extraCommentsByPostId}
-              searchQuery={searchQuery}
-              selectedPostId={selectedPostId}
-              isLoading={feedQuery.isLoading}
-              isError={feedQuery.isError}
-              onSelectPost={setSelectedPostId}
-            />
-
-            <CommunityContextSidebar
-              groups={groups}
-              joinedGroupIds={groups
-                .filter((group) => group.joined)
-                .map((group) => group.id)}
-              groupsLoading={groupsQuery.isLoading}
-              groupsError={groupsQuery.isError}
-            />
-          </div>
+          <CommunityFeed
+            posts={feedQuery.data ?? []}
+            groups={groups}
+            extraCommentsByPostId={extraCommentsByPostId}
+            searchQuery={searchQuery}
+            selectedPostId={selectedPostId}
+            isLoading={feedQuery.isLoading}
+            isError={feedQuery.isError}
+            onSelectPost={setSelectedPostId}
+          />
           {groupsQuery.hasNextPage ? (
             <Button
               variant="outline"
@@ -88,8 +78,18 @@ export function CommunityPage() {
               Load more communities
             </Button>
           ) : null}
-        </div>
-      </div>
+        </CommunityWorkspace.Content>
+        <CommunityWorkspace.Aside>
+          <CommunityContextSidebar
+            groups={groups}
+            joinedGroupIds={groups
+              .filter((group) => group.joined)
+              .map((group) => group.id)}
+            groupsLoading={groupsQuery.isLoading}
+            groupsError={groupsQuery.isError}
+          />
+        </CommunityWorkspace.Aside>
+      </CommunityWorkspace>
     </CommunityErrorBoundary>
   );
 }

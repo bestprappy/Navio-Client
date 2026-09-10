@@ -27,6 +27,7 @@ import type {
   PlaceAutocompleteSuggestion,
   PlaceSearchResult,
 } from "./place-api";
+import { matchesDestination } from "../itinerary/day-destinations";
 import { PlaceSearchDropdown } from "./place-search-dropdown";
 
 type AddPlaceInputProps = {
@@ -77,6 +78,7 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
       sessionToken,
       searchBias?.lat,
       searchBias?.lng,
+      searchBias?.label,
     ],
     queryFn: () =>
       fetchPlaceAutocomplete(debouncedQuery, {
@@ -84,12 +86,22 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
         lng: searchBias?.lng,
         sessionToken,
       }),
-    enabled: debouncedQuery.trim().length >= 2,
+    enabled: isDropdownOpen && debouncedQuery.trim().length >= 2,
     staleTime: 30_000,
     retry: 1,
   });
 
-  const suggestions = autocompleteQuery.data ?? [];
+  const discoveryQuery = useQuery({
+    queryKey: ["destination-suggestions", searchBias?.label, searchBias?.lat, searchBias?.lng],
+    queryFn: () => fetchPlaceSearch(`Things to do in ${searchBias!.label}`, { lat: searchBias!.lat, lng: searchBias!.lng }),
+    enabled: isDropdownOpen && !query.trim() && !!searchBias,
+    staleTime: 300_000,
+    retry: 1,
+  });
+  const isDiscovering = !query.trim() && !!searchBias;
+  const suggestions: PlaceAutocompleteSuggestion[] = isDiscovering
+    ? (discoveryQuery.data ?? []).filter((place) => matchesDestination(place.address, searchBias!.label)).slice(0, 8).map((place) => ({ provider: place.provider, providerPlaceId: place.providerPlaceId, mainText: place.name, secondaryText: place.address, types: [], place }))
+    : (autocompleteQuery.data ?? []).filter((suggestion) => !searchBias || matchesDestination(suggestion.secondaryText, searchBias.label));
   const activeSuggestion = suggestions[activeIndex];
 
   const nearbySearchQuery = useQuery({
@@ -98,6 +110,7 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
       debouncedQuery,
       searchBias?.lat,
       searchBias?.lng,
+      searchBias?.label,
     ],
     queryFn: () =>
       fetchPlaceSearch(debouncedQuery, {
@@ -190,7 +203,8 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
 
     if (event.key === "Enter") {
       event.preventDefault();
-      void showResultsOnMap();
+      if (isDropdownOpen && activeSuggestion) selectSuggestion(activeSuggestion);
+      else void showResultsOnMap();
       return;
     }
 
@@ -271,15 +285,15 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
   const isBusy = isFetchingDetail || isMapSearchLoading;
 
   const showDropdown =
-    isDropdownOpen && query.trim() && dropdownStyle && !isFetchingDetail;
+    isDropdownOpen && (query.trim() || searchBias) && dropdownStyle && !isFetchingDetail;
 
   const inputPlaceholder = isFetchingDetail
     ? "Loading place details..."
     : isMapSearchLoading
       ? "Finding nearby places..."
     : searchBias
-      ? `Add places near ${searchBias.label}`
-      : "Add places";
+      ? `Add a stop in ${searchBias.label}`
+      : "Add a stop";
 
   return (
     <div
@@ -301,6 +315,7 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
           id={inputId}
           type="text"
           role="combobox"
+          aria-label={searchBias ? `Add a stop in ${searchBias.label}` : "Add a stop"}
           aria-autocomplete="list"
           aria-controls={listboxId}
           aria-activedescendant={
@@ -350,10 +365,11 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
               listboxId={listboxId}
               mapResultCount={nearbySearchQuery.data?.length ?? 0}
               query={query}
+              destinationLabel={isDiscovering ? searchBias?.label : undefined}
               suggestions={suggestions}
-              isLoading={autocompleteQuery.isFetching}
+              isLoading={isDiscovering ? discoveryQuery.isFetching : autocompleteQuery.isFetching}
               error={
-                autocompleteQuery.isError
+                (isDiscovering ? discoveryQuery.isError : autocompleteQuery.isError)
                   ? "Search is temporarily unavailable."
                   : null
               }

@@ -76,7 +76,8 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
     const startDate = dateRange?.from ?? today;
     const endDate = dateRange?.to ?? startDate;
     createTripMutation.mutate({
-      displayName: `Trip to ${selectedDestination.name}`,
+      displayName: selectedDestination.country || selectedDestination.name,
+      destinationCountry: selectedDestination.country || undefined,
       startDate: formatDate(startDate),
       endDate: formatDate(endDate),
       destinationId: selectedDestination.id,

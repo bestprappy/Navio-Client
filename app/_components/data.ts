@@ -1,74 +1,74 @@
-import type { LucideIcon } from "lucide-react"
-import { Camera, Navigation, Users, Zap } from "lucide-react"
+import type { LucideIcon } from "lucide-react";
+import { Camera, Navigation, Users, Zap } from "lucide-react";
 
 export type Feature = {
-  icon: LucideIcon
-  title: string
-  description: string
-}
+  icon: LucideIcon;
+  title: string;
+  description: string;
+};
 
 export type Step = {
-  number: string
-  title: string
-  description: string
-}
+  number: string;
+  title: string;
+  description: string;
+};
 
 export type Stat = {
-  value: string
-  label: string
-}
+  value: string;
+  label: string;
+};
 
 export const features: Feature[] = [
   {
     icon: Navigation,
-    title: "AI-Powered Route Planning",
+    title: "Route planning",
     description:
-      "Smart routing that factors in your EV range, charging network, and real-time traffic to plan the perfect trip.",
+      "Plan around EV range, charging coverage, and route timing without losing the details that matter on the road.",
   },
   {
     icon: Zap,
-    title: "Smart Charging Stops",
+    title: "Charging context",
     description:
-      "Automatically discover and reserve charging stations with live availability and estimated charge times.",
+      "Compare charger stops, estimated charge time, connector details, and nearby context before committing to a route.",
   },
   {
     icon: Camera,
-    title: "Trip Media",
+    title: "Trip memory",
     description:
-      "Capture and share photos and videos from your EV adventures with geo-tagged, shareable media albums.",
+      "Keep photos, notes, and highlights attached to the plan so finished routes are easier to revisit and share.",
   },
   {
     icon: Users,
-    title: "Community Routes",
+    title: "Community routes",
     description:
-      "Discover routes shared by real EV drivers and contribute your own adventures to the growing community.",
+      "Browse trip ideas from other drivers, copy useful plans, and discuss what worked before taking the same route.",
   },
-]
+];
 
 export const steps: Step[] = [
   {
     number: "01",
-    title: "Plan Your Route",
+    title: "Build the outline",
     description:
-      "Enter your destination and let Navio's AI calculate the optimal EV route with charging stops automatically included.",
+      "Choose a destination and turn it into a structured route with dates, stops, and useful trip context.",
   },
   {
     number: "02",
-    title: "Charge with Confidence",
+    title: "Check the charging fit",
     description:
-      "Get live charging station availability, pricing, and estimated wait times — then reserve your spot ahead of time.",
+      "Review charging options, timing, and connector fit before the route becomes final.",
   },
   {
     number: "03",
-    title: "Share the Adventure",
+    title: "Save and share",
     description:
-      "Document your journey with trip media and share your route with the growing Navio EV community.",
+      "Save the finished plan, copy routes from Explore, and bring questions to the community feed.",
   },
-]
+];
 
 export const stats: Stat[] = [
-  { value: "50K+", label: "Charging Stations" },
-  { value: "120K+", label: "Routes Planned" },
-  { value: "15K+", label: "EV Drivers" },
-  { value: "98%", label: "Trip Success Rate" },
-]
+  { value: "50K+", label: "Charging stations" },
+  { value: "120K+", label: "Routes planned" },
+  { value: "15K+", label: "EV drivers" },
+  { value: "98%", label: "Trip success rate" },
+];

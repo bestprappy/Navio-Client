@@ -2,7 +2,7 @@
 
 import { Fragment, type DragEvent, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, GripVertical } from "lucide-react";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,24 +10,14 @@ import { cn } from "@/lib/utils";
 import { getTripBlockColorById } from "../constants/trip-block-colors";
 import {
   isEvChargerPlaceItem,
-  isPlaceItem,
   type TripBlockData,
   type TripBlockItem,
 } from "../constants/types";
-import {
-  calcBatteryUsedPct,
-  calcDayChargeStats,
-} from "../garage/ev-calculator";
-import {
-  activeEvCarAtom,
-  startingBatteryPctAtom,
-} from "../garage/garage.atoms";
-import type { EvCar } from "../constants/vehicle.types";
+import { useTripCharging } from "../garage/use-trip-charging";
 import { reorderBlockItemsAtom } from "../overview/trip-builder.atoms";
 import { DischargeSegmentInfo } from "../routes/charge-segment-info";
 import { RouteSegmentInfo } from "../routes/route-segment-info";
 import { getRouteSegmentByToItemId } from "../routes/trip-route.helpers";
-import type { RouteSegment } from "../routes/trip-route.types";
 import { useTripRoutes } from "../routes/trip-route-query";
 import { TripChecklistItem } from "./items/trip-checklist-item";
 import { TripNoteItem } from "./items/trip-note-item";
@@ -99,50 +89,13 @@ function getRegularPlacePosition(
     .length;
 }
 
-function buildBatteryStateMap(
-  items: TripBlockItem[],
-  segments: Map<string, RouteSegment>,
-  car: EvCar,
-  startPct: number,
-): Map<string, BatteryState> {
-  const map = new Map<string, BatteryState>();
-  const placeItems = items.filter(isPlaceItem);
-  let currentPct = startPct;
-
-  for (let i = 0; i < placeItems.length; i++) {
-    const item = placeItems[i]!;
-
-    let arrivalPct = currentPct;
-
-    if (i > 0) {
-      const seg = segments.get(item.id);
-      const distanceKm = (seg?.distanceMeters ?? 0) / 1000;
-      const usedPct = distanceKm > 0 ? calcBatteryUsedPct(distanceKm, car) : 0;
-      arrivalPct = Math.max(0, currentPct - usedPct);
-    }
-
-    let departurePct = arrivalPct;
-
-    if (isEvChargerPlaceItem(item) && item.evCharger) {
-      const chargeStats = calcDayChargeStats([item.evCharger], car);
-      const addedPct = (chargeStats.chargeEnergyKwh / car.batteryKwh) * 100;
-      departurePct = Math.min(100, arrivalPct + addedPct);
-    }
-
-    map.set(item.id, { arrivalPct, departurePct });
-    currentPct = departurePct;
-  }
-
-  return map;
-}
-
 export function SortableBlockItems({ block }: SortableBlockItemsProps) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
+  const [interactiveItemId, setInteractiveItemId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const shouldShowRouting = block.kind !== "list";
   const reorderBlockItems = useSetAtom(reorderBlockItemsAtom);
-  const activeEvCar = useAtomValue(activeEvCarAtom);
-  const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
+  const charging = useTripCharging();
   const tripRoutes = useTripRoutes();
   const routeSegments = useMemo(
     () => tripRoutes.data?.segments ?? [],
@@ -159,21 +112,7 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
     () => getRouteablePositionByItemId(block.items),
     [block.items],
   );
-  const batteryStateByItemId = useMemo(() => {
-    if (!shouldShowRouting || !activeEvCar) return new Map<string, BatteryState>();
-    return buildBatteryStateMap(
-      block.items,
-      routeSegmentByToItemId,
-      activeEvCar,
-      startingBatteryPct,
-    );
-  }, [
-    activeEvCar,
-    block.items,
-    routeSegmentByToItemId,
-    shouldShowRouting,
-    startingBatteryPct,
-  ]);
+  const batteryStateByItemId = charging?.days.get(block.id)?.batteryByItemId ?? new Map<string, BatteryState>();
 
   const blockColor = getTripBlockColorById(block.colorId);
 
@@ -253,10 +192,10 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
             {shouldShowRouteInfo ? (
               <div
                 role="listitem"
-                className="mr-8 grid grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-sm"
+                className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 rounded-sm"
               >
                 <div
-                  className="ml-3 flex justify-center py-1"
+                  className="flex justify-center py-1"
                   aria-hidden="true"
                 >
                   <span className="h-full min-h-8 w-px bg-border" />
@@ -278,7 +217,13 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
 
             <div
               role="listitem"
-              draggable
+              draggable={interactiveItemId !== item.id}
+              onPointerDownCapture={(event) => {
+                const target = event.target as HTMLElement;
+                setInteractiveItemId(target.closest("input, textarea, select, a, [data-no-drag]") ? item.id : null);
+              }}
+              onPointerUpCapture={() => setInteractiveItemId(null)}
+              onPointerCancel={() => setInteractiveItemId(null)}
               onDragStart={(event) => handleDragStart(event, item.id)}
               onDragEnd={() => {
                 setDraggedItemId(null);
@@ -291,12 +236,12 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
               onDragLeave={() => setDropTargetId(null)}
               onDrop={(event) => handleDrop(event, item.id)}
               className={cn(
-                " mr-8  grid grid-cols-[2rem_minmax(0,1fr)] gap-3 rounded-sm transition-colors",
+                "min-w-0 grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 rounded-sm transition-colors",
                 isDragging && "opacity-50",
                 isDropTarget && "bg-primary/10 p-2",
               )}
             >
-              <div className="flex flex-col items-center gap-1 ml-3">
+              <div className="flex flex-col items-center gap-1">
                 <button
                   type="button"
                   className="flex size-8 cursor-grab items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 active:cursor-grabbing"

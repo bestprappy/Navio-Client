@@ -59,7 +59,7 @@ export function PlanCardVertical({
   const imageClassName = cn(
     "w-full bg-cover bg-center transition duration-300",
     variant === "trending"
-      ? "aspect-3/4 group-hover:scale-[1.04]"
+      ? "aspect-3/4 group-hover:scale-[1.03]"
       : variant === "featured"
         ? "h-48 group-hover:scale-[1.02]"
         : variant === "grid" || variant === "compact"
@@ -104,7 +104,7 @@ export function PlanCardVertical({
       data-plan-card
       onClick={handleCardClick}
     >
-      <div className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      <div className="group relative overflow-hidden rounded-lg border border-border bg-card shadow-sm">
         <Link href={href} className="block cursor-pointer">
           <div
             className={imageClassName}
@@ -123,7 +123,7 @@ export function PlanCardVertical({
               requireAuth(() => setIsSaved((prev) => !prev));
             }}
             className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer",
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer",
               isSaved && "text-success ring-2 ring-success/30",
             )}
           >
@@ -139,7 +139,7 @@ export function PlanCardVertical({
               event.stopPropagation();
               onShare(plan.id);
             }}
-            className="flex h-8 w-8 items-center justify-center rounded-full bg-background/80 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur transition hover:bg-background cursor-pointer"
           >
             <Share2 className="h-4 w-4" />
           </button>
@@ -147,21 +147,21 @@ export function PlanCardVertical({
             href={copyHref}
             aria-label={`Copy ${plan.title} to planner`}
             onClick={(event) => event.stopPropagation()}
-            className="rounded-full border border-primary/40 bg-background/80 px-4 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur transition hover:bg-background cursor-pointer"
+            className="hidden rounded-full border border-primary/40 bg-background/85 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur transition hover:bg-background cursor-pointer sm:inline-flex"
           >
-            Copy Plan
+            Copy
           </Link>
         </div>
       </div>
 
-      <div className="space-y-2">
+      <div className="min-w-0 space-y-2">
         <Link href={href} className="block w-fit cursor-pointer">
           <h3 className={titleClassName}>{plan.title}</h3>
         </Link>
         <div
           className={cn(
             metaSizeClassName,
-            "flex flex-wrap items-center gap-3 text-muted-foreground",
+            "flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-muted-foreground",
           )}
         >
           <button
@@ -170,7 +170,7 @@ export function PlanCardVertical({
             className="flex items-center gap-1 font-medium text-success/90 underline decoration-success/70 underline-offset-4 hover:text-success cursor-pointer"
           >
             <MapPin className="h-3.5 w-3.5" />
-            <span className="line-clamp-1">{plan.location}</span>
+              <span className="max-w-48 truncate">{plan.location}</span>
           </button>
           <Link
             href={reviewHref}
@@ -204,7 +204,7 @@ export function PlanCardVertical({
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
         <UserBadge
           user={author}
           variant={variant === "compact" ? "compact" : "default"}
@@ -243,7 +243,7 @@ export function PlanCardVertical({
           <div
             className={cn(
               metaSizeClassName,
-              "flex flex-wrap items-center justify-end gap-2 text-muted-foreground",
+            "flex min-w-0 flex-wrap items-center justify-end gap-2 text-muted-foreground",
             )}
           >
             <Link
@@ -252,11 +252,12 @@ export function PlanCardVertical({
               onClick={(event) => event.stopPropagation()}
               className={cn(
                 buttonVariants({ variant: "outline", size: "sm" }),
-                "rounded-full border-primary/30 px-3 text-primary hover:text-primary",
+                "rounded-full border-primary/30 px-3 text-primary hover:text-primary max-sm:px-2",
               )}
             >
               <MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />
-              Start Discussion
+              <span className="hidden sm:inline">Start Discussion</span>
+              <span className="sm:hidden">Discuss</span>
             </Link>
             <button
               type="button"

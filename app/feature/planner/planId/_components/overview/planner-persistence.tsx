@@ -7,11 +7,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { readPlannerDraft, writePlannerDraft, clearPlannerDraft } from "@/app/feature/planner/_components/planner-draft";
+import { useTripMetadata } from "@/app/feature/planner/_components/use-trip-metadata";
+import { getTripCountry } from "@/app/feature/planner/_components/trip-destinations";
+import { ensureItineraryDays } from "../itinerary/itinerary-days";
+import { tripMetadataPlannerVersionAtom } from "@/app/feature/planner/_components/trip-metadata-sync.atoms";
 import {
   getPlannerSnapshot,
   isPersistedTripId,
-  isPlannerBlocks,
-  isTripBudgetState,
   createTrip,
   PlannerApiError,
   savePlannerSnapshot,
@@ -28,14 +31,12 @@ import {
   tripExpensesAtom,
 } from "./trip-builder.atoms";
 import {
-  defaultTripBudget,
   getCurrencyOption,
 } from "../budget/budget.data";
 import type { TripBudgetState } from "../budget/budget.types";
 import type { TripBlockData } from "../constants/types";
 
 const AUTOSAVE_DELAY_MS = 750;
-const PLANNER_DRAFT_STORAGE_PREFIX = "navio:planner-draft:v1:";
 
 type PlannerPersistenceProps = {
   planId?: string;
@@ -48,7 +49,7 @@ type PlannerPersistenceProps = {
   templatePlanId?: string;
 };
 
-type SyncStatus = "loading" | "saved" | "saving" | "error";
+type SyncStatus = "loading" | "saved" | "saved-local" | "saving" | "error";
 
 type SaveVariables = {
   state: PlannerState;
@@ -60,10 +61,6 @@ type PlannerState = {
   budget: TripBudgetState;
 };
 
-type PlannerDraft = PlannerState & {
-  version: number;
-  updatedAt: string;
-};
 
 export function PlannerPersistence({
   planId,
@@ -76,6 +73,7 @@ export function PlannerPersistence({
   templatePlanId,
 }: PlannerPersistenceProps) {
   const router = useRouter();
+  const metadata = useTripMetadata(planId);
   const queryClient = useQueryClient();
   const store = useStore();
   const blocks = useAtomValue(tripBlocksAtom);
@@ -95,6 +93,7 @@ export function PlannerPersistence({
   const [status, setStatus] = useState<SyncStatus>("loading");
   const [syncErrorMessage, setSyncErrorMessage] = useState<string>();
   const isDraftStoredRef = useRef(false);
+  const localSettingsPendingRef = useRef(false);
   const hydratedPlanIdRef = useRef<string | null>(null);
   const lastSavedRef = useRef<string | null>(null);
   const plannerVersionRef = useRef<number | null>(null);
@@ -147,8 +146,20 @@ export function PlannerPersistence({
   const createMissingTrip = createMissingTripMutation.mutate;
 
   const saveMutation = useMutation({
-    mutationFn: ({ state }: SaveVariables) => {
-      const version = plannerVersionRef.current;
+    mutationFn: async ({ state }: SaveVariables) => {
+      let version = plannerVersionRef.current;
+      const metadataVersion = store.get(tripMetadataPlannerVersionAtom);
+      if (metadataVersion?.tripId === persistedPlanId) {
+        const refreshedVersion = metadataVersion.version ??
+          (await getPlannerSnapshot(persistedPlanId!)).version;
+        version = Math.max(version ?? 0, refreshedVersion);
+        plannerVersionRef.current = version;
+        isDraftStoredRef.current = writePlannerDraft(persistedPlanId!, version, latestStateRef.current);
+        store.set(tripMetadataPlannerVersionAtom, {
+          tripId: persistedPlanId!,
+          version: refreshedVersion,
+        });
+      }
       if (version === null) {
         throw new PlannerApiError("Planner version is not loaded yet.", 409);
       }
@@ -171,13 +182,15 @@ export function PlannerPersistence({
       setStatus("saving");
     },
     onSuccess: (snapshot, variables) => {
+      localSettingsPendingRef.current = Boolean(snapshot.localOnlySettings);
+      void queryClient.invalidateQueries({ queryKey: ["planner", "snapshot-stats", persistedPlanId] });
       lastSavedRef.current = variables.serialized;
       plannerVersionRef.current = snapshot.version;
       const latestSerialized = serializePlannerState(latestStateRef.current);
       queryClient.setQueryData<PlannerSnapshot>(queryKey, (current) =>
         current
           ? {
-              blocks: variables.state.blocks,
+              blocks: snapshot.syncedBlocks ?? variables.state.blocks,
               budget: variables.state.budget,
               version: snapshot.version,
               savedAt: snapshot.savedAt,
@@ -185,10 +198,17 @@ export function PlannerPersistence({
           : current,
       );
       if (latestSerialized === variables.serialized) {
-        clearPlannerDraft(persistedPlanId!);
-        isDraftStoredRef.current = false;
+        if (snapshot.localOnlySettings) {
+          isDraftStoredRef.current = writePlannerDraft(persistedPlanId!, snapshot.version, latestStateRef.current);
+        } else {
+          clearPlannerDraft(persistedPlanId!);
+          isDraftStoredRef.current = false;
+        }
         setSyncErrorMessage(undefined);
-        setStatus("saved");
+        if (snapshot.localOnlySettings && !isDraftStoredRef.current) {
+          setSyncErrorMessage("Itinerary saved, but extra settings could not be stored on this device. Keep this page open and enable browser storage.");
+          setStatus("error");
+        } else setStatus(snapshot.localOnlySettings ? "saved-local" : "saved");
       } else {
         const stored = writePlannerDraft(
           persistedPlanId!,
@@ -200,14 +220,18 @@ export function PlannerPersistence({
       }
     },
     onError: (error) => {
-      console.error("Planner autosave failed.", {
+      console.warn("Planner autosave failed.", {
         component: "PlannerPersistence",
         operation: "savePlannerSnapshot",
         planId: persistedPlanId,
         error,
+        message: error instanceof Error ? error.message : String(error),
+        status: error instanceof PlannerApiError ? error.status : undefined,
       });
       setSyncErrorMessage(
-        isDraftStoredRef.current
+        error instanceof PlannerApiError && error.message.startsWith("These new planner settings") && isDraftStoredRef.current
+          ? error.message
+          : isDraftStoredRef.current
           ? "Changes are stored on this device. Sync failed."
           : "Changes could not be saved. Keep this page open and retry.",
       );
@@ -221,7 +245,7 @@ export function PlannerPersistence({
 
     const today = formatDate(new Date());
     createMissingTrip({
-      displayName: `Trip to ${destinationName}`,
+      displayName: getTripCountry({ destinationName, destinationCountry: null }),
       startDate: toDateOnly(from) ?? today,
       endDate: toDateOnly(to) ?? toDateOnly(from) ?? today,
       destinationId: destinationId ?? templatePlanId ?? planId,
@@ -245,6 +269,7 @@ export function PlannerPersistence({
     hydratedPlanIdRef.current = null;
     lastSavedRef.current = null;
     plannerVersionRef.current = null;
+    localSettingsPendingRef.current = false;
     isDraftStoredRef.current = false;
     const timeoutId = window.setTimeout(
       () => {
@@ -286,6 +311,7 @@ export function PlannerPersistence({
 
   useEffect(() => {
     if (!persistedPlanId || !plannerQuery.data) return;
+    if (!from && metadata.isPending) return;
     if (hydratedPlanIdRef.current === persistedPlanId) return;
 
     const serverState: PlannerState = {
@@ -310,11 +336,10 @@ export function PlannerPersistence({
           blocks: shouldUseServerBlocks ? serverState.blocks : currentBlocks,
           budget: serverState.budget,
         };
-    skipAutosaveOnceRef.current =
-      !recoverableDraft &&
-      serializePlannerState(hydratedState) === serverSerialized;
+    hydratedState.blocks = ensureItineraryDays(hydratedState.blocks, metadata.data?.startDate || from, metadata.data?.endDate || to);
+    skipAutosaveOnceRef.current = !recoverableDraft && serializePlannerState(hydratedState) === serverSerialized;
     const hydratedBlocks = hydratedState.blocks;
-    if (recoverableDraft || shouldUseServerBlocks) {
+    if (recoverableDraft || shouldUseServerBlocks || hydratedBlocks !== currentBlocks) {
       setBlocks(hydratedBlocks);
       setOpenBlockIds(hydratedBlocks.map((block) => block.id));
       setActiveBlockId(hydratedBlocks[0]?.id ?? null);
@@ -339,6 +364,11 @@ export function PlannerPersistence({
     return () => window.clearTimeout(timeoutId);
   }, [
     persistedPlanId,
+    from,
+    to,
+    metadata.data?.startDate,
+    metadata.data?.endDate,
+    metadata.isPending,
     plannerQuery.data,
     setActiveBlockId,
     setBudgetAmount,
@@ -404,8 +434,10 @@ export function PlannerPersistence({
 
     const serialized = serializePlannerState(plannerState);
     if (serialized === lastSavedRef.current) {
-      clearPlannerDraft(persistedPlanId);
-      isDraftStoredRef.current = false;
+      if (!localSettingsPendingRef.current) {
+        clearPlannerDraft(persistedPlanId);
+        isDraftStoredRef.current = false;
+      }
       return;
     }
 
@@ -519,6 +551,10 @@ function PlannerSyncStatus({
   if (status === "saved") return null;
 
   const content = {
+    "saved-local": {
+      icon: <CloudOff className="size-3.5 shrink-0" aria-hidden="true" />,
+      label: "Itinerary saved. Destination changes and charge targets are stored on this device until the server update.",
+    },
     loading: {
       icon: <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />,
       label: "Loading trip…",
@@ -535,7 +571,7 @@ function PlannerSyncStatus({
 
   return (
     <div
-      className="fixed bottom-4 left-4 z-50 flex max-w-sm items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs text-muted-foreground shadow-md"
+      className="fixed bottom-3 left-1/2 z-40 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs leading-relaxed text-muted-foreground shadow-sm"
       role="status"
       aria-live="polite"
     >
@@ -559,73 +595,6 @@ function PlannerSyncStatus({
 
 function serializePlannerState(state: PlannerState): string {
   return JSON.stringify({ blocks: state.blocks, budget: state.budget });
-}
-
-function readPlannerDraft(planId: string): PlannerDraft | null {
-  try {
-    const rawDraft = window.localStorage.getItem(plannerDraftStorageKey(planId));
-    if (!rawDraft) return null;
-
-    const value: unknown = JSON.parse(rawDraft);
-    if (
-      !value ||
-      typeof value !== "object" ||
-      !("version" in value) ||
-      typeof value.version !== "number" ||
-      !("blocks" in value) ||
-      !isPlannerBlocks(value.blocks) ||
-      !("updatedAt" in value) ||
-      typeof value.updatedAt !== "string"
-    ) {
-      clearPlannerDraft(planId);
-      return null;
-    }
-    const budget =
-      "budget" in value && isTripBudgetState(value.budget)
-        ? value.budget
-        : defaultTripBudget;
-    return {
-      version: value.version,
-      blocks: value.blocks,
-      budget,
-      updatedAt: value.updatedAt,
-    };
-  } catch (error) {
-    console.warn("Planner draft could not be read.", { planId, error });
-    return null;
-  }
-}
-
-function writePlannerDraft(
-  planId: string,
-  version: number,
-  state: PlannerState,
-): boolean {
-  try {
-    const draft: PlannerDraft = {
-      version,
-      blocks: state.blocks,
-      budget: state.budget,
-      updatedAt: new Date().toISOString(),
-    };
-    window.localStorage.setItem(plannerDraftStorageKey(planId), JSON.stringify(draft));
-    return true;
-  } catch (error) {
-    console.warn("Planner draft could not be stored.", { planId, error });
-    return false;
-  }
-}
-
-function clearPlannerDraft(planId: string): void {
-  try {
-    window.localStorage.removeItem(plannerDraftStorageKey(planId));
-  } catch (error) {
-    console.warn("Planner draft could not be cleared.", { planId, error });
-  }
-}
-
-function plannerDraftStorageKey(planId: string): string {
-  return `${PLANNER_DRAFT_STORAGE_PREFIX}${planId}`;
 }
 
 function toDateOnly(value: string | undefined): string | null {

@@ -21,14 +21,14 @@ export function CommunityTripAttachment({ trip }: CommunityTripAttachmentProps) 
   }
 
   const content = (
-    <div className="grid gap-0 sm:grid-cols-[10rem_1fr]">
+    <div className="grid min-w-0 gap-0 @min-[32rem]:grid-cols-[8rem_minmax(0,1fr)]">
       <div
         role="img"
         aria-label={trip.title}
-        className="min-h-36 bg-cover bg-center sm:min-h-full"
+        className="min-h-36 bg-cover bg-center @min-[32rem]:min-h-full"
         style={{ backgroundImage: `url(${trip.coverImageUrl})` }}
       />
-      <div className="flex flex-col gap-3 p-4">
+      <div className="flex min-w-0 flex-col gap-3 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -49,7 +49,7 @@ export function CommunityTripAttachment({ trip }: CommunityTripAttachmentProps) 
                 />
               ) : null}
             </h3>
-            <p className="text-sm leading-6 text-muted-foreground">
+            <p className="line-clamp-3 break-words text-sm leading-6 text-muted-foreground">
               {trip.summary}
             </p>
           </div>
@@ -86,7 +86,7 @@ export function CommunityTripAttachment({ trip }: CommunityTripAttachmentProps) 
       <Link
         href={trip.href}
         aria-label={`Open discussed plan: ${trip.title}`}
-        className="block overflow-hidden rounded-xl border border-border bg-muted/30 transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+        className="@container block overflow-hidden rounded-xl border border-border/60 bg-muted/30 transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         onClick={stopParentNavigation}
         onKeyDown={stopParentNavigation}
       >
@@ -98,7 +98,7 @@ export function CommunityTripAttachment({ trip }: CommunityTripAttachmentProps) 
   return (
     <section
       aria-label={`Shared trip: ${trip.title}`}
-      className="overflow-hidden rounded-xl border border-border bg-muted/30"
+      className="@container overflow-hidden rounded-xl border border-border/60 bg-muted/30"
     >
       {content}
     </section>

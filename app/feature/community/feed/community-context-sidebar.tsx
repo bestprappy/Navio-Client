@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowBigUpDash, MessageCircle } from "lucide-react";
 import { useAtom, useAtomValue } from "jotai";
 
@@ -19,7 +20,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CommunityMembershipButton } from "../_components/community-membership-button";
 import { CommunityMyGroups } from "../_components/community-my-groups";
-import { cn } from "@/lib/utils";
 
 type CommunityContextSidebarProps = {
   groups: CommunityGroup[];
@@ -32,7 +32,7 @@ function CommunityJoinItem({ group }: { group: CommunityGroup }) {
   const groupHref = `/community/${group.slug ?? slugifyCommunityValue(group.name)}`;
 
   return (
-    <div className="flex items-center gap-3 hover:bg-muted/70 my-3 p-4 rounded-sm">
+    <div className="my-2 flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-muted/70">
       <Link
         href={groupHref}
         className="flex min-w-0 flex-1 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -67,7 +67,7 @@ function RecentPostItem({
   const groupHref = `/community/${group.slug ?? slugifyCommunityValue(group.name)}`;
 
   return (
-    <div className="flex gap-3 py-2.5">
+    <div className="flex gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/60">
       <Link
         href={groupHref}
         className="mt-0.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -88,7 +88,7 @@ function RecentPostItem({
           >
             {group.name}
           </Link>
-          {" - "}
+          {" / "}
           {formatRelativeTime(post.createdAt)}
         </p>
         <p className="mt-0.5 line-clamp-2 text-sm font-medium leading-snug text-foreground">
@@ -106,11 +106,13 @@ function RecentPostItem({
         </div>
       </div>
       {post.imageUrl ? (
-        <img
+        <Image
           src={post.imageUrl}
           alt=""
           aria-hidden="true"
-          className="size-16 shrink-0 rounded-md object-cover"
+          width={64}
+          height={64}
+          className="size-16 shrink-0 rounded-lg object-cover"
         />
       ) : null}
     </div>
@@ -148,23 +150,17 @@ export function CommunityContextSidebar({
   return (
     <aside
       aria-label="Community sidebar"
-      className={cn(
-        "flex flex-col gap-4",
-        "xl:sticky xl:top-6 xl:self-start",
-        "xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto",
-        "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]",
-        "xl:pr-1",
-      )}
+      className="flex min-w-0 flex-col gap-4"
     >
       <CommunityMyGroups />
       {/* Recent Posts */}
       {joinedGroups.length > 0 ? (
         <section
           aria-label="Recent posts from joined communities"
-          className="px-4 py-3"
+          className="rounded-lg border border-border/50 bg-card px-4 py-3 shadow-sm"
         >
           <div className="mb-1 flex items-center justify-between gap-2">
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
               Recent Posts
             </h2>
             {!cleared ? (
@@ -200,8 +196,11 @@ export function CommunityContextSidebar({
 
       {/* Popular Communities */}
       {unjoinedGroups.length > 0 || groupsLoading || groupsError ? (
-        <section aria-label="Popular communities" className="px-4 py-3">
-          <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <section
+          aria-label="Popular communities"
+          className="rounded-lg border border-border/50 bg-card px-4 py-3 shadow-sm"
+        >
+          <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
             Popular Communities
           </h2>
 

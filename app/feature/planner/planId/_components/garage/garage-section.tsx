@@ -10,11 +10,6 @@ import { itineraryBlocksAtom } from "../overview/trip-builder.atoms";
 import { useTripRoutes } from "../routes/trip-route-query";
 import { getVehicleCar } from "../constants/vehicle.data";
 import {
-  isEvChargerPlaceItem,
-  isPlaceItem,
-  type PlaceItemEvChargerDetails,
-} from "../constants/types";
-import {
   activeEvCarAtom,
   activeVehicleAtom,
   activeVehicleIdAtom,
@@ -25,12 +20,7 @@ import {
   startingBatteryPctAtom,
   userVehiclesAtom,
 } from "./garage.atoms";
-import {
-  calcDayChargeStats,
-  calcDayRouteStats,
-  calcTripEvSummary,
-  type DayBlockSummary,
-} from "./ev-calculator";
+import { useTripCharging } from "./use-trip-charging";
 import { VehicleCard } from "./vehicle-card";
 import { AddVehicleDialog } from "./add-vehicle-dialog";
 import { VehicleUsageOverview } from "./vehicle-usage-overview";
@@ -50,30 +40,8 @@ export function GarageSection() {
   const blocks = useAtomValue(itineraryBlocksAtom);
   const { data: routeData } = useTripRoutes();
 
-  const tripSummary = useMemo(() => {
-    if (!activeEvCar || !routeData || blocks.length === 0) return null;
-
-    const blockSummaries: DayBlockSummary[] = blocks.map((block) => {
-      const segments = routeData.segments.filter((s) => s.blockId === block.id);
-      const chargerItems = block.items
-        .filter(isPlaceItem)
-        .filter(isEvChargerPlaceItem)
-        .map((item) => item.evCharger)
-        .filter((c): c is PlaceItemEvChargerDetails => c !== undefined);
-
-      const routeStats = calcDayRouteStats(segments, activeEvCar);
-      const chargeStats = calcDayChargeStats(chargerItems, activeEvCar);
-
-      return {
-        distanceKm: routeStats.totalDistanceKm,
-        energyKwh: routeStats.energyKwh,
-        chargeEnergyKwh: chargeStats.chargeEnergyKwh,
-        chargeMinutes: chargeStats.chargeMinutes,
-      };
-    });
-
-    return calcTripEvSummary(blockSummaries, activeEvCar, startingBattery);
-  }, [activeEvCar, routeData, blocks, startingBattery]);
+  const charging = useTripCharging();
+  const tripSummary = routeData && blocks.length ? charging?.summary ?? null : null;
 
   const totalDrivingMinutes = useMemo(() => {
     if (!routeData) return 0;
@@ -83,10 +51,10 @@ export function GarageSection() {
   }, [routeData]);
 
   return (
-    <section className="px-4 py-4 mx-6">
-      <div className="mb-4 flex items-center justify-between pl-1">
+    <section className="px-4 py-6">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">My Garage</h2>
+          <h2 className="text-2xl font-bold text-foreground">My garage</h2>
           <p className="mt-3 text-sm text-muted-foreground ">
             Add a prebuilt EV or enter your own specs for route estimates.
           </p>
@@ -98,7 +66,7 @@ export function GarageSection() {
           onClick={() => setModalOpen(true)}
         >
           <Plus className="size-4" aria-hidden="true" />
-          Add Vehicle
+          Add vehicle
         </Button>
       </div>
 

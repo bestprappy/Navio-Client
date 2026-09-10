@@ -53,20 +53,9 @@ export function CommunityGroupSidebar({
   return (
     <aside
       aria-label={`${group.name} sidebar`}
-      className={cn(
-        "flex min-h-0 flex-col gap-4",
-        "xl:sticky xl:top-6 xl:self-start",
-        "xl:max-h-[calc(100dvh-8rem)]",
-      )}
+      className="flex min-w-0 flex-col gap-4"
     >
-      <Card
-        className={cn(
-          "gap-0 py-0",
-          "xl:max-h-[calc(100dvh-8rem)] xl:overflow-y-auto xl:overscroll-contain",
-          "xl:[scrollbar-width:none] xl:[-ms-overflow-style:none]",
-          "xl:[&::-webkit-scrollbar]:hidden",
-        )}
-      >
+      <Card className="gap-0 overflow-hidden rounded-2xl border-border/60 py-0 shadow-sm">
         <CardHeader className="px-4 py-4">
           <CardTitle>{group.name}</CardTitle>
           <p className="text-sm leading-6 text-muted-foreground">

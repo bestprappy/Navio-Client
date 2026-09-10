@@ -31,11 +31,11 @@ export function UserBadge({ user, variant = "default" }: UserBadgeProps) {
           {getInitials(user.name)}
         </AvatarFallback>
       </Avatar>
-      <div className={isCompact ? "min-w-0" : undefined}>
+      <div className="min-w-0">
         <p
           className={cn(
-            "font-medium text-foreground",
-            isCompact ? "max-w-28 truncate text-xs" : "text-sm",
+            "truncate font-medium text-foreground",
+            isCompact ? "text-xs" : "text-sm",
           )}
         >
           {user.name}

@@ -15,20 +15,10 @@ import { useAtomValue } from "jotai";
 
 import { cn } from "@/lib/utils";
 
-import { itineraryBlocksAtom } from "../overview/trip-builder.atoms";
 import { useTripRoutes } from "../routes/trip-route-query";
-import {
-  isEvChargerPlaceItem,
-  isPlaceItem,
-  type PlaceItemEvChargerDetails,
-} from "../constants/types";
-import { activeEvCarAtom, startingBatteryPctAtom } from "./garage.atoms";
-import {
-  calcDayChargeStats,
-  calcDayRouteStats,
-  calcTripEvSummary,
-  type DayBlockSummary,
-} from "./ev-calculator";
+import { activeEvCarAtom } from "./garage.atoms";
+import { calcDayRouteStats } from "./ev-calculator";
+import { useTripCharging } from "./use-trip-charging";
 import { formatMinutes } from "./garage-formatters";
 
 type DayRouteOverviewProps = {
@@ -38,8 +28,9 @@ type DayRouteOverviewProps = {
 
 export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps) {
   const activeEvCar = useAtomValue(activeEvCarAtom);
-  const blocks = useAtomValue(itineraryBlocksAtom);
-  const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
+  const charging = useTripCharging();
+  const chargeStats = charging?.days.get(blockId);
+  const batteryAtDayStart = chargeStats?.startBatteryPct ?? 0;
   const { data: routeData, isLoading, isError } = useTripRoutes();
 
   const daySegments = useMemo(
@@ -47,51 +38,13 @@ export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps)
     [routeData, blockId],
   );
 
-  const chargerItems = useMemo(() => {
-    const block = blocks.find((b) => b.id === blockId);
-    if (!block) return [] as PlaceItemEvChargerDetails[];
-    return block.items
-      .filter(isPlaceItem)
-      .filter(isEvChargerPlaceItem)
-      .map((item) => item.evCharger)
-      .filter((c): c is PlaceItemEvChargerDetails => c !== undefined);
-  }, [blocks, blockId]);
-
-  const batteryAtDayStart = useMemo(() => {
-    if (!activeEvCar || !routeData) return startingBatteryPct;
-
-    const priorSummaries: DayBlockSummary[] = blocks.slice(0, blockIndex).map((block) => {
-      const segments = routeData.segments.filter((s) => s.blockId === block.id);
-      const priorChargers = block.items
-        .filter(isPlaceItem)
-        .filter(isEvChargerPlaceItem)
-        .map((item) => item.evCharger)
-        .filter((c): c is PlaceItemEvChargerDetails => c !== undefined);
-
-      const routeStats = calcDayRouteStats(segments, activeEvCar);
-      const chargeStats = calcDayChargeStats(priorChargers, activeEvCar);
-
-      return {
-        distanceKm: routeStats.totalDistanceKm,
-        energyKwh: routeStats.energyKwh,
-        chargeEnergyKwh: chargeStats.chargeEnergyKwh,
-        chargeMinutes: chargeStats.chargeMinutes,
-      };
-    });
-
-    if (priorSummaries.length === 0) return startingBatteryPct;
-
-    const summary = calcTripEvSummary(priorSummaries, activeEvCar, startingBatteryPct);
-    return summary.finalBatteryPct;
-  }, [activeEvCar, routeData, blocks, blockIndex, startingBatteryPct]);
-
   if (!activeEvCar) return null;
 
   const hasRouteableBlock = daySegments.length > 0;
 
   if (isLoading) {
     return (
-      <div className="mx-8 mt-4 pl-2">
+      <div className="ml-8 mt-4">
         <div className="flex items-center gap-2 rounded-sm border border-border bg-card/80 px-3 py-2 text-sm text-muted-foreground shadow-xs">
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
           <span>Calculating day overview...</span>
@@ -102,7 +55,7 @@ export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps)
 
   if (isError) {
     return (
-      <div className="mx-8 mt-4 pl-2">
+      <div className="ml-8 mt-4">
         <div className="flex items-center gap-2 rounded-sm border border-border bg-card/80 px-3 py-2 text-sm text-muted-foreground shadow-xs">
           <AlertTriangle className="size-4 text-warning" aria-hidden="true" />
           <span>Route estimate unavailable.</span>
@@ -111,25 +64,10 @@ export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps)
     );
   }
 
-  if (!hasRouteableBlock) return null;
+  if (!hasRouteableBlock || !chargeStats) return null;
 
   const dayStats = calcDayRouteStats(daySegments, activeEvCar);
-  const chargeStats = calcDayChargeStats(chargerItems, activeEvCar);
-  const batteryEndPct = Math.min(
-    100,
-    Math.max(
-      0,
-      batteryAtDayStart -
-        dayStats.batteryUsedPct +
-        (chargeStats.chargeEnergyKwh / activeEvCar.batteryKwh) * 100,
-    ),
-  );
-
-  const chargedPct = (chargeStats.chargeEnergyKwh / activeEvCar.batteryKwh) * 100;
-  const halfDrivingPct = dayStats.batteryUsedPct / 2;
-  const batteryBeforeCharge = Math.max(0, Math.min(100, batteryAtDayStart - halfDrivingPct));
-  const batteryAfterCharge = Math.max(0, Math.min(100, batteryBeforeCharge + chargedPct));
-  const hasCharging = chargeStats.chargeMinutes > 0 && chargedPct > 0;
+  const batteryEndPct = chargeStats.finalBatteryPct;
 
   const batteryLow = batteryEndPct < 20;
   const hasIncompatibleStops = chargeStats.incompatibleStops > 0;
@@ -137,7 +75,7 @@ export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps)
   const drivingMinutes = Math.round(dayStats.totalDrivingSeconds / 60);
 
   return (
-    <div className="mx-8 mt-4 pl-2" aria-label={`Day ${blockIndex + 1} route overview`}>
+    <div className="ml-8 mt-4" aria-label={`Day ${blockIndex + 1} route overview`}>
       <div className="rounded-sm border border-border bg-card/80 p-3 shadow-xs">
         <div className="mb-2 flex items-center justify-between gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">

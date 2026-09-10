@@ -1,3 +1,4 @@
+import { isTripDestination } from "../planId/_components/itinerary/day-destinations";
 import type {
   ChecklistItem,
   EvCharger,
@@ -55,6 +56,7 @@ export type TripResponse = {
 };
 
 export type PlannerSnapshot = {
+  capabilities?: string[];
   blocks: TripBlockData[];
   budget: TripBudgetState;
   version: number;
@@ -70,6 +72,10 @@ export type CurrencyRateResponse = {
 };
 
 export type PlannerSaveAcknowledgement = {
+  localOnlySettings?: boolean;
+  /** Client-side record of the supported blocks sent to the service. */
+  syncedBlocks?: TripBlockData[];
+  capabilities?: string[];
   version: number;
   savedAt: string;
 };
@@ -191,18 +197,35 @@ export async function savePlannerSnapshot(
   budget: TripBudgetState,
   version: number,
 ): Promise<PlannerSaveAcknowledgement> {
+  const requiresDestinations = blocks.some((block) => block.destination);
+  const requiresTargets = blocks.some((block) => block.items.some((item) => item.type === "place" && item.evCharger?.targetBatteryPct != null));
+  let syncedBlocks = blocks;
+  let localOnlySettings = false;
+  if (requiresDestinations || requiresTargets) {
+    const server = await getPlannerSnapshot(tripId);
+    const destinationsSupported = server.capabilities?.includes("day-destinations");
+    const targetsSupported = server.capabilities?.includes("charge-targets");
+    localOnlySettings = Boolean((requiresDestinations && !destinationsSupported) || (requiresTargets && !targetsSupported));
+    syncedBlocks = blocks.map((block) => ({
+      ...block,
+      ...(!destinationsSupported ? { destination: undefined } : {}),
+      items: block.items.map((item) => item.type === "place" && item.evCharger && !targetsSupported
+        ? { ...item, evCharger: { ...item.evCharger, targetBatteryPct: undefined } }
+        : item),
+    }));
+  }
   const value = await requestJson(
     `/api/trips/${encodeURIComponent(tripId)}/planner`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ version, blocks, budget }),
+      body: JSON.stringify({ version, blocks: syncedBlocks, budget }),
     },
   );
   if (!isPlannerSaveAcknowledgement(value)) {
     throw new PlannerApiError("Trip service returned an invalid save acknowledgement.", 502);
   }
-  return value;
+  return { ...value, localOnlySettings, syncedBlocks };
 }
 
 export async function previewTripEvOptimization(
@@ -259,7 +282,7 @@ export async function getCurrencyRate(
   return value;
 }
 
-async function requestJson(
+export async function requestJson(
   input: string,
   init?: RequestInit,
 ): Promise<unknown> {
@@ -295,6 +318,8 @@ function isPlannerSnapshot(value: unknown): value is PlannerSnapshot {
     isRecord(value) &&
     isPlannerBlocks(value.blocks) &&
     isTripBudgetState(value.budget) &&
+    (value.capabilities === undefined ||
+      (Array.isArray(value.capabilities) && value.capabilities.every((entry) => typeof entry === "string"))) &&
     typeof value.version === "number" &&
     typeof value.savedAt === "string"
   );
@@ -478,7 +503,7 @@ function isTripPage(
   );
 }
 
-function isTripResponse(value: unknown): value is TripResponse {
+export function isTripResponse(value: unknown): value is TripResponse {
   return (
     isRecord(value) &&
     typeof value.id === "string" &&
@@ -504,6 +529,7 @@ function isTripBlock(value: unknown): value is TripBlockData {
     typeof value.title === "string" &&
     typeof value.date === "string" &&
     typeof value.colorId === "string" &&
+    (value.destination == null || isTripDestination(value.destination)) &&
     Array.isArray(value.items) &&
     value.items.every(isTripBlockItem)
   );
@@ -568,6 +594,9 @@ function isEvCharger(value: unknown): value is PlaceItemEvChargerDetails {
     isNullableString(value.priceText) &&
     isNullableString(value.openingHoursSummary) &&
     typeof value.estimatedChargeMinutes === "number" &&
+    (value.targetBatteryPct == null ||
+      (typeof value.targetBatteryPct === "number" && Number.isInteger(value.targetBatteryPct) &&
+        value.targetBatteryPct >= 0 && value.targetBatteryPct <= 100)) &&
     isNullableString(value.operatorName) &&
     (value.selectionSource === undefined ||
       value.selectionSource === "AUTO" ||

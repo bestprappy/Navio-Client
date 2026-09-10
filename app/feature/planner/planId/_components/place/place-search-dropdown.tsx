@@ -13,6 +13,7 @@ type PlaceSearchDropdownProps = {
   listboxId: string;
   mapResultCount: number;
   query: string;
+  destinationLabel?: string;
   suggestions: PlaceAutocompleteSuggestion[];
   isLoading: boolean;
   error: string | null;
@@ -28,6 +29,7 @@ export function PlaceSearchDropdown({
   listboxId,
   mapResultCount,
   query,
+  destinationLabel,
   suggestions,
   isLoading,
   error,
@@ -42,8 +44,9 @@ export function PlaceSearchDropdown({
       id={listboxId}
       role="listbox"
       aria-labelledby={inputId}
-      className="absolute z-30 mt-2 w-full overflow-hidden rounded-md border border-border bg-popover p-2 text-popover-foreground shadow-lg"
+      className="absolute z-30 mt-2 w-full max-h-[min(24rem,50dvh)] overflow-y-auto overscroll-contain rounded-xl border border-border bg-popover p-2 text-popover-foreground shadow-lg"
     >
+      {destinationLabel && <p className="px-3 py-2 text-xs font-semibold text-muted-foreground">Suggested stops in {destinationLabel}</p>}
       {trimmedQuery ? (
         <button
           type="button"
@@ -67,14 +70,14 @@ export function PlaceSearchDropdown({
           <span className="min-w-0 flex-1">
             <span className="block truncate">
               <span className="font-semibold">{trimmedQuery}</span>{" "}
-              <span className="text-muted-foreground">See locations</span>
+              <span className="text-muted-foreground">Search the map</span>
             </span>
             <span className="block truncate text-xs text-foreground">
               {isMapSearchLoading
                 ? "Finding results..."
                 : mapResultCount > 0
                   ? `See ${mapResultCount} result${mapResultCount === 1 ? "" : "s"} on map`
-                  : "See result(s) on map"}
+                  : "View results on the map"}
             </span>
           </span>
         </button>
@@ -129,7 +132,7 @@ export function PlaceSearchDropdown({
         })
       ) : (
         <div className="px-3 py-4 text-sm text-muted-foreground">
-          No matching places found.
+          {destinationLabel ? "No suggestions are available here yet. Search for a place above." : "No matching places found in this destination."}
         </div>
       )}
     </div>

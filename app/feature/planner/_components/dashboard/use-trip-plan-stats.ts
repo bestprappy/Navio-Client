@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { TripBlockData } from "../../planId/_components/constants/types";
 import { isEvChargerPlaceItem, isPlaceItem } from "../../planId/_components/constants/types";
 import { getPlannerSnapshot } from "../planner-api";
+import { readPlannerDraft } from "../planner-draft";
 
 export type TripPlanStats = {
   blockCount: number;
@@ -12,6 +13,7 @@ export type TripPlanStats = {
   chargerCount: number;
   checklistDoneCount: number;
   checklistTotalCount: number;
+  destinations: string[];
 };
 
 export const EMPTY_TRIP_PLAN_STATS: TripPlanStats = {
@@ -20,6 +22,7 @@ export const EMPTY_TRIP_PLAN_STATS: TripPlanStats = {
   chargerCount: 0,
   checklistDoneCount: 0,
   checklistTotalCount: 0,
+  destinations: [],
 };
 
 export function tripPlanStatsQueryKey(tripId: string) {
@@ -41,7 +44,8 @@ export function useTripPlanStats(tripId: string | undefined) {
       if (!tripId) return EMPTY_TRIP_PLAN_STATS;
       try {
         const snapshot = await getPlannerSnapshot(tripId);
-        return summarizeBlocks(snapshot.blocks);
+        const draft = readPlannerDraft(tripId);
+        return summarizeBlocks(draft?.version === snapshot.version ? draft.blocks : snapshot.blocks);
       } catch (error) {
         console.error("Unable to load planner stats for the dashboard.", {
           component: "useTripPlanStats",
@@ -57,7 +61,9 @@ export function useTripPlanStats(tripId: string | undefined) {
 
 function summarizeBlocks(blocks: readonly TripBlockData[]): TripPlanStats {
   return blocks.reduce<TripPlanStats>((stats, block) => {
-    const next = { ...stats, blockCount: stats.blockCount + 1 };
+    const next = { ...stats, blockCount: stats.blockCount + (block.kind === "itinerary" ? 1 : 0),
+      destinations: block.destination && !stats.destinations.includes(block.destination.name)
+        ? [...stats.destinations, block.destination.name] : stats.destinations };
 
     for (const item of block.items) {
       if (isPlaceItem(item)) {

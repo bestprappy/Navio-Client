@@ -27,7 +27,7 @@ export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/25 bg-background/70 backdrop-blur-xl backdrop-saturate-150 supports-backdrop-filter:bg-background/50">
+    <header className="sticky top-0 z-50 border-b border-border bg-card/95 shadow-2xs backdrop-blur-xl">
       <nav
         className="container-max flex h-16 items-center justify-between"
         style={{ paddingInline: "var(--section-px)" }}

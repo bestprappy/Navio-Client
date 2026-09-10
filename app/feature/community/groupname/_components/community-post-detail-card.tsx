@@ -84,7 +84,7 @@ export function CommunityPostDetailCard({
   }
 
   return (
-    <Card className="gap-0 rounded-lg py-0">
+    <Card className="gap-0 rounded-2xl border-border/60 py-0 shadow-sm">
       <CardContent className="px-4 py-4 sm:px-5">
         <div className="mb-3 flex items-start gap-3">
           <Link
@@ -120,7 +120,7 @@ export function CommunityPostDetailCard({
           </div>
         </div>
 
-        <h1 className="text-2xl font-semibold leading-tight text-foreground sm:text-3xl">
+        <h1 className="break-words text-xl font-bold leading-snug tracking-tight text-foreground sm:text-2xl">
           {post.title}
         </h1>
 
@@ -130,12 +130,12 @@ export function CommunityPostDetailCard({
           </div>
         ) : null}
 
-        <p className="mt-4 whitespace-pre-line text-sm leading-6 text-foreground">
+        <p className="mt-4 whitespace-pre-line break-words text-sm leading-7 text-foreground">
           {post.body}
         </p>
 
         {post.imageUrl ? (
-          <div className="relative mt-4 h-[280px] overflow-hidden rounded-lg bg-muted sm:h-[420px]">
+          <div className="relative mt-4 aspect-video max-h-96 overflow-hidden rounded-xl bg-muted">
             <img
               src={post.imageUrl}
               alt=""
@@ -213,7 +213,7 @@ export function CommunityPostDetailCard({
             className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
           >
             <MessageCircle className="size-3.5" aria-hidden="true" />
-            {formatCount(commentTotal)} discussions
+            {formatCount(commentTotal)} comments
           </a>
 
           <button

@@ -273,7 +273,7 @@ function GarageSection({
   );
 
   return (
-    <section className="px-4 py-4 mx-6">
+    <section className="px-4 py-5 sm:px-6">
       <div className="mb-4 flex items-center justify-between pl-1">
         <div>
           <h2 className="text-2xl font-bold text-foreground">My Garage</h2>
@@ -1104,8 +1104,8 @@ export function PlanView({ plan }: PlanViewProps) {
       </div>
 
       {/* Info card — matches TripInfoCard: -mt-20 mx-16 */}
-      <div className="relative z-10 -mt-20 mx-16 flex flex-col gap-4 rounded-sm bg-card p-6 shadow-2xs">
-        <h1 className="text-4xl font-extrabold leading-tight text-foreground">
+      <div className="relative z-10 mx-4 -mt-12 flex min-w-0 flex-col gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-sm sm:mx-6 sm:p-6">
+        <h1 className="break-words text-[clamp(1.5rem,3vw,2.25rem)] font-bold leading-tight tracking-tight text-foreground">
           {plan.title}
         </h1>
         <div className="flex flex-wrap items-center gap-2">
@@ -1143,7 +1143,7 @@ export function PlanView({ plan }: PlanViewProps) {
             )}
           >
             <Copy className="size-4" aria-hidden="true" />
-            Copy Plan
+            Use this trip
           </Link>
           <Link
             href={discussionHref}
@@ -1153,7 +1153,7 @@ export function PlanView({ plan }: PlanViewProps) {
             )}
           >
             <MessageCircle className="size-4" aria-hidden="true" />
-            Start Discussion
+            Discuss this trip
           </Link>
         </div>
       </div>

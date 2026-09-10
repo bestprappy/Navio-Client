@@ -1,0 +1,77 @@
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  max-width: 92rem;
+  margin-inline: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+}
+
+.content,
+.aside {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: calc(var(--spacing) * 6);
+  padding: calc(var(--spacing) * 4);
+}
+
+.content:focus-visible,
+.aside:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.aside {
+  padding-top: 0;
+}
+
+@media (min-width: 40rem) {
+  .content,
+  .aside {
+    padding: calc(var(--spacing) * 6);
+  }
+
+  .aside {
+    padding-top: 0;
+  }
+}
+
+@media (min-width: 80rem) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 22rem);
+    grid-template-rows: minmax(0, 1fr);
+    align-content: stretch;
+    overflow: hidden;
+  }
+
+  .content,
+  .aside {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: auto;
+    scrollbar-width: thin;
+  }
+
+  .content > *,
+  .aside > * {
+    flex-shrink: 0;
+  }
+
+  .aside {
+    padding: calc(var(--spacing) * 6) calc(var(--spacing) * 4);
+    scrollbar-color: transparent transparent;
+  }
+
+  .aside:hover,
+  .aside:focus-within {
+    scrollbar-color: var(--border) transparent;
+  }
+}

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 import type { TripResponse } from "../planner-api";
 import { TripHeroCard } from "./trip-hero-card";
+import { TripPreparation } from "./trip-preparation";
 import { TripSummaryCard } from "./trip-summary-card";
 import { selectCurrentTrip, sortTrips } from "./trip-dashboard.utils";
 
@@ -52,7 +53,7 @@ function TripDashboardRoot({ trips, children }: TripDashboardRootProps) {
     <TripDashboardContext.Provider value={value}>
       <section
         aria-label="Your trips"
-        className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-10 sm:px-10 sm:py-14"
+        className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 sm:px-8 lg:py-10"
       >
         {children}
       </section>
@@ -76,6 +77,7 @@ function TripDashboardHeader({
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex flex-col gap-2">
+        <p className="text-xs font-semibold tracking-widest text-primary uppercase">Your travel journal</p>
         <h1 className="text-3xl font-extrabold text-foreground sm:text-4xl">
           {title}
         </h1>
@@ -102,7 +104,7 @@ function TripDashboardHeader({
 function TripDashboardCurrent() {
   const { currentTrip } = useTripDashboardContext();
   if (!currentTrip) return null;
-  return <TripHeroCard trip={currentTrip} />;
+  return <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_18rem]"><TripHeroCard trip={currentTrip} /><TripPreparation trip={currentTrip} /></div>;
 }
 
 type TripDashboardCollectionProps = {
