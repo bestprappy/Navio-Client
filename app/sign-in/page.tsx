@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
+import { readAuth as auth } from "@/auth";
 import { AuthCard } from "@/app/feature/auth/auth-card";
 import { getSafeCallbackUrl } from "@/lib/auth-navigation";
 

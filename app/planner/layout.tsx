@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 
-import { auth } from "@/auth";
+import { readAuth as auth } from "@/auth";
 import { getSignInHref } from "@/lib/auth-navigation";
 
 type PlannerLayoutProps = {

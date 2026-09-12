@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { auth } from "@/auth";
+import { readAuth as auth } from "@/auth";
 import { Navbar } from "@/components/navbar";
 import { getSignInHref } from "@/lib/auth-navigation";
 

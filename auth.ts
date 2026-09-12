@@ -1,8 +1,15 @@
-import NextAuth, { type DefaultSession } from "next-auth";
+import NextAuth, { type DefaultSession, type NextAuthConfig } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import Keycloak from "next-auth/providers/keycloak";
+import { createTokenRefreshCoordinator } from "@/lib/token-refresh-coordinator";
 
 const REFRESH_BUFFER_SECONDS = 30;
+// Share across separately bundled routes in the same Node process.
+const authGlobal = globalThis as typeof globalThis & {
+  navioTokenRefresh?: ReturnType<typeof createTokenRefreshCoordinator<JWT>>;
+};
+const coordinateRefresh = authGlobal.navioTokenRefresh ??=
+  createTokenRefreshCoordinator<JWT>();
 
 type KeycloakTokenResponse = {
   access_token: string;
@@ -70,6 +77,11 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
     return { ...token, error: "RefreshTokenError" };
   }
 
+  return coordinateRefresh(token.refreshToken, () => requestAccessToken(token));
+}
+
+async function requestAccessToken(token: JWT): Promise<JWT> {
+
   try {
     const { internalIssuer, clientId, clientSecret } =
       getKeycloakEnvironment();
@@ -82,15 +94,19 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
           client_id: clientId,
           client_secret: clientSecret,
           grant_type: "refresh_token",
-          refresh_token: token.refreshToken,
+          refresh_token: token.refreshToken!,
         }),
         cache: "no-store",
+        signal: AbortSignal.timeout(10_000),
       },
     );
     const responseBody: unknown = await response.json();
 
     if (!response.ok || !isKeycloakTokenResponse(responseBody)) {
-      throw new Error(`Keycloak refresh failed with status ${response.status}.`);
+      const code = responseBody && typeof responseBody === "object" &&
+        "error" in responseBody && typeof responseBody.error === "string"
+        ? responseBody.error : "invalid_response";
+      throw new Error(`Keycloak refresh failed with status ${response.status} (${code}).`);
     }
 
     return {
@@ -135,7 +151,7 @@ async function revokeKeycloakSession(refreshToken?: string) {
   }
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const authConfig = {
   providers: [createKeycloakProvider()],
   pages: {
     signIn: "/sign-in",
@@ -187,6 +203,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await revokeKeycloakSession(message.token?.refreshToken);
       }
     },
+  },
+} satisfies NextAuthConfig;
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
+
+// Server Components cannot persist cookies. They only check session identity;
+// rotation belongs in the session endpoint, API wrappers, and request proxy.
+export const { auth: readAuth } = NextAuth({
+  ...authConfig,
+  callbacks: {
+    ...authConfig.callbacks,
+    jwt: ({ token }) => token,
   },
 });
 

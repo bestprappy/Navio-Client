@@ -50,6 +50,10 @@ export function AuthActions({
     retry: 1,
   });
 
+  const pictureUrl = profileQuery.data?.avatarMediaId
+    ? `/api/users/me/picture?v=${profileQuery.data.avatarMediaId}`
+    : session?.user?.image;
+
   if (status === "loading") {
     return (
       <div
@@ -117,8 +121,8 @@ export function AuthActions({
         )}
       >
         <Avatar aria-label={userLabel}>
-          {session?.user?.image ? (
-            <AvatarImage src={session.user.image} alt="" />
+          {pictureUrl ? (
+            <AvatarImage src={pictureUrl} alt="" />
           ) : null}
           <AvatarFallback>
             {getInitials(session?.user?.name, session?.user?.email)}

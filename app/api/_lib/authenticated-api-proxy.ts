@@ -2,7 +2,9 @@ import "server-only";
 
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
+import type { Session } from "next-auth";
+import { withAuthenticatedSession } from "./with-authenticated-session";
+import { isCrossOriginMutation, readUploadBody, UploadTooLargeError } from "./upload-request";
 
 const UPSTREAM_TIMEOUT_MS = 15_000;
 const RESPONSE_HEADERS_TO_FORWARD = [
@@ -11,6 +13,7 @@ const RESPONSE_HEADERS_TO_FORWARD = [
   "retry-after",
   "www-authenticate",
   "x-request-id",
+  "x-content-type-options",
 ] as const;
 
 export async function proxyAuthenticatedApiRequest(
@@ -18,7 +21,20 @@ export async function proxyAuthenticatedApiRequest(
   upstreamPath: string,
   options: { allowAnonymous?: boolean } = {},
 ): Promise<Response> {
-  const session = await auth();
+  if (isCrossOriginMutation(request, process.env.AUTH_URL ?? process.env.NEXTAUTH_URL)) {
+    return NextResponse.json({ message: "This request must come from Navio." }, { status: 403 });
+  }
+  return withAuthenticatedSession(request, (authenticatedRequest, session) =>
+    forwardAuthenticatedApiRequest(authenticatedRequest, upstreamPath, options, session),
+  );
+}
+
+async function forwardAuthenticatedApiRequest(
+  request: Request,
+  upstreamPath: string,
+  options: { allowAnonymous?: boolean },
+  session: Session | null,
+): Promise<Response> {
   if ((!session?.accessToken || session.error) && !options.allowAnonymous) {
     return NextResponse.json(
       { message: "Authentication is required." },
@@ -67,7 +83,11 @@ export async function proxyAuthenticatedApiRequest(
     const response = await fetch(upstreamUrl, {
       method: request.method,
       headers,
-      body: hasRequestBody ? await request.text() : undefined,
+      body: hasRequestBody
+        ? contentType?.toLowerCase().startsWith("multipart/form-data")
+          ? await readUploadBody(request)
+          : await request.arrayBuffer()
+        : undefined,
       cache: "no-store",
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
@@ -84,6 +104,9 @@ export async function proxyAuthenticatedApiRequest(
       headers: responseHeaders,
     });
   } catch (error) {
+    if (error instanceof UploadTooLargeError) {
+      return NextResponse.json({ message: "Upload request must be at most 6 MiB." }, { status: 413 });
+    }
     const timedOut =
       error instanceof Error &&
       (error.name === "TimeoutError" || error.name === "AbortError");

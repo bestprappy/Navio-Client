@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
+import type { Session } from "next-auth";
+import { withAuthenticatedSession } from "./with-authenticated-session";
 
 const UPSTREAM_TIMEOUT_MS = 15_000;
 const REQUEST_HEADERS_TO_FORWARD = [
@@ -27,7 +28,17 @@ export async function proxyMobilityRequest(
   upstreamPath: string,
   options: MobilityProxyOptions = {},
 ): Promise<Response> {
-  const session = await auth();
+  return withAuthenticatedSession(request, (authenticatedRequest, session) =>
+    forwardMobilityRequest(authenticatedRequest, upstreamPath, options, session),
+  );
+}
+
+async function forwardMobilityRequest(
+  request: Request,
+  upstreamPath: string,
+  options: MobilityProxyOptions,
+  session: Session | null,
+): Promise<Response> {
   if (!session?.accessToken || session.error) {
     return NextResponse.json(
       { error: "Authentication is required." },
