@@ -187,6 +187,7 @@ export function useUpdateCommunityGroup(slug: string) {
   const { identity } = useCommunityIdentity();
   return useMutation({
     mutationKey: ["community", "settings", slug],
+    scope: { id: `community-settings-${slug}` },
     mutationFn: ({
       section,
       body,

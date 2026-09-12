@@ -1,107 +1,30 @@
-"use client";
+﻿"use client";
 
-import type { FormEvent } from "react";
-import { ImageIcon, Type } from "lucide-react";
-
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { CommunityFormField } from "../../_components/community-form-field";
+import { CommunityQueryError } from "../../_components/community-query-state";
+import { usePostMutation } from "../../_components/community-queries";
+import type { CommunityComment } from "../../_components/data";
 
-type CommunityCommentComposerProps = {
-  id: string;
-  value: string;
-  placeholder: string;
-  submitLabel: string;
-  onChange: (value: string) => void;
-  onSubmit: () => void;
-  onCancel?: () => void;
-  onFocus?: () => void;
-  autoFocus?: boolean;
-};
+const schema = z.object({ body: z.string().trim().min(1, "Write a comment.").max(10000) });
 
-export function CommunityCommentComposer({
-  id,
-  value,
-  placeholder,
-  submitLabel,
-  onChange,
-  onSubmit,
-  onCancel,
-  onFocus,
-  autoFocus = false,
-}: CommunityCommentComposerProps) {
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!value.trim()) {
-      return;
-    }
-
-    onSubmit();
-  }
-
-  return (
-    <form
-      className="rounded-2xl border border-border bg-card p-3 shadow-xs"
-      onSubmit={handleSubmit}
-    >
-      <label htmlFor={id} className="sr-only">
-        {placeholder}
-      </label>
-      <Textarea
-        id={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
-        onFocus={onFocus}
-        className="min-h-16 resize-y border-0 bg-transparent px-1.5 py-2 leading-6 shadow-none focus-visible:ring-0"
-      />
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1 text-muted-foreground">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Attach image"
-            title="Image attachments are not available yet"
-            disabled
-          >
-            <ImageIcon className="size-4" aria-hidden="true" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-label="Add GIF"
-            title="GIF attachments are not available yet"
-            disabled
-            className="px-2 text-[11px] font-semibold uppercase"
-          >
-            GIF
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Format text"
-            title="Rich text formatting is not available yet"
-            disabled
-          >
-            <Type className="size-4" aria-hidden="true" />
-          </Button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {onCancel ? (
-            <Button type="button" variant="secondary" onClick={onCancel}>
-              Cancel
-            </Button>
-          ) : null}
-          <Button type="submit" disabled={!value.trim()}>
-            {submitLabel}
-          </Button>
-        </div>
-      </div>
-    </form>
-  );
+export function CommunityCommentComposer({ postId, parent, onComplete }: {
+  postId: string; parent: CommunityComment | null; onComplete: () => void;
+}) {
+  const mutation = usePostMutation();
+  const form = useForm({ resolver: zodResolver(schema), defaultValues: { body: "" } });
+  return <form className="space-y-3" onSubmit={form.handleSubmit((values) => mutation.mutate({
+    path: `/${postId}/comments`, method: "POST", body: { ...values, parentCommentId: parent?.id ?? null },
+  }, { onSuccess: () => { form.reset(); onComplete(); } }))}>
+    {parent ? <div className="flex items-center justify-between gap-2 rounded-lg bg-muted p-3">
+      <p className="line-clamp-2 text-sm">Replying to: {parent.body}</p>
+      <Button type="button" variant="ghost" disabled={mutation.isPending} onClick={onComplete}>Cancel reply</Button>
+    </div> : null}
+    <CommunityFormField control={form.control} name="body" label={parent ? "Your reply" : "Add a comment"} multiline disabled={mutation.isPending} />
+    <CommunityQueryError error={mutation.error} />
+    <Button type="submit" disabled={mutation.isPending}>{mutation.isPending ? "Posting…" : parent ? "Post reply" : "Post comment"}</Button>
+  </form>;
 }

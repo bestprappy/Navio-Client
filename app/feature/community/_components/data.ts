@@ -41,6 +41,7 @@ export type SharedTrip = {
 };
 
 export type CommunityGroup = {
+  status?: string;
   slug?: string;
   joined?: boolean;
   muted?: boolean;
@@ -104,6 +105,10 @@ export type CommunityGroupProfile = {
 };
 
 export type CommunityPost = {
+  groupSlug?: string;
+  groupName?: string;
+  viewerVote?: number;
+  linkUrl?: string;
   id: string;
   groupId: string;
   authorId: string;
@@ -121,6 +126,8 @@ export type CommunityPost = {
 };
 
 export type CommunityComment = {
+  deleted?: boolean;
+  viewerVote?: number;
   id: string;
   postId: string;
   parentCommentId?: string;
@@ -1595,7 +1602,7 @@ export function getCommentsByPostId(
 export function getCommunityPostSlug(
   post: Pick<CommunityPost, "id" | "title">,
 ) {
-  return slugifyCommunityValue(post.title) || post.id;
+  return post.id;
 }
 
 export function getCommunityPostHref(

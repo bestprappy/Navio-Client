@@ -1,13 +1,10 @@
 "use client";
 
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue } from "jotai";
 
 import {
   communityFeedSortAtom,
   communitySearchQueryAtom,
-  createdPostsAtom,
-  extraCommentsByPostIdAtom,
-  selectedCommunityPostIdAtom,
 } from "./_components/community-atoms";
 import { CommunityContextSidebar } from "./feed/community-context-sidebar";
 import { CommunityErrorBoundary } from "./_components/community-error-boundary";
@@ -25,21 +22,10 @@ import { CommunityQueryError } from "./_components/community-query-state";
 export function CommunityPage() {
   const searchQuery = useAtomValue(communitySearchQueryAtom);
   const sort = useAtomValue(communityFeedSortAtom);
-  const createdPosts = useAtomValue(createdPostsAtom);
-  const extraCommentsByPostId = useAtomValue(extraCommentsByPostIdAtom);
-  const [selectedPostId, setSelectedPostId] = useAtom(
-    selectedCommunityPostIdAtom,
-  );
 
   const groupsQuery = useCommunityGroups(searchQuery);
   const groups = groupsQuery.data;
-  const feedQuery = useCommunityFeed(
-    searchQuery,
-    sort,
-    createdPosts,
-    groups,
-    extraCommentsByPostId,
-  );
+  const feedQuery = useCommunityFeed(searchQuery, sort);
 
   return (
     <CommunityErrorBoundary>
@@ -62,13 +48,11 @@ export function CommunityPage() {
           <CommunityFeed
             posts={feedQuery.data ?? []}
             groups={groups}
-            extraCommentsByPostId={extraCommentsByPostId}
             searchQuery={searchQuery}
-            selectedPostId={selectedPostId}
             isLoading={feedQuery.isLoading}
             isError={feedQuery.isError}
-            onSelectPost={setSelectedPostId}
           />
+          {feedQuery.hasNextPage ? <Button variant="outline" disabled={feedQuery.isFetchingNextPage} onClick={() => void feedQuery.fetchNextPage()}>Load more posts</Button> : null}
           {groupsQuery.hasNextPage ? (
             <Button
               variant="outline"

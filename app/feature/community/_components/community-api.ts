@@ -146,19 +146,21 @@ export async function communityRequest<T>(
   schema: z.ZodType<T>,
   init?: { method: string; body?: unknown },
   signal?: AbortSignal,
+  resource: "groups" | "posts" = "groups",
 ): Promise<T> {
   try {
-    const response = await fetch(`/api/groups${path}`, {
+    const multipart = init?.body instanceof FormData;
+    const response = await fetch(`/api/${resource}${path}`, {
       method: init?.method ?? "GET",
       credentials: "same-origin",
       cache: "no-store",
       headers: {
         Accept: "application/json",
-        ...(init?.body !== undefined
+        ...(init?.body !== undefined && !multipart
           ? { "Content-Type": "application/json" }
           : {}),
       },
-      body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
+      body: multipart ? init.body as FormData : init?.body !== undefined ? JSON.stringify(init.body) : undefined,
       signal: signal
         ? AbortSignal.any([signal, AbortSignal.timeout(20_000)])
         : AbortSignal.timeout(20_000),
@@ -216,7 +218,9 @@ export function toCommunityGroup(
     profile: detail
       ? {
           groupId: group.id,
-          bannerUrl: detail.bannerUrl ?? "",
+          bannerUrl: detail.bannerMediaId
+            ? `/api/groups/${encodeURIComponent(group.slug)}/banner?v=${detail.bannerMediaId}`
+            : detail.bannerUrl ?? "",
           summary: detail.summary ?? group.description,
           weeklyVisitorCount: detail.weeklyVisitorCount,
           weeklyContributionCount: detail.weeklyContributionCount,

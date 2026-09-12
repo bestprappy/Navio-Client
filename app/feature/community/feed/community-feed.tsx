@@ -6,15 +6,12 @@ import { useAtom } from "jotai";
 import { communityFeedSortAtom } from "../_components/community-atoms";
 import { CommunityPostCard } from "../_components/community-post-card";
 import type {
-  CommunityComment,
   CommunityFeedSort,
   CommunityGroup,
   CommunityPost,
 } from "../_components/data";
 import {
-  getCommentsByPostId,
   getGroupById,
-  getTripById,
 } from "../_components/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,12 +27,9 @@ import { cn } from "@/lib/utils";
 type CommunityFeedProps = {
   posts: CommunityPost[];
   groups: CommunityGroup[];
-  extraCommentsByPostId: Record<string, CommunityComment[]>;
   searchQuery: string;
-  selectedPostId: string | null;
   isLoading: boolean;
   isError: boolean;
-  onSelectPost: (postId: string) => void;
 };
 
 const SORT_OPTIONS: { value: CommunityFeedSort; label: string }[] = [
@@ -47,12 +41,9 @@ const SORT_OPTIONS: { value: CommunityFeedSort; label: string }[] = [
 export function CommunityFeed({
   posts,
   groups,
-  extraCommentsByPostId,
   searchQuery,
-  selectedPostId,
   isLoading,
   isError,
-  onSelectPost,
 }: CommunityFeedProps) {
   const [sort, setSort] = useAtom(communityFeedSortAtom);
 
@@ -69,8 +60,7 @@ export function CommunityFeed({
             ) : null}
           </div>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Local preview: posts, comments, and votes stay in this session and
-            are not published.
+            Share routes, ask questions, and learn from other travelers.
           </p>
         </div>
         <div
@@ -99,7 +89,7 @@ export function CommunityFeed({
           <CardHeader>
             <CardTitle>Feed unavailable</CardTitle>
             <CardDescription>
-              We couldn’t load the discussion preview. Please refresh the page
+              We couldn’t load the discussions. Please refresh the page
               to try again.
             </CardDescription>
           </CardHeader>
@@ -129,11 +119,10 @@ export function CommunityFeed({
             />
             <div>
               <h2 className="font-semibold text-foreground">
-                No discussion previews yet
+                No discussions yet
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Discover a community or create a local post preview to try the
-                discussion experience.
+                Join a community and publish the first discussion.
               </p>
             </div>
           </CardContent>
@@ -149,23 +138,12 @@ export function CommunityFeed({
           <div className="rounded-lg border border-border/50 bg-card p-1 shadow-sm">
             {posts.map((post) => {
               const group = getGroupById(post.groupId, groups);
-              const trip = post.sharedTripId
-                ? getTripById(post.sharedTripId)
-                : null;
-              const comments = getCommentsByPostId(
-                post.id,
-                extraCommentsByPostId[post.id] ?? [],
-              );
 
               return (
                 <CommunityPostCard
                   key={post.id}
                   post={post}
                   group={group}
-                  trip={trip}
-                  comments={comments}
-                  selected={selectedPostId === post.id}
-                  onSelect={onSelectPost}
                 />
               );
             })}

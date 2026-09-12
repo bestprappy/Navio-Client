@@ -24,9 +24,9 @@ export function CommunityGroupHeader({ detail }: { detail: GroupDetail }) {
   return (
     <section className="space-y-4 overflow-hidden rounded-lg bg-card">
       <div className="relative h-32 bg-secondary sm:h-44">
-        {detail.bannerUrl && /^https?:\/\//.test(detail.bannerUrl) ? (
+        {group.profile?.bannerUrl ? (
           <Image
-            src={detail.bannerUrl}
+            src={group.profile.bannerUrl}
             alt={`${group.name} banner`}
             fill
             unoptimized

@@ -58,8 +58,7 @@ export function CommunityCreatePage({
         </div>
 
         <p className="mb-4 text-sm text-muted-foreground">
-          Local preview: your post stays in this session and will not be
-          published.
+          Share a question, trip note, or picture with your community.
         </p>
         {groupsQuery.isLoading ? <CommunityGroupLoading /> : null}
         <CommunityQueryError
@@ -86,7 +85,7 @@ export function CommunityCreatePage({
         >
           <CommunityComposer
             groups={groups}
-            initialGroupId={initialGroupId}
+            initialGroupId={initialGroupId ?? detail.data?.id}
             initialPlanId={initialPlanId}
           />
           {selectedGroup && <CommunityRulesSidebar group={selectedGroup} />}

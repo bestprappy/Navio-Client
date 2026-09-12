@@ -1,5 +1,6 @@
 "use client";
 
+import { CommunityBannerUpload } from "./community-banner-upload";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,13 +19,7 @@ const schema = z.object({
   places: z.string(),
   tags: z.string(),
   summary: z.string().trim(),
-  bannerUrl: z.union([
-    z.literal(""),
-    z
-      .string()
-      .trim()
-      .regex(/^https?:\/\/[^\s]+$/, "Enter an HTTP or HTTPS URL."),
-  ]),
+
 });
 type Values = z.infer<typeof schema>;
 
@@ -38,7 +33,6 @@ export function CommunityProfileForm({ group }: { group: GroupDetail }) {
       places: (group.places ?? []).join(", "),
       tags: (group.tags ?? []).join(", "),
       summary: group.summary ?? "",
-      bannerUrl: group.bannerUrl ?? "",
     },
   });
   function submit(values: Values) {
@@ -48,8 +42,7 @@ export function CommunityProfileForm({ group }: { group: GroupDetail }) {
         body: {
           ...values,
           country: values.country || null,
-          summary: values.summary || null,
-          bannerUrl: values.bannerUrl || null,
+          summary: values.summary,
           places: splitCommunityTerms(values.places),
           tags: splitCommunityTerms(values.tags),
         },
@@ -91,12 +84,7 @@ export function CommunityProfileForm({ group }: { group: GroupDetail }) {
         label="Tags (comma separated)"
         disabled={mutation.isPending}
       />
-      <CommunityFormField
-        control={form.control}
-        name="bannerUrl"
-        label="Banner image URL"
-        disabled={mutation.isPending}
-      />
+      <CommunityBannerUpload group={group} />
       <CommunityQueryError error={mutation.error} />
       {mutation.isSuccess && !form.formState.isDirty ? (
         <p role="status" className="text-sm text-success">

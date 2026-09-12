@@ -2,14 +2,11 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtomValue } from "jotai";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   communityFeedSortAtom,
-  createdPostsAtom,
-  extraCommentsByPostIdAtom,
-  selectedCommunityPostIdAtom,
 } from "../_components/community-atoms";
 import {
   CommunityApiError,
@@ -32,19 +29,8 @@ export function CommunityGroupPage({ groupName }: { groupName: string }) {
     () => (detail.data ? [toCommunityGroup(detail.data)] : []),
     [detail.data],
   );
-  const createdPosts = useAtomValue(createdPostsAtom);
-  const extraCommentsByPostId = useAtomValue(extraCommentsByPostIdAtom);
   const sort = useAtomValue(communityFeedSortAtom);
-  const [selectedPostId, setSelectedPostId] = useAtom(
-    selectedCommunityPostIdAtom,
-  );
-  const feed = useCommunityFeed(
-    "",
-    sort,
-    createdPosts,
-    groups,
-    extraCommentsByPostId,
-  );
+  const feed = useCommunityFeed("", sort, groupName);
   const group = groups[0];
   return (
     <CommunityErrorBoundary>
@@ -77,16 +63,16 @@ export function CommunityGroupPage({ groupName }: { groupName: string }) {
           <>
             <CommunityGroupHeader detail={detail.data} />
             <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
+              <div className="flex min-w-0 flex-col gap-4">
               <CommunityFeed
                 posts={feed.data ?? []}
                 groups={groups}
-                extraCommentsByPostId={extraCommentsByPostId}
                 searchQuery=""
-                selectedPostId={selectedPostId}
                 isLoading={feed.isLoading}
                 isError={feed.isError}
-                onSelectPost={setSelectedPostId}
               />
+              {feed.hasNextPage ? <Button variant="outline" disabled={feed.isFetchingNextPage} onClick={() => void feed.fetchNextPage()}>Load more posts</Button> : null}
+              </div>
               <CommunityGroupSidebar group={group} profile={group.profile} />
             </div>
           </>

@@ -3,22 +3,23 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowBigUpDash, MessageCircle } from "lucide-react";
-import { useAtom, useAtomValue } from "jotai";
+import { useAtom } from "jotai";
 
 import {
-  createdPostsAtom,
   recentPostsClearedAtom,
 } from "../_components/community-atoms";
 import type { CommunityGroup, CommunityPost } from "../_components/data";
 import {
+  getCommunityPostHref,
   formatCount,
   formatRelativeTime,
   getInitials,
-  mockCommunityPosts,
   slugifyCommunityValue,
 } from "../_components/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CommunityMembershipButton } from "../_components/community-membership-button";
+import { useCommunityFeed } from "../_components/community-queries";
+import { CommunityQueryError } from "../_components/community-query-state";
 import { CommunityMyGroups } from "../_components/community-my-groups";
 
 type CommunityContextSidebarProps = {
@@ -92,7 +93,7 @@ function RecentPostItem({
           {formatRelativeTime(post.createdAt)}
         </p>
         <p className="mt-0.5 line-clamp-2 text-sm font-medium leading-snug text-foreground">
-          {post.title}
+          <Link href={getCommunityPostHref(group, post)} className="hover:underline">{post.title}</Link>
         </p>
         <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
@@ -108,6 +109,7 @@ function RecentPostItem({
       {post.imageUrl ? (
         <Image
           src={post.imageUrl}
+          unoptimized
           alt=""
           aria-hidden="true"
           width={64}
@@ -126,9 +128,8 @@ export function CommunityContextSidebar({
   groupsError,
 }: CommunityContextSidebarProps) {
   const [cleared, setCleared] = useAtom(recentPostsClearedAtom);
-  const createdPosts = useAtomValue(createdPostsAtom);
-
-  const allPosts: CommunityPost[] = [...createdPosts, ...mockCommunityPosts];
+  const recent = useCommunityFeed("", "new");
+  const allPosts = recent.data;
   const joinedGroups = groups.filter((g) => joinedGroupIds.includes(g.id));
   const unjoinedGroups = groups.filter((g) => !joinedGroupIds.includes(g.id));
 
@@ -174,6 +175,7 @@ export function CommunityContextSidebar({
             ) : null}
           </div>
 
+          <CommunityQueryError error={recent.error} onRetry={() => void recent.refetch()} />
           {!cleared && hasRecentPosts ? (
             <div className="">
               {recentPostsByGroup.map(({ group, posts }) =>
@@ -188,7 +190,7 @@ export function CommunityContextSidebar({
             <p className="py-2 text-sm text-muted-foreground">
               {cleared
                 ? "No recent posts."
-                : "No posts yet in your communities."}
+                : "No recent posts to show."}
             </p>
           ) : null}
         </section>

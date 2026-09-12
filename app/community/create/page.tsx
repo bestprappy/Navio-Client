@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { CommunityCreatePage } from "@/app/feature/community/_components/community-create-page";
-import { auth } from "@/auth";
+import { readAuth as auth } from "@/auth";
 import { getSignInHref } from "@/lib/auth-navigation";
 
 export const metadata: Metadata = {

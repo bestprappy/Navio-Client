@@ -9,7 +9,7 @@ const publicProfileSchema = z.object({
 
 export async function getCommunityUser(userId: string, signal: AbortSignal) {
   try {
-    const response = await fetch(`/api/users/${encodeURIComponent(userId)}`, {
+    const response = await fetch(`/api/users/by-subject/${encodeURIComponent(userId)}`, {
       credentials: "same-origin",
       cache: "no-store",
       headers: { Accept: "application/json" },

@@ -35,3 +35,12 @@ export const pageFixture = {
   totalPages: 1,
   last: true,
 };
+
+export const postFixture = {
+  id: "33333333-3333-4333-8333-333333333333",
+  groupId: groupFixture.id, groupSlug: groupFixture.slug, groupName: groupFixture.name,
+  authorId: groupFixture.createdById, title: "Route notes", body: "A good trip",
+  linkUrl: null, flairId: null, sharedTripId: null, imageUrl: null,
+  createdAt: "2026-09-12T00:00:00Z", updatedAt: "2026-09-12T00:00:00Z",
+  upvotes: 0, commentCount: 0, viewerVote: 0,
+};
