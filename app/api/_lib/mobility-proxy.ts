@@ -20,7 +20,6 @@ const RESPONSE_HEADERS_TO_FORWARD = [
 
 type MobilityProxyOptions = {
   method?: "GET" | "POST";
-  body?: string;
 };
 
 export async function proxyMobilityRequest(
@@ -80,7 +79,9 @@ async function forwardMobilityRequest(
     const upstreamResponse = await fetch(upstreamUrl, {
       method: options.method ?? "GET",
       headers,
-      body: options.body,
+      // Read from the authenticated request: reading before the auth wrapper
+      // leaves a consumed stream that NextRequest cannot reconstruct.
+      body: options.method === "POST" ? await request.text() : undefined,
       cache: "no-store",
       signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });

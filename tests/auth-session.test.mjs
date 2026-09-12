@@ -18,6 +18,9 @@ registerHooks({
     if (specifier.startsWith("@/")) {
       return nextResolve(new URL(`../${specifier.slice(2)}.ts`, import.meta.url).href, context);
     }
+    if (specifier === "./with-authenticated-session") {
+      return nextResolve(`${specifier}.ts`, context);
+    }
     if (["next/server", "next/headers", "next/navigation"].includes(specifier)) {
       return nextResolve(`${specifier}.js`, context);
     }
@@ -37,6 +40,7 @@ const { encode, decode } = await import("next-auth/jwt");
 const { withAuthenticatedSession } = await import("../app/api/_lib/with-authenticated-session.ts");
 const { readAuth } = await import("../auth.ts");
 const { NextRequest } = await import("next/server");
+const { POST: directions } = await import("../app/api/routes/directions/route.ts");
 
 // App Router wraps requests and binds public accessors to the original target.
 // The proxy itself does not carry Node Request's private internal state.
@@ -53,6 +57,7 @@ const originalFetch = globalThis.fetch;
 afterEach(() => {
   globalThis.fetch = originalFetch;
   delete globalThis.__navioTestHeaders;
+  delete process.env.NAVIO_API_BASE_URL;
 });
 
 test("read-only page rendering does not consume a refresh token it cannot persist", async () => {
@@ -155,4 +160,35 @@ test("proxied route requests preserve URL, headers, body bytes, and cancellation
     );
     assert.equal(response.status, 204);
   }
+});
+
+test("directions forwards its JSON after authentication without consuming the body twice", async () => {
+  const cookieName = "authjs.session-token";
+  const cookie = await encode({
+    secret: process.env.AUTH_SECRET, salt: cookieName,
+    token: { sub: "route-user", accessToken: "route-access", accessTokenExpiresAt: Math.floor(Date.now() / 1000) + 300 },
+  });
+  const body = JSON.stringify({ profile: "driving", groups: [{ id: "day-1", points: [] }] });
+  const result = { segments: [] };
+  process.env.NAVIO_API_BASE_URL = "http://gateway.test";
+  let calls = 0;
+  globalThis.fetch = async (url, options) => {
+    calls++;
+    assert.equal(String(url), "http://gateway.test/v1/routes/directions");
+    assert.equal(options.method, "POST");
+    assert.equal(options.headers.get("authorization"), "Bearer route-access");
+    assert.equal(options.headers.get("content-type"), "application/json");
+    assert.equal(options.body, body);
+    return Response.json(result);
+  };
+  const request = (authenticated) => routeRequest("http://localhost:3000/api/routes/directions", {
+    method: "POST", body,
+    headers: { "content-type": "application/json", ...(authenticated ? { cookie: `${cookieName}=${cookie}` } : {}) },
+  });
+  assert.equal((await directions(request(false))).status, 401);
+  assert.equal(calls, 0);
+  const response = await directions(request(true));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), result);
+  assert.equal(calls, 1);
 });
