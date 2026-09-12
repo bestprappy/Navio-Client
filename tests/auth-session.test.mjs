@@ -36,6 +36,19 @@ process.env.AUTH_KEYCLOAK_SECRET = "test-client-secret";
 const { encode, decode } = await import("next-auth/jwt");
 const { withAuthenticatedSession } = await import("../app/api/_lib/with-authenticated-session.ts");
 const { readAuth } = await import("../auth.ts");
+const { NextRequest } = await import("next/server");
+
+// App Router wraps requests and binds public accessors to the original target.
+// The proxy itself does not carry Node Request's private internal state.
+function routeRequest(url, init) {
+  return new Proxy(new NextRequest(url, init), {
+    get(target, property) {
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+}
+
 const originalFetch = globalThis.fetch;
 afterEach(() => {
   globalThis.fetch = originalFetch;
@@ -90,7 +103,7 @@ test("API requests persist rotated cookies and reuse them after concurrent expir
       : Response.json({ error: "invalid_grant" }, { status: 400 });
   };
   const call = (cookie) => withAuthenticatedSession(
-    new Request("http://localhost:3000/api/groups/mine", { headers: { cookie } }),
+    routeRequest("http://localhost:3000/api/groups/mine", { headers: { cookie } }),
     async (_request, session) => Response.json({ accessToken: session?.accessToken, error: session?.error }),
   );
   const responses = await Promise.all(Array.from({ length: 8 }, () => call(`${cookieName}=${expiredCookie}`)));
@@ -113,4 +126,33 @@ test("anonymous sessions remain anonymous", async () => {
     async (_request, session) => Response.json({ signedIn: Boolean(session) }),
   );
   assert.deepEqual(await response.json(), { signedIn: false });
+});
+
+test("proxied route requests preserve URL, headers, body bytes, and cancellation", async () => {
+  const bytes = new Uint8Array([0, 255, 128, 65, 13, 10]);
+  for (const method of ["GET", "HEAD", "POST", "PATCH", "DELETE"]) {
+    const hasBody = method !== "GET" && method !== "HEAD";
+    const controller = new AbortController();
+    const url = "http://localhost:3000/api/posts?page=2";
+    const response = await withAuthenticatedSession(
+      routeRequest(url, {
+        method,
+        headers: { "content-type": "application/octet-stream", "x-request-id": "proxy-test" },
+        body: hasBody ? bytes : undefined,
+        signal: controller.signal,
+      }),
+      async (request, session) => {
+        assert.equal(session, null);
+        assert.equal(request.url, url);
+        assert.equal(request.method, method);
+        assert.equal(request.headers.get("content-type"), "application/octet-stream");
+        assert.equal(request.headers.get("x-request-id"), "proxy-test");
+        assert.deepEqual(new Uint8Array(await request.arrayBuffer()), hasBody ? bytes : new Uint8Array());
+        controller.abort();
+        assert.equal(request.signal.aborted, true);
+        return new Response(null, { status: 204 });
+      },
+    );
+    assert.equal(response.status, 204);
+  }
 });
