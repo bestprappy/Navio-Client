@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Allows isolated verification builds alongside an existing development server.
+  distDir: process.env.NAVIO_BUILD_DIR ?? ".next",
   // Emits .next/standalone with a self-contained server and only the traced
   // runtime dependencies, so the container image ships without node_modules.
   output: "standalone",
