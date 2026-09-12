@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
 import type { TripEvSummary } from "./ev-calculator";
+import { calcRangeKmForBatteryPct } from "./ev-calculator";
 import { formatMinutes } from "./garage-formatters";
 import { VehicleMedia } from "./vehicle-media";
 
@@ -32,7 +33,7 @@ export function VehicleUsageOverview({
   plannedDays,
 }: VehicleUsageOverviewProps) {
   const batteryPct = tripSummary?.finalBatteryPct ?? vehicle.startingBatteryPct;
-  const currentRangeKm = Math.round((batteryPct / 100) * car.rangeKm);
+  const currentRangeKm = Math.round(calcRangeKmForBatteryPct(batteryPct, car));
   const totalDistanceKm = tripSummary?.totalDistanceKm ?? 0;
   const totalEnergyKwh = tripSummary?.totalEnergyKwh ?? 0;
   const totalChargeMinutes = tripSummary?.totalChargeMinutes ?? 0;
@@ -51,11 +52,11 @@ export function VehicleUsageOverview({
               {displayName}
             </p>
             <p className="text-xs text-muted-foreground">
-              {car.make} {car.model} ({car.year})
+              {car.make} {car.model}{car.year ? ` (${car.year})` : ""}
             </p>
           </div>
           <span className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-            {vehicle.source === "custom" ? "Custom EV" : "Prebuilt EV"}
+            {vehicle.source === "custom" ? "Custom EV" : "Catalogue EV"}
           </span>
         </div>
       </div>
@@ -68,15 +69,15 @@ export function VehicleUsageOverview({
               icon={<Zap className="size-4" />}
               label="Consumption"
               value={`${totalEnergyKwh.toFixed(1)} kWh`}
-              iconColor="text-amber-500"
-              iconBg="bg-amber-500/10"
+              iconColor="text-warning"
+              iconBg="bg-warning/10"
             />
             <MetricTile
               icon={<Gauge className="size-4" />}
               label="Mileage"
               value={`${totalDistanceKm.toFixed(1)} km`}
-              iconColor="text-blue-500"
-              iconBg="bg-blue-500/10"
+              iconColor="text-primary"
+              iconBg="bg-primary/10"
             />
           </div>
         </div>
@@ -99,22 +100,22 @@ export function VehicleUsageOverview({
             icon={<BatteryCharging className="size-4" />}
             label="Charging Time"
             value={totalChargeMinutes > 0 ? formatMinutes(totalChargeMinutes) : "No stops"}
-            iconColor="text-orange-500"
-            iconBg="bg-orange-500/10"
+            iconColor="text-warning"
+            iconBg="bg-warning/10"
           />
           <MetricTile
             icon={<PlugZap className="size-4" />}
             label="Connector"
             value={car.connectorTypes.join(", ")}
-            iconColor="text-purple-500"
-            iconBg="bg-purple-500/10"
+            iconColor="text-primary"
+            iconBg="bg-primary/10"
           />
           <MetricTile
             icon={<Timer className="size-4" />}
             label="Driving Time"
             value={formatMinutes(totalDrivingMinutes)}
-            iconColor="text-cyan-500"
-            iconBg="bg-cyan-500/10"
+            iconColor="text-primary"
+            iconBg="bg-primary/10"
           />
         </div>
       </div>
@@ -153,7 +154,7 @@ function BatteryPanel({
             </p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-muted-foreground">Range</p>
+            <p className="text-xs font-semibold text-muted-foreground">Estimated range</p>
             <p className="text-lg font-bold tabular-nums text-foreground">
               {currentRangeKm} km
             </p>

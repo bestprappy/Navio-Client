@@ -15,6 +15,7 @@ type VehicleCardProps = {
   isActive: boolean;
   onSelect: () => void;
   onRemove: () => void;
+  disabled?: boolean;
 };
 
 export function VehicleCard({
@@ -23,6 +24,7 @@ export function VehicleCard({
   isActive,
   onSelect,
   onRemove,
+  disabled = false,
 }: VehicleCardProps) {
   const batteryPct = vehicle.startingBatteryPct;
   const batteryColor =
@@ -33,24 +35,15 @@ export function VehicleCard({
         : "bg-destructive";
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-pressed={isActive}
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.key !== "Enter" && e.key !== " ") return;
-        e.preventDefault();
-        onSelect();
-      }}
+    <article
       className={cn(
-        "relative cursor-pointer rounded-md border bg-card p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+        "relative rounded-md border bg-card p-4 text-left transition-all",
         isActive
           ? "border-primary shadow-sm shadow-primary/20"
           : "border-border hover:border-border/80 hover:bg-card/80",
       )}
     >
-      <VehicleMedia car={car} compact className="mb-3" />
+      <VehicleMedia car={car} className="mb-3" />
 
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -62,13 +55,13 @@ export function VehicleCard({
               {vehicle.nickname}
             </p>
           )}
-          <p className="text-xs text-muted-foreground">{car.year}</p>
+          <p className="text-xs text-muted-foreground">{[car.trim, car.year, car.market === "TH" ? "Thailand" : null].filter(Boolean).join(" · ")}</p>
         </div>
         <Badge
           variant="outline"
           className="shrink-0 px-1.5 py-0 text-[10px] font-medium"
         >
-          {vehicle.source === "custom" ? "Custom" : "Preset"}
+          {vehicle.source === "custom" ? "Custom" : "Catalogue"}
         </Badge>
         <Button
           type="button"
@@ -76,6 +69,7 @@ export function VehicleCard({
           size="icon"
           className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
           aria-label={`Remove ${car.make} ${car.model}`}
+          disabled={disabled}
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
@@ -106,12 +100,12 @@ export function VehicleCard({
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1">
-        <StatItem label="Range" value={`${car.rangeKm} km`} />
+        <StatItem label={`${car.rangeStandard ?? "Reference"} range`} value={`${car.rangeKm} km`} />
         <StatItem label="Battery" value={`${car.batteryKwh} kWh`} />
         {car.maxDcKw > 0 && (
           <StatItem label="Max DC" value={`${car.maxDcKw} kW`} />
         )}
-        <StatItem label="AC" value={`${car.maxAcKw} kW`} />
+        <StatItem label="AC" value={car.maxAcKw > 0 ? `${car.maxAcKw} kW` : car.chargingLimitsKnown === false ? "Unconfirmed" : "Unsupported"} />
       </div>
 
       <div
@@ -130,13 +124,12 @@ export function VehicleCard({
         ))}
       </div>
 
-      {isActive && (
-        <span
-          className="absolute right-2 top-2 size-2 rounded-full bg-primary"
-          aria-hidden="true"
-        />
-      )}
-    </div>
+      {car.sourceUrl && <a href={car.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 block text-xs text-primary underline underline-offset-4">Official specification · checked {car.verifiedAt}</a>}
+      {car.sourceUrl && <p className="mt-2 text-xs text-muted-foreground">AI illustration · manufacturer-declared capacity · test range</p>}
+      <Button type="button" variant={isActive ? "secondary" : "outline"} className="mt-4 w-full" aria-pressed={isActive} disabled={disabled || isActive} onClick={onSelect}>
+        {isActive ? "Selected for route estimates" : "Use this vehicle"}
+      </Button>
+    </article>
   );
 }
 

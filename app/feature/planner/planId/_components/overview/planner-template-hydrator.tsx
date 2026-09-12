@@ -6,12 +6,6 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { getPlanById } from "@/app/feature/explore/_components/data";
 import { currencyOptions, getCurrencyOption } from "../budget/budget.data";
 import { getCopiedPlanBlocks } from "../constants/planner-template";
-import { getPlanGarageUserVehicle } from "../constants/template-ev";
-import {
-  activeVehicleIdAtom,
-  startingBatteryPctAtom,
-  userVehiclesAtom,
-} from "../garage/garage.atoms";
 import {
   activeBlockIdAtom,
   activeSearchAtom,
@@ -65,9 +59,6 @@ export function PlannerTemplateHydrator({
   const setEvChargerResults = useSetAtom(evChargerResultsAtom);
   const setEvChargerLoading = useSetAtom(evChargerLoadingAtom);
   const setEvChargerError = useSetAtom(evChargerErrorAtom);
-  const setUserVehicles = useSetAtom(userVehiclesAtom);
-  const setActiveVehicleId = useSetAtom(activeVehicleIdAtom);
-  const setStartingBatteryPct = useSetAtom(startingBatteryPctAtom);
   const setTripBudget = useSetAtom(tripBudgetAtom);
   const setTripExpenses = useSetAtom(tripExpensesAtom);
   const setTripCurrency = useSetAtom(tripCurrencyAtom);
@@ -92,9 +83,6 @@ export function PlannerTemplateHydrator({
     setEvChargerResults([]);
     setEvChargerLoading(false);
     setEvChargerError(null);
-    setUserVehicles([]);
-    setActiveVehicleId(null);
-    setStartingBatteryPct(80);
     setTripBudget(0);
     setTripExpenses([]);
     setTripCurrency(currencyOptions[0]);
@@ -120,17 +108,7 @@ export function PlannerTemplateHydrator({
 
     const plan = getPlanById(templatePlanId);
 
-    // Hydrate garage
-    if (plan?.garage) {
-      const { garage } = plan;
-      const vehicleId = `vehicle-copied-${templatePlanId}`;
-      setUserVehicles([getPlanGarageUserVehicle(vehicleId, garage, 80)]);
-      setActiveVehicleId(vehicleId);
-      setStartingBatteryPct(80);
-    } else {
-      setUserVehicles([]);
-      setActiveVehicleId(null);
-    }
+    // The account garage is restored by GarageProvider, independently of trip templates.
 
     // Hydrate budget
     if (plan?.budget) {
@@ -163,20 +141,17 @@ export function PlannerTemplateHydrator({
     setActiveBlockId,
     setActiveSearch,
     setActivePlannerKey,
-    setActiveVehicleId,
     setEvChargerError,
     setEvChargerLoading,
     setEvChargerResults,
     setOpenBlockIds,
     setSelectedEvChargerId,
     setSelectedTripPlaceItemId,
-    setStartingBatteryPct,
     setTripBlocks,
     setTripBudget,
     setTripCurrency,
     setTripDateRange,
     setTripExpenses,
-    setUserVehicles,
     templatePlanId,
     to,
   ]);

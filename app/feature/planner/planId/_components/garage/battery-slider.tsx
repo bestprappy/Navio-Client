@@ -40,7 +40,7 @@ export function BatterySlider({
 
   return (
     <div className="relative w-full select-none">
-      <div className="relative" style={{ height: THUMB_SIZE + 8 }}>
+      <div className="relative rounded-md focus-within:ring-2 focus-within:ring-ring" style={{ height: THUMB_SIZE + 8 }}>
         {/* Track (inset by half-thumb on each side so thumb center aligns with track edges) */}
         <div
           className="absolute top-1/2 -translate-y-1/2 rounded-full bg-muted"
@@ -65,7 +65,7 @@ export function BatterySlider({
           }}
           aria-hidden="true"
         >
-          <div className="rounded-full bg-white/70" style={{ width: 7, height: 7 }} />
+          <div className="rounded-full bg-primary-foreground/70" style={{ width: 7, height: 7 }} />
         </div>
 
         {/* Native input overlay — transparent, handles all interaction and keyboard events */}

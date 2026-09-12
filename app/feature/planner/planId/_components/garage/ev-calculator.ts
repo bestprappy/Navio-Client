@@ -784,7 +784,7 @@ export function normalizeChargeTargetPct(value?: number): number {
   );
 }
 
-function calcRangeKmForBatteryPct(batteryPct: number, car: EvCar): number {
+export function calcRangeKmForBatteryPct(batteryPct: number, car: EvCar): number {
   const energyKwh = (clampPct(batteryPct) / 100) * car.batteryKwh;
   return (energyKwh / car.consumptionKwhPer100km) * 100;
 }

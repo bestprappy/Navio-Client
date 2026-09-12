@@ -5,6 +5,7 @@ import { getTripCountry } from "../_components/trip-destinations";
 import { PlannerWorkspace } from "./_components/layout/planner-workspace";
 import { ExploreSection } from "./_components/explore/explore-section";
 import { GarageSection } from "./_components/garage/garage-section";
+import { GarageProvider } from "./_components/garage/garage-provider";
 import { DayNavSidebar } from "./_components/itinerary/day-nav-sidebar";
 import { ItinerarySection } from "./_components/itinerary/itinerary-section";
 import { MyListSection } from "./_components/list/my-list-section";
@@ -43,6 +44,7 @@ export function PlannerDetail({
   const tripLatitude = metadata.data?.destinationLat ?? latitude;
   const tripLongitude = metadata.data?.destinationLng ?? longitude;
   return (
+    <GarageProvider>
     <PlannerWorkspace itinerary={<>
           <TripHero destinationName={tripDestinationName} />
           <TripInfoCard
@@ -98,5 +100,6 @@ export function PlannerDetail({
       />
       <DayNavSidebar />
     </PlannerWorkspace>
+    </GarageProvider>
   );
 }

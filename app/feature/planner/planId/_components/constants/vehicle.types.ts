@@ -4,7 +4,7 @@ export type EvCar = {
   id: string;
   make: string;
   model: string;
-  year: number;
+  year: number | null;
   batteryKwh: number;
   rangeKm: number;
   consumptionKwhPer100km: number;
@@ -12,6 +12,12 @@ export type EvCar = {
   maxDcKw: number;
   connectorTypes: EvConnectorType[];
   imageUrl?: string;
+  trim?: string;
+  market?: string;
+  rangeStandard?: string;
+  sourceUrl?: string;
+  verifiedAt?: string;
+  chargingLimitsKnown?: boolean;
 };
 
 type UserVehicleBase = {
@@ -23,6 +29,7 @@ type UserVehicleBase = {
 export type PresetUserVehicle = UserVehicleBase & {
   source: "preset";
   carId: string;
+  car: EvCar;
 };
 
 export type CustomUserVehicle = UserVehicleBase & {

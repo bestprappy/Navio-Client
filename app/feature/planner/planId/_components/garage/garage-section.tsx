@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { AlertTriangle, Car, Plus } from "lucide-react";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 
 import { Button } from "@/components/ui/button";
 
@@ -14,28 +14,23 @@ import {
   activeVehicleAtom,
   activeVehicleIdAtom,
   garageModalOpenAtom,
-  removeVehicleAtom,
-  setActiveVehicleAtom,
-  setStartingBatteryPctAtom,
-  startingBatteryPctAtom,
   userVehiclesAtom,
 } from "./garage.atoms";
 import { useTripCharging } from "./use-trip-charging";
 import { VehicleCard } from "./vehicle-card";
 import { AddVehicleDialog } from "./add-vehicle-dialog";
 import { VehicleUsageOverview } from "./vehicle-usage-overview";
-import { BatterySlider, getBatteryColor } from "./battery-slider";
+import { VehicleSettingsForm } from "./vehicle-settings-form";
+import { useGarage } from "./garage-provider";
 
 export function GarageSection() {
   const vehicles = useAtomValue(userVehiclesAtom);
   const activeVehicleId = useAtomValue(activeVehicleIdAtom);
   const activeVehicle = useAtomValue(activeVehicleAtom);
   const activeEvCar = useAtomValue(activeEvCarAtom);
-  const startingBattery = useAtomValue(startingBatteryPctAtom);
   const [isModalOpen, setModalOpen] = useAtom(garageModalOpenAtom);
-  const setActiveVehicle = useSetAtom(setActiveVehicleAtom);
-  const removeVehicle = useSetAtom(removeVehicleAtom);
-  const setStartingBatteryPct = useSetAtom(setStartingBatteryPctAtom);
+  const { query, mutation, vehicles: savedVehicles, authenticated, loadingSession } = useGarage();
+  const savedActiveVehicle = savedVehicles.find((vehicle) => vehicle.id === activeVehicleId);
 
   const blocks = useAtomValue(itineraryBlocksAtom);
   const { data: routeData } = useTripRoutes();
@@ -56,21 +51,27 @@ export function GarageSection() {
         <div>
           <h2 className="text-2xl font-bold text-foreground">My garage</h2>
           <p className="mt-3 text-sm text-muted-foreground ">
-            Add a prebuilt EV or enter your own specs for route estimates.
+            Your saved EVs, ready for your next trip. Select one for route estimates.
           </p>
         </div>
         <Button
           type="button"
           size="lg"
           className="mr-2 gap-2 rounded-full px-5"
-          onClick={() => setModalOpen(true)}
+          disabled={!authenticated || query.isPending || query.isError || mutation.isPending || vehicles.length >= 25}
+          onClick={() => { mutation.reset(); setModalOpen(true); }}
         >
           <Plus className="size-4" aria-hidden="true" />
           Add vehicle
         </Button>
       </div>
 
-      {vehicles.length === 0 ? (
+      {(loadingSession || (authenticated && query.isPending)) && <p role="status" className="p-4 text-sm text-muted-foreground">Loading your saved vehicles…</p>}
+      {!loadingSession && !authenticated && <p role="status" className="p-4 text-sm text-muted-foreground">Sign in to load and save your garage.</p>}
+      {authenticated && query.isError && <div role="alert" className="mb-4 rounded-md bg-destructive/10 p-4 text-sm text-destructive"><p>{query.error.message}</p><Button variant="outline" className="mt-2" onClick={() => void query.refetch()}>Reload garage</Button></div>}
+      {mutation.isError && !isModalOpen && <p role="alert" className="mb-4 rounded-md bg-destructive/10 p-4 text-sm text-destructive">{mutation.error.message}</p>}
+      {mutation.isPending && <p role="status" className="mb-3 text-sm text-muted-foreground">Saving your garage…</p>}
+      {authenticated && query.isSuccess && vehicles.length === 0 ? (
         <div className="mx-1 flex items-center gap-3 rounded-sm border border-primary/30 bg-primary/5 p-4">
           <Car className="size-5 shrink-0 text-primary" aria-hidden="true" />
           <div>
@@ -91,39 +92,19 @@ export function GarageSection() {
                 vehicle={vehicle}
                 car={car}
                 isActive={vehicle.id === activeVehicleId}
-                onSelect={() => setActiveVehicle(vehicle.id)}
-                onRemove={() => removeVehicle(vehicle.id)}
+                disabled={mutation.isPending || !authenticated || query.isError}
+                onSelect={() => mutation.mutate({ kind: "update", id: vehicle.id, patch: { isDefault: true } })}
+                onRemove={() => mutation.mutate({ kind: "delete", id: vehicle.id })}
               />
             );
           })}
         </div>
       )}
 
-      {vehicles.length > 0 && (
-        <div className="mx-1 mt-4 rounded-md border border-border bg-card p-4">
-          <div className="flex items-center justify-between gap-4">
-            <label
-              htmlFor="starting-battery"
-              className="text-sm font-medium text-foreground"
-            >
-              Starting battery
-            </label>
-            <span
-              className="text-sm font-semibold tabular-nums"
-              style={{ color: getBatteryColor(startingBattery) }}
-            >
-              {startingBattery}%
-            </span>
-          </div>
-          <div className="mt-3">
-            <BatterySlider
-              id="starting-battery"
-              value={startingBattery}
-              onChange={setStartingBatteryPct}
-            />
-          </div>
-        </div>
-      )}
+      {savedActiveVehicle && <VehicleSettingsForm key={`${savedActiveVehicle.id}:${savedActiveVehicle.updatedAt}`} vehicle={savedActiveVehicle} />}
+      {activeVehicle && !activeEvCar && <p className="mt-3 text-sm text-muted-foreground">Save your average consumption to enable route estimates.</p>}
+      {activeEvCar?.chargingLimitsKnown === false && <p className="mt-3 text-sm text-muted-foreground">Some charging limits are unconfirmed. Charging estimates are available only for confirmed limits.</p>}
+      {vehicles.length >= 25 && <p className="mt-3 text-sm text-muted-foreground">Your garage is full (25 vehicles). Remove a vehicle to add another.</p>}
 
       {activeVehicle && activeEvCar && (
         <div className="mx-1 mt-6 mb-3 flex items-center gap-3">
