@@ -179,6 +179,27 @@ export type TripDestination = {
   country?: string;
 };
 
+/**
+ * Where an anchor came from, which decides whether it can be shared.
+ *
+ * - `SAVED_PLACE` — the traveller's own address book (home, work). Personal, so
+ *   it is stripped from anything published and replaced with a placeholder.
+ * - `PLACE` — a provider place such as a hotel. Real itinerary content; this is
+ *   what makes a shared template useful, so it travels with the trip.
+ * - `MANUAL` — an ad-hoc pin the traveller typed. Travels.
+ */
+export type TripAnchorKind = "SAVED_PLACE" | "PLACE" | "MANUAL";
+
+/** Where a day starts or ends. */
+export type TripAnchor = {
+  id: string;
+  kind: TripAnchorKind;
+  name: string;
+  address?: string;
+  lat: number;
+  lng: number;
+};
+
 export type TripBlockData = {
   id: string;
   kind: TripBlockKind;
@@ -187,6 +208,15 @@ export type TripBlockData = {
   colorId: TripBlockColorId;
   /** An explicit destination change; following days inherit it. */
   destination?: TripDestination | null;
+  /**
+   * Set only when this day does not start where the previous one ended.
+   *
+   * Normally absent: a day's start is derived from the day before, so the two
+   * can never drift apart. Day one carries the trip origin here.
+   */
+  startAnchor?: TripAnchor | null;
+  /** Where the day ends — usually the night's accommodation. */
+  endAnchor?: TripAnchor | null;
   items: TripBlockItem[];
 };
 

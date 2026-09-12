@@ -21,6 +21,7 @@ import {
   type PlaceItem,
   type PlaceSearchResult,
   type PremadeList,
+  type TripAnchor,
   type TripBlockData,
   type TripBlockColorId,
   type TripBlockItem,
@@ -59,6 +60,14 @@ type UpdateBlockDatePayload = {
 type UpdateBlockColorPayload = {
   blockId: string;
   colorId: TripBlockColorId;
+};
+
+export type DayAnchorEdge = "start" | "end";
+
+type SetDayAnchorPayload = {
+  blockId: string;
+  edge: DayAnchorEdge;
+  anchor: TripAnchor | null;
 };
 
 type UpdateNotePayload = {
@@ -173,6 +182,49 @@ function sortBlocksByDate(blocks: TripBlockData[]): TripBlockData[] {
 
 function isItineraryBlock(block: TripBlockData): boolean {
   return block.kind !== "list";
+}
+
+/** Moves an ISO date by whole days without pulling in a timezone library. */
+function shiftDate(date: string, days: number): string {
+  const shifted = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(shifted.getTime())) {
+    return date;
+  }
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return shifted.toISOString().slice(0, 10);
+}
+
+/**
+ * Closes the gap left by a removed day.
+ *
+ * <p>Days are shown to the traveller as "Day 1, Day 2, Day 3", so removing the
+ * middle of a five-day trip must produce four consecutive days rather than a
+ * visible hole at day three — a hole is exactly what somebody reading a shared
+ * copy of this trip would see as "missing day 3". Later days move one day
+ * earlier and the trip ends a day sooner; stops, notes and anchors ride along
+ * with their day untouched.
+ */
+function resequenceItineraryDays(
+  blocks: TripBlockData[],
+  removedBlock: TripBlockData | undefined,
+): TripBlockData[] {
+  if (!removedBlock || !isItineraryBlock(removedBlock)) {
+    return blocks;
+  }
+
+  return blocks.map((block) => {
+    if (!isItineraryBlock(block) || block.date <= removedBlock.date) {
+      return block;
+    }
+    const date = shiftDate(block.date, -1);
+    return {
+      ...block,
+      date,
+      // Only auto-generated titles follow the date. A day the traveller named
+      // keeps its name.
+      title: block.title === block.date ? date : block.title,
+    };
+  });
 }
 
 function updateBlock(
@@ -672,6 +724,21 @@ export const updateBlockDateAtom = atom(
   },
 );
 
+export const setDayAnchorAtom = atom(
+  null,
+  (get, set, payload: SetDayAnchorPayload) => {
+    set(
+      tripBlocksAtom,
+      updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
+        ...block,
+        // null clears the override so the day falls back to where the previous
+        // one ended; undefined would leave the old value in place on merge.
+        [payload.edge === "start" ? "startAnchor" : "endAnchor"]: payload.anchor,
+      })),
+    );
+  },
+);
+
 export const updateBlockColorAtom = atom(
   null,
   (get, set, payload: UpdateBlockColorPayload) => {
@@ -685,16 +752,36 @@ export const updateBlockColorAtom = atom(
   },
 );
 
-export const removeTripBlockAtom = atom(null, (get, set, blockId: string) => {
+export type RemoveTripBlockResult = {
+  /** The shortened trip end date, when a day was removed and dates shifted. */
+  endDate?: string;
+};
+
+export const removeTripBlockAtom = atom(null, (get, set, blockId: string): RemoveTripBlockResult => {
   const blocks = get(tripBlocksAtom);
   const removedBlock = blocks.find((block) => block.id === blockId);
-  const nextBlocks = blocks.filter((block) => block.id !== blockId);
+  const nextBlocks = resequenceItineraryDays(
+    blocks.filter((block) => block.id !== blockId),
+    removedBlock,
+  );
   const activeBlockId = get(activeBlockIdAtom);
   const selectedItemId = get(selectedTripPlaceItemIdAtom);
   const activeSearch = get(activeSearchAtom);
   const selectedEvChargerResult = get(selectedEvChargerResultAtom);
 
   set(tripBlocksAtom, nextBlocks);
+  // Removing a middle day shortens the trip by a day rather than leaving a hole
+  // in the date range. The caller persists the returned endDate: without it,
+  // ensureItineraryDays rehydrates from the server's old range on the next load
+  // and puts the empty day straight back.
+  let endDate: string | undefined;
+  if (removedBlock && isItineraryBlock(removedBlock)) {
+    const range = get(tripDateRangeAtom);
+    if (range.to) {
+      endDate = shiftDate(range.to, -1);
+      set(tripDateRangeAtom, { ...range, to: endDate });
+    }
+  }
   set(
     openBlockIdsAtom,
     get(openBlockIdsAtom).filter((id) => id !== blockId),
@@ -722,6 +809,8 @@ export const removeTripBlockAtom = atom(null, (get, set, blockId: string) => {
       (result) => result.targetBlockId !== blockId,
     ),
   );
+
+  return { endDate };
 });
 
 export const addNoteToBlockAtom = atom(

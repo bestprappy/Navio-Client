@@ -1,3 +1,4 @@
+import { isTripAnchor } from "../planId/_components/itinerary/day-anchors";
 import { isTripDestination } from "../planId/_components/itinerary/day-destinations";
 import type {
   ChecklistItem,
@@ -198,17 +199,20 @@ export async function savePlannerSnapshot(
   version: number,
 ): Promise<PlannerSaveAcknowledgement> {
   const requiresDestinations = blocks.some((block) => block.destination);
+  const requiresAnchors = blocks.some((block) => block.startAnchor || block.endAnchor);
   const requiresTargets = blocks.some((block) => block.items.some((item) => item.type === "place" && item.evCharger?.targetBatteryPct != null));
   let syncedBlocks = blocks;
   let localOnlySettings = false;
-  if (requiresDestinations || requiresTargets) {
+  if (requiresDestinations || requiresAnchors || requiresTargets) {
     const server = await getPlannerSnapshot(tripId);
     const destinationsSupported = server.capabilities?.includes("day-destinations");
+    const anchorsSupported = server.capabilities?.includes("day-anchors");
     const targetsSupported = server.capabilities?.includes("charge-targets");
-    localOnlySettings = Boolean((requiresDestinations && !destinationsSupported) || (requiresTargets && !targetsSupported));
+    localOnlySettings = Boolean((requiresDestinations && !destinationsSupported) || (requiresAnchors && !anchorsSupported) || (requiresTargets && !targetsSupported));
     syncedBlocks = blocks.map((block) => ({
       ...block,
       ...(!destinationsSupported ? { destination: undefined } : {}),
+      ...(!anchorsSupported ? { startAnchor: undefined, endAnchor: undefined } : {}),
       items: block.items.map((item) => item.type === "place" && item.evCharger && !targetsSupported
         ? { ...item, evCharger: { ...item.evCharger, targetBatteryPct: undefined } }
         : item),
@@ -530,6 +534,8 @@ function isTripBlock(value: unknown): value is TripBlockData {
     typeof value.date === "string" &&
     typeof value.colorId === "string" &&
     (value.destination == null || isTripDestination(value.destination)) &&
+    (value.startAnchor == null || isTripAnchor(value.startAnchor)) &&
+    (value.endAnchor == null || isTripAnchor(value.endAnchor)) &&
     Array.isArray(value.items) &&
     value.items.every(isTripBlockItem)
   );

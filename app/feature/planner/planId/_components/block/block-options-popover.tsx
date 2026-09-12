@@ -1,8 +1,11 @@
 "use client";
 
 import { type MouseEvent, useState } from "react";
+import { useParams } from "next/navigation";
 import { Check, MoreHorizontal, Trash2 } from "lucide-react";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
+
+import { useUpdateTripMetadata } from "@/app/feature/planner/_components/use-trip-metadata";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,8 +24,10 @@ import {
 import type { TripBlockData } from "../constants/types";
 import {
   removeTripBlockAtom,
+  tripBlocksAtom,
   updateBlockColorAtom,
 } from "../overview/trip-builder.atoms";
+import { getDayIndex } from "../itinerary/day-anchors";
 
 type BlockOptionsPopoverProps = {
   block: TripBlockData;
@@ -34,9 +39,26 @@ function stopHeaderToggle(event: MouseEvent<HTMLElement>) {
 
 export function BlockOptionsPopover({ block }: BlockOptionsPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const params = useParams<{ planId?: string }>();
+  const blocks = useAtomValue(tripBlocksAtom);
   const removeTripBlock = useSetAtom(removeTripBlockAtom);
   const updateBlockColor = useSetAtom(updateBlockColorAtom);
+  const updateMetadata = useUpdateTripMetadata(params.planId);
   const selectedColor = getTripBlockColorById(block.colorId);
+  const isDay = block.kind !== "list";
+  const dayNumber = getDayIndex(blocks, block.id);
+
+  function handleDelete() {
+    const { endDate } = removeTripBlock(block.id);
+    setIsConfirming(false);
+    setIsOpen(false);
+    // The shortened range has to reach the server, or the next load rebuilds
+    // the removed day from the old end date.
+    if (endDate) {
+      updateMetadata.mutate({ endDate });
+    }
+  }
 
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -95,19 +117,47 @@ export function BlockOptionsPopover({ block }: BlockOptionsPopoverProps) {
           </div>
         </div>
 
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          className="w-full justify-start rounded-sm p-4"
-          onClick={() => {
-            removeTripBlock(block.id);
-            setIsOpen(false);
-          }}
-        >
-          <Trash2 className="size-4" aria-hidden="true" />
-          Delete this block
-        </Button>
+        {isConfirming ? (
+          <div className="space-y-2 rounded-sm border border-destructive/30 bg-destructive/5 p-3">
+            <p className="text-xs leading-relaxed text-foreground">
+              {isDay
+                ? `Remove day ${dayNumber}? Later days each move one day earlier and the trip ends a day sooner, so the itinerary stays in an unbroken run.`
+                : "Delete this list and everything in it?"}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="flex-1 rounded-sm"
+                onClick={handleDelete}
+              >
+                <Trash2 className="size-4" aria-hidden="true" />
+                {isDay ? "Remove day" : "Delete"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1 rounded-sm"
+                onClick={() => setIsConfirming(false)}
+              >
+                Keep it
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="w-full justify-start rounded-sm p-4"
+            onClick={() => setIsConfirming(true)}
+          >
+            <Trash2 className="size-4" aria-hidden="true" />
+            {isDay ? "Remove this day" : "Delete this block"}
+          </Button>
+        )}
       </PopoverContent>
     </Popover>
   );

@@ -5,7 +5,9 @@ import { useParams } from "next/navigation";
 import { useTripMetadata, useUpdateTripMetadata } from "../../../_components/use-trip-metadata";
 import { DayDestinationPicker } from "./day-destination-picker";
 import { resolveDayDestinations } from "./day-destinations";
-import type { TripDestination } from "../constants/types";
+import { DayAnchorRail } from "./day-anchor-rail";
+import { EMPTY_DAY_ANCHORS, resolveDayAnchors } from "./day-anchors";
+import { isPlaceItem, type TripAnchor, type TripDestination } from "../constants/types";
 import type { DateRange } from "react-day-picker";
 import { CalendarIcon, CalendarPlus } from "lucide-react";
 import { addDays, format, isAfter, parseISO } from "date-fns";
@@ -24,10 +26,12 @@ import { cn } from "@/lib/utils";
 import {
   addTripBlocksForDatesAtom,
   itineraryBlocksAtom,
+  setDayAnchorAtom,
   tripDateRangeAtom,
   tripBlocksAtom,
   openBlockIdsAtom,
   toggleBlockOpenAtom,
+  type DayAnchorEdge,
 } from "../overview/trip-builder.atoms";
 import { TripBlock } from "../block/trip-block";
 import { DayRouteOverview } from "../garage/day-route-overview";
@@ -75,7 +79,12 @@ export function ItinerarySection({
     lng: metadata.data?.destinationLng ?? longitude,
   };
   const destinations = resolveDayDestinations(blocks, initialDestination);
+  const dayAnchors = resolveDayAnchors(blocks);
+  const setDayAnchor = useSetAtom(setDayAnchorAtom);
   const firstBlockId = [...blocks].sort((a, b) => a.date.localeCompare(b.date))[0]?.id;
+  function changeAnchor(blockId: string, edge: DayAnchorEdge, anchor: TripAnchor | null) {
+    setDayAnchor({ blockId, edge, anchor });
+  }
   async function changeDestination(blockId: string, destination: TripDestination | null) {
     if (blockId === firstBlockId && destination) {
       await updateMetadata.mutateAsync({ destinationId: destination.id, destinationName: destination.name, destinationLat: destination.lat, destinationLng: destination.lng, destinationCountry: destination.country });
@@ -215,6 +224,28 @@ export function ItinerarySection({
                       <TripBlock.Header>
                         <TripBlock.Title />
                         <DayDestinationPicker destination={destination} isFirstDay={block.id === firstBlockId} isOverride={!!block.destination} onChange={(next) => changeDestination(block.id, next)} />
+                        <DayAnchorRail.Root
+                          anchors={dayAnchors.get(block.id) ?? EMPTY_DAY_ANCHORS}
+                          dayLabel={`Day ${index + 1}`}
+                          isFirstDay={block.id === firstBlockId}
+                          dayPlaces={block.items.filter(isPlaceItem)}
+                          searchBias={{ lat: destination.lat, lng: destination.lng }}
+                          ownStart={block.startAnchor ?? null}
+                          ownEnd={block.endAnchor ?? null}
+                          onChange={(edge, anchor) => changeAnchor(block.id, edge, anchor)}
+                          className={cn(!isOpen && "px-3 py-2.5")}
+                        >
+                          {isOpen ? (
+                            <>
+                              <DayAnchorRail.Start />
+                              <DayAnchorRail.End />
+                            </>
+                          ) : (
+                            // Collapsed days stay scannable: a long trip would
+                            // otherwise show two full anchor rows per day.
+                            <DayAnchorRail.Summary />
+                          )}
+                        </DayAnchorRail.Root>
                         <button type="button" aria-expanded={isOpen} aria-controls={`day-content-${block.id}`} className="flex min-h-10 w-full items-center justify-between rounded-lg px-2 text-sm text-primary hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={() => toggleOpen(block.id)}>
                           <span>{block.items.length} {block.items.length === 1 ? "item" : "items"}</span><span>{isOpen ? "Show less" : "Show more"}</span>
                         </button>
