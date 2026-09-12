@@ -148,6 +148,7 @@ export type CreateGroupDraft = {
 export type CreatePostDraft = {
   title: string;
   body: string;
+  linkUrl: string;
   groupId: string;
   place: string;
   country: string;
@@ -1487,6 +1488,7 @@ export const defaultCreateGroupDraft: CreateGroupDraft = {
 export const defaultCreatePostDraft: CreatePostDraft = {
   title: "",
   body: "",
+  linkUrl: "",
   groupId: "group-thailand-restaurants",
   place: "Bangkok",
   country: "Thailand",
