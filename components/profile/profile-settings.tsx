@@ -98,7 +98,9 @@ function ProfileEditor({ profile, sessionImage, onProfileSaved }: ProfileEditorP
       <Separator className="my-7" />
 
       <ProfilePhoto
-        imageUrl={sessionImage}
+        imageUrl={profile.avatarMediaId ? `/api/users/me/picture?v=${profile.avatarMediaId}` : sessionImage}
+        profile={profile}
+        onSaved={onProfileSaved}
         displayName={profile.displayName}
         status={profile.status}
       />

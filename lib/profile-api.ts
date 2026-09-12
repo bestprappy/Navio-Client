@@ -55,7 +55,7 @@ function describeFailure(status: number, body: unknown): string {
 async function requestProfile(
   path: string,
   operation: string,
-  init?: { method: "PATCH"; body: unknown },
+  init?: { method: "PATCH" | "POST" | "DELETE"; body?: unknown },
 ): Promise<UserProfile> {
   let response: Response;
   try {
@@ -63,10 +63,10 @@ async function requestProfile(
       method: init?.method ?? "GET",
       cache: "no-store",
       credentials: "same-origin",
-      headers: init
+      headers: init && !(init.body instanceof FormData)
         ? { "Content-Type": "application/json", Accept: "application/json" }
         : { Accept: "application/json" },
-      body: init ? JSON.stringify(init.body) : undefined,
+      body: init?.body instanceof FormData ? init.body : init?.body !== undefined ? JSON.stringify(init.body) : undefined,
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (cause) {
@@ -88,6 +88,7 @@ async function requestProfile(
   }
 
   // A gateway error page is not JSON, so parsing has to be allowed to fail.
+  if (response.ok && response.status === 204) return getMyProfile();
   let body: unknown = null;
   try {
     body = await response.json();
@@ -121,6 +122,15 @@ async function requestProfile(
 
 export function getMyProfile(): Promise<UserProfile> {
   return requestProfile("/api/users/me", "getMyProfile");
+}
+
+export function uploadProfilePicture(file: File): Promise<UserProfile> {
+  const body = new FormData(); body.append("file", file);
+  return requestProfile("/api/users/me/picture", "uploadProfilePicture", { method: "POST", body });
+}
+
+export function removeProfilePicture(): Promise<UserProfile> {
+  return requestProfile("/api/users/me/picture", "removeProfilePicture", { method: "DELETE" });
 }
 
 /**
