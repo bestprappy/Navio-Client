@@ -12,6 +12,15 @@ import {
 } from "@vis.gl/react-google-maps";
 import { MapPin, Zap } from "lucide-react";
 
+import { AnchorMapPin } from "./_components/itinerary/anchor-map-pin";
+import {
+  buildAnchorMarkers,
+  countPlacesByBlockId,
+  orderRolesForActiveBlock,
+} from "./_components/itinerary/anchor-map-markers";
+import { resolveDayAnchors } from "./_components/itinerary/day-anchors";
+import { focusedAnchorAtom } from "./_components/itinerary/anchor-map.atoms";
+import { useRevealPlanCard } from "./_components/itinerary/use-reveal-plan-card";
 import { sidebarCollapsedAtom } from "@/app/configs/constant";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +37,7 @@ import {
   closeSelectedEvChargerAtom,
   closeSelectedSearchPlaceAtom,
   closeSelectedTripPlaceAtom,
+  routeLineModeAtom,
   evChargerErrorAtom,
   evChargerLoadingAtom,
   evChargerResultsAtom,
@@ -73,6 +83,7 @@ type MapControllerProps = {
   selectedPlaceCoord: LatLng | null;
   evChargerCoord: LatLng | null;
   tripPlaceCoord: LatLng | null;
+  anchorCoord: LatLng | null;
 };
 
 type MapResizeHandlerProps = {
@@ -90,8 +101,15 @@ function MapController({
   selectedPlaceCoord,
   evChargerCoord,
   tripPlaceCoord,
+  anchorCoord,
 }: MapControllerProps) {
   const map = useMap();
+
+  useEffect(() => {
+    if (!map || !anchorCoord) return;
+    map.panTo(anchorCoord);
+    map.setZoom(FLY_TO_ZOOM);
+  }, [map, anchorCoord]);
 
   useEffect(() => {
     if (!map || !selectedPlaceCoord) return;
@@ -217,10 +235,16 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
   const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
   const activeSearch = useAtomValue(activeSearchAtom);
   const tripBlocks = useAtomValue(tripBlocksAtom);
+  const focusedAnchor = useAtomValue(focusedAnchorAtom);
+  const dayAnchors = useMemo(() => resolveDayAnchors(tripBlocks), [tripBlocks]);
   const selectedPlace = useAtomValue(selectedSearchPlaceAtom);
   const selectedTripPlace = useAtomValue(selectedTripPlaceAtom);
   const selectedTripPlaces = useAtomValue(selectedTripPlacesAtom);
   const selectedTripPlaceMarkers = useAtomValue(selectedTripPlaceMarkersAtom);
+  const anchorMarkers = useMemo(
+    () => buildAnchorMarkers(dayAnchors, countPlacesByBlockId(selectedTripPlaceMarkers)),
+    [dayAnchors, selectedTripPlaceMarkers],
+  );
   const activeEvCar = useAtomValue(activeEvCarAtom);
   const evChargerResults = useAtomValue(evChargerResultsAtom);
   const selectedEvChargerResult = useAtomValue(selectedEvChargerResultAtom);
@@ -229,6 +253,8 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
   const evChargerError = useAtomValue(evChargerErrorAtom);
   const isSelectedPlaceAdded = useAtomValue(selectedSearchPlaceIsAddedAtom);
   const activeBlockId = useAtomValue(activeBlockIdAtom);
+  const routeLineMode = useAtomValue(routeLineModeAtom);
+  const revealPlanCard = useRevealPlanCard();
   const selectSearchResult = useSetAtom(selectSearchResultAtom);
   const selectEvCharger = useSetAtom(selectEvChargerAtom);
   const selectTripPlace = useSetAtom(selectTripPlaceAtom);
@@ -263,14 +289,25 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
     () => tripRoutes.data?.segments ?? [],
     [tripRoutes.data?.segments],
   );
-  // Every block's road route stays on the map, colour-coded per block, so the
-  // whole trip is readable without having to select a place first.
-  const visibleRouteSegments = routeSegments;
-  const routeStatusMessage = tripRoutes.isFetching
-    ? "Calculating routes..."
-    : tripRoutes.isError
-      ? "Routes could not load."
-      : null;
+  // "all" mode draws every day's route. Otherwise only the active day's route is
+  // drawn — the day the itinerary is scrolled to (or was last pressed).
+  const isShowingAllRoutes = routeLineMode === "all";
+  const visibleRouteSegments = useMemo(
+    () =>
+      isShowingAllRoutes
+        ? routeSegments
+        : activeBlockId
+          ? routeSegments.filter((segment) => segment.blockId === activeBlockId)
+          : [],
+    [isShowingAllRoutes, routeSegments, activeBlockId],
+  );
+  const routeStatusMessage = !isShowingAllRoutes && !activeBlockId
+    ? null
+    : tripRoutes.isFetching
+      ? "Calculating routes..."
+      : tripRoutes.isError
+        ? "Routes could not load."
+        : null;
   const canAddToTrip = tripBlocks.length > 0;
 
   // Coords passed to MapController for fly-to animations
@@ -338,6 +375,7 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
             selectedPlaceCoord={selectedPlaceCoord}
             evChargerCoord={evChargerCoord}
             tripPlaceCoord={tripPlaceCoord}
+            anchorCoord={focusedAnchor}
           />
           <MapResizeHandler sidebarCollapsed={sidebarCollapsed} />
           <RoutePolylinesLayer
@@ -345,6 +383,18 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
             routeColorByBlockId={routeColorByBlockId}
           />
 
+          {anchorMarkers.map(({ key, lat, lng, roles }) => {
+            // Roles sharing a spot (an overnight stay) are merged into one pin;
+            // the active day's role leads so its number and colour show.
+            const orderedRoles = orderRolesForActiveBlock(roles, activeBlockId);
+            return (
+              <AdvancedMarker key={key} position={{ lat, lng }} zIndex={orderedRoles[0]?.blockId === activeBlockId ? 21 : 20}>
+                <AnchorMapPin
+                  roles={orderedRoles.map((role) => ({ ...role, color: blockColorById.get(role.blockId)?.mapColor }))}
+                />
+              </AdvancedMarker>
+            );
+          })}
           {/* Saved trip place markers */}
           {selectedTripPlaceMarkers.map((place) => {
             const isSelected = selectedTripPlace?.id === place.id;
@@ -359,7 +409,10 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
                   type="button"
                   className="relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
                   aria-label={`Select saved ${place.isEvCharger ? "EV station" : "place"} ${place.name}`}
-                  onClick={() => selectTripPlace({ itemId: place.id })}
+                  onClick={() => {
+                    selectTripPlace({ itemId: place.id });
+                    revealPlanCard(place.blockId, place.id);
+                  }}
                 >
                   <MapPin
                     className={cn(
@@ -389,7 +442,7 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
                         aria-hidden="true"
                       />
                     ) : (
-                      place.placeSequence
+                      place.placeSequence ?? 0
                     )}
                   </span>
                 </button>

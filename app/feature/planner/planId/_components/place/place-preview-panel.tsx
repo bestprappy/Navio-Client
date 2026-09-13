@@ -4,6 +4,7 @@ import Image from "next/image";
 import {
   ChevronLeft,
   ChevronRight,
+  Clock,
   ExternalLink,
   MapPin,
   MessageSquareOff,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { formatOpeningHours } from "../charger/opening-hours";
 
 import type { PlaceSearchResult } from "./place-api";
 
@@ -55,6 +57,8 @@ export function PlacePreviewPanel({
   onAddToTrip,
   onClose,
 }: PlacePreviewPanelProps) {
+  const hours = formatOpeningHours(place.openingHours);
+
   return (
     <aside className="absolute bottom-4 left-4 right-4 z-10 overflow-hidden rounded-sm border border-border bg-card text-card-foreground shadow-xl">
       {place.imageUrl ? (
@@ -126,13 +130,30 @@ export function PlacePreviewPanel({
               </div>
             )}
 
-            <div className="flex items-start gap-2">
+            <div className="flex items-start gap-2 py-1">
               <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-              <span>{place.address}</span>
+              <span className="min-w-0 break-words leading-relaxed">{place.address}</span>
             </div>
 
             {place.openingHours ? (
-              <div className="text-foreground">{place.openingHours}</div>
+              <section aria-label="Opening hours" className="rounded-lg border border-border/70 bg-muted/30 p-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                  <Clock className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  Opening hours
+                </div>
+                {hours.rows.length > 0 ? (
+                  <dl className="mt-2 divide-y divide-border/50">
+                    {hours.rows.map((row, index) => (
+                      <div key={`${row.days}-${index}`} className="grid grid-cols-[5rem_minmax(0,1fr)] items-baseline gap-3 py-1.5 text-xs leading-relaxed">
+                        <dt className="font-medium text-muted-foreground">{row.days}</dt>
+                        <dd className="min-w-0 break-words text-right font-medium tabular-nums text-foreground">{row.hours}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : (
+                  <p className="mt-2 break-words text-xs leading-relaxed text-foreground">{hours.summary}</p>
+                )}
+              </section>
             ) : null}
 
             {place.phone ? (

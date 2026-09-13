@@ -5,11 +5,14 @@ import { useParams } from "next/navigation";
 import { useTripMetadata, useUpdateTripMetadata } from "../../../_components/use-trip-metadata";
 import { DayDestinationPicker } from "./day-destination-picker";
 import { resolveDayDestinations } from "./day-destinations";
+import { focusedAnchorAtom } from "./anchor-map.atoms";
+import { AnchorStopCard, EndAnchorRouteInfo } from "./anchor-stop-card";
+import { getTripBlockColorById } from "../constants/trip-block-colors";
 import { DayAnchorRail } from "./day-anchor-rail";
-import { EMPTY_DAY_ANCHORS, resolveDayAnchors } from "./day-anchors";
+import { EMPTY_DAY_ANCHORS, getDayPlacePositions, resolveDayAnchors } from "./day-anchors";
 import { isPlaceItem, type TripAnchor, type TripDestination } from "../constants/types";
 import type { DateRange } from "react-day-picker";
-import { CalendarIcon, CalendarPlus } from "lucide-react";
+import { CalendarIcon, CalendarPlus, ChevronsDownUp, ChevronsUpDown, Route } from "lucide-react";
 import { addDays, format, isAfter, parseISO } from "date-fns";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 
@@ -30,6 +33,7 @@ import {
   tripDateRangeAtom,
   tripBlocksAtom,
   openBlockIdsAtom,
+  routeLineModeAtom,
   toggleBlockOpenAtom,
   type DayAnchorEdge,
 } from "../overview/trip-builder.atoms";
@@ -72,6 +76,16 @@ export function ItinerarySection({
   const setBlocks = useSetAtom(tripBlocksAtom);
   const [openIds, setOpenIds] = useAtom(openBlockIdsAtom);
   const toggleOpen = useSetAtom(toggleBlockOpenAtom);
+  const [routeLineMode, setRouteLineMode] = useAtom(routeLineModeAtom);
+  const isShowingAllRoutes = routeLineMode === "all";
+  const areAllDaysOpen = blocks.length > 0 && blocks.every((block) => openIds.includes(block.id));
+  function toggleAllDays() {
+    setOpenIds((ids) =>
+      areAllDaysOpen
+        ? ids.filter((id) => !blocks.some((block) => block.id === id))
+        : [...new Set([...ids, ...blocks.map((block) => block.id)])],
+    );
+  }
   const initialDestination: TripDestination = {
     id: metadata.data?.destinationId ?? destinationName,
     name: metadata.data?.destinationName ?? destinationName,
@@ -81,9 +95,11 @@ export function ItinerarySection({
   const destinations = resolveDayDestinations(blocks, initialDestination);
   const dayAnchors = resolveDayAnchors(blocks);
   const setDayAnchor = useSetAtom(setDayAnchorAtom);
+  const focusAnchor = useSetAtom(focusedAnchorAtom);
   const firstBlockId = [...blocks].sort((a, b) => a.date.localeCompare(b.date))[0]?.id;
   function changeAnchor(blockId: string, edge: DayAnchorEdge, anchor: TripAnchor | null) {
     setDayAnchor({ blockId, edge, anchor });
+    focusAnchor(anchor);
   }
   async function changeDestination(blockId: string, destination: TripDestination | null) {
     if (blockId === firstBlockId && destination) {
@@ -210,11 +226,37 @@ export function ItinerarySection({
               ) : (
                 <>
                   <div className="flex flex-wrap justify-end gap-2">
-                    <button type="button" className="min-h-10 rounded-lg px-3 text-sm text-primary hover:bg-muted" onClick={() => setOpenIds((ids) => [...new Set([...ids, ...blocks.map((block) => block.id)])])}>Expand all days</button>
-                    <button type="button" className="min-h-10 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted" onClick={() => setOpenIds((ids) => ids.filter((id) => !blocks.some((block) => block.id === id)))}>Collapse all days</button>
+                    <button
+                      type="button"
+                      aria-pressed={isShowingAllRoutes}
+                      title={isShowingAllRoutes ? "Only draw the route of the day you press" : "Draw every day's route on the map"}
+                      className={cn(
+                        "flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                        isShowingAllRoutes ? "bg-muted text-primary" : "text-muted-foreground",
+                      )}
+                      onClick={() => setRouteLineMode(isShowingAllRoutes ? "day" : "all")}
+                    >
+                      <Route className="size-4" aria-hidden="true" />
+                      {isShowingAllRoutes ? "Show routes by day" : "Show all routes"}
+                    </button>
+                    <button
+                      type="button"
+                      aria-expanded={areAllDaysOpen}
+                      className="flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm text-primary transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      onClick={toggleAllDays}
+                    >
+                      {areAllDaysOpen ? (
+                        <ChevronsDownUp className="size-4" aria-hidden="true" />
+                      ) : (
+                        <ChevronsUpDown className="size-4" aria-hidden="true" />
+                      )}
+                      {areAllDaysOpen ? "Collapse all days" : "Expand all days"}
+                    </button>
                   </div>
                   {blocks.map((block, index) => {
                     const destination = destinations.get(block.id) ?? initialDestination;
+                    const anchors = dayAnchors.get(block.id) ?? EMPTY_DAY_ANCHORS;
+                    const placeCount = getDayPlacePositions(block, !!anchors.start).size;
                     const isOpen = openIds.includes(block.id);
                     return <TripBlock.Root
                       key={block.id}
@@ -252,7 +294,10 @@ export function ItinerarySection({
                       </TripBlock.Header>
                       <div id={`day-content-${block.id}`} hidden={!isOpen}>
                       {isOpen && <TripBlock.Content>
-                        <TripBlock.Items />
+                        <AnchorStopCard edge="start" anchor={anchors.start} position={1} colorId={block.colorId} />
+                        <TripBlock.Items hasStart={!!anchors.start} />
+                        {anchors.end && (anchors.start || block.items.some(isPlaceItem)) && <EndAnchorRouteInfo blockId={block.id} routeColor={getTripBlockColorById(block.colorId).value} />}
+                        <AnchorStopCard edge="end" anchor={anchors.end} position={placeCount + (anchors.start ? 2 : 1)} colorId={block.colorId} />
                         <DayRouteOverview
                           blockId={block.id}
                           blockIndex={index}

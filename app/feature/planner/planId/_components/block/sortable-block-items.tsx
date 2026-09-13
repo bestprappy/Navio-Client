@@ -9,11 +9,12 @@ import { cn } from "@/lib/utils";
 
 import { getTripBlockColorById } from "../constants/trip-block-colors";
 import {
-  isEvChargerPlaceItem,
   type TripBlockData,
   type TripBlockItem,
 } from "../constants/types";
 import { useTripCharging } from "../garage/use-trip-charging";
+import { getDayPlacePositions, getLastDayPlaceId } from "../itinerary/day-anchors";
+import { getTripItemElementId } from "../itinerary/use-reveal-plan-card";
 import { reorderBlockItemsAtom } from "../overview/trip-builder.atoms";
 import { DischargeSegmentInfo } from "../routes/charge-segment-info";
 import { RouteSegmentInfo } from "../routes/route-segment-info";
@@ -25,6 +26,7 @@ import { TripPlaceCard } from "./items/trip-place-card";
 
 type SortableBlockItemsProps = {
   block: TripBlockData;
+  hasStart?: boolean;
 };
 
 type DragPayload = {
@@ -45,6 +47,7 @@ function renderBlockItem(
   item: TripBlockItem,
   placePosition: number | null,
   showEvChargeDetails: boolean,
+  canMarkAsEnd: boolean,
   chargeBatteryFrom?: number,
   chargeBatteryTo?: number,
 ) {
@@ -60,6 +63,7 @@ function renderBlockItem(
           chargeBatteryFrom={chargeBatteryFrom}
           chargeBatteryTo={chargeBatteryTo}
           showEvChargeDetails={showEvChargeDetails}
+          canMarkAsEnd={canMarkAsEnd}
         />
       );
     case "note":
@@ -69,27 +73,7 @@ function renderBlockItem(
   }
 }
 
-function getRegularPlacePosition(
-  items: TripBlockItem[],
-  currentIndex: number,
-): number | null {
-  const currentItem = items[currentIndex];
-
-  if (
-    !currentItem ||
-    currentItem.type !== "place" ||
-    isEvChargerPlaceItem(currentItem)
-  ) {
-    return null;
-  }
-
-  return items
-    .slice(0, currentIndex + 1)
-    .filter((item) => item.type === "place" && !isEvChargerPlaceItem(item))
-    .length;
-}
-
-export function SortableBlockItems({ block }: SortableBlockItemsProps) {
+export function SortableBlockItems({ block, hasStart = false }: SortableBlockItemsProps) {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [interactiveItemId, setInteractiveItemId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -115,6 +99,8 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
   const batteryStateByItemId = charging?.days.get(block.id)?.batteryByItemId ?? new Map<string, BatteryState>();
 
   const blockColor = getTripBlockColorById(block.colorId);
+  const placePositions = getDayPlacePositions(block, hasStart);
+  const lastDayPlaceId = getLastDayPlaceId(block);
 
   function reorderByOffset(itemId: string, offset: number) {
     const itemIndex = block.items.findIndex((item) => item.id === itemId);
@@ -165,7 +151,7 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
   return (
     <div role="list" className="space-y-3" aria-label={`${block.title} items`}>
       {block.items.map((item, index) => {
-        const placePosition = getRegularPlacePosition(block.items, index);
+        const placePosition = placePositions.get(item.id) ?? null;
         const isDragging = draggedItemId === item.id;
         const isDropTarget =
           dropTargetId === item.id && draggedItemId !== item.id;
@@ -174,7 +160,7 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
           ? (routeablePositionByItemId.get(item.id) ?? 0)
           : 0;
         const shouldShowRouteInfo =
-          shouldShowRouting && isRouteableItem && routeablePosition > 1;
+          shouldShowRouting && isRouteableItem && (hasStart || routeablePosition > 1);
 
         const seg = shouldShowRouteInfo
           ? routeSegmentByToItemId.get(item.id)
@@ -216,6 +202,7 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
             ) : null}
 
             <div
+              id={getTripItemElementId(item.id)}
               role="listitem"
               draggable={interactiveItemId !== item.id}
               onPointerDownCapture={(event) => {
@@ -276,6 +263,7 @@ export function SortableBlockItems({ block }: SortableBlockItemsProps) {
                 item,
                 placePosition,
                 shouldShowRouting,
+                item.id === lastDayPlaceId,
                 itemBatteryState?.arrivalPct,
                 itemBatteryState?.departurePct,
               )}

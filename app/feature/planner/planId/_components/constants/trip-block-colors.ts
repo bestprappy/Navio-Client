@@ -26,6 +26,14 @@ export const tripBlockColorOptions: TripBlockColorOption[] = [
   { id: "wine",    label: "Wine",    value: "var(--planner-block-wine)",    foreground: "var(--planner-block-foreground)", mapColor: "#972767" },
   { id: "brick",   label: "Brick",   value: "var(--planner-block-brick)",   foreground: "var(--planner-block-foreground)", mapColor: "#ac312a" },
   { id: "rust",    label: "Rust",    value: "var(--planner-block-rust)",    foreground: "var(--planner-block-foreground)", mapColor: "#a94700" },
+  { id: "lime",     label: "Lime",     value: "var(--planner-block-lime)",     foreground: "var(--planner-block-foreground)", mapColor: "#56932b" },
+  { id: "olive",    label: "Olive",    value: "var(--planner-block-olive)",    foreground: "var(--planner-block-foreground)", mapColor: "#677014" },
+  { id: "gold",     label: "Gold",     value: "var(--planner-block-gold)",     foreground: "var(--planner-block-foreground)", mapColor: "#aa7e00" },
+  { id: "sky",      label: "Sky",      value: "var(--planner-block-sky)",      foreground: "var(--planner-block-foreground)", mapColor: "#089ac3" },
+  { id: "fuchsia",  label: "Fuchsia",  value: "var(--planner-block-fuchsia)",  foreground: "var(--planner-block-foreground)", mapColor: "#b243ba" },
+  { id: "mocha",    label: "Mocha",    value: "var(--planner-block-mocha)",    foreground: "var(--planner-block-foreground)", mapColor: "#7c5336" },
+  { id: "stone",    label: "Stone",    value: "var(--planner-block-stone)",    foreground: "var(--planner-block-foreground)", mapColor: "#766d62" },
+  { id: "graphite", label: "Graphite", value: "var(--planner-block-graphite)", foreground: "var(--planner-block-foreground)", mapColor: "#4e535b" },
 ];
 
 export const defaultTripBlockColorId = "blue" satisfies TripBlockColorId;

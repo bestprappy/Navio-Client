@@ -2,7 +2,8 @@
 .tabs { display: flex; gap: var(--space-sm); flex-shrink: 0; padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--border); background: var(--card); }
 .tabs button { display: flex; align-items: center; justify-content: center; gap: var(--space-sm); flex: 1; min-height: 2.75rem; border-radius: var(--radius-md); color: var(--muted-foreground); }
 .tabs button[aria-pressed="true"] { background: var(--secondary); color: var(--secondary-foreground); }
-.drawer { flex: 1; min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-width: thin; }
+.drawer { flex: 1; min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-width: none; }
+.drawer::-webkit-scrollbar { display: none; }
 .map { min-width: 0; min-height: 0; flex: 1; }
 .workspace[data-view="itinerary"] .map, .workspace[data-view="map"] .drawer { display: none; }
 .divider { display: none; }
@@ -11,6 +12,8 @@
   .tabs { display: none; }
   .workspace[data-view] .drawer { display: block; flex: 0 0 clamp(21rem, var(--drawer-width), calc(100% - 20rem)); }
   .workspace[data-view] .map { display: block; }
+  .workspace > aside { position: relative; flex: 0 0 clamp(18rem, 30%, 28rem); width: auto; }
+  .workspace[data-view]:has(> aside) .drawer { flex-basis: min(var(--drawer-width), 38%); }
   .divider { z-index: 20; display: flex; justify-content: center; align-items: center; flex: 0 0 0.5rem; touch-action: none; cursor: col-resize; background: var(--background); border-inline: 1px solid var(--border); }
   .divider span { height: 2.5rem; width: 0.1875rem; border-radius: 1rem; background: var(--border); transition: background 150ms; }
   .divider:hover, .divider:focus-visible { outline: none; background: var(--secondary); }

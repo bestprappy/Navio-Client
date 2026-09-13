@@ -59,3 +59,53 @@ assert.equal(projection.days.get('first').finalBatteryPct, 100);
 assert.equal(projection.days.get('second').startBatteryPct, 100);
 assert.equal(projection.days.get('second').finalBatteryPct, 80);
 console.log('Planner model checks passed: destination inheritance, stop preservation, hours, charging targets, legacy stops, and chronological battery carryover.');
+
+const { getTripRouteGroups } = require(base + 'routes/trip-route.helpers.ts');
+const { getGoogleMapsDirectionsLinks } = require(base + 'routes/google-maps-export.ts');
+const home = { id:'home',kind:'SAVED_PLACE',name:'Home',lat:13.7,lng:100.5 };
+const hotel = { id:'hotel',kind:'PLACE',name:'Hotel',lat:14,lng:101 };
+const anchorDays = [
+  { ...block('one','2026-09-01',[{...stop('visit'),name:'Visit',lat:13.8,lng:100.8}]), startAnchor:home,endAnchor:hotel },
+  { ...block('two','2026-09-02',[]),endAnchor:home },
+];
+const anchorSnapshot = JSON.stringify(anchorDays);
+const anchorRoutes = getTripRouteGroups(anchorDays);
+assert.deepEqual(anchorRoutes[0].points.map(p=>p.name), ['Home','Visit','Hotel']);
+assert.deepEqual(anchorRoutes[1].points.map(p=>p.name), ['Hotel','Home']);
+assert.equal(anchorRoutes[1].points[0].id, 'two:start');
+assert.equal(JSON.stringify(anchorDays), anchorSnapshot);
+assert.equal(getTripRouteGroups([{...anchorDays[0],items:[]}])[0].points.length,2);
+const exported = new URL(getGoogleMapsDirectionsLinks(anchorDays[0])[0].href);
+assert.equal(exported.searchParams.get('origin'),'13.700000,100.500000');
+assert.equal(exported.searchParams.get('destination'),'14.000000,101.000000');
+console.log('Endpoint checks passed: route order, inherited starts, empty days, immutable stops, and Google Maps export.');
+
+const { getDayPlacePositions, resolveDayAnchors } = require(base + 'itinerary/day-anchors.ts');
+const numberedDay = { ...anchorDays[0], items: [{id:'note',type:'note'},stop('visit'),stop('charge',charger),stop('next')] };
+assert.deepEqual([...getDayPlacePositions(numberedDay,true)], [['visit',2],['next',3]]);
+assert.deepEqual([...getDayPlacePositions(numberedDay,false)], [['visit',1],['next',2]]);
+assert.deepEqual([...getDayPlacePositions({...numberedDay,kind:'list'},true)], [['visit',1],['next',2]]);
+assert.deepEqual([...getDayPlacePositions({...numberedDay,items:[stop('next'),stop('visit')]},true)], [['next',2],['visit',3]]);
+assert.equal(getDayPlacePositions({...anchorDays[1],items:[stop('next-day')]}, !!resolveDayAnchors(anchorDays).get('two').start).get('next-day'),2);
+const anchorProjection = projectTripCharging(anchorDays, [
+  {blockId:'one',fromItemId:'one:start',toItemId:'visit',distanceMeters:30000},
+  {blockId:'one',fromItemId:'visit',toItemId:'one:end',distanceMeters:15000},
+  {blockId:'two',fromItemId:'two:start',toItemId:'two:end',distanceMeters:60000},
+], car,80);
+assert.equal(anchorProjection.days.get('one').batteryByItemId.get('one:start').departurePct,80);
+assert.equal(anchorProjection.days.get('one').batteryByItemId.get('visit').arrivalPct,70);
+assert.equal(anchorProjection.days.get('one').batteryByItemId.get('one:end').arrivalPct,65);
+assert.equal(anchorProjection.days.get('one').distanceKm,45);
+assert.equal(anchorProjection.days.get('two').startBatteryPct,65);
+assert.equal(anchorProjection.days.get('two').batteryByItemId.get('two:start').departurePct,65);
+assert.equal(anchorProjection.days.get('two').finalBatteryPct,45);
+assert.equal(anchorProjection.summary.totalDistanceKm,105);
+assert.equal(anchorProjection.summary.totalEnergyKwh,21);
+const chargeFirst = projectTripCharging([{...anchorDays[0],items:[stop('charge',charger)]}], [
+  {blockId:'one',fromItemId:'one:start',toItemId:'charge',distanceMeters:30000},
+  {blockId:'one',fromItemId:'charge',toItemId:'one:end',distanceMeters:15000},
+],car,80).days.get('one');
+assert.equal(chargeFirst.batteryByItemId.get('charge').arrivalPct,70);
+assert.equal(chargeFirst.batteryByItemId.get('charge').departurePct,100);
+assert.equal(chargeFirst.finalBatteryPct,95);
+console.log('Start/end checks passed: shared numbering, reordering, inherited starts, first-leg battery, final-leg totals, anchor-only days, and charging before the final leg.');

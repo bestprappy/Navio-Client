@@ -1,3 +1,4 @@
+import { resolveDayAnchors } from "../itinerary/day-anchors";
 import {
   isEvChargerPlaceItem,
   isPlaceItem,
@@ -7,24 +8,25 @@ import type {
   DirectionsRequest,
   RouteLineString,
   RoutePointGroup,
+  RoutePoint,
   RouteSegment,
 } from "./trip-route.types";
 
 export function getTripRouteGroups(blocks: TripBlockData[]): RoutePointGroup[] {
+  const anchors = resolveDayAnchors(blocks);
   return blocks
     .filter((block) => block.kind !== "list")
-    .map((block) => ({
-      blockId: block.id,
-      points: block.items.filter(isPlaceItem).map((item) => ({
-        id: item.id,
-        name: item.name,
-        type: isEvChargerPlaceItem(item)
-          ? ("charger" as const)
-          : ("place" as const),
-        lat: item.lat,
-        lng: item.lng,
-      })),
-    }))
+    .map((block) => {
+      const day = anchors.get(block.id);
+      const points: RoutePoint[] = block.items.filter(isPlaceItem).map((item) => ({
+        id: item.id, name: item.name,
+        type: isEvChargerPlaceItem(item) ? "charger" : "place",
+        lat: item.lat, lng: item.lng,
+      }));
+      if (day?.start) points.unshift({ ...day.start, id: `${block.id}:start`, type: "place" });
+      if (day?.end) points.push({ ...day.end, id: `${block.id}:end`, type: "place" });
+      return { blockId: block.id, points };
+    })
     .filter((group) => group.points.length >= 2);
 }
 
