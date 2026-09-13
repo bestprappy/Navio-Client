@@ -30,6 +30,7 @@ export const createdPostsAtom = atom<CommunityPost[]>([]);
 export const commentDraftsAtom = atom<Record<string, string>>({});
 export const replyDraftsByCommentIdAtom = atom<Record<string, string>>({});
 export const replyingToCommentIdAtom = atom<string | null>(null);
+export const editingCommentIdAtom = atom<string | null>(null);
 export const visibleReplyCountsByCommentIdAtom = atom<Record<string, number>>(
   {},
 );

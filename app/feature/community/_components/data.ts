@@ -127,6 +127,7 @@ export type CommunityPost = {
 
 export type CommunityComment = {
   deleted?: boolean;
+  edited?: boolean;
   viewerVote?: number;
   id: string;
   postId: string;

@@ -10,6 +10,8 @@ import { CommunityMembershipButton } from "./community-membership-button";
 import { CommunityFlairBadge } from "./community-flair-badge";
 import { CommunityTripAttachment } from "./community-trip-attachment";
 import { CommunityVotePill, CommunitySharePill } from "./community-post-actions";
+import { CommunityPostEditor } from "./community-post-editor";
+import { useCommunityIdentity } from "./community-group-queries";
 import { useCommunityUserProfile } from "./community-user-label";
 import type { CommunityGroup, CommunityPost } from "./data";
 import {
@@ -38,6 +40,7 @@ export function CommunityPostCard({
   showJoinAction = true,
 }: CommunityPostCardProps) {
   const router = useRouter();
+  const { identity } = useCommunityIdentity();
   const author = useCommunityUserProfile(post.authorId);
   const [selectedPostId, setSelectedPostId] = useAtom(
     selectedCommunityPostIdAtom,
@@ -60,6 +63,9 @@ export function CommunityPostCard({
     ? (group?.postFlairs.find((item) => item.id === post.flairId) ?? null)
     : null;
   const archived = group?.status === "archived";
+  const canWrite = Boolean(group?.joined) && !archived;
+  const isAuthor = identity === post.authorId;
+  const isModerator = group?.role === "admin" || group?.role === "moderator";
 
   function openPost() {
     setSelectedPostId(post.id);
@@ -221,6 +227,15 @@ export function CommunityPostCard({
         </button>
 
         {postHref ? <CommunitySharePill href={postHref} /> : null}
+
+        {canWrite && (isAuthor || isModerator) ? (
+          <CommunityPostEditor
+            post={post}
+            canEdit={isAuthor}
+            canDelete
+            redirectOnDelete={false}
+          />
+        ) : null}
       </div>
     </article>
   );

@@ -12,6 +12,7 @@ type CommunityCommentComposerProps = {
   value: string;
   placeholder: string;
   submitLabel: string;
+  pendingLabel?: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
   onCancel?: () => void;
@@ -26,6 +27,7 @@ export function CommunityCommentComposer({
   value,
   placeholder,
   submitLabel,
+  pendingLabel = "Posting…",
   onChange,
   onSubmit,
   onCancel,
@@ -117,7 +119,7 @@ export function CommunityCommentComposer({
             </Button>
           ) : null}
           <Button type="submit" disabled={!value.trim() || pending}>
-            {pending ? "Posting…" : submitLabel}
+            {pending ? pendingLabel : submitLabel}
           </Button>
         </div>
       </div>

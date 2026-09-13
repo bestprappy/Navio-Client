@@ -105,7 +105,7 @@ export function CommunityPostDetailCard({
         ) : null}
 
         {post.imageUrl ? (
-          <div className="relative mt-4 aspect-video max-h-96 overflow-hidden rounded-xl bg-muted">
+          <div className="relative mt-4 w-full overflow-hidden rounded-xl bg-muted">
             {/* Post pictures are served from the private media proxy, which the image optimizer cannot read. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -118,7 +118,7 @@ export function CommunityPostDetailCard({
             <img
               src={post.imageUrl}
               alt={post.title}
-              className="relative z-10 mx-auto h-full w-full object-contain"
+              className="relative z-10 mx-auto block h-auto max-h-[70vh] w-full object-contain"
             />
           </div>
         ) : null}

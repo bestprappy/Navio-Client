@@ -17,7 +17,7 @@ export const postSchema = z.object({
 export const commentSchema = z.object({
   id: z.string().uuid(), postId: z.string().uuid(), authorId: z.string().uuid(),
   parentCommentId: z.string().uuid().nullable().transform((value) => value ?? undefined),
-  body: z.string(), deleted: z.boolean(), createdAt: z.string().datetime(),
+  body: z.string(), deleted: z.boolean(), edited: z.boolean(), createdAt: z.string().datetime(),
   upvotes: z.number().int(), viewerVote: z.number().int().min(-1).max(1),
 }).transform((comment): CommunityComment => comment);
 

@@ -6,6 +6,7 @@ import {
   ArrowBigUpDash,
   MessageCircle,
   Minus,
+  Pencil,
   Plus,
   Reply,
   Search,
@@ -17,6 +18,7 @@ import {
   collapsedCommentIdsAtom,
   commentDraftsAtom,
   continuedCommentThreadIdsAtom,
+  editingCommentIdAtom,
   communityCommentSearchAtom,
   communityCommentSortAtom,
   replyingToCommentIdAtom,
@@ -79,6 +81,9 @@ type CommentThreadContextValue = {
   visibleReplyCountsByCommentId: Record<string, number>;
   replyDraftsByCommentId: Record<string, string>;
   replyingToCommentId: string | null;
+  editingCommentId: string | null;
+  onEditStart: (commentId: string) => void;
+  onEditEnd: () => void;
   onToggleCollapse: (commentId: string) => void;
   onContinueThread: (commentId: string) => void;
   onShowMoreReplies: (commentId: string, nextCount: number) => void;
@@ -263,7 +268,8 @@ function CommentDeleteDialog({ comment }: { comment: CommunityComment }) {
         <DialogHeader>
           <DialogTitle>Delete comment?</DialogTitle>
           <DialogDescription>
-            The text will be removed. Replies will remain visible.
+            If people replied, it will show as unavailable so their replies
+            keep their context. Otherwise it will be removed completely.
           </DialogDescription>
         </DialogHeader>
         <CommunityQueryError error={mutation.error} />
@@ -299,7 +305,7 @@ function CommentDeleteDialog({ comment }: { comment: CommunityComment }) {
 }
 
 function CommentToolbar({ comment }: { comment: CommunityCommentNode }) {
-  const { group, viewerId, canInteract, onReplyStart } =
+  const { group, viewerId, canInteract, onReplyStart, onEditStart } =
     useCommentThreadContext();
   const voteMutation = usePostMutation();
   const { requireAuth } = useRequireAuth();
@@ -307,9 +313,10 @@ function CommentToolbar({ comment }: { comment: CommunityCommentNode }) {
   const vote = comment.viewerVote ?? 0;
   const upvoted = vote === 1;
   const downvoted = vote === -1;
+  const isAuthor = viewerId === comment.authorId;
   const removable =
     canInteract &&
-    (viewerId === comment.authorId ||
+    (isAuthor ||
       group.role === "admin" ||
       group.role === "moderator");
 
@@ -362,6 +369,19 @@ function CommentToolbar({ comment }: { comment: CommunityCommentNode }) {
           Reply
         </Button>
 
+        {canInteract && isAuthor ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => onEditStart(comment.id)}
+            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Pencil className="size-3.5" aria-hidden="true" />
+            Edit
+          </Button>
+        ) : null}
+
         {removable ? <CommentDeleteDialog comment={comment} /> : null}
       </div>
 
@@ -407,6 +427,44 @@ function CommentReplyComposer({ comment }: { comment: CommunityCommentNode }) {
   );
 }
 
+function CommentEditComposer({ comment }: { comment: CommunityCommentNode }) {
+  const { onEditEnd } = useCommentThreadContext();
+  const mutation = usePostMutation();
+  const [draft, setDraft] = useState(comment.body);
+
+  return (
+    <CommunityCommentComposer
+      id={`edit-${comment.id}`}
+      value={draft}
+      placeholder="Edit your comment"
+      submitLabel="Save"
+      pendingLabel="Saving…"
+      autoFocus
+      pending={mutation.isPending}
+      error={mutation.error}
+      onChange={setDraft}
+      onCancel={onEditEnd}
+      onSubmit={() => {
+        const body = draft.trim();
+
+        if (body === comment.body) {
+          onEditEnd();
+          return;
+        }
+
+        mutation.mutate(
+          {
+            path: `/${comment.postId}/comments/${comment.id}`,
+            method: "PATCH",
+            body: { body },
+          },
+          { onSuccess: onEditEnd },
+        );
+      }}
+    />
+  );
+}
+
 function CommentNode({
   comment,
   level,
@@ -422,6 +480,7 @@ function CommentNode({
     continuedCommentThreadIds,
     visibleReplyCountsByCommentId,
     replyingToCommentId,
+    editingCommentId,
     onToggleCollapse,
     onContinueThread,
     onShowMoreReplies,
@@ -441,6 +500,7 @@ function CommentNode({
     comment.replies.length - visibleReplies.length,
   );
   const replyComposerVisible = replyingToCommentId === comment.id;
+  const editing = editingCommentId === comment.id && !comment.deleted;
   const depthLimitReached =
     level >= MAX_INLINE_COMMENT_DEPTH && comment.replies.length > 0;
   const threadContinued = continuedCommentThreadIds.includes(comment.id);
@@ -493,8 +553,14 @@ function CommentNode({
 
         <div className="min-w-0 flex-1 pb-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-sm font-semibold text-foreground">
-              {name}
+            {/* A removed comment no longer credits its author. */}
+            <span
+              className={cn(
+                "text-sm font-semibold",
+                comment.deleted ? "text-muted-foreground" : "text-foreground",
+              )}
+            >
+              {comment.deleted ? "[deleted]" : name}
             </span>
             <time
               dateTime={comment.createdAt}
@@ -502,20 +568,31 @@ function CommentNode({
             >
               {formatRelativeTime(comment.createdAt)}
             </time>
+            {comment.edited ? (
+              <span className="text-xs text-muted-foreground">(edited)</span>
+            ) : null}
           </div>
 
-          <p
-            className={cn(
-              "mt-1 max-w-full whitespace-pre-wrap break-words text-sm leading-6 [overflow-wrap:anywhere]",
-              comment.deleted
-                ? "italic text-muted-foreground"
-                : "text-foreground",
-            )}
-          >
-            {comment.deleted ? "Comment deleted." : comment.body}
-          </p>
+          {editing ? (
+            <div className="mt-2">
+              <CommentEditComposer comment={comment} />
+            </div>
+          ) : (
+            <p
+              className={cn(
+                "mt-1 max-w-full whitespace-pre-wrap break-words text-sm leading-6 [overflow-wrap:anywhere]",
+                comment.deleted
+                  ? "italic text-muted-foreground"
+                  : "text-foreground",
+              )}
+            >
+              {comment.deleted ? "Comment unavailable" : comment.body}
+            </p>
+          )}
 
-          {comment.deleted ? null : <CommentToolbar comment={comment} />}
+          {comment.deleted || editing ? null : (
+            <CommentToolbar comment={comment} />
+          )}
 
           {replyComposerVisible ? (
             <div className="mt-3">
@@ -621,6 +698,7 @@ export function CommunityCommentThread({
   const [replyingToCommentId, setReplyingToCommentId] = useAtom(
     replyingToCommentIdAtom,
   );
+  const [editingCommentId, setEditingCommentId] = useAtom(editingCommentIdAtom);
   const [collapsedCommentIds, setCollapsedCommentIds] = useAtom(
     collapsedCommentIdsAtom,
   );
@@ -672,6 +750,12 @@ export function CommunityCommentThread({
       visibleReplyCountsByCommentId,
       replyDraftsByCommentId,
       replyingToCommentId,
+      editingCommentId,
+      onEditStart: (commentId) => {
+        setReplyingToCommentId(null);
+        setEditingCommentId(commentId);
+      },
+      onEditEnd: () => setEditingCommentId(null),
       onToggleCollapse: (commentId) =>
         setCollapsedCommentIds((previous) =>
           previous.includes(commentId)
@@ -688,7 +772,10 @@ export function CommunityCommentThread({
           [commentId]: nextCount,
         })),
       onReplyStart: (commentId) =>
-        requireAuth(() => setReplyingToCommentId(commentId)),
+        requireAuth(() => {
+          setEditingCommentId(null);
+          setReplyingToCommentId(commentId);
+        }),
       onReplyCancel: (commentId) => {
         setReplyingToCommentId(null);
         setReplyDraftsByCommentId((previous) => ({
@@ -730,9 +817,11 @@ export function CommunityCommentThread({
       visibleReplyCountsByCommentId,
       replyDraftsByCommentId,
       replyingToCommentId,
+      editingCommentId,
       requireAuth,
       setCollapsedCommentIds,
       setContinuedCommentThreadIds,
+      setEditingCommentId,
       setReplyDraftsByCommentId,
       setReplyingToCommentId,
       setVisibleReplyCountsByCommentId,
