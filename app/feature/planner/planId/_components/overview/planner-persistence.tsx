@@ -92,6 +92,7 @@ export function PlannerPersistence({
   );
   const [status, setStatus] = useState<SyncStatus>("loading");
   const [syncErrorMessage, setSyncErrorMessage] = useState<string>();
+  const [hydrationRequest, setHydrationRequest] = useState(0);
   const isDraftStoredRef = useRef(false);
   const localSettingsPendingRef = useRef(false);
   const hydratedPlanIdRef = useRef<string | null>(null);
@@ -125,6 +126,7 @@ export function PlannerPersistence({
         error.status >= 500),
     staleTime: 30_000,
   });
+  const serverBlockCount = plannerQuery.data?.blocks.length ?? 0;
 
   const createMissingTripMutation = useMutation({
     mutationFn: createTrip,
@@ -370,6 +372,7 @@ export function PlannerPersistence({
     metadata.data?.endDate,
     metadata.isPending,
     plannerQuery.data,
+    hydrationRequest,
     setActiveBlockId,
     setBudgetAmount,
     setBlocks,
@@ -427,6 +430,20 @@ export function PlannerPersistence({
     if (!persistedPlanId || hydratedPlanIdRef.current !== persistedPlanId) {
       return;
     }
+    // A hydrated trip always has its days, so an empty itinerary here means the
+    // planner store was reset underneath us (dev hot reload re-creating the
+    // atoms, or a template reset). Saving it would wipe the trip on the server
+    // and in the local draft, so reload the last saved snapshot instead.
+    if (plannerState.blocks.length === 0 && serverBlockCount > 0) {
+      console.warn("Planner state was reset after hydration; restoring the saved trip instead of autosaving it.", {
+        component: "PlannerPersistence",
+        operation: "autosave",
+        planId: persistedPlanId,
+      });
+      hydratedPlanIdRef.current = null;
+      window.setTimeout(() => setHydrationRequest((request) => request + 1), 0);
+      return;
+    }
     if (skipAutosaveOnceRef.current) {
       skipAutosaveOnceRef.current = false;
       return;
@@ -459,7 +476,7 @@ export function PlannerPersistence({
       window.clearTimeout(statusTimeoutId);
       window.clearTimeout(saveTimeoutId);
     };
-  }, [persistedPlanId, plannerQuery.isSuccess, plannerState, saveState]);
+  }, [persistedPlanId, plannerQuery.isSuccess, plannerState, saveState, serverBlockCount]);
 
   useEffect(() => {
     const tripIsMissing =

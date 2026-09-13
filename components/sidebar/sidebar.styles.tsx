@@ -17,8 +17,9 @@ export const SidebarWrapper = styled.div`
   padding-top: var(--space-10);
   padding-left: var(--space-6);
   padding-right: var(--space-6);
+  scrollbar-width: none;
 
-  ::-webkit-scrollbar {
+  &::-webkit-scrollbar {
     display: none;
   }
 
