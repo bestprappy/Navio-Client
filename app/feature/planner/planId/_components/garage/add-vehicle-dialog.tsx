@@ -2,19 +2,24 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useGarage } from "./garage-provider";
 import { CustomVehicleForm } from "./custom-vehicle-form";
 import { VehicleCatalogPicker } from "./vehicle-catalog-picker";
 import type { CatalogVehicle, VehicleCommand } from "./vehicle-api";
+import { estimateCatalogConsumption } from "./vehicle-mappers";
 
 export function AddVehicleDialog({ onClose }: { onClose: () => void }) {
   const [mode, setMode] = useState<"catalog" | "custom">("catalog");
   const [selected, setSelected] = useState<CatalogVehicle | null>(null);
+  const [knowsConsumption, setKnowsConsumption] = useState(false);
   const [consumption, setConsumption] = useState("");
   const { mutation } = useGarage();
-  const validConsumption = Number.isFinite(Number(consumption)) && Number(consumption) > 0 && Number(consumption) <= 99999.999;
+  const estimatedConsumption = selected ? estimateCatalogConsumption(selected) : null;
+  const consumptionToSave = knowsConsumption ? Number(consumption) : estimatedConsumption;
+  const validConsumption = consumptionToSave !== null && Number.isFinite(consumptionToSave) && consumptionToSave > 0 && consumptionToSave <= 99999.999;
 
   async function save(command: VehicleCommand) {
     try {
@@ -39,17 +44,28 @@ export function AddVehicleDialog({ onClose }: { onClose: () => void }) {
         {mutation.isError && <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{mutation.error.message}</p>}
         {mode === "catalog" ? <form className="grid gap-4" onSubmit={(event) => {
           event.preventDefault();
-          if (selected && validConsumption && !mutation.isPending) void save({ kind: "catalog", catalogId: selected.id, consumptionKwhPer100km: Number(consumption), startingBatteryPct: 80 });
+          if (selected && validConsumption && consumptionToSave !== null && !mutation.isPending) void save({ kind: "catalog", catalogId: selected.id, consumptionKwhPer100km: consumptionToSave, startingBatteryPct: 80 });
         }}>
           <VehicleCatalogPicker selectedId={selected?.id ?? null} onSelect={setSelected} disabled={mutation.isPending} />
           {selected && <div className="grid gap-3 rounded-lg bg-muted/50 p-4">
             <p className="text-sm"><span className="font-semibold">{selected.make} {selected.model} {selected.trim}</span> · Thailand{selected.year ? ` · ${selected.year}` : " · Model year not published"}</p>
             <p className="text-xs text-muted-foreground">{selected.rangeKm} km is the official {selected.rangeStandard} test range. Battery capacity is manufacturer declared; usable capacity is not confirmed. Actual range varies.</p>
             <a href={selected.sourceUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline underline-offset-4">Official specification · checked {selected.verifiedAt}</a>
-            <label htmlFor="preset-consumption" className="text-sm font-medium">Your average consumption (kWh/100 km)</label>
-            <Input id="preset-consumption" type="number" min="0.001" max="99999.999" step="0.001" required value={consumption}
-              onChange={(event) => setConsumption(event.target.value)} disabled={mutation.isPending} aria-describedby="preset-consumption-help" />
-            <p id="preset-consumption-help" className="text-xs text-muted-foreground">Enter the average shown by your car to calculate route energy. Published test range is kept separately.</p>
+            <div className="flex items-start gap-3">
+              <Checkbox id="preset-knows-consumption" checked={knowsConsumption} onCheckedChange={setKnowsConsumption}
+                disabled={mutation.isPending} aria-describedby="preset-consumption-help" className="mt-0.5" />
+              <label htmlFor="preset-knows-consumption" className="text-sm font-medium">I know my car&apos;s average consumption</label>
+            </div>
+            {knowsConsumption && <>
+              <label htmlFor="preset-consumption" className="text-sm font-medium">Your average consumption (kWh/100 km)</label>
+              <Input id="preset-consumption" type="number" min="0.001" max="99999.999" step="0.001" required value={consumption}
+                onChange={(event) => setConsumption(event.target.value)} disabled={mutation.isPending} aria-describedby="preset-consumption-help" />
+            </>}
+            <p id="preset-consumption-help" className="text-xs text-muted-foreground">
+              {knowsConsumption
+                ? "Use the average shown in your car's trip computer for the most accurate route energy."
+                : `We'll estimate about ${estimatedConsumption} kWh/100 km from the battery and ${selected.rangeStandard} range. You can change it later in vehicle settings.`}
+            </p>
           </div>}
           <p className="text-xs text-muted-foreground">Car images are AI illustrations. Appearance and equipment may vary by trim.</p>
           <div className="flex justify-end gap-2">

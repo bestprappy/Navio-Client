@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+import { resolveDayAnchors } from "../itinerary/day-anchors";
 import type { TripBlockData } from "../constants/types";
 import {
   getGoogleMapsDirectionsLinks,
@@ -45,10 +46,11 @@ function getBlockLabel(block: TripBlockData): string {
 }
 
 function getDisplayLinks(blocks: TripBlockData[]): DisplayDirectionsLink[] {
+  const anchors = resolveDayAnchors(blocks);
   return blocks
     .filter((block) => block.kind !== "list")
     .flatMap((block) => {
-      const blockLinks = getGoogleMapsDirectionsLinks(block);
+      const blockLinks = getGoogleMapsDirectionsLinks({ ...block, startAnchor: anchors.get(block.id)?.start });
       const blockLabel = getBlockLabel(block);
 
       return blockLinks.map((link, index) => ({

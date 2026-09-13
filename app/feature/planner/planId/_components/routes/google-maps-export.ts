@@ -1,4 +1,5 @@
-import { isPlaceItem, type TripBlockData } from "../constants/types";
+import { getTripRouteGroups } from "./trip-route.helpers";
+import { type TripBlockData } from "../constants/types";
 
 const GOOGLE_MAPS_DIRECTIONS_URL = "https://www.google.com/maps/dir/";
 const MAX_POINTS_PER_GOOGLE_MAPS_LINK = 5;
@@ -20,15 +21,7 @@ type GoogleMapsRoutePoint = {
 export function getGoogleMapsDirectionsLinks(
   block: TripBlockData,
 ): GoogleMapsDirectionsLink[] {
-  const points = block.items
-    .filter(isPlaceItem)
-    .map((item) => ({
-      id: item.id,
-      name: item.name,
-      lat: item.lat,
-      lng: item.lng,
-    }))
-    .filter(isValidRoutePoint);
+  const points = (getTripRouteGroups([block])[0]?.points ?? []).filter(isValidRoutePoint);
 
   if (points.length < 2) {
     return [];

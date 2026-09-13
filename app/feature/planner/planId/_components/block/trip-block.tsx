@@ -183,12 +183,12 @@ function TripBlockActions({
   return (
     <div className="mx-0 mt-5 space-y-3">
       <AddPlaceInput blockId={block.id} searchBias={placeSearchBias} />
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <Button
           type="button"
           variant="outline"
           size="lg"
-          className="min-w-28 flex-1 rounded-lg border-info/25 bg-info/5 py-5 text-info hover:bg-info/10"
+          className="h-11 min-w-0 w-full rounded-lg border-blue-300 bg-blue-100 text-blue-800 hover:bg-blue-200 hover:text-blue-800 dark:border-blue-400/40 dark:bg-blue-400/15 dark:text-blue-300 dark:hover:bg-blue-400/25 dark:hover:text-blue-300"
           onClick={() => addNoteToBlock({ blockId: block.id })}
         >
           <FileText className="size-4" aria-hidden="true" />
@@ -198,7 +198,7 @@ function TripBlockActions({
           type="button"
           variant="outline"
           size="lg"
-          className="min-w-28 flex-1 rounded-lg border-warning/25 bg-warning/5 py-5 text-warning hover:bg-warning/10"
+          className="h-11 min-w-0 w-full rounded-lg border-yellow-300 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:text-yellow-800 dark:border-yellow-400/40 dark:bg-yellow-400/15 dark:text-yellow-300 dark:hover:bg-yellow-400/25 dark:hover:text-yellow-300"
           onClick={() => addChecklistToBlock({ blockId: block.id })}
         >
           <CheckSquare className="size-4" aria-hidden="true" />
@@ -227,10 +227,10 @@ function TripBlockPlaceActions({
   );
 }
 
-function TripBlockItems() {
+function TripBlockItems({ hasStart = false }: { hasStart?: boolean }) {
   const { block } = useTripBlockContext();
 
-  return <SortableBlockItems block={block} />;
+  return <SortableBlockItems block={block} hasStart={hasStart} />;
 }
 
 export const TripBlock = Object.assign(TripBlockRoot, {

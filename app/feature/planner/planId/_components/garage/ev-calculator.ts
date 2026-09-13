@@ -1,4 +1,5 @@
 import { getDistanceKm } from "../constants/place.data";
+import { resolveDayAnchors } from "../itinerary/day-anchors";
 import {
   isEvChargerPlaceItem,
   isPlaceItem,
@@ -141,25 +142,32 @@ export function projectTripCharging(
   startingBatteryPct: number,
 ): { days: Map<string, DayEvProjection>; summary: TripEvSummary } {
   const days = new Map<string, DayEvProjection>();
+  const anchors = resolveDayAnchors(blocks);
   const segmentByItem = new Map(segments.map((segment) => [`${segment.blockId}:${segment.toItemId}`, segment]));
   let currentBatteryPct = clampPct(startingBatteryPct);
   const summary: TripEvSummary = { totalDistanceKm: 0, totalEnergyKwh: 0, totalChargeMinutes: 0, finalBatteryPct: currentBatteryPct, batteryByDay: [] };
 
   for (const block of blocks.filter((entry) => entry.kind === "itinerary").toSorted((a, b) => a.date.localeCompare(b.date))) {
     const day: DayEvProjection = { startBatteryPct: currentBatteryPct, finalBatteryPct: currentBatteryPct, distanceKm: 0, energyKwh: 0, chargeEnergyKwh: 0, chargeMinutes: 0, compatibleStops: 0, incompatibleStops: 0, batteryByItemId: new Map() };
-    for (const item of block.items.filter(isPlaceItem)) {
+    const stops = block.items.filter(isPlaceItem).map((item) => ({
+      id: item.id,
+      charger: isEvChargerPlaceItem(item) ? item.evCharger : undefined,
+    }));
+    if (anchors.get(block.id)?.start) stops.unshift({ id: `${block.id}:start`, charger: undefined });
+    if (anchors.get(block.id)?.end) stops.push({ id: `${block.id}:end`, charger: undefined });
+    for (const item of stops) {
       const segment = segmentByItem.get(`${block.id}:${item.id}`);
       const distanceKm = Math.max(0, segment?.distanceMeters ?? 0) / 1000;
       day.distanceKm += distanceKm;
       day.energyKwh += calcEnergyKwh(distanceKm, car);
       currentBatteryPct = clampPct(currentBatteryPct - calcBatteryUsedPct(distanceKm, car));
-      const state: ChargingStopProjection = isEvChargerPlaceItem(item) && item.evCharger
-        ? projectChargingStop(currentBatteryPct, item.evCharger, car)
+      const state: ChargingStopProjection = item.charger
+        ? projectChargingStop(currentBatteryPct, item.charger, car)
         : { arrivalPct: currentBatteryPct, departurePct: currentBatteryPct, chargeEnergyKwh: 0, chargeMinutes: 0, compatible: true };
       day.batteryByItemId.set(item.id, state);
       day.chargeEnergyKwh += state.chargeEnergyKwh;
       day.chargeMinutes += state.chargeMinutes;
-      if (isEvChargerPlaceItem(item) && item.evCharger) {
+      if (item.charger) {
         if (state.compatible) day.compatibleStops += 1;
         else day.incompatibleStops += 1;
       }

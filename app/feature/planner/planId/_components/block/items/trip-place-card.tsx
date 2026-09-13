@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import {
   CheckCircle2,
   Clock,
+  Flag,
   LockKeyhole,
   LockKeyholeOpen,
   MapPin,
@@ -23,6 +24,7 @@ import {
   type TripBlockColorId,
 } from "../../constants/types";
 import {
+  markPlaceAsDayEndAtom,
   removeItemFromBlockAtom,
   selectedTripPlaceItemIdReadonlyAtom,
   selectTripPlaceAtom,
@@ -45,6 +47,8 @@ type TripPlaceCardProps = {
   chargeBatteryFrom?: number;
   chargeBatteryTo?: number;
   showEvChargeDetails?: boolean;
+  /** Only the day's last stop can become where the day ends. */
+  canMarkAsEnd?: boolean;
 };
 
 function formatDisplayTime(time: string): string {
@@ -63,9 +67,11 @@ export function TripPlaceCard({
   position,
   chargeBatteryFrom,
   chargeBatteryTo,
+  canMarkAsEnd = false,
 }: TripPlaceCardProps) {
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const removeItemFromBlock = useSetAtom(removeItemFromBlockAtom);
+  const markPlaceAsDayEnd = useSetAtom(markPlaceAsDayEndAtom);
   const selectTripPlace = useSetAtom(selectTripPlaceAtom);
   const selectedTripPlaceItemId = useAtomValue(
     selectedTripPlaceItemIdReadonlyAtom,
@@ -342,6 +348,22 @@ export function TripPlaceCard({
                     blockDate={blockDate}
                     cost={item.cost}
                   />
+                  {canMarkAsEnd ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="rounded-sm"
+                      title="Make this the place the day ends at"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        markPlaceAsDayEnd({ blockId, itemId: item.id });
+                      }}
+                    >
+                      <Flag className="size-3.5" aria-hidden="true" />
+                      Mark as end stop
+                    </Button>
+                  ) : null}
                 </div>
                 <Button
                   type="button"

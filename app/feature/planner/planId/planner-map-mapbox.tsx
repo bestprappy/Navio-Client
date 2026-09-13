@@ -12,6 +12,15 @@ import Map, {
 } from "react-map-gl/mapbox";
 import { MapPin, Zap } from "lucide-react";
 
+import { AnchorMapPin } from "./_components/itinerary/anchor-map-pin";
+import {
+  buildAnchorMarkers,
+  countPlacesByBlockId,
+  orderRolesForActiveBlock,
+} from "./_components/itinerary/anchor-map-markers";
+import { resolveDayAnchors } from "./_components/itinerary/day-anchors";
+import { focusedAnchorAtom } from "./_components/itinerary/anchor-map.atoms";
+import { useRevealPlanCard } from "./_components/itinerary/use-reveal-plan-card";
 import { sidebarCollapsedAtom } from "@/app/configs/constant";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +39,7 @@ import {
   closeSelectedEvChargerAtom,
   closeSelectedSearchPlaceAtom,
   closeSelectedTripPlaceAtom,
+  routeLineModeAtom,
   evChargerErrorAtom,
   evChargerLoadingAtom,
   evChargerResultsAtom,
@@ -99,10 +109,16 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
   const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
   const activeSearch = useAtomValue(activeSearchAtom);
   const tripBlocks = useAtomValue(tripBlocksAtom);
+  const focusedAnchor = useAtomValue(focusedAnchorAtom);
+  const dayAnchors = useMemo(() => resolveDayAnchors(tripBlocks), [tripBlocks]);
   const selectedPlace = useAtomValue(selectedSearchPlaceAtom);
   const selectedTripPlace = useAtomValue(selectedTripPlaceAtom);
   const selectedTripPlaces = useAtomValue(selectedTripPlacesAtom);
   const selectedTripPlaceMarkers = useAtomValue(selectedTripPlaceMarkersAtom);
+  const anchorMarkers = useMemo(
+    () => buildAnchorMarkers(dayAnchors, countPlacesByBlockId(selectedTripPlaceMarkers)),
+    [dayAnchors, selectedTripPlaceMarkers],
+  );
   const activeEvCar = useAtomValue(activeEvCarAtom);
   const evChargerResults = useAtomValue(evChargerResultsAtom);
   const selectedEvChargerResult = useAtomValue(selectedEvChargerResultAtom);
@@ -120,6 +136,8 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
   const closeSelectedSearchPlace = useSetAtom(closeSelectedSearchPlaceAtom);
   const closeSelectedTripPlace = useSetAtom(closeSelectedTripPlaceAtom);
   const activeBlockId = useAtomValue(activeBlockIdAtom);
+  const routeLineMode = useAtomValue(routeLineModeAtom);
+  const revealPlanCard = useRevealPlanCard();
   const startPlaceSearch = useSetAtom(startPlaceSearchAtom);
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const [viewportPois, setViewportPois] = useState<PlaceSearchResult[]>([]);
@@ -146,18 +164,29 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
     () => tripRoutes.data?.segments ?? [],
     [tripRoutes.data?.segments],
   );
-  // Every block's road route stays on the map, colour-coded per block, so the
-  // whole trip is readable without having to select a place first.
-  const visibleRouteSegments = routeSegments;
+  // "all" mode draws every day's route. Otherwise only the active day's route is
+  // drawn — the day the itinerary is scrolled to (or was last pressed).
+  const isShowingAllRoutes = routeLineMode === "all";
+  const visibleRouteSegments = useMemo(
+    () =>
+      isShowingAllRoutes
+        ? routeSegments
+        : activeBlockId
+          ? routeSegments.filter((segment) => segment.blockId === activeBlockId)
+          : [],
+    [isShowingAllRoutes, routeSegments, activeBlockId],
+  );
   const routeGeoJson = useMemo(
     () => getRouteFeatureCollection(visibleRouteSegments, routeColorByBlockId),
     [routeColorByBlockId, visibleRouteSegments],
   );
-  const routeStatusMessage = tripRoutes.isFetching
-    ? "Calculating routes..."
-    : tripRoutes.isError
-      ? "Routes could not load."
-      : null;
+  const routeStatusMessage = !isShowingAllRoutes && !activeBlockId
+    ? null
+    : tripRoutes.isFetching
+      ? "Calculating routes..."
+      : tripRoutes.isError
+        ? "Routes could not load."
+        : null;
   const canAddToTrip = tripBlocks.length > 0;
 
   useEffect(() => {
@@ -239,6 +268,10 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
       duration: 700,
     });
   }, [selectedTripPlace]);
+
+  useEffect(() => {
+    if (focusedAnchor && isMapReady) mapRef.current?.flyTo({ center: [focusedAnchor.lng, focusedAnchor.lat], zoom: 14 });
+  }, [focusedAnchor, isMapReady]);
 
   const handleMoveEnd = useCallback(async () => {
     const map = mapRef.current;
@@ -339,6 +372,16 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
           setMapError("The map could not load. Please check the Mapbox token.");
         }}
       >
+          {anchorMarkers.map(({ key, lat, lng, roles }) => {
+            const orderedRoles = orderRolesForActiveBlock(roles, activeBlockId);
+            return (
+              <Marker key={key} latitude={lat} longitude={lng} anchor="bottom" style={{ zIndex: orderedRoles[0]?.blockId === activeBlockId ? 21 : 20 }}>
+                <AnchorMapPin
+                  roles={orderedRoles.map((role) => ({ ...role, color: blockColorById.get(role.blockId)?.mapColor }))}
+                />
+              </Marker>
+            );
+          })}
         <NavigationControl position="top-right" />
         <FullscreenControl position="top-right" />
 
@@ -396,6 +439,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
                 onClick={(event) => {
                   event.stopPropagation();
                   selectTripPlace({ itemId: place.id });
+                  revealPlanCard(place.blockId, place.id);
                 }}
               >
                 <MapPin
@@ -424,7 +468,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
                       aria-hidden="true"
                     />
                   ) : (
-                    place.placeSequence
+                    place.placeSequence ?? 0
                   )}
                 </span>
               </button>

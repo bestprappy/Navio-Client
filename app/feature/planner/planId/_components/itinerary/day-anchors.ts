@@ -1,4 +1,34 @@
-import type { TripAnchor, TripAnchorKind, TripBlockData } from "../constants/types";
+import { isEvChargerPlaceItem, isPlaceItem, type PlaceItem, type TripAnchor, type TripAnchorKind, type TripBlockData } from "../constants/types";
+
+export function placeItemToAnchor(item: PlaceItem): TripAnchor {
+  return {
+    id: item.placeId,
+    kind: "PLACE",
+    name: item.name,
+    address: item.address || undefined,
+    lat: item.lat,
+    lng: item.lng,
+  };
+}
+
+/** The stop that may be promoted to the day's end: its last regular place. */
+export function getLastDayPlaceId(block: TripBlockData): string | null {
+  if (block.kind !== "itinerary") return null;
+  const last = block.items.findLast(
+    (item) => isPlaceItem(item) && !isEvChargerPlaceItem(item),
+  );
+  return last?.id ?? null;
+}
+
+/** Place badges share their sequence with Start; chargers keep their own icon. */
+export function getDayPlacePositions(block: TripBlockData, hasStart: boolean): Map<string, number> {
+  const positions = new Map<string, number>();
+  let position = block.kind === "itinerary" && hasStart ? 1 : 0;
+  for (const item of block.items) {
+    if (isPlaceItem(item) && !isEvChargerPlaceItem(item)) positions.set(item.id, ++position);
+  }
+  return positions;
+}
 
 const ANCHOR_KINDS: readonly TripAnchorKind[] = ["SAVED_PLACE", "PLACE", "MANUAL"];
 

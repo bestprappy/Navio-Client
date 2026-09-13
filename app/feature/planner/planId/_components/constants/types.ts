@@ -167,7 +167,15 @@ export type TripBlockColorId =
   | "plum"
   | "wine"
   | "brick"
-  | "rust";
+  | "rust"
+  | "lime"
+  | "olive"
+  | "gold"
+  | "sky"
+  | "fuchsia"
+  | "mocha"
+  | "stone"
+  | "graphite";
 
 export type TripBlockKind = "itinerary" | "list";
 

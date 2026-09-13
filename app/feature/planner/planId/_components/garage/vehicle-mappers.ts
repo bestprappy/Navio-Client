@@ -1,10 +1,19 @@
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
 import type { CatalogVehicle, SavedVehicle } from "./vehicle-api";
 
+// Share of the official test range typically achieved on real roads. Test cycles are optimistic by different amounts.
+const REAL_WORLD_RANGE_FACTOR: Record<CatalogVehicle["rangeStandard"], number> = { NEDC: 0.7, CLTC: 0.7, WLTP: 0.85, EPA: 0.9 };
+
+/** Rough kWh/100 km from declared capacity and test range, used only when the driver does not know their average. */
+export function estimateCatalogConsumption(vehicle: CatalogVehicle): number {
+  const realWorldRangeKm = vehicle.rangeKm * REAL_WORLD_RANGE_FACTOR[vehicle.rangeStandard];
+  return Math.round((vehicle.batteryCapacityKwh / realWorldRangeKm) * 1000) / 10;
+}
+
 export function catalogVehicleCar(vehicle: CatalogVehicle): EvCar {
   return {
     ...vehicle, batteryKwh: vehicle.batteryCapacityKwh,
-    consumptionKwhPer100km: 0, // Not supplied by the source. Never derive real consumption from rated range.
+    consumptionKwhPer100km: 0, // Not supplied by the source. Estimates are opt-in at save time via estimateCatalogConsumption.
     maxAcKw: vehicle.maxAcKw ?? 0, maxDcKw: vehicle.maxDcKw ?? 0,
     chargingLimitsKnown: vehicle.maxAcKw !== null && vehicle.maxDcKw !== null,
   };

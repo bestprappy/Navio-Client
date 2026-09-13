@@ -141,11 +141,13 @@ export function AddEvStationButton({
           ? undefined
           : "Add a place or choose a destination before searching for EV stations"
       }
-      className="min-w-40 flex-1 rounded-sm border-primary/30 bg-primary/10 py-6 text-primary hover:border-primary/50 hover:bg-primary/15 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-primary/40 dark:bg-primary/15 dark:hover:bg-primary/25"
+      className="h-11 min-w-0 w-full rounded-lg border-green-300 bg-green-100 text-green-800 hover:bg-green-200 hover:text-green-800 disabled:cursor-not-allowed dark:border-green-400/40 dark:bg-green-400/15 dark:text-green-300 dark:hover:bg-green-400/25 dark:hover:text-green-300"
       onClick={openStationList}
     >
       <Zap className="size-4" aria-hidden="true" />
-      {isLoadingEvChargers ? "Finding EV stations..." : "Add EV station"}
+      <span className="truncate">
+        {isLoadingEvChargers ? "Finding EV stations..." : "Add EV station"}
+      </span>
     </Button>
   );
 }

@@ -11,6 +11,7 @@ import {
   MapPin,
   Pin,
   Plus,
+  X,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -149,9 +150,10 @@ function AnchorRow({ edge, withConnector = false }: AnchorRowProps) {
   const anchor = isStart ? anchors.start : anchors.end;
   const own = isStart ? ownStart : ownEnd;
   const carriedOver = isStart && anchors.startIsCarriedOver;
-  // The first day has no day before it to inherit from, so there is nothing to
-  // fall back to and the control must stay set.
-  const canClear = !(isStart && isFirstDay) && Boolean(own);
+  const canClear = Boolean(own);
+  const clearLabel = isStart && anchors.inheritedStart
+    ? `Clear start override and follow on from ${anchors.inheritedStart.name}`
+    : `Clear ${isStart ? "start" : "end"} place`;
 
   const handleSelect = useCallback(
     (next: TripAnchor | null) => onChange(edge, next),
@@ -233,6 +235,21 @@ function AnchorRow({ edge, withConnector = false }: AnchorRowProps) {
           aria-hidden="true"
         />
       </button>
+
+      {canClear && (
+        <button
+          type="button"
+          aria-label={clearLabel}
+          title={clearLabel}
+          onClick={() => {
+            handleSelect(null);
+            setOpenEdge(null);
+          }}
+          className="flex size-11 shrink-0 items-center justify-center self-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <X className="size-4" aria-hidden="true" />
+        </button>
+      )}
 
       <DayAnchorPicker
         open={openEdge === edge}

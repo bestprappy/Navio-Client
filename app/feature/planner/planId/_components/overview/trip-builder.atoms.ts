@@ -1,4 +1,5 @@
 import { atom } from "jotai";
+import { getDayPlacePositions, placeItemToAnchor, resolveDayAnchors } from "../itinerary/day-anchors";
 
 import { currencyOptions, getCurrencyOption } from "../budget/budget.data";
 import { roundMoney } from "../budget/budget.utils";
@@ -344,16 +345,13 @@ function getTripPlaceAnchors(
   options?: { includeEvChargers?: boolean },
 ): TripPlaceAnchor[] {
   const includeEvChargers = options?.includeEvChargers ?? true;
+  const dayAnchors = resolveDayAnchors(blocks);
 
   return blocks.flatMap((block) => {
-    let placeSequence = 0;
+    const positions = getDayPlacePositions(block, !!dayAnchors.get(block.id)?.start);
 
     return block.items.filter(isPlaceItem).flatMap((item) => {
       const isEvCharger = isEvChargerPlaceItem(item);
-
-      if (!isEvCharger) {
-        placeSequence += 1;
-      }
 
       if (isEvCharger && !includeEvChargers) {
         return [];
@@ -365,7 +363,7 @@ function getTripPlaceAnchors(
           blockId: block.id,
           blockTitle: block.title,
           blockColorId: block.colorId,
-          placeSequence: isEvCharger ? null : placeSequence,
+          placeSequence: positions.get(item.id) ?? null,
           isEvCharger,
         },
       ];
@@ -394,6 +392,9 @@ export const tripCurrencyAtom = atom<CurrencyOption>(currencyOptions[0]);
 export const tripExpensesAtom = atom<ExpenseItem[]>([]);
 export const tripBudgetAtom = atom<number>(0);
 export const activeBlockIdAtom = atom<string | null>(null);
+// "day" draws only the active (scrolled-to) day's route; "all" draws every day's route.
+export type RouteLineMode = "day" | "all";
+export const routeLineModeAtom = atom<RouteLineMode>("day");
 export const activeSearchAtom = atom<ActiveSearch | null>(null);
 export const activePlannerSidePanelAtom = atom<ActivePlannerSidePanel | null>(
   null,
@@ -942,6 +943,25 @@ export const removeItemFromBlockAtom = atom(
     set(tripExpensesAtom, (prev) =>
       prev.filter((e) => e.id !== `place-cost-${payload.itemId}`),
     );
+  },
+);
+
+/**
+ * Turns a stop into the day's end place.
+ *
+ * The stop leaves the list rather than being copied, so the route does not
+ * visit the same place twice with a zero-length final leg.
+ */
+export const markPlaceAsDayEndAtom = atom(
+  null,
+  (get, set, payload: RemoveItemPayload) => {
+    const block = get(tripBlocksAtom).find((entry) => entry.id === payload.blockId);
+    const item = block?.items.find((entry) => entry.id === payload.itemId);
+    if (!block || block.kind !== "itinerary" || !item || !isPlaceItem(item) || isEvChargerPlaceItem(item)) {
+      return;
+    }
+    set(setDayAnchorAtom, { blockId: payload.blockId, edge: "end", anchor: placeItemToAnchor(item) });
+    set(removeItemFromBlockAtom, payload);
   },
 );
 

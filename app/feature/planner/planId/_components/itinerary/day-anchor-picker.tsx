@@ -13,6 +13,7 @@ import {
   Pin,
   RotateCcw,
   Search,
+  X,
 } from "lucide-react";
 
 import {
@@ -24,11 +25,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ManualAnchorPicker } from "./manual-anchor-picker";
+import { SaveFavoritePlaceButton } from "./save-favorite-place-button";
 import { cn } from "@/lib/utils";
 
 import { fetchPlaceSearch, type PlaceSearchResult } from "../place/place-api";
 import type { PlaceItem, TripAnchor } from "../constants/types";
 import type { DayAnchorEdge } from "../overview/trip-builder.atoms";
+import { placeItemToAnchor } from "./day-anchors";
 import {
   createSavedPlace,
   listSavedPlaces,
@@ -53,7 +57,7 @@ type DayAnchorPickerProps = {
   edge: DayAnchorEdge;
   dayLabel: string;
   current: TripAnchor | null;
-  /** False on the first day, whose start has no previous day to fall back to. */
+  /** Whether this day has an explicit place selection that can be cleared. */
   canClear: boolean;
   carriedOverName: string | null;
   dayPlaces: PlaceItem[];
@@ -89,21 +93,10 @@ function searchResultToAnchor(result: PlaceSearchResult): TripAnchor {
   };
 }
 
-function placeItemToAnchor(item: PlaceItem): TripAnchor {
-  return {
-    id: item.placeId,
-    kind: "PLACE",
-    name: item.name,
-    address: item.address || undefined,
-    lat: item.lat,
-    lng: item.lng,
-  };
-}
-
 export function DayAnchorPicker({ open, onOpenChange, ...rest }: DayAnchorPickerProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85dvh] gap-3 overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[85dvh] grid-cols-1 gap-3 overflow-x-hidden overflow-y-auto overscroll-contain sm:max-w-lg">
         {/* Mounted only while open, so every visit starts from a clean search
             rather than needing an effect to reset it. */}
         {open && <PickerBody onOpenChange={onOpenChange} {...rest} />}
@@ -126,6 +119,7 @@ function PickerBody({
   onSelect,
 }: PickerBodyProps) {
   const listId = useId();
+  const [pinning, setPinning] = useState(false);
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
@@ -228,25 +222,55 @@ function PickerBody({
     : "Pick tonight's stop. Tomorrow starts here unless you change it.";
 
   const groups = [
-    { id: "saved" as const, label: "Your places" },
+    { id: "saved" as const, label: "Favorite places" },
     { id: "day" as const, label: `Stops on ${dayLabel.toLowerCase()}` },
     { id: "search" as const, label: "Search results" },
   ];
 
+  const header = (
+    <DialogHeader className="min-w-0 pr-7">
+      <DialogTitle className="flex items-center gap-2 leading-snug">
+        <Navigation
+          className={cn("size-4 shrink-0 text-primary", !isStart && "rotate-90")}
+          aria-hidden="true"
+        />
+        {title}
+      </DialogTitle>
+      <DialogDescription className="break-words">{description}</DialogDescription>
+    </DialogHeader>
+  );
+
+  // Pinning replaces the search view rather than stacking under it, so the
+  // dialog never grows into a long scroll with focus lost below the fold.
+  if (pinning) {
+    return (
+      <>
+        {header}
+        <ManualAnchorPicker
+          initial={current ?? searchBias ?? { lat: 13.7563, lng: 100.5018 }}
+          onBack={() => setPinning(false)}
+          onSelect={(anchor) => {
+            onSelect(anchor);
+            onOpenChange(false);
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <>
-      <DialogHeader>
-        <DialogTitle className="flex items-center gap-2">
-          <Navigation
-            className={cn("size-4 shrink-0 text-primary", !isStart && "rotate-90")}
-            aria-hidden="true"
-          />
-          {title}
-        </DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
+      {header}
 
-      <div className="relative">
+      {current && (
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2.5">
+          <p className="min-w-0 truncate text-sm font-medium">{current.name}</p>
+          <SaveFavoritePlaceButton key={`${current.id}:${current.lat}:${current.lng}`} anchor={current} />
+        </div>
+      )}
+
+      <div className="flex min-w-0 gap-2">
+      <div className="relative min-w-0 flex-1">
         <Search
           className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
@@ -285,6 +309,11 @@ function PickerBody({
           className="pl-9"
         />
       </div>
+      <Button type="button" variant="outline" onClick={() => setPinning(true)}>
+        <Pin aria-hidden="true" />
+        <span className="max-sm:sr-only">Pin on map</span>
+      </Button>
+      </div>
 
       {results.isFetching && (
         <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -312,7 +341,7 @@ function PickerBody({
         !results.isError &&
         (results.data?.length ?? 0) === 0 && (
           <p className="text-xs text-muted-foreground">
-            No places found. Try a hotel name or a street address.
+            No places found. Try another address, or use Pin on map.
           </p>
         )}
 
@@ -374,7 +403,7 @@ function PickerBody({
                         onOpenChange(false);
                       }}
                       className={cn(
-                        "flex min-h-11 flex-1 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
+                        "flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors",
                         "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         isCurrent && "bg-primary/10 ring-1 ring-primary/30",
                       )}
@@ -431,16 +460,20 @@ function PickerBody({
         <Button
           type="button"
           variant="outline"
-          className="w-full"
+          className="h-auto min-h-9 w-full whitespace-normal py-2"
           onClick={() => {
             onSelect(null);
             onOpenChange(false);
           }}
         >
-          <RotateCcw className="size-4" aria-hidden="true" />
-          {carriedOverName
-            ? `Follow on from ${carriedOverName}`
-            : "Follow on from the day before"}
+          {isStart && carriedOverName ? (
+            <RotateCcw className="size-4" aria-hidden="true" />
+          ) : (
+            <X className="size-4" aria-hidden="true" />
+          )}
+          {isStart && carriedOverName
+            ? `Clear start override and follow on from ${carriedOverName}`
+            : `Clear ${isStart ? "start" : "end"} place`}
         </Button>
       )}
     </>

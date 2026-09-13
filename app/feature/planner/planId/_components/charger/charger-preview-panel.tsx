@@ -34,8 +34,8 @@ export function ChargerPreviewPanel({
       : `${charger.availableConnectors} of ${charger.totalConnectors} available`;
 
   return (
-    <aside className="absolute bottom-4 left-4 right-4 z-10 rounded-sm border border-border bg-card p-4 text-card-foreground shadow-xl">
-      <div className="mb-3 flex items-center justify-between gap-3">
+    <aside className="absolute bottom-4 left-4 right-4 z-10 flex max-h-[calc(100%-2rem)] min-h-0 flex-col overflow-hidden rounded-sm border border-border bg-card p-4 text-card-foreground shadow-xl">
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-sm bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
             <Zap className="size-3.5" aria-hidden="true" />
@@ -61,14 +61,14 @@ export function ChargerPreviewPanel({
         <button
           type="button"
           onClick={onClose}
-          className="flex size-7 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+          className="flex size-7 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
           aria-label="Close EV station preview"
         >
           <X className="size-4" aria-hidden="true" />
         </button>
       </div>
 
-      <div className="space-y-3">
+      <div className="min-h-0 space-y-3 overflow-y-auto overscroll-contain break-words">
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-bold leading-tight text-foreground">
@@ -121,7 +121,7 @@ export function ChargerPreviewPanel({
         </div>
       </div>
 
-      <div className="mt-4 flex items-center justify-end border-t border-border/70 pt-3">
+      <div className="mt-4 flex shrink-0 items-center justify-end border-t border-border/70 pt-3">
         <Button
           type="button"
           size="sm"
