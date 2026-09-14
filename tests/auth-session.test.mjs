@@ -73,6 +73,22 @@ test("read-only page rendering does not consume a refresh token it cannot persis
   assert.equal(refreshes, 0);
 });
 
+test("session user id is the Keycloak subject even when Auth.js stored a random sub", async () => {
+  const cookieName = "authjs.session-token";
+  const keycloakSubject = "7d0f6b8e-3c1a-4f2e-9b5d-1a2b3c4d5e6f";
+  const claims = Buffer.from(JSON.stringify({ sub: keycloakSubject })).toString("base64url");
+  const cookie = await encode({
+    secret: process.env.AUTH_SECRET, salt: cookieName,
+    token: {
+      sub: "random-auth-js-id",
+      accessToken: `e30.${claims}.signature`,
+      accessTokenExpiresAt: Math.floor(Date.now() / 1000) + 300,
+    },
+  });
+  globalThis.__navioTestHeaders = { cookie: `${cookieName}=${cookie}` };
+  assert.equal((await readAuth()).user.id, keycloakSubject);
+});
+
 test("simultaneous and late requests share one refresh; expired entries are replaced", async () => {
   let now = 1000;
   let calls = 0;
