@@ -31,6 +31,7 @@ export function DateRangePicker({
   className,
 }: DateRangePickerProps) {
   const [open, setOpen] = React.useState(false)
+  const [editingEnd, setEditingEnd] = React.useState(false)
   const [internal, setInternal] = React.useState<DateRange | undefined>()
   const range = value ?? internal
   const setRange = onChange ?? setInternal
@@ -42,8 +43,10 @@ export function DateRangePicker({
     "flex w-full items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-left transition-colors hover:bg-muted/40 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-50"
 
   function handleDayClick(day: Date) {
-    if (!range?.from || range.to) {
+    if (disabled) return
+    if (!range?.from || (range.to && !editingEnd)) {
       setRange({ from: day, to: undefined })
+      setEditingEnd(true)
       return
     }
 
@@ -70,6 +73,7 @@ export function DateRangePicker({
               type="button"
               className={triggerClass}
               aria-label={startPlaceholder}
+              onClick={() => setEditingEnd(false)}
               disabled={disabled}
             />
           }
@@ -88,6 +92,7 @@ export function DateRangePicker({
               type="button"
               className={triggerClass}
               aria-label={endPlaceholder}
+              onClick={() => setEditingEnd(true)}
               disabled={disabled}
             />
           }

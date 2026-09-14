@@ -11,7 +11,7 @@ import { getTripBlockColorById } from "../constants/trip-block-colors";
 import { DayAnchorRail } from "./day-anchor-rail";
 import { EMPTY_DAY_ANCHORS, getDayPlacePositions, resolveDayAnchors } from "./day-anchors";
 import { isPlaceItem, type TripAnchor, type TripDestination } from "../constants/types";
-import type { DateRange } from "react-day-picker";
+import { useTripDates } from "../overview/use-trip-dates";
 import { CalendarIcon, CalendarPlus, ChevronsDownUp, ChevronsUpDown, Route } from "lucide-react";
 import { addDays, format, isAfter, parseISO } from "date-fns";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
@@ -30,7 +30,6 @@ import {
   addTripBlocksForDatesAtom,
   itineraryBlocksAtom,
   setDayAnchorAtom,
-  tripDateRangeAtom,
   tripBlocksAtom,
   openBlockIdsAtom,
   routeLineModeAtom,
@@ -107,17 +106,11 @@ export function ItinerarySection({
     }
     setBlocks((current) => current.map((block) => block.id === blockId ? { ...block, destination } : block));
   }
-  const [tripDateRange, setTripDateRange] = useAtom(tripDateRangeAtom);
+  const { pickerValue, changeRange, isPending: isSavingDates, isError: datesSaveFailed, isReady: datesReady } = useTripDates();
   const addBlocksForDates = useSetAtom(addTripBlocksForDatesAtom);
   const [isEditingDates, setIsEditingDates] = useState(false);
-
-  const tripFrom = tripDateRange.from
-    ? parseISO(tripDateRange.from)
-    : undefined;
-  const tripTo = tripDateRange.to ? parseISO(tripDateRange.to) : undefined;
-  const pickerValue: DateRange | undefined = tripFrom
-    ? { from: tripFrom, to: tripTo }
-    : undefined;
+  const tripFrom = pickerValue?.from;
+  const tripTo = pickerValue?.to;
   const existingDates = new Set(blocks.map((block) => block.date));
   const nextBlockDate =
     tripFrom && tripTo
@@ -127,17 +120,6 @@ export function ItinerarySection({
   function handleAddBlock() {
     if (!nextBlockDate) return;
     addBlocksForDates([nextBlockDate]);
-  }
-
-  function handleRangeChange(range: DateRange | undefined) {
-    setTripDateRange({
-      from: range?.from ? format(range.from, "yyyy-MM-dd") : undefined,
-      to: range?.to ? format(range.to, "yyyy-MM-dd") : undefined,
-    });
-
-    if (range?.from && range?.to) {
-      setIsEditingDates(false);
-    }
   }
 
   const tripDateLabel =
@@ -170,7 +152,8 @@ export function ItinerarySection({
               {isEditingDates || !tripDateLabel ? (
                 <DateRangePicker
                   value={pickerValue}
-                  onChange={handleRangeChange}
+                  onChange={(range) => changeRange(range, () => setIsEditingDates(false))}
+                  disabled={isSavingDates || !datesReady}
                   startPlaceholder="Start date"
                   endPlaceholder="End date"
                   className="w-full min-w-0 max-w-[25rem]"
@@ -214,6 +197,8 @@ export function ItinerarySection({
             </div>
           </div>
 
+          {isSavingDates && <p role="status" className="mb-2 text-xs text-muted-foreground">Saving dates...</p>}
+          {datesSaveFailed && <p role="alert" className="mb-2 text-xs text-destructive">Dates could not be saved. Please select your dates again to retry.</p>}
           <AccordionContent className="pt-0">
             <div className="space-y-4 pb-10 pt-2">
               {blocks.length === 0 ? (
