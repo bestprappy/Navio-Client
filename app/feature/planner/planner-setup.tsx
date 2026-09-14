@@ -4,6 +4,9 @@ import type { FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useMutation } from "@tanstack/react-query";
+import { useRequireAuth } from "@/hooks/use-require-auth";
+import { createGuestTrip } from "./_components/guest-planner";
+import type { CreateTripPayload } from "./_components/planner-api";
 
 import { PlannerSetupActions } from "./_components/planner-setup.actions";
 import { createTrip } from "./_components/planner-api";
@@ -19,13 +22,14 @@ import { PlannerSetupHeader } from "./_components/planner-setup.header";
 
 function PlannerSetupRoot({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const { isAuthenticated, isAuthenticationLoading } = useRequireAuth();
   const selectedDestination = useAtomValue(selectedDestinationAtom);
   const dateRange = useAtomValue(plannerDateRangeAtom);
   const canSubmit = useAtomValue(canSubmitPlannerAtom);
   const setValidationError = useSetAtom(destinationValidationErrorAtom);
   const setIsCreatingTrip = useSetAtom(isCreatingTripAtom);
   const createTripMutation = useMutation({
-    mutationFn: createTrip,
+    mutationFn: (payload: CreateTripPayload) => isAuthenticated ? createTrip(payload) : Promise.resolve(createGuestTrip(payload)),
     onMutate: () => {
       setValidationError(null);
       setIsCreatingTrip(true);
@@ -34,10 +38,11 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
       const searchParams = new URLSearchParams({
         destinationId: trip.destinationId,
         destinationName: trip.destinationName,
+        country: trip.destinationCountry ?? "",
       });
 
-      if (dateRange?.from) searchParams.set("from", dateRange.from.toISOString());
-      if (dateRange?.to) searchParams.set("to", dateRange.to.toISOString());
+      searchParams.set("from", trip.startDate);
+      searchParams.set("to", trip.endDate);
       if (trip.destinationLat !== null) {
         searchParams.set("lat", String(trip.destinationLat));
       }
@@ -64,6 +69,7 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isAuthenticationLoading || createTripMutation.isPending) return;
 
     if (!canSubmit || !selectedDestination) {
       setValidationError(

@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { HelpCircle, Search, Sparkles } from "lucide-react";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,12 +12,14 @@ import { PlannerSidePanel } from "../layout/planner-side-panel";
 import type { EvCharger } from "../constants/types";
 import {
   autoAddEvChargersToBlockAtom,
+  compatibleChargersOnlyAtom,
   evChargerLoadingAtom,
   tripBlocksAtom,
   type EvChargerMapResult,
 } from "../overview/trip-builder.atoms";
 import {
   activeEvCarAtom,
+  activeVehicleAtom,
   chargeStopTargetPctAtom,
   setChargeStopTargetPctAtom,
   startingBatteryPctAtom,
@@ -64,8 +67,10 @@ export function EvStationSidePanel({
   onSelect,
 }: EvStationSidePanelProps) {
   const [query, setQuery] = useState("");
+  const [compatibleOnly, setCompatibleOnly] = useAtom(compatibleChargersOnlyAtom);
   const [autoMessage, setAutoMessage] = useState<string | null>(null);
   const activeEvCar = useAtomValue(activeEvCarAtom);
+  const activeVehicle = useAtomValue(activeVehicleAtom);
   const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
   const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
   const chargeStopTargetPct = useAtomValue(chargeStopTargetPctAtom);
@@ -170,6 +175,7 @@ export function EvStationSidePanel({
   return (
     <PlannerSidePanel.Root
       open
+      resizable
       title={
         <>
           <span className="mr-2 text-primary">EV</span>
@@ -264,6 +270,11 @@ export function EvStationSidePanel({
         </div>
 
         <section aria-label="Nearby EV stations" className="px-4 py-4">
+          <label className="mb-4 flex items-center gap-2 text-sm font-medium">
+            <Checkbox checked={compatibleOnly} onCheckedChange={setCompatibleOnly} />
+            Show only compatible
+          </label>
+          {compatibleOnly && !activeVehicle && <p className="mb-3 text-sm text-muted-foreground">Select a vehicle in your garage to find compatible stations.</p>}
           {isLoadingEvChargers ? (
             <div className="rounded-sm border border-border bg-card px-4 py-8 text-center text-sm text-muted-foreground shadow-xs">
               Finding EV stations near this block...

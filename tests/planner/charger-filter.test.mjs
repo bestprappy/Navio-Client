@@ -1,0 +1,20 @@
+import assert from "node:assert/strict";
+import { registerHooks } from "node:module";
+import { test } from "node:test";
+registerHooks({resolve(specifier,context,next){if(specifier.startsWith(".")&&!/\.(?:[cm]?js|tsx?|json)$/.test(specifier))return next(`${specifier}.ts`,context);return next(specifier,context);}});
+const {createStore}=await import("jotai");
+const {evChargerResultsAtom,visibleEvChargerResultsAtom,compatibleChargersOnlyAtom,selectedEvChargerIdAtom,selectedEvChargerResultAtom}=await import("../../app/feature/planner/planId/_components/overview/trip-builder.atoms.ts");
+const {garageVehiclesSnapshotAtom,garageActiveIdSnapshotAtom}=await import("../../app/feature/planner/planId/_components/garage/garage.atoms.ts");
+const {savedVehicleForPlanner}=await import("../../app/feature/planner/planId/_components/garage/vehicle-mappers.ts");
+const {savedVehicleFixture}=await import("../garage/data.ts");
+const {drawerChargers}=await import("./data.ts");
+test("compatible filtering preserves results, follows vehicle changes, and hides stale previews",()=>{
+ const store=createStore();const results=drawerChargers.map(charger=>({charger,targetBlockId:"day-1",targetPlaceId:"place",distanceKm:1}));
+ store.set(evChargerResultsAtom,results);assert.equal(store.get(visibleEvChargerResultsAtom),results);
+ store.set(garageVehiclesSnapshotAtom,[savedVehicleForPlanner(savedVehicleFixture)]);store.set(garageActiveIdSnapshotAtom,savedVehicleFixture.id);
+ store.set(selectedEvChargerIdAtom,"incompatible");assert.ok(store.get(selectedEvChargerResultAtom));
+ store.set(compatibleChargersOnlyAtom,true);assert.deepEqual(store.get(visibleEvChargerResultsAtom).map(r=>r.charger.id),["compatible"]);assert.equal(store.get(selectedEvChargerResultAtom),null);
+ store.set(garageVehiclesSnapshotAtom,[savedVehicleForPlanner({...savedVehicleFixture,connectorTypes:["CHADEMO"]})]);assert.deepEqual(store.get(visibleEvChargerResultsAtom).map(r=>r.charger.id),["incompatible"]);
+ store.set(garageActiveIdSnapshotAtom,null);assert.deepEqual(store.get(visibleEvChargerResultsAtom),[]);
+ store.set(compatibleChargersOnlyAtom,false);assert.equal(store.get(visibleEvChargerResultsAtom),results);assert.equal(store.get(evChargerResultsAtom),results);
+});

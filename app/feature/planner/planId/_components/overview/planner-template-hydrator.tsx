@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 
 import { getPlanById } from "@/app/feature/explore/_components/data";
+import { ensureItineraryDays } from "../itinerary/itinerary-days";
 import { currencyOptions, getCurrencyOption } from "../budget/budget.data";
 import { getCopiedPlanBlocks } from "../constants/planner-template";
 import {
@@ -34,6 +35,7 @@ const CATEGORY_MAP: Record<string, string> = {
 };
 
 type PlannerTemplateHydratorProps = {
+  guest?: boolean;
   planId?: string;
   templatePlanId?: string;
   from?: string;
@@ -41,6 +43,7 @@ type PlannerTemplateHydratorProps = {
 };
 
 export function PlannerTemplateHydrator({
+  guest = false,
   planId,
   templatePlanId,
   from,
@@ -88,10 +91,17 @@ export function PlannerTemplateHydrator({
     setTripCurrency(currencyOptions[0]);
 
     if (!templatePlanId) {
+      if (guest) {
+        const days = ensureItineraryDays([], from || new Date().toISOString().slice(0, 10), to);
+        setTripBlocks(days);
+        setOpenBlockIds(days.slice(0, 5).map((day) => day.id));
+        setActiveBlockId(days[0]?.id ?? null);
+      }
       return;
     }
 
-    const copiedBlocks = getCopiedPlanBlocks(templatePlanId, from);
+    const templateBlocks = getCopiedPlanBlocks(templatePlanId, from);
+    const copiedBlocks = guest ? ensureItineraryDays(templateBlocks, from, to) : templateBlocks;
 
     if (copiedBlocks.length === 0) {
       console.error("Copied plan template was empty.", {
@@ -134,6 +144,7 @@ export function PlannerTemplateHydrator({
       setTripExpenses([]);
     }
   }, [
+    guest,
     activePlannerKey,
     blocks.length,
     from,

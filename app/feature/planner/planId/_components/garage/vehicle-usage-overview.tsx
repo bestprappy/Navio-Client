@@ -43,10 +43,10 @@ export function VehicleUsageOverview({
     : `${car.make} ${car.model}`;
 
   return (
-    <div className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
+    <div role="region" aria-label="Vehicle usage overview" className="@container/usage min-w-0 overflow-hidden rounded-md border border-border bg-card shadow-sm">
       <div className="border-b border-border/60 bg-background/50 p-3">
         <VehicleMedia car={car} />
-        <div className="mt-3 flex items-start justify-between gap-3">
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-base font-bold text-foreground">
               {displayName}
@@ -62,7 +62,7 @@ export function VehicleUsageOverview({
       </div>
 
       <div className="grid gap-3 p-3">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1.1fr]">
+        <div className="grid min-w-0 grid-cols-1 gap-3 @min-[32rem]/usage:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
           <BatteryPanel batteryPct={batteryPct} currentRangeKm={currentRangeKm} />
           <div className="grid gap-3">
             <MetricTile
@@ -84,7 +84,7 @@ export function VehicleUsageOverview({
 
         <DailyUsageBars values={dailyBattery} plannedDays={plannedDays} />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-1 gap-3 @min-[25rem]/usage:grid-cols-2">
           <MetricTile
             icon={<Route className="size-4" />}
             label="Distance"
@@ -133,7 +133,7 @@ function BatteryPanel({
   const filledBars = Math.ceil(batteryPct / 12.5);
 
   return (
-    <div className="flex h-full flex-col rounded-md border border-border bg-background/70 p-3">
+    <div className="flex h-full min-h-40 min-w-0 flex-col rounded-md border border-border bg-background/70 p-3">
       <div className="flex flex-1 gap-3">
         <div className="flex w-20 flex-col-reverse gap-1.5">
           {Array.from({ length: 8 }).map((_, index) => (
@@ -182,7 +182,7 @@ function DailyUsageBars({
   const padClass = count > 14 ? "px-0.5 pb-0.5" : "px-1 pb-1";
 
   return (
-    <div className="rounded-md border border-border bg-background/70 p-3">
+    <div className="min-w-0 rounded-md border border-border bg-background/70 p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
           <p className="text-sm font-semibold text-foreground">Vehicle Usage</p>
@@ -192,7 +192,8 @@ function DailyUsageBars({
           Trip
         </span>
       </div>
-      <div className={cn("flex h-24 items-end pb-1", gapClass)}>
+      <div className="overflow-x-auto pb-1" tabIndex={0} role="region" aria-label="Daily battery usage">
+      <div className={cn("flex h-24 items-end pb-1", gapClass)} style={{ minWidth: `${count * 1.75}rem` }}>
         {barValues.map((value, index) => {
           const height = Math.max(12, value);
           const isEmpty = values.length === 0;
@@ -218,6 +219,7 @@ function DailyUsageBars({
           );
         })}
       </div>
+      </div>
     </div>
   );
 }
@@ -236,10 +238,10 @@ function MetricTile({
   iconBg?: string;
 }) {
   return (
-    <div className="rounded-md border border-border bg-background/70 p-3">
+    <div className="min-w-0 rounded-md border border-border bg-background/70 p-3">
       <div className={cn("mb-2 flex items-center gap-2", iconColor)}>
         <span
-          className={cn("flex size-7 items-center justify-center rounded-full", iconBg)}
+          className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", iconBg)}
           aria-hidden="true"
         >
           {icon}

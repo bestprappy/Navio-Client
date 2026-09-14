@@ -38,8 +38,13 @@ await context.route("**/api/posts**",async route=>{
     return route.fulfill({status:201,json:posts[0]});
   }
   if(path.endsWith("/comments")) {
-    if(req.method()==="POST"){const body=req.postDataJSON();const id=`55555555-5555-4555-8555-${String(comments.length+1).padStart(12,"0")}`;comments.push({...body,id,postId:postFixture.id,authorId:groupFixture.createdById,createdAt:postFixture.createdAt,deleted:false,upvotes:0,viewerVote:0});posts[0].commentCount=comments.length;return route.fulfill({status:201,json:comments.at(-1)});}
+    if(req.method()==="POST"){const body=req.postDataJSON();const id=`55555555-5555-4555-8555-${String(comments.length+1).padStart(12,"0")}`;comments.push({...body,id,postId:postFixture.id,authorId:groupFixture.createdById,createdAt:postFixture.createdAt,deleted:false,edited:false,upvotes:0,viewerVote:0});posts[0].commentCount=comments.length;return route.fulfill({status:201,json:comments.at(-1)});}
     return route.fulfill({json:paged(comments)});
+  }
+  if(path.includes("/comments/") && req.method()==="PATCH") {
+    const comment=comments.find(item=>item.id===path.split("/").at(-1));
+    assert.ok(comment); Object.assign(comment,req.postDataJSON(),{edited:true});
+    return route.fulfill({json:comment});
   }
   if(path.endsWith("/vote")){posts[0]={...posts[0],viewerVote:req.postDataJSON().value,upvotes:req.postDataJSON().value};return route.fulfill({json:posts[0]});}
   if(req.method()==="PATCH"){posts[0]={...posts[0],...req.postDataJSON()};return route.fulfill({json:posts[0]});}
@@ -58,30 +63,38 @@ await context.route("**/api/users/**",async route=>{
 try {
   await page.goto(`${origin}/community/create?groupId=${group.id}&groupSlug=${group.slug}`);
   await page.getByRole("heading",{name:"Create post",exact:true}).waitFor({timeout:90000});
-  await page.getByLabel("Title",{exact:true}).fill("Browser-tested route");
-  await page.getByLabel("Post text",{exact:true}).fill("A real discussion flow <script>window.injected=true</script>");
-  await page.getByLabel("Post banner picture (optional)").setInputFiles({name:"route.png",mimeType:"image/png",buffer:png});
-  await page.getByRole("button",{name:"Publish post",exact:true}).click();
+  await page.getByText(group.name,{exact:true}).first().waitFor();
+  await page.getByLabel("Post title",{exact:true}).fill("Browser-tested route");
+  await page.getByLabel("Post body",{exact:true}).fill("A real discussion flow <script>window.injected=true</script>");
+  await page.getByRole("tab",{name:"Images & Video",exact:true}).click();
+  await page.getByLabel("Post picture file",{exact:true}).setInputFiles({name:"route.png",mimeType:"image/png",buffer:png});
+  await page.getByRole("button",{name:"Post",exact:true}).click();
   await page.getByText("Communities are temporarily unavailable. Please try again.",{exact:true}).waitFor();
-  assert.equal(await page.getByLabel("Title",{exact:true}).inputValue(),"Browser-tested route");
-  await page.getByRole("button",{name:"Publish post",exact:true}).click();
+  assert.equal(await page.getByLabel("Post title",{exact:true}).inputValue(),"Browser-tested route");
+  await page.getByRole("button",{name:"Post",exact:true}).click();
   await page.getByRole("heading",{name:"Browser-tested route",exact:true}).waitFor({timeout:90000});
   await page.reload();await page.getByRole("heading",{name:"Browser-tested route",exact:true}).waitFor();
   assert.equal(await page.evaluate(()=>window.injected),undefined);
   await page.getByRole("button",{name:"Upvote",exact:true}).first().click();
   await page.waitForFunction(()=>document.querySelector('[aria-label="Upvote"]')?.getAttribute("aria-pressed")==="true");
-  await page.getByLabel("Add a comment",{exact:true}).fill("Useful route notes");
-  await page.getByRole("button",{name:"Post comment",exact:true}).click();
+  await page.getByLabel("Join the conversation",{exact:true}).fill("Useful route notes");
+  await page.getByRole("button",{name:"Comment",exact:true}).click();
   await page.getByText("Useful route notes",{exact:true}).waitFor();
+  await page.getByRole("region",{name:"Discussion for Browser-tested route",exact:true}).getByRole("button",{name:"Edit",exact:true}).click();
+  await page.getByLabel("Edit your comment",{exact:true}).fill("Revised route notes");
+  await page.getByRole("button",{name:"Save",exact:true}).click();
+  await page.getByText("Revised route notes",{exact:true}).waitFor();
+  await page.getByText("(edited)",{exact:true}).waitFor();
+  assert.equal(comments[0].body,"Revised route notes");
   await page.getByRole("button",{name:"Reply",exact:true}).click();
-  await page.getByLabel("Your reply",{exact:true}).fill("Thanks for the suggestion");
-  await page.getByRole("button",{name:"Post reply",exact:true}).click();
+  await page.getByLabel("Reply to Test Traveler",{exact:true}).fill("Thanks for the suggestion");
+  await page.getByRole("button",{name:"Comment",exact:true}).last().click();
   await page.getByText("Thanks for the suggestion",{exact:true}).waitFor();
-  await page.getByRole("button",{name:"Edit",exact:true}).click();
+  await page.getByRole("button",{name:"Edit",exact:true}).first().click();
   await page.getByRole("dialog").getByLabel("Title",{exact:true}).fill("Updated route");
   await page.getByRole("button",{name:"Save changes",exact:true}).click();
   await page.getByRole("heading",{name:"Updated route",exact:true}).waitFor();
-  for(const width of [390,768,1280]){await page.setViewportSize({width,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),`overflow at ${width}`);}
+  for(const width of [390,768,1280]){await page.setViewportSize({width,height:844});for(const theme of ["light","dark"]){await page.evaluate(theme=>document.documentElement.classList.toggle("dark",theme==="dark"),theme);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),`overflow at ${width} in ${theme}`);}}
   await page.emulateMedia({colorScheme:"dark"});await page.screenshot({path:process.env.NAVIO_SCREENSHOT_PATH ?? "../server/community-service/target/community-mobile.png",fullPage:true});
   await page.goto(`${origin}/community/${group.slug}`);
   await page.getByRole("button",{name:"Manage community",exact:true}).click();
@@ -112,4 +125,8 @@ try {
   assert.equal(posts.length,0);
   assert.equal(uploads,2);assert.deepEqual(errors,[]);
   console.log("Browser checks passed: upload failure/retry, publish/reload, escaped text, votes, comment/reply, edit/delete, responsive layouts, banner upload/removal, Escape focus management, profile upload/removal.");
+} catch(error) {
+  console.error("Browser errors:",errors);
+  console.error((await page.locator("body").innerText()).slice(0,7000));
+  throw error;
 } finally {await browser.close();}

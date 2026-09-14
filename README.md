@@ -32,6 +32,33 @@ AI provider selection is invisible to the client. The same `/v1/ai/**` contract 
 
 ## Local development
 
+### Guest planning
+
+`/planner` and `/planner/new` are public. The optional sign-in dialog includes
+**Sign in later**. Guests can create an itinerary, edit dates/destinations, add
+stops and a temporary custom EV, and estimate routes/charging without an account.
+Guest trips use `guest-` IDs and isolated in-memory state: no trip API writes or
+local-storage drafts. Refreshing or leaving the planner clears the guest plan.
+Signing in from a guest plan starts a new saved plan; it does not silently save
+the temporary itinerary. Signed-in planners retain their existing autosave flow.
+
+Saved-trip access, account garages/addresses, community publishing/voting, and
+Explore likes/bookmarks require authentication. Saved-route optimization also
+requires a saved trip; manual charging stops and local estimates remain available
+to guests. Dismissing an action's sign-in prompt leaves the current page unchanged.
+
+Deploy the matching `server/api-gateway` security change with this client. It
+permits anonymous place reads (`GET /v1/geo/places/{placeId}`, including search,
+autocomplete and nearby), nearby charger reads, currency-rate reads, and
+`POST /v1/routes/directions`. All trip/account writes remain protected. An older
+gateway will still reject guest searches and directions. No database migration
+or environment-secret changes are needed.
+
+Regression checks: Node 24 `--experimental-transform-types --test` runs
+`tests/auth-session.test.mjs` and `tests/guest-planner.test.mjs`. The browser
+check is `tests/guest/browser-check.mjs` (see its local-server instructions);
+it uses mocked public data and never writes a real account.
+
 Requirements:
 
 - Node.js 20+

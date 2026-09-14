@@ -15,5 +15,5 @@ export const proxy = auth((request) => {
 });
 
 export const config = {
-  matcher: ["/planner/:path*", "/community/create"],
+  matcher: ["/community/create"],
 };

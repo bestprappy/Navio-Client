@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useId, useMemo, useState, type FormEvent } from "react";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Briefcase, House, Loader2, MapPin } from "lucide-react";
 
@@ -67,6 +68,7 @@ type ManualAnchorPickerProps = {
 };
 
 export function ManualAnchorPicker({ initial, onSelect, onBack }: ManualAnchorPickerProps) {
+  const { isAuthenticated, isAuthenticationLoading, requireAuth } = useRequireAuth();
   const id = useId();
   const queryClient = useQueryClient();
   const [mapError, setMapError] = useState(false);
@@ -74,9 +76,9 @@ export function ManualAnchorPicker({ initial, onSelect, onBack }: ManualAnchorPi
   // The text fields are the single source of truth; the map writes into them.
   const [latText, setLatText] = useState("");
   const [lngText, setLngText] = useState("");
-  const [saveToFavorites, setSaveToFavorites] = useState(true);
+  const [saveToFavorites, setSaveToFavorites] = useState(isAuthenticated);
   const [kind, setKind] = useState<SavedPlaceKind>("HOME");
-  const [label, setLabel] = useState(DEFAULT_LABEL.HOME);
+  const [label, setLabel] = useState(isAuthenticated ? DEFAULT_LABEL.HOME : DEFAULT_LABEL.CUSTOM);
   const [labelEdited, setLabelEdited] = useState(false);
 
   const lat = useMemo(() => parseAxis(latText, 90), [latText]);
@@ -150,7 +152,7 @@ export function ManualAnchorPicker({ initial, onSelect, onBack }: ManualAnchorPi
     }
 
     if (!trimmedLabel) return;
-    save.mutate({ label: trimmedLabel.slice(0, 80), name: trimmedLabel, kind, ...point });
+    requireAuth(() => save.mutate({ label: trimmedLabel.slice(0, 80), name: trimmedLabel, kind, ...point }));
   }
 
   const saveErrorMessage =
@@ -231,8 +233,8 @@ export function ManualAnchorPicker({ initial, onSelect, onBack }: ManualAnchorPi
         <FieldLabel className="font-normal">
           <Checkbox
             checked={saveToFavorites}
-            onCheckedChange={(checked) => setSaveToFavorites(checked)}
-            disabled={save.isPending}
+            onCheckedChange={(checked) => checked ? requireAuth(() => setSaveToFavorites(true)) : setSaveToFavorites(false)}
+            disabled={isAuthenticationLoading || save.isPending}
           />
           Save to my favorite places for future trips
         </FieldLabel>

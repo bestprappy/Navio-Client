@@ -86,14 +86,15 @@ export function BatterySlider({
       {/* Tick labels */}
       {showLabels ? (
         <div className="relative mt-2" style={{ height: "1rem" }}>
-          {LABELS.map((label) => {
+          {LABELS.filter((label) => label >= min && label <= max).map((label) => {
             const labelRatio = (label - min) / (max - min);
             return (
               <span
                 key={label}
-                className="absolute -translate-x-1/2 text-xs text-muted-foreground"
+                className="absolute text-xs text-muted-foreground"
                 style={{
                   left: `calc(${THUMB_HALF}px + ${labelRatio} * (100% - ${THUMB_SIZE}px))`,
+                  transform: `translateX(-${labelRatio * 100}%)`,
                 }}
               >
                 {label}%

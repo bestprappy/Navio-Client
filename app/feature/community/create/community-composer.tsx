@@ -173,7 +173,8 @@ export function CommunityComposer({
 
     if (
       appliedPrefillKeyRef.current === prefillKey ||
-      (!initialGroupId && !initialPlanId)
+      (!initialGroupId && !initialPlanId) ||
+      groups.length === 0
     ) {
       return;
     }

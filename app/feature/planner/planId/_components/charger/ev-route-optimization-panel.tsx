@@ -1,4 +1,5 @@
 "use client";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 
 import { useMemo, useState } from "react";
 import { CheckCircle2, Loader2, Route, Sparkles } from "lucide-react";
@@ -68,6 +69,7 @@ export function EvRouteOptimizationPanel({
   targetSocPct,
 }: EvRouteOptimizationPanelProps) {
   const params = useParams<{ planId: string }>();
+  const { isAuthenticated, isAuthenticationLoading, requireAuth } = useRequireAuth();
   const tripId = isPersistedTripId(params.planId) ? params.planId : null;
   const applyServerSnapshot = useSetAtom(applyPlannerServerSnapshotAtom);
   const blocks = useAtomValue(tripBlocksAtom);
@@ -177,15 +179,15 @@ export function EvRouteOptimizationPanel({
         type="button"
         size="lg"
         className="mt-3 h-10 w-full rounded-sm"
-        disabled={!canPreview || previewMutation.isPending || applyMutation.isPending}
-        onClick={previewRoute}
+        disabled={isAuthenticationLoading || (isAuthenticated && !canPreview) || previewMutation.isPending || applyMutation.isPending}
+        onClick={() => requireAuth(previewRoute)}
       >
         {previewMutation.isPending ? (
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
         ) : (
           <Sparkles className="size-4" aria-hidden="true" />
         )}
-        {previewMutation.isPending ? "Checking the route..." : "Optimize EV route"}
+        {previewMutation.isPending ? "Checking the route..." : isAuthenticated ? "Optimize EV route" : "Sign in for saved-route optimization"}
       </Button>
 
       {!vehicle ? (
@@ -194,7 +196,7 @@ export function EvRouteOptimizationPanel({
         </p>
       ) : !tripId ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          Save this trip before using server optimization.
+          This feature updates a saved trip. You can still add charging stops and estimate battery usage in a guest plan.
         </p>
       ) : null}
 

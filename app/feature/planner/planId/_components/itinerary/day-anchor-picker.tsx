@@ -1,4 +1,6 @@
 "use client";
+import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useSession } from "next-auth/react";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -120,6 +122,8 @@ function PickerBody({
 }: PickerBodyProps) {
   const listId = useId();
   const [pinning, setPinning] = useState(false);
+  const { isAuthenticated, isAuthenticationLoading, requireAuth } = useRequireAuth();
+  const { data: session } = useSession();
   const queryClient = useQueryClient();
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState("");
@@ -133,8 +137,9 @@ function PickerBody({
   }, [query]);
 
   const savedPlaces = useQuery({
-    queryKey: savedPlacesQueryKey,
+    queryKey: [...savedPlacesQueryKey, session?.user?.id],
     queryFn: ({ signal }) => listSavedPlaces(signal),
+    enabled: isAuthenticated,
     staleTime: 60_000,
     retry: 1,
   });
@@ -158,15 +163,15 @@ function PickerBody({
   const savedIds = useMemo(
     () =>
       new Set(
-        (savedPlaces.data ?? [])
+        (isAuthenticated ? savedPlaces.data ?? [] : [])
           .map((place) => place.providerPlaceId)
           .filter((id): id is string => Boolean(id)),
       ),
-    [savedPlaces.data],
+    [isAuthenticated, savedPlaces.data],
   );
 
   const options = useMemo<AnchorOption[]>(() => {
-    const saved = (savedPlaces.data ?? []).map<AnchorOption>((place) => ({
+    const saved = (isAuthenticated ? savedPlaces.data ?? [] : []).map<AnchorOption>((place) => ({
       key: `saved:${place.id}`,
       anchor: savedPlaceToAnchor(place),
       group: "saved",
@@ -202,7 +207,7 @@ function PickerBody({
     }));
 
     return [...saved, ...stops, ...found];
-  }, [savedPlaces.data, dayPlaces, results.data, savedIds]);
+  }, [isAuthenticated, savedPlaces.data, dayPlaces, results.data, savedIds]);
 
   // Clamped on read rather than corrected in an effect, so a shrinking result
   // list can never leave the highlight pointing past the end.
@@ -323,7 +328,7 @@ function PickerBody({
       )}
       {results.isError && (
         <p role="alert" className="text-xs text-destructive">
-          Place search is unavailable right now. Your saved places still work.
+          Place search is unavailable right now. Try again or pin a place on the map.
         </p>
       )}
       {savedPlaces.isError && (
@@ -357,8 +362,9 @@ function PickerBody({
                 key={group.id}
                 className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
               >
-                No saved places yet. Find your home below and use the bookmark
-                button — every trip can then start from it in one tap.
+                {isAuthenticated
+                  ? "No saved places yet. Find your home below and bookmark it for future trips."
+                  : "Search or pin a place for this trip. Sign in to keep favorite places for future trips."}
               </p>
             ) : null;
           }
@@ -426,10 +432,10 @@ function PickerBody({
                     {option.savable && (
                       <button
                         type="button"
-                        disabled={saveToAddressBook.isPending}
+                        disabled={isAuthenticationLoading || saveToAddressBook.isPending}
                         aria-label={`Save ${option.primary} to your places`}
                         onClick={() =>
-                          saveToAddressBook.mutate({
+                          requireAuth(() => saveToAddressBook.mutate({
                             label: option.savable!.label.slice(0, 80),
                             kind: "CUSTOM",
                             name: option.savable!.name.slice(0, 255),
@@ -437,7 +443,7 @@ function PickerBody({
                             providerPlaceId: option.savable!.providerPlaceId,
                             lat: option.anchor.lat,
                             lng: option.anchor.lng,
-                          })
+                          }))
                         }
                         className="flex w-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                       >

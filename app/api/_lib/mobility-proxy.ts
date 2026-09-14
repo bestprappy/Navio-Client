@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import type { Session } from "next-auth";
 import { withAuthenticatedSession } from "./with-authenticated-session";
+import { isPublicPlannerRequest } from "./public-planner-request";
 
 const UPSTREAM_TIMEOUT_MS = 15_000;
 const REQUEST_HEADERS_TO_FORWARD = [
@@ -38,7 +39,8 @@ async function forwardMobilityRequest(
   options: MobilityProxyOptions,
   session: Session | null,
 ): Promise<Response> {
-  if (!session?.accessToken || session.error) {
+  const accessToken = session?.error ? undefined : session?.accessToken;
+  if (!accessToken && !isPublicPlannerRequest(options.method ?? "GET", upstreamPath)) {
     return NextResponse.json(
       { error: "Authentication is required." },
       { status: 401 },
@@ -72,7 +74,7 @@ async function forwardMobilityRequest(
 
   const headers = createUpstreamHeaders(
     request.headers,
-    session.accessToken,
+    accessToken,
   );
 
   try {
@@ -96,8 +98,13 @@ async function forwardMobilityRequest(
     });
   } catch (error) {
     const timedOut = isTimeoutError(error);
+    const cause = error instanceof Error ? error.cause : undefined;
+    const connectionCode = cause && typeof cause === "object" && "code" in cause && typeof cause.code === "string"
+      ? cause.code : "UNKNOWN";
 
-    console.error("Mobility backend request failed.", {
+    // Keep the diagnostic code in the message: some dev loggers serialize
+    // nested Error objects as {}. Never log request credentials or cookies.
+    console.error(`Mobility backend request failed (${connectionCode}).`, {
       component: "MobilityProxy",
       operation: options.method ?? "GET",
       timedOut,
@@ -121,11 +128,10 @@ function normalizeBaseUrl(baseUrl: string): string {
 
 function createUpstreamHeaders(
   requestHeaders: Headers,
-  accessToken: string,
+  accessToken?: string,
 ): Headers {
-  const headers = new Headers({
-    Authorization: `Bearer ${accessToken}`,
-  });
+  const headers = new Headers();
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
 
   for (const headerName of REQUEST_HEADERS_TO_FORWARD) {
     const value = requestHeaders.get(headerName);

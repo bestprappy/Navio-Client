@@ -52,7 +52,7 @@ export function BlockDatePicker({
         aria-label="Itinerary date"
         onClick={(e) => e.stopPropagation()}
         onMouseDown={(e) => e.stopPropagation()}
-        className="rounded-sm bg-transparent px-0 py-1 text-xl font-bold leading-tight text-foreground transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+        className="max-w-full whitespace-normal rounded-sm bg-transparent px-0 py-1 text-left text-xl font-bold leading-tight text-foreground transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
       >
         {displayDate}
       </PopoverTrigger>

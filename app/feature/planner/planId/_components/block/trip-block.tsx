@@ -183,7 +183,7 @@ function TripBlockActions({
   return (
     <div className="mx-0 mt-5 space-y-3">
       <AddPlaceInput blockId={block.id} searchBias={placeSearchBias} />
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2 [&_button]:h-auto [&_button]:min-h-11 [&_button]:whitespace-normal [&_button]:px-2 [&_button]:py-2 [&_button]:leading-snug">
         <Button
           type="button"
           variant="outline"

@@ -9,6 +9,7 @@ type PlannerDetailPageProps = {
   searchParams: Promise<{
     destinationId?: string;
     destinationName?: string;
+    country?: string;
     from?: string;
     to?: string;
     lat?: string;
@@ -27,7 +28,7 @@ export default async function PlannerDetailPage({
   searchParams,
 }: PlannerDetailPageProps) {
   const { planId } = await params;
-  const { destinationId, destinationName, from, to, lat, lng, templatePlanId } =
+  const { destinationId, destinationName, country, from, to, lat, lng, templatePlanId } =
     await searchParams;
 
   const latitude =
@@ -40,6 +41,7 @@ export default async function PlannerDetailPage({
       planId={planId}
       destinationId={destinationId}
       destinationName={destinationName ?? "your destination"}
+      country={country}
       from={from}
       to={to}
       latitude={latitude}

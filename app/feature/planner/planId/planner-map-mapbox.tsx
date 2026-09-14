@@ -42,7 +42,7 @@ import {
   routeLineModeAtom,
   evChargerErrorAtom,
   evChargerLoadingAtom,
-  evChargerResultsAtom,
+  visibleEvChargerResultsAtom,
   selectEvChargerAtom,
   selectedEvChargerIsAddedAtom,
   selectedEvChargerResultAtom,
@@ -120,7 +120,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
     [dayAnchors, selectedTripPlaceMarkers],
   );
   const activeEvCar = useAtomValue(activeEvCarAtom);
-  const evChargerResults = useAtomValue(evChargerResultsAtom);
+  const evChargerResults = useAtomValue(visibleEvChargerResultsAtom);
   const selectedEvChargerResult = useAtomValue(selectedEvChargerResultAtom);
   const selectedEvChargerIsAdded = useAtomValue(selectedEvChargerIsAddedAtom);
   const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);

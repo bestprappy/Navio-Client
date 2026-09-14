@@ -9,7 +9,7 @@ import {
   activePlannerSidePanelAtom,
   addEvChargerToBlockAtom,
   clearEvChargerResultsAtom,
-  evChargerResultsAtom,
+  visibleEvChargerResultsAtom,
   selectEvChargerAtom,
   selectedEvChargerResultAtom,
   selectedTripPlacesAtom,
@@ -17,7 +17,7 @@ import {
 
 export function PlannerSidePanelHost() {
   const activePanel = useAtomValue(activePlannerSidePanelAtom);
-  const evChargerResults = useAtomValue(evChargerResultsAtom);
+  const evChargerResults = useAtomValue(visibleEvChargerResultsAtom);
   const selectedEvChargerResult = useAtomValue(selectedEvChargerResultAtom);
   const selectedTripPlaces = useAtomValue(selectedTripPlacesAtom);
   const addEvChargerToBlock = useSetAtom(addEvChargerToBlockAtom);

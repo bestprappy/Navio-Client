@@ -16,7 +16,7 @@ export function ExploreSection({ destinationName, country }: { destinationName: 
     <Accordion defaultValue={["explore"]}><AccordionItem value="explore" className="border-none">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <AccordionTrigger iconSide="left" className="py-0 text-2xl font-bold hover:no-underline">Explore</AccordionTrigger>
-        <Link href="/explore" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/35 bg-primary/10 px-4 text-sm font-medium text-primary hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-ring">Browse all<ArrowUpRight className="size-4" /></Link>
+        <Link href="/explore" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/35 bg-primary/10 px-4 text-sm font-medium text-primary hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-ring">See more<ArrowUpRight className="size-4" /></Link>
       </div>
       <AccordionContent className="pt-4 [&_a]:no-underline">
         <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"><Compass className="size-4 text-primary" />Explore {country === "Your trip" ? destinationName : country}</p>

@@ -7,6 +7,8 @@ import { AlertCircle, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button.variants";
 import { cn } from "@/lib/utils";
+import { useRequireAuth } from "@/hooks/use-require-auth";
+import { useSession } from "next-auth/react";
 
 import {
   PLANNER_SETUP_HREF,
@@ -24,12 +26,18 @@ const TRIP_PAGE_SIZE = 30;
  * trips; first-time travellers land straight on the setup form.
  */
 export function PlannerHomeView() {
+  const { isAuthenticated, isAuthenticationLoading } = useRequireAuth();
+  const { data: session } = useSession();
   const tripsQuery = useQuery({
-    queryKey: ["planner", "trips", { page: 0, size: TRIP_PAGE_SIZE }],
+    queryKey: ["planner", "trips", { page: 0, size: TRIP_PAGE_SIZE, userId: session?.user?.id }],
     queryFn: () => listTrips(0, TRIP_PAGE_SIZE),
+    enabled: isAuthenticated,
     staleTime: 30_000,
     retry: 1,
   });
+
+  if (isAuthenticationLoading) return <TripDashboardSkeleton />;
+  if (!isAuthenticated) return <PlannerSetupView />;
 
   if (tripsQuery.isPending) {
     return <TripDashboardSkeleton />;

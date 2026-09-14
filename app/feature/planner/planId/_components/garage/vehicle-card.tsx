@@ -37,7 +37,7 @@ export function VehicleCard({
   return (
     <article
       className={cn(
-        "relative rounded-md border bg-card p-4 text-left transition-all",
+        "relative min-w-0 rounded-md border bg-card p-4 text-left transition-all",
         isActive
           ? "border-primary shadow-sm shadow-primary/20"
           : "border-border hover:border-border/80 hover:bg-card/80",
@@ -45,9 +45,9 @@ export function VehicleCard({
     >
       <VehicleMedia car={car} className="mb-3" />
 
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0 basis-24 grow">
+          <p className="break-words text-sm font-semibold text-foreground">
             {car.make} {car.model}
           </p>
           {vehicle.nickname && (
@@ -126,7 +126,7 @@ export function VehicleCard({
 
       {car.sourceUrl && <a href={car.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 block text-xs text-primary underline underline-offset-4">Official specification · checked {car.verifiedAt}</a>}
       {car.sourceUrl && <p className="mt-2 text-xs text-muted-foreground">AI illustration · manufacturer-declared capacity · test range</p>}
-      <Button type="button" variant={isActive ? "secondary" : "outline"} className="mt-4 w-full" aria-pressed={isActive} disabled={disabled || isActive} onClick={onSelect}>
+      <Button type="button" variant={isActive ? "secondary" : "outline"} className="mt-4 h-auto min-h-10 w-full whitespace-normal px-3 py-2 text-center leading-snug" aria-pressed={isActive} disabled={disabled || isActive} onClick={onSelect}>
         {isActive ? "Selected for route estimates" : "Use this vehicle"}
       </Button>
     </article>
@@ -135,7 +135,7 @@ export function VehicleCard({
 
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
-    <div>
+    <div className="min-w-0 break-words">
       <p className="text-[10px] text-muted-foreground">{label}</p>
       <p className="text-xs font-semibold text-foreground">{value}</p>
     </div>

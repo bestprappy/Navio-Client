@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 
 import { proxyAuthenticatedApiRequest } from "@/app/api/_lib/authenticated-api-proxy";
+import { isPublicPlannerRequest } from "@/app/api/_lib/public-planner-request";
 
 type TripProxyContext = {
   params: Promise<{ path?: string[] }>;
@@ -15,6 +16,7 @@ async function proxyTripRequest(
   return proxyAuthenticatedApiRequest(
     request,
     `/v1/trips${upstreamPath}`,
+    { allowAnonymous: isPublicPlannerRequest(request.method, `/v1/trips${upstreamPath}`) },
   );
 }
 
