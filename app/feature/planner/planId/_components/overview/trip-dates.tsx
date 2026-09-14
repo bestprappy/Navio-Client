@@ -1,13 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { DateRange } from "react-day-picker";
+import { useState } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Plus } from "lucide-react";
-import { useAtom } from "jotai";
 
 import { DateRangePicker } from "@/components/date-range-picker";
-import { tripDateRangeAtom } from "./trip-builder.atoms";
+import { useTripDates } from "./use-trip-dates";
 
 type TripDatesProps = {
   initialFrom?: string;
@@ -19,35 +17,10 @@ function formatTripDate(date: Date): string {
 }
 
 export function TripDates({ initialFrom, initialTo }: TripDatesProps) {
-  const [dateRange, setDateRange] = useAtom(tripDateRangeAtom);
-  // only show the picker inline when actively editing (no dates yet, or user clicked to change)
+  const { pickerValue, changeRange, isPending, isError, isReady } = useTripDates(initialFrom, initialTo);
   const [isEditing, setIsEditing] = useState(!initialFrom);
-
-  useEffect(() => {
-    if (initialFrom) {
-      setDateRange({ from: initialFrom, to: initialTo });
-    }
-    // seed on mount only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const parsedFrom = dateRange.from ? new Date(dateRange.from) : undefined;
-  const parsedTo = dateRange.to ? new Date(dateRange.to) : undefined;
-
-  const pickerValue: DateRange | undefined = parsedFrom
-    ? { from: parsedFrom, to: parsedTo }
-    : undefined;
-
-  function handleRangeChange(range: DateRange | undefined) {
-    setDateRange({
-      from: range?.from ? format(range.from, "yyyy-MM-dd") : undefined,
-      to: range?.to ? format(range.to, "yyyy-MM-dd") : undefined,
-    });
-    // only close once the user has picked BOTH ends of the range
-    if (range?.from && range?.to) {
-      setIsEditing(false);
-    }
-  }
+  const parsedFrom = pickerValue?.from;
+  const parsedTo = pickerValue?.to;
 
   const fromLabel = parsedFrom ? formatTripDate(parsedFrom) : null;
   const toLabel = parsedTo ? formatTripDate(parsedTo) : null;
@@ -63,10 +36,13 @@ export function TripDates({ initialFrom, initialTo }: TripDatesProps) {
       <div className="mt-2">
         <DateRangePicker
           value={pickerValue}
-          onChange={handleRangeChange}
+          onChange={(range) => changeRange(range, () => setIsEditing(false))}
+          disabled={isPending || !isReady}
           startPlaceholder="Start date"
           endPlaceholder="End date"
         />
+        {isPending && <p role="status" className="mt-2 text-xs text-muted-foreground">Saving dates...</p>}
+        {isError && <p role="alert" className="mt-2 text-xs text-destructive">Dates could not be saved. Please select your dates again to retry.</p>}
       </div>
     );
   }
