@@ -63,8 +63,10 @@ export function CommunityPostCard({
     ? (group?.postFlairs.find((item) => item.id === post.flairId) ?? null)
     : null;
   const archived = group?.status === "archived";
-  const canWrite = Boolean(group?.joined) && !archived;
   const isAuthor = identity === post.authorId;
+  // The home feed only loads one page of groups, so a post's group may be unknown here.
+  // Authors still get their controls; the service rejects them if they are no longer a member.
+  const canWrite = group ? Boolean(group.joined) && !archived : isAuthor;
   const isModerator = group?.role === "admin" || group?.role === "moderator";
 
   function openPost() {

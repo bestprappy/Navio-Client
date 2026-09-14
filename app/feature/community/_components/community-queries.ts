@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useCommunityIdentity } from "./community-group-queries";
-import { listPosts, postRequest, postSchema, commentSchema } from "./community-post-api";
+import { getDeletedPostId, isDeletedPostQuery, listPosts, postRequest, postSchema, commentSchema } from "./community-post-api";
 import { pageSchema } from "./community-api";
 import type { CommunityFeedSort } from "./data";
 
@@ -49,10 +49,14 @@ export function usePostMutation() {
   return useMutation({
     mutationFn: ({ path, method, body }: { path: string; method: string; body?: unknown }) =>
       postRequest(path, method === "DELETE" ? z.null() : z.union([postSchema, commentSchema]), { method, body }),
-    onSuccess: (_data, variables) => client.invalidateQueries({
-      queryKey: ["community"],
-      // The editor navigates away after deletion; avoid briefly refetching a post that no longer exists.
-      refetchType: variables.method === "DELETE" && variables.path.split("/").length === 2 ? "none" : "active",
-    }),
+    onSuccess: (_data, variables) => {
+      const deletedPostId = getDeletedPostId(variables);
+      return client.invalidateQueries({
+        queryKey: ["community"],
+        // Refresh feeds so a deleted post drops out, but never refetch the deleted post itself:
+        // the detail page navigates away and would otherwise flash a not-found error.
+        predicate: (query) => !isDeletedPostQuery(query.queryKey, deletedPostId),
+      });
+    },
   });
 }
