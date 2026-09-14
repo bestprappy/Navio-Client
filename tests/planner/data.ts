@@ -2,9 +2,10 @@ import type { TripResponse, PlannerSnapshot } from "../../app/feature/planner/_c
 import type { EvCharger } from "../../app/feature/planner/planId/_components/constants/types";
 
 export const drawerTrip: TripResponse = {
-  id: "a1000000-0000-4000-8000-000000000014", displayName: "Drawer test trip",
+  id: "a1000000-0000-4000-8000-000000000014", displayName: "Drawer test trip", title: "Drawer test trip",
   startDate: "2026-09-01", endDate: "2026-09-20", destinationId: "bangkok", destinationName: "Bangkok",
-  destinationCountry: "Thailand", destinationLat: 13.75, destinationLng: 100.5, visibility: "PRIVATE",
+  destinationCountry: "Thailand", destinationCity: "Bangkok", destinationRegion: "Bangkok",
+  destinationCountryCode: "TH", destinationLat: 13.75, destinationLng: 100.5, visibility: "PRIVATE",
   createdAt: "2026-09-14T00:00:00Z", updatedAt: "2026-09-14T00:00:00Z",
 };
 export const drawerSnapshot: PlannerSnapshot = {

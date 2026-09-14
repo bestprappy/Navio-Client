@@ -6,7 +6,6 @@ import { createGuestTrip, guestTripAtom, isGuestPlanner } from "../_components/g
 import { GuestPlanNotice } from "../_components/guest-plan-notice";
 
 import { useTripMetadata } from "../_components/use-trip-metadata";
-import { getTripCountry } from "../_components/trip-destinations";
 import { PlannerWorkspace } from "./_components/layout/planner-workspace";
 import { ExploreSection } from "./_components/explore/explore-section";
 import { GarageSection } from "./_components/garage/garage-section";
@@ -50,7 +49,6 @@ export function PlannerDetail({
   const guest = isGuestPlanner(planId, isAuthenticated);
   const today = new Date().toISOString().slice(0, 10);
   useHydrateAtoms([[guestTripAtom, guest ? createGuestTrip({
-    displayName: country || destinationName, destinationCountry: country,
     destinationId: destinationId || "", destinationName,
     destinationLat: latitude, destinationLng: longitude,
     startDate: from || today, endDate: to || from || today,
@@ -73,7 +71,7 @@ export function PlannerDetail({
           />
           <ExploreSection
             destinationName={tripDestinationName}
-            country={getTripCountry({ destinationName: tripDestinationName, destinationCountry: metadata.data?.destinationCountry ?? null })}
+            country={metadata.data?.destinationCountry ?? country ?? ""}
           />
 
           <TripBuilderErrorBoundary>

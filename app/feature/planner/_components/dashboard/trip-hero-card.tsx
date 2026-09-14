@@ -27,7 +27,6 @@ import { useTripPlanStats } from "./use-trip-plan-stats";
 import { TripNameEditor } from "../../planId/_components/overview/trip-name-editor";
 import { TripScenery } from "./scenery";
 import { TripDestinationLabel } from "./trip-destination-label";
-import { getTripCountry } from "../trip-destinations";
 
 type TripHeroCardProps = {
   trip: TripResponse;
@@ -57,7 +56,7 @@ export function TripHeroCard({ trip, className }: TripHeroCardProps) {
     >
       <div className="relative flex flex-col">
         <header className="relative isolate flex min-h-60 flex-col justify-center gap-4 overflow-hidden border-b border-border p-5 sm:p-7">
-          <TripScenery destinations={[...destinations, getTripCountry(trip)]} />
+          <TripScenery destinations={[...destinations, trip.destinationCountry ?? ""]} />
           <div className="relative z-10 flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <TripStatusBadge status={status} />

@@ -102,7 +102,7 @@ export function ItinerarySection({
   }
   async function changeDestination(blockId: string, destination: TripDestination | null) {
     if (blockId === firstBlockId && destination) {
-      await updateMetadata.mutateAsync({ destinationId: destination.id, destinationName: destination.name, destinationLat: destination.lat, destinationLng: destination.lng, destinationCountry: destination.country });
+      await updateMetadata.mutateAsync({ destinationId: destination.id, destinationName: destination.name, destinationLat: destination.lat, destinationLng: destination.lng });
     }
     setBlocks((current) => current.map((block) => block.id === blockId ? { ...block, destination } : block));
   }

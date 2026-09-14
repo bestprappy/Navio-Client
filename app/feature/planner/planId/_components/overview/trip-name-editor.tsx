@@ -2,7 +2,6 @@
 
 import { useId, useMemo, useRef } from "react";
 import type { TripResponse } from "@/app/feature/planner/_components/planner-api";
-import { getTripDisplayName } from "@/app/feature/planner/_components/trip-destinations";
 import { atom, useAtom } from "jotai";
 import { Check, Loader2, Pencil, X } from "lucide-react";
 
@@ -28,7 +27,7 @@ export function TripNameEditor({ planId, destinationName, trip, heading: Heading
   const tripQuery = useTripMetadata(planId);
   const renameMutation = useUpdateTripMetadata(planId);
   const currentTrip = tripQuery.data ?? trip;
-  const title = currentTrip ? getTripDisplayName(currentTrip) : destinationName;
+  const title = currentTrip ? currentTrip.title ?? "Untitled trip" : destinationName;
 
   function closeEditor() {
     setDraft(null);

@@ -81,6 +81,18 @@ export async function fetchDestinationSuggestions(
   }));
 }
 
+// Trips are stored against a provider place so the server can resolve the
+// city and country. Premade plans only carry a name, so look that name up.
+export async function resolveDestinationPlaceId(name: string): Promise<string> {
+  const query = name.trim();
+  if (!query) throw new Error("A destination name is required.");
+  const [match] = await fetchDestinationSuggestions(query);
+  if (!match?.providerPlaceId) {
+    throw new Error(`No destination matched "${query}".`);
+  }
+  return match.providerPlaceId;
+}
+
 export async function fetchDestinationCoordinates(
   providerPlaceId: string,
   provider: PlaceProvider,

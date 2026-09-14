@@ -7,12 +7,21 @@ export function isGuestPlanner(planId: string | undefined, authenticated: boolea
   return !!planId && (planId.startsWith("guest-") || (!authenticated && !isPersistedTripId(planId)));
 }
 
-export function createGuestTrip(payload: CreateTripPayload, id = `guest-${crypto.randomUUID()}`): TripResponse {
+export type GuestTripPayload = CreateTripPayload & {
+  destinationName: string;
+  destinationLat?: number;
+  destinationLng?: number;
+};
+
+export function createGuestTrip(payload: GuestTripPayload, id = `guest-${crypto.randomUUID()}`): TripResponse {
   const now = new Date().toISOString();
   return {
     ...payload, id, destinationLat: payload.destinationLat ?? null,
     destinationLng: payload.destinationLng ?? null,
-    destinationCountry: payload.destinationCountry ?? null,
+    displayName: payload.displayName ?? null,
+    title: payload.displayName ?? payload.destinationName,
+    destinationCountry: null, destinationCity: null,
+    destinationRegion: null, destinationCountryCode: null,
     visibility: "PRIVATE", createdAt: now, updatedAt: now,
   };
 }

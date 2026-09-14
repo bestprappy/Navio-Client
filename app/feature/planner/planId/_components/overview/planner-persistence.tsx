@@ -9,7 +9,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { readPlannerDraft, writePlannerDraft, clearPlannerDraft } from "@/app/feature/planner/_components/planner-draft";
 import { useTripMetadata } from "@/app/feature/planner/_components/use-trip-metadata";
-import { getTripCountry } from "@/app/feature/planner/_components/trip-destinations";
 import { ensureItineraryDays } from "../itinerary/itinerary-days";
 import { tripMetadataPlannerVersionAtom } from "@/app/feature/planner/_components/trip-metadata-sync.atoms";
 import {
@@ -18,8 +17,10 @@ import {
   createTrip,
   PlannerApiError,
   savePlannerSnapshot,
+  type CreateTripPayload,
   type PlannerSnapshot,
 } from "@/app/feature/planner/_components/planner-api";
+import { resolveDestinationPlaceId } from "@/app/feature/planner/_components/destination-api";
 
 import {
   activeBlockIdAtom,
@@ -51,6 +52,11 @@ type PlannerPersistenceProps = {
 
 type SyncStatus = "loading" | "saved" | "saved-local" | "saving" | "error";
 
+type MissingTripRequest = Omit<CreateTripPayload, "destinationId"> & {
+  destinationId?: string;
+  destinationName: string;
+};
+
 type SaveVariables = {
   state: PlannerState;
   serialized: string;
@@ -68,8 +74,6 @@ export function PlannerPersistence({
   destinationName,
   from,
   to,
-  latitude,
-  longitude,
   templatePlanId,
 }: PlannerPersistenceProps) {
   const router = useRouter();
@@ -129,7 +133,11 @@ export function PlannerPersistence({
   const serverBlockCount = plannerQuery.data?.blocks.length ?? 0;
 
   const createMissingTripMutation = useMutation({
-    mutationFn: createTrip,
+    mutationFn: async ({ destinationName: name, ...payload }: MissingTripRequest) =>
+      createTrip({
+        ...payload,
+        destinationId: payload.destinationId ?? await resolveDestinationPlaceId(name),
+      }),
     retry: 1,
     onMutate: () => setStatus("loading"),
     onSuccess: (trip) => {
@@ -247,23 +255,17 @@ export function PlannerPersistence({
 
     const today = formatDate(new Date());
     createMissingTrip({
-      displayName: getTripCountry({ destinationName, destinationCountry: null }),
       startDate: toDateOnly(from) ?? today,
       endDate: toDateOnly(to) ?? toDateOnly(from) ?? today,
-      destinationId: destinationId ?? templatePlanId ?? planId,
+      destinationId,
       destinationName,
-      destinationLat: latitude,
-      destinationLng: longitude,
     });
   }, [
     createMissingTrip,
     destinationId,
     destinationName,
     from,
-    latitude,
-    longitude,
     planId,
-    templatePlanId,
     to,
   ]);
 

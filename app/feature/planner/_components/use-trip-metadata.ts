@@ -42,6 +42,7 @@ export function useUpdateTripMetadata(planId?: string) {
     mutationFn: async (update: TripMetadataUpdate) => {
       if (guest && guestTrip) {
         const trip = { ...guestTrip, ...update, updatedAt: new Date().toISOString() };
+        trip.title = trip.displayName ?? trip.destinationName;
         setGuestTrip(trip);
         return trip;
       }

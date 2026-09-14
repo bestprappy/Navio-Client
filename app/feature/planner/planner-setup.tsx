@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useMutation } from "@tanstack/react-query";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { createGuestTrip } from "./_components/guest-planner";
-import type { CreateTripPayload } from "./_components/planner-api";
+import { createGuestTrip, type GuestTripPayload } from "./_components/guest-planner";
 
 import { PlannerSetupActions } from "./_components/planner-setup.actions";
 import { createTrip } from "./_components/planner-api";
@@ -29,7 +28,9 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
   const setValidationError = useSetAtom(destinationValidationErrorAtom);
   const setIsCreatingTrip = useSetAtom(isCreatingTripAtom);
   const createTripMutation = useMutation({
-    mutationFn: (payload: CreateTripPayload) => isAuthenticated ? createTrip(payload) : Promise.resolve(createGuestTrip(payload)),
+    mutationFn: (payload: GuestTripPayload) => isAuthenticated
+      ? createTrip({ destinationId: payload.destinationId, startDate: payload.startDate, endDate: payload.endDate })
+      : Promise.resolve(createGuestTrip(payload)),
     onMutate: () => {
       setValidationError(null);
       setIsCreatingTrip(true);
@@ -82,8 +83,6 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
     const startDate = dateRange?.from ?? today;
     const endDate = dateRange?.to ?? startDate;
     createTripMutation.mutate({
-      displayName: selectedDestination.country || selectedDestination.name,
-      destinationCountry: selectedDestination.country || undefined,
       startDate: formatDate(startDate),
       endDate: formatDate(endDate),
       destinationId: selectedDestination.id,

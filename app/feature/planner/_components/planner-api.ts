@@ -31,19 +31,19 @@ const EV_CONNECTOR_TYPES = new Set<EvConnectorType>([
 ]);
 
 export type CreateTripPayload = {
-  displayName: string;
+  displayName?: string;
   startDate: string;
   endDate: string;
   destinationId: string;
-  destinationName: string;
-  destinationLat?: number;
-  destinationLng?: number;
-  destinationCountry?: string;
 };
 
 export type TripResponse = {
   id: string;
-  displayName: string;
+  displayName: string | null;
+  title: string | null;
+  destinationCity: string | null;
+  destinationRegion: string | null;
+  destinationCountryCode: string | null;
   startDate: string;
   endDate: string;
   destinationId: string;
@@ -511,7 +511,11 @@ export function isTripResponse(value: unknown): value is TripResponse {
   return (
     isRecord(value) &&
     typeof value.id === "string" &&
-    typeof value.displayName === "string" &&
+    isNullableString(value.displayName) &&
+    isNullableString(value.title) &&
+    isNullableString(value.destinationCity) &&
+    isNullableString(value.destinationRegion) &&
+    isNullableString(value.destinationCountryCode) &&
     typeof value.startDate === "string" &&
     typeof value.endDate === "string" &&
     typeof value.destinationId === "string" &&
