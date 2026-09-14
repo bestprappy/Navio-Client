@@ -32,6 +32,17 @@ export function postRequest<T>(path: string, schema: z.ZodType<T>, init?: { meth
   return communityRequest(path, schema, init, signal, "posts");
 }
 
+/** The id of the post a mutation removes, or null when it edits, votes or touches a comment. */
+export function getDeletedPostId({ path, method }: { path: string; method: string }) {
+  const segments = path.split("/").filter(Boolean);
+  return method === "DELETE" && segments.length === 1 ? segments[0] : null;
+}
+
+/** Queries that would 404 if refetched after their post was deleted. */
+export function isDeletedPostQuery(queryKey: readonly unknown[], deletedPostId: string | null) {
+  return deletedPostId !== null && (queryKey[2] === "post" || queryKey[2] === "comments") && queryKey[3] === deletedPostId;
+}
+
 export function listPosts(query: string, sort: string, page: number, group?: string, signal?: AbortSignal) {
   const params = new URLSearchParams({ q: query.trim().slice(0, 200), sort, page: String(page), size: "20" });
   if (group) params.set("group", group);

@@ -7,7 +7,7 @@ registerHooks({ resolve(specifier, context, next) {
   if (specifier === "./community-api") return next(`${specifier}.ts`,context);
   return next(specifier,context);
 } });
-const { createPost, listPosts, postSchema, postFormSchema } = await import("../../app/feature/community/_components/community-post-api.ts");
+const { createPost, getDeletedPostId, isDeletedPostQuery, listPosts, postSchema, postFormSchema } = await import("../../app/feature/community/_components/community-post-api.ts");
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
 
@@ -48,6 +48,23 @@ test("null and malformed post responses are rejected",() => {
   assert.equal(postSchema.safeParse(null).success,false);
   assert.equal(postSchema.safeParse({...postFixture,commentCount:-1}).success,false);
   assert.equal(postSchema.safeParse({...postFixture,viewerVote:5}).success,false);
+});
+
+test("only a post delete is recognised as removing a post",() => {
+  const id = postFixture.id;
+  assert.equal(getDeletedPostId({path:`/${id}`,method:"DELETE"}),id);
+  assert.equal(getDeletedPostId({path:`/${id}`,method:"PATCH"}),null);
+  assert.equal(getDeletedPostId({path:`/${id}/comments/${id}`,method:"DELETE"}),null);
+  assert.equal(getDeletedPostId({path:`/${id}/vote`,method:"PUT"}),null);
+});
+
+test("deleting a post still refreshes feeds but skips the deleted post and its comments",() => {
+  const id = postFixture.id;
+  assert.equal(isDeletedPostQuery(["community","user","post",id],id),true);
+  assert.equal(isDeletedPostQuery(["community","user","comments",id],id),true);
+  assert.equal(isDeletedPostQuery(["community","user","posts","","new","all"],id),false);
+  assert.equal(isDeletedPostQuery(["community","user","post","other"],id),false);
+  assert.equal(isDeletedPostQuery(["community","user","post",id],null),false);
 });
 
 test("managed image URLs are mapped to the authenticated same-origin proxy",() => {
