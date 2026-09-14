@@ -1,5 +1,10 @@
 "use client";
 
+import { useHydrateAtoms } from "jotai/utils";
+import { useRequireAuth } from "@/hooks/use-require-auth";
+import { createGuestTrip, guestTripAtom, isGuestPlanner } from "../_components/guest-planner";
+import { GuestPlanNotice } from "../_components/guest-plan-notice";
+
 import { useTripMetadata } from "../_components/use-trip-metadata";
 import { getTripCountry } from "../_components/trip-destinations";
 import { PlannerWorkspace } from "./_components/layout/planner-workspace";
@@ -22,6 +27,7 @@ type PlannerDetailProps = {
   planId?: string;
   destinationId?: string;
   destinationName: string;
+  country?: string;
   from?: string;
   to?: string;
   latitude: number;
@@ -33,12 +39,22 @@ export function PlannerDetail({
   planId,
   destinationId,
   destinationName,
+  country,
   from,
   to,
   latitude,
   longitude,
   templatePlanId,
 }: PlannerDetailProps) {
+  const { isAuthenticated } = useRequireAuth();
+  const guest = isGuestPlanner(planId, isAuthenticated);
+  const today = new Date().toISOString().slice(0, 10);
+  useHydrateAtoms([[guestTripAtom, guest ? createGuestTrip({
+    displayName: country || destinationName, destinationCountry: country,
+    destinationId: destinationId || "", destinationName,
+    destinationLat: latitude, destinationLng: longitude,
+    startDate: from || today, endDate: to || from || today,
+  }, planId) : null]]);
   const metadata = useTripMetadata(planId);
   const tripDestinationName = metadata.data?.destinationName ?? destinationName;
   const tripLatitude = metadata.data?.destinationLat ?? latitude;
@@ -46,6 +62,7 @@ export function PlannerDetail({
   return (
     <GarageProvider>
     <PlannerWorkspace itinerary={<>
+          {guest && <GuestPlanNotice />}
           <TripHero destinationName={tripDestinationName} />
           <TripInfoCard
             planId={planId}
@@ -83,12 +100,13 @@ export function PlannerDetail({
 
 </>} map={<TripBuilderErrorBoundary><PlannerMap latitude={tripLatitude} longitude={tripLongitude} /></TripBuilderErrorBoundary>} details={<PlannerSidePanelHost />}>
       <PlannerTemplateHydrator
+        guest={guest}
         planId={planId}
         templatePlanId={templatePlanId}
         from={from}
         to={to}
       />
-      <PlannerPersistence
+      {!guest && isAuthenticated && <PlannerPersistence
         planId={planId}
         destinationId={destinationId}
         destinationName={destinationName}
@@ -97,7 +115,7 @@ export function PlannerDetail({
         latitude={latitude}
         longitude={longitude}
         templatePlanId={templatePlanId}
-      />
+      />}
       <DayNavSidebar />
     </PlannerWorkspace>
     </GarageProvider>

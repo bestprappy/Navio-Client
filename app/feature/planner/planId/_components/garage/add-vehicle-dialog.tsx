@@ -12,11 +12,11 @@ import type { CatalogVehicle, VehicleCommand } from "./vehicle-api";
 import { estimateCatalogConsumption } from "./vehicle-mappers";
 
 export function AddVehicleDialog({ onClose }: { onClose: () => void }) {
-  const [mode, setMode] = useState<"catalog" | "custom">("catalog");
+  const { mutation, authenticated } = useGarage();
+  const [mode, setMode] = useState<"catalog" | "custom">(authenticated ? "catalog" : "custom");
   const [selected, setSelected] = useState<CatalogVehicle | null>(null);
   const [knowsConsumption, setKnowsConsumption] = useState(false);
   const [consumption, setConsumption] = useState("");
-  const { mutation } = useGarage();
   const estimatedConsumption = selected ? estimateCatalogConsumption(selected) : null;
   const consumptionToSave = knowsConsumption ? Number(consumption) : estimatedConsumption;
   const validConsumption = consumptionToSave !== null && Number.isFinite(consumptionToSave) && consumptionToSave > 0 && consumptionToSave <= 99999.999;
@@ -35,12 +35,12 @@ export function AddVehicleDialog({ onClose }: { onClose: () => void }) {
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl" showCloseButton={!mutation.isPending}>
         <DialogHeader>
           <DialogTitle>Add your EV</DialogTitle>
-          <DialogDescription>Choose a Thailand specification or enter your own. Your garage is saved to your account.</DialogDescription>
+          <DialogDescription>{authenticated ? "Choose a Thailand specification or enter your own. Your garage is saved to your account." : "Enter your EV specifications for this guest plan. This vehicle will not be saved."}</DialogDescription>
         </DialogHeader>
-        <div className="flex gap-2" aria-label="Vehicle source">
+        {authenticated && <div className="flex gap-2" aria-label="Vehicle source">
           <Button variant={mode === "catalog" ? "default" : "outline"} aria-pressed={mode === "catalog"} disabled={mutation.isPending} onClick={() => setMode("catalog")}>Thailand catalogue</Button>
           <Button variant={mode === "custom" ? "default" : "outline"} aria-pressed={mode === "custom"} disabled={mutation.isPending} onClick={() => setMode("custom")}>Custom EV</Button>
-        </div>
+        </div>}
         {mutation.isError && <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{mutation.error.message}</p>}
         {mode === "catalog" ? <form className="grid gap-4" onSubmit={(event) => {
           event.preventDefault();
@@ -72,7 +72,7 @@ export function AddVehicleDialog({ onClose }: { onClose: () => void }) {
             <Button type="button" variant="ghost" onClick={onClose} disabled={mutation.isPending}>Cancel</Button>
             <Button type="submit" disabled={!selected || !validConsumption || mutation.isPending}>{mutation.isPending ? "Saving…" : "Save to garage"}</Button>
           </div>
-        </form> : <CustomVehicleForm onSave={(vehicle) => save({ kind: "custom", vehicle })} onCancel={onClose} pending={mutation.isPending} />}
+        </form> : <CustomVehicleForm submitLabel={authenticated ? "Save custom EV" : "Use for this trip"} onSave={(vehicle) => save({ kind: "custom", vehicle })} onCancel={onClose} pending={mutation.isPending} />}
       </DialogContent>
     </Dialog>
   );

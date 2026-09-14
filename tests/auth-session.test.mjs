@@ -18,7 +18,7 @@ registerHooks({
     if (specifier.startsWith("@/")) {
       return nextResolve(new URL(`../${specifier.slice(2)}.ts`, import.meta.url).href, context);
     }
-    if (specifier === "./with-authenticated-session") {
+    if (["./with-authenticated-session", "./public-planner-request", "./upload-request"].includes(specifier)) {
       return nextResolve(`${specifier}.ts`, context);
     }
     if (["next/server", "next/headers", "next/navigation"].includes(specifier)) {
@@ -176,7 +176,7 @@ test("directions forwards its JSON after authentication without consuming the bo
     calls++;
     assert.equal(String(url), "http://gateway.test/v1/routes/directions");
     assert.equal(options.method, "POST");
-    assert.equal(options.headers.get("authorization"), "Bearer route-access");
+    assert.equal(options.headers.get("authorization"), calls === 1 ? null : "Bearer route-access");
     assert.equal(options.headers.get("content-type"), "application/json");
     assert.equal(options.body, body);
     return Response.json(result);
@@ -185,10 +185,56 @@ test("directions forwards its JSON after authentication without consuming the bo
     method: "POST", body,
     headers: { "content-type": "application/json", ...(authenticated ? { cookie: `${cookieName}=${cookie}` } : {}) },
   });
-  assert.equal((await directions(request(false))).status, 401);
-  assert.equal(calls, 0);
+  assert.equal((await directions(request(false))).status, 200);
+  assert.equal(calls, 1);
   const response = await directions(request(true));
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), result);
-  assert.equal(calls, 1);
+  assert.equal(calls, 2);
+});
+
+test("guest planning reads work without credentials; saved trips and account writes remain protected", async () => {
+  const { proxyMobilityRequest } = await import("../app/api/_lib/mobility-proxy.ts");
+  const { GET, POST, PUT } = await import("../app/api/trips/[[...path]]/route.ts");
+  const { proxyAuthenticatedApiRequest } = await import("../app/api/_lib/authenticated-api-proxy.ts");
+  process.env.NAVIO_API_BASE_URL = "http://gateway.test";
+  const forwarded = [];
+  globalThis.fetch = async (url, options) => {
+    assert.equal(options.headers.get("authorization"), null);
+    assert.equal(options.headers.get("cookie"), null);
+    assert.equal(options.headers.get("x-user-id"), null);
+    forwarded.push(String(url));
+    return Response.json({ ok: true });
+  };
+  const req = (method = "GET") => new NextRequest("http://localhost:3000/api/test", { method, headers: { "x-user-id": "forged", authorization: "Bearer forged" } });
+  assert.equal((await proxyMobilityRequest(req(), "/v1/geo/places/autocomplete?q=Bangkok")).status, 200);
+  assert.equal((await proxyMobilityRequest(req(), "/v1/ev/chargers/near?lat=13&lng=100")).status, 200);
+  assert.equal((await GET(req(), { params: Promise.resolve({ path: ["currencies", "rate"] }) })).status, 200);
+  for (const path of [[], ["trip-id"], ["trip-id", "planner"]]) {
+    for (const [method, handler] of [["GET", GET], ["POST", POST], ["PUT", PUT]]) {
+      assert.equal((await handler(req(method), { params: Promise.resolve({ path }) })).status, 401);
+    }
+  }
+  for (const path of ["/v1/posts", "/v1/posts/id/vote", "/v1/users/me/places", "/v1/users/me/vehicles"]) {
+    assert.equal((await proxyAuthenticatedApiRequest(req("POST"), path)).status, 401);
+  }
+  assert.equal((await POST(req("POST"), { params: Promise.resolve({ path: ["currencies", "rate"] }) })).status, 401);
+  assert.equal(forwarded.length, 3, "protected operations must never reach the upstream service");
+});
+
+test("connection failures retain a safe diagnostic code without exposing request credentials", async () => {
+  const { proxyMobilityRequest } = await import("../app/api/_lib/mobility-proxy.ts");
+  process.env.NAVIO_API_BASE_URL = "http://gateway.test";
+  globalThis.fetch = async () => { throw new Error("fetch failed", { cause: Object.assign(new Error("connection blocked"), { code: "EACCES" }) }); };
+  const originalError = console.error;
+  const messages = [];
+  console.error = (message) => messages.push(message);
+  try {
+    const response = await proxyMobilityRequest(new NextRequest("http://localhost:3000/api/geo/places/destinations?query=Bang"), "/v1/geo/places/autocomplete?query=Bang&scope=DESTINATION");
+    assert.equal(response.status, 502);
+    assert.deepEqual(await response.json(), { error: "The mobility service is temporarily unavailable." });
+    assert.deepEqual(messages, ["Mobility backend request failed (EACCES)."]);
+  } finally {
+    console.error = originalError;
+  }
 });

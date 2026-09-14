@@ -221,7 +221,7 @@ function AnchorRow({ edge, withConnector = false }: AnchorRowProps) {
               </Badge>
             )}
           </span>
-          <span className="block truncate text-sm font-semibold text-foreground">
+          <span className="block break-words text-sm font-semibold leading-snug text-foreground">
             {anchor?.name ?? emptyLabel}
           </span>
           {anchor?.address && (

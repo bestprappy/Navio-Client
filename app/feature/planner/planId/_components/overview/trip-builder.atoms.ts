@@ -1,4 +1,7 @@
 import { atom } from "jotai";
+import { activeVehicleAtom } from "../garage/garage.atoms";
+import { getVehicleCar } from "../constants/vehicle.data";
+import { isCompatible } from "../garage/ev-calculator";
 import { getDayPlacePositions, placeItemToAnchor, resolveDayAnchors } from "../itinerary/day-anchors";
 
 import { currencyOptions, getCurrencyOption } from "../budget/budget.data";
@@ -401,6 +404,14 @@ export const activePlannerSidePanelAtom = atom<ActivePlannerSidePanel | null>(
 );
 export const openBlockIdsAtom = atom<string[]>([]);
 export const evChargerResultsAtom = atom<EvChargerMapResult[]>([]);
+export const compatibleChargersOnlyAtom = atom(false);
+export const visibleEvChargerResultsAtom = atom((get) => {
+  const results = get(evChargerResultsAtom);
+  if (!get(compatibleChargersOnlyAtom)) return results;
+  const vehicle = get(activeVehicleAtom);
+  const car = vehicle ? getVehicleCar(vehicle) : null;
+  return car ? results.filter(({ charger }) => isCompatible(car.connectorTypes, charger.connectorTypes)) : [];
+});
 export const selectedEvChargerIdAtom = atom<string | null>(null);
 export const selectedTripPlaceItemIdAtom = atom<string | null>(null);
 export const selectedTripPlaceItemIdReadonlyAtom = atom((get) =>
@@ -531,7 +542,7 @@ export const selectedEvChargerResultAtom = atom((get) => {
   }
 
   return (
-    get(evChargerResultsAtom).find(
+    get(visibleEvChargerResultsAtom).find(
       (result) => result.charger.id === selectedId,
     ) ?? null
   );

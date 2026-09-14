@@ -40,7 +40,7 @@ export function PlanCardHorizontal({
   variant = "default",
 }: PlanCardHorizontalProps) {
   const router = useRouter();
-  const { requireAuth } = useRequireAuth();
+  const { requireAuth, isAuthenticationLoading } = useRequireAuth();
   const href = getPlanHref(plan);
   const copyHref = getPlanCopyHref(plan);
   const discussionHref = getPlanDiscussionHref(plan);
@@ -83,6 +83,7 @@ export function PlanCardHorizontal({
           <button
             type="button"
             aria-pressed={isSaved}
+            disabled={isAuthenticationLoading}
             aria-label={isSaved ? "Saved" : "Save"}
             onClick={(event) => {
               event.preventDefault();
@@ -186,6 +187,7 @@ export function PlanCardHorizontal({
             <button
               type="button"
               aria-pressed={isLiked}
+              disabled={isAuthenticationLoading}
               onClick={() =>
                 requireAuth(() => setIsLiked((prev) => !prev))
               }

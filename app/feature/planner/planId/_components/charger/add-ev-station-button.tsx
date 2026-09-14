@@ -145,7 +145,7 @@ export function AddEvStationButton({
       onClick={openStationList}
     >
       <Zap className="size-4" aria-hidden="true" />
-      <span className="truncate">
+      <span className="whitespace-normal">
         {isLoadingEvChargers ? "Finding EV stations..." : "Add EV station"}
       </span>
     </Button>

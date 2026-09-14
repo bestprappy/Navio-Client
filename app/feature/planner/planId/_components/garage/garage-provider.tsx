@@ -3,7 +3,9 @@
 import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
-import { useStore } from "jotai";
+import { useAtom, useStore } from "jotai";
+import { applyGuestVehicleCommand, guestVehiclesAtom } from "./guest-vehicles";
+import type { VehicleCommand } from "./vehicle-api";
 
 import { garageActiveIdSnapshotAtom, garageModalOpenAtom, garageVehiclesSnapshotAtom } from "./garage.atoms";
 import { executeVehicleCommand, listVehicles, VehicleApiError, type SavedVehicle } from "./vehicle-api";
@@ -15,6 +17,7 @@ function useGarageState() {
   const authenticated = status === "authenticated" && Boolean(userId) && !session?.error;
   const queryClient = useQueryClient();
   const store = useStore();
+  const [guestVehicles, setGuestVehicles] = useAtom(guestVehiclesAtom);
   const queryKey = ["garage", userId] as const;
   const query = useQuery({
     queryKey, queryFn: ({ signal }) => listVehicles(signal), enabled: authenticated,
@@ -23,10 +26,17 @@ function useGarageState() {
   });
   const mutation = useMutation({
     mutationKey: ["garage-write", userId],
-    mutationFn: executeVehicleCommand,
+    mutationFn: async (command: VehicleCommand) => {
+      if (status === "loading") throw new Error("Wait for your session to finish loading.");
+      if (authenticated) return executeVehicleCommand(command);
+      const next = applyGuestVehicleCommand(store.get(guestVehiclesAtom), command);
+      setGuestVehicles(next);
+      return command.kind === "delete" ? null : next[next.length - 1];
+    },
     scope: { id: `garage-${userId}` },
     onMutate: async () => { await queryClient.cancelQueries({ queryKey }); },
     onSuccess: async (saved, command) => {
+      if (!authenticated) return;
       // Apply the confirmed server response even if the subsequent refresh fails.
       queryClient.setQueryData<SavedVehicle[]>(queryKey, (current = []) => {
         if (command.kind === "delete") return current.filter((vehicle) => vehicle.id !== command.id);
@@ -39,7 +49,7 @@ function useGarageState() {
     },
     onError: (error) => { console.error("Could not save garage changes.", { component: "GarageProvider", error }); },
   });
-  const vehicles = useMemo(() => authenticated ? query.data ?? [] : [], [authenticated, query.data]);
+  const vehicles = useMemo(() => authenticated ? query.data ?? [] : guestVehicles, [authenticated, query.data, guestVehicles]);
   useLayoutEffect(() => {
     store.set(garageVehiclesSnapshotAtom, vehicles.map(savedVehicleForPlanner));
     store.set(garageActiveIdSnapshotAtom, vehicles.find((vehicle) => vehicle.isDefault)?.id ?? null);

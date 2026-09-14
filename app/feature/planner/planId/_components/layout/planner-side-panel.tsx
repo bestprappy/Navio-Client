@@ -1,6 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { useAtom } from "jotai";
+import { atomWithStorage } from "jotai/utils";
+import styles from "./planner-workspace.module.css";
 import {
   createContext,
   useContext,
@@ -13,6 +16,9 @@ import { ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const evDrawerWidthAtom = atomWithStorage("navio:ev-drawer-width", 30);
+const clampWidth = (value: number) => Math.max(24, Math.min(55, Number.isFinite(value) ? value : 30));
 
 type PlannerSidePanelContextValue = {
   title: ReactNode;
@@ -42,6 +48,7 @@ type PlannerSidePanelRootProps = {
   children: ReactNode;
   onBack: () => void;
   className?: string;
+  resizable?: boolean;
 };
 
 function getFirstFocusableElement(panel: HTMLElement): HTMLElement | null {
@@ -64,7 +71,10 @@ function PlannerSidePanelRoot({
   children,
   onBack,
   className,
+  resizable = false,
 }: PlannerSidePanelRootProps) {
+  const [width, setWidth] = useAtom(evDrawerWidthAtom);
+  const percent = clampWidth(width);
   const panelRef = useRef<HTMLElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const titleId = useId();
@@ -110,6 +120,8 @@ function PlannerSidePanelRoot({
         ref={panelRef}
         aria-label={ariaLabel}
         aria-labelledby={titleId}
+        data-resizable={resizable || undefined}
+        style={resizable ? { "--details-width": `${percent}%` } as CSSProperties : undefined}
         className={cn(
           "absolute inset-y-0 right-0 z-30 flex h-full w-full max-w-md min-w-0 flex-col border-l border-border bg-background text-foreground shadow-2xl outline-none animate-in slide-in-from-right-6 duration-200",
           className,
@@ -121,6 +133,13 @@ function PlannerSidePanelRoot({
           }
         }}
       >
+        {resizable && <div role="separator" tabIndex={0} aria-label="Resize EV drawer" aria-orientation="vertical" aria-valuemin={24} aria-valuemax={55} aria-valuenow={Math.round(percent)} className={styles.detailsDivider}
+          onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); event.preventDefault(); }}
+          onPointerMove={(event) => { if (!event.currentTarget.hasPointerCapture(event.pointerId)) return; const rect = panelRef.current?.parentElement?.getBoundingClientRect(); if (rect) setWidth(clampWidth((rect.right - event.clientX) / rect.width * 100)); }}
+          onPointerUp={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
+          onDoubleClick={() => setWidth(30)}
+          onKeyDown={(event) => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); setWidth(clampWidth(percent + (event.key === "ArrowLeft" ? 2 : -2))); } else if (event.key === "Home" || event.key === "End") { event.preventDefault(); setWidth(event.key === "Home" ? 24 : 55); } }}
+        ><span /></div>}
         {children}
       </aside>
     </PlannerSidePanelContext.Provider>

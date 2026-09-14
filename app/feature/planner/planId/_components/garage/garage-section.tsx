@@ -46,19 +46,19 @@ export function GarageSection() {
   }, [routeData]);
 
   return (
-    <section className="px-4 py-6">
+    <section aria-label="Trip vehicles" className="@container/garage min-w-0 px-4 py-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">My garage</h2>
+          <h2 className="text-2xl font-bold text-foreground">{authenticated ? "My garage" : "Trip vehicle"}</h2>
           <p className="mt-3 text-sm text-muted-foreground ">
-            Your saved EVs, ready for your next trip. Select one for route estimates.
+            {authenticated ? "Your saved EVs, ready for your next trip. Select one for route estimates." : "Add your EV specifications to estimate battery usage and charging time for this trip."}
           </p>
         </div>
         <Button
           type="button"
           size="lg"
           className="mr-2 gap-2 rounded-full px-5"
-          disabled={!authenticated || query.isPending || query.isError || mutation.isPending || vehicles.length >= 25}
+          disabled={loadingSession || (authenticated && (query.isPending || query.isError)) || mutation.isPending || vehicles.length >= 25}
           onClick={() => { mutation.reset(); setModalOpen(true); }}
         >
           <Plus className="size-4" aria-hidden="true" />
@@ -67,11 +67,11 @@ export function GarageSection() {
       </div>
 
       {(loadingSession || (authenticated && query.isPending)) && <p role="status" className="p-4 text-sm text-muted-foreground">Loading your saved vehicles…</p>}
-      {!loadingSession && !authenticated && <p role="status" className="p-4 text-sm text-muted-foreground">Sign in to load and save your garage.</p>}
+      {!loadingSession && !authenticated && <p role="status" className="p-4 text-sm text-muted-foreground">Used only in this guest plan. Sign in to save vehicles to your garage.</p>}
       {authenticated && query.isError && <div role="alert" className="mb-4 rounded-md bg-destructive/10 p-4 text-sm text-destructive"><p>{query.error.message}</p><Button variant="outline" className="mt-2" onClick={() => void query.refetch()}>Reload garage</Button></div>}
       {mutation.isError && !isModalOpen && <p role="alert" className="mb-4 rounded-md bg-destructive/10 p-4 text-sm text-destructive">{mutation.error.message}</p>}
-      {mutation.isPending && <p role="status" className="mb-3 text-sm text-muted-foreground">Saving your garage…</p>}
-      {authenticated && query.isSuccess && vehicles.length === 0 ? (
+      {mutation.isPending && <p role="status" className="mb-3 text-sm text-muted-foreground">{authenticated ? "Saving your garage…" : "Updating trip vehicle…"}</p>}
+      {(!authenticated || query.isSuccess) && vehicles.length === 0 ? (
         <div className="mx-1 flex items-center gap-3 rounded-sm border border-primary/30 bg-primary/5 p-4">
           <Car className="size-5 shrink-0 text-primary" aria-hidden="true" />
           <div>
@@ -82,7 +82,7 @@ export function GarageSection() {
           </div>
         </div>
       ) : (
-        <div className="mx-1 grid grid-cols-1 gap-2 2xl:grid-cols-2">
+        <div className={`mx-1 grid min-w-0 grid-cols-1 gap-2 ${vehicles.length > 1 ? "@min-[28rem]/garage:grid-cols-2" : ""}`}>
           {vehicles.map((vehicle) => {
             const car = getVehicleCar(vehicle);
             if (!car) return null;
@@ -92,7 +92,7 @@ export function GarageSection() {
                 vehicle={vehicle}
                 car={car}
                 isActive={vehicle.id === activeVehicleId}
-                disabled={mutation.isPending || !authenticated || query.isError}
+                disabled={mutation.isPending || loadingSession || (authenticated && query.isError)}
                 onSelect={() => mutation.mutate({ kind: "update", id: vehicle.id, patch: { isDefault: true } })}
                 onRemove={() => mutation.mutate({ kind: "delete", id: vehicle.id })}
               />

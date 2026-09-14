@@ -15,9 +15,10 @@ type CustomVehicleFormProps = {
   onSave: (vehicle: CustomVehicleInput) => Promise<void>;
   onCancel: () => void;
   pending: boolean;
+  submitLabel?: string;
 };
 
-export function CustomVehicleForm({ onSave, onCancel, pending }: CustomVehicleFormProps) {
+export function CustomVehicleForm({ onSave, onCancel, pending, submitLabel = "Save custom EV" }: CustomVehicleFormProps) {
   const form = useForm<CustomVehicleInput>({ resolver: zodResolver(customVehicleSchema), defaultValues: customVehicleDefaults });
   return (
     <form onSubmit={form.handleSubmit(onSave)} className="grid gap-4" noValidate>
@@ -71,7 +72,7 @@ export function CustomVehicleForm({ onSave, onCancel, pending }: CustomVehicleFo
       <p className="text-xs text-muted-foreground">Use the average consumption shown by your car. Leave an unknown charging limit blank; enter 0 only if charging is unsupported.</p>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>Cancel</Button>
-        <Button type="submit" disabled={pending}>{pending ? "Saving…" : "Save custom EV"}</Button>
+        <Button type="submit" disabled={pending}>{pending ? "Applying…" : submitLabel}</Button>
       </div>
     </form>
   );

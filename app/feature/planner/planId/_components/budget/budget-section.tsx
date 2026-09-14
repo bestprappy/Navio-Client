@@ -41,7 +41,7 @@ export function BudgetSection() {
       </div>
 
       <div className="mx-2 rounded-sm bg-card border p-5">
-        <div className="grid gap-5 lg:grid-cols-[1fr_12rem]">
+        <div className="grid min-w-0 gap-5 @min-[32rem]/planner:grid-cols-[minmax(0,1fr)_12rem]">
           <div>
             <div className="flex items-end justify-between gap-4">
               <p className="text-3xl font-semibold text-foreground">

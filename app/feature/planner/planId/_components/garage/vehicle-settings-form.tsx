@@ -28,7 +28,7 @@ export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle }) {
         <div className="grid gap-2"><label htmlFor="saved-vehicle-nickname" className="text-sm font-medium">Nickname</label><Input id="saved-vehicle-nickname" maxLength={100} value={nickname} onChange={(event) => setNickname(event.target.value)} disabled={mutation.isPending} /></div>
         <div className="grid gap-2"><label htmlFor="saved-vehicle-consumption" className="text-sm font-medium">Consumption (kWh/100 km)</label><Input id="saved-vehicle-consumption" type="number" min="0.001" max="99999.999" step="0.001" required value={consumption} onChange={(event) => setConsumption(event.target.value)} disabled={mutation.isPending} /></div>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">{dirty ? "Unsaved changes. Save to update route estimates." : "Settings saved to your account."}</p><Button type="submit" disabled={!dirty || !valid || mutation.isPending || !authenticated || query.isError}>{mutation.isPending ? "Saving…" : "Save settings"}</Button></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">{dirty ? "Apply changes to update route estimates." : authenticated ? "Settings saved to your account." : "Settings used only for this guest plan."}</p><Button type="submit" disabled={!dirty || !valid || mutation.isPending || (authenticated && query.isError)}>{mutation.isPending ? "Applying…" : authenticated ? "Save settings" : "Apply to trip"}</Button></div>
     </form>
   );
 }
