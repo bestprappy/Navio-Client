@@ -27,10 +27,14 @@ import {
 import {
   AUTO_CHARGE_TARGET_MAX_PCT,
   AUTO_CHARGE_TARGET_MIN_PCT,
+  AUTO_MIN_ARRIVAL_PCT,
   isCompatible,
   planAutoEvChargers,
 } from "../garage/ev-calculator";
 import { BatterySlider } from "../garage/battery-slider";
+import { useTripCharging } from "../garage/use-trip-charging";
+import { resolveDayAnchors } from "../itinerary/day-anchors";
+import { useTripRoutes } from "../routes/trip-route-query";
 
 import { EvStationListCard } from "./ev-station-list-card";
 import { EvRouteOptimizationPanel } from "./ev-route-optimization-panel";
@@ -82,6 +86,16 @@ export function EvStationSidePanel({
     () => tripBlocks.find((block) => block.id === panelBlockId) ?? null,
     [panelBlockId, tripBlocks],
   );
+  const routeSegments = useTripRoutes().data?.segments;
+  const tripCharging = useTripCharging();
+  const dayAnchors = useMemo(
+    () => (panelBlockId ? resolveDayAnchors(tripBlocks).get(panelBlockId) ?? null : null),
+    [panelBlockId, tripBlocks],
+  );
+  // Later days start with whatever the earlier days left in the battery.
+  const dayStartBatteryPct = panelBlockId
+    ? tripCharging?.days.get(panelBlockId)?.startBatteryPct ?? startingBatteryPct
+    : startingBatteryPct;
   const autoPlan = useMemo(() => {
     if (!targetBlock || !activeEvCar) {
       return null;
@@ -90,15 +104,19 @@ export function EvStationSidePanel({
     return planAutoEvChargers({
       block: targetBlock,
       car: activeEvCar,
-      startingBatteryPct,
+      startingBatteryPct: dayStartBatteryPct,
       chargeTargetPct: chargeStopTargetPct,
       chargers: results.map((result) => result.charger),
+      dayAnchors,
+      segments: routeSegments,
     });
   }, [
     activeEvCar,
     chargeStopTargetPct,
+    dayAnchors,
+    dayStartBatteryPct,
     results,
-    startingBatteryPct,
+    routeSegments,
     targetBlock,
   ]);
   const autoPlanMinutes = useMemo(
@@ -111,13 +129,18 @@ export function EvStationSidePanel({
   );
   const autoAddDisabled =
     !panelBlockId || !activeEvCar || !autoPlan?.insertions.length;
+  const batterySummary = autoPlan
+    ? ` Day starts at ${Math.round(dayStartBatteryPct)}% and ends near ${autoPlan.finalBatteryPct}%.`
+    : "";
   const autoStatusText =
     autoMessage ??
     (!activeEvCar
       ? "Select an EV from your garage first."
       : autoPlan?.insertions.length
-        ? `${autoPlan.insertions.length} stop${autoPlan.insertions.length === 1 ? "" : "s"} ready, about ${autoPlanMinutes} min charging to at least ${chargeStopTargetPct}%.`
-        : autoPlan?.message ?? "Open a day with route places to auto-plan.");
+        ? `${autoPlan.insertions.length} stop${autoPlan.insertions.length === 1 ? "" : "s"} ready, about ${autoPlanMinutes} min charging.${batterySummary}`
+        : autoPlan
+          ? [autoPlan.message, ...autoPlan.warnings].join(" ") + batterySummary
+          : "Open a day with route places to auto-plan.");
   const selectedCharger =
     selectedResult?.charger ?? results[0]?.charger ?? null;
   const visibleResults = useMemo(() => {
@@ -154,12 +177,14 @@ export function EvStationSidePanel({
       return;
     }
 
-    autoAddEvChargers({
+    const addedCount = autoAddEvChargers({
       blockId: panelBlockId,
       insertions: autoPlan.insertions,
     });
     setAutoMessage(
-      `Added ${autoPlan.insertions.length} charger${autoPlan.insertions.length === 1 ? "" : "s"} in route order.`,
+      addedCount > 0
+        ? `Added ${addedCount} charger${addedCount === 1 ? "" : "s"} in route order.`
+        : "No chargers were added. The planned stops are already on this day.",
     );
   }
 
@@ -230,16 +255,22 @@ export function EvStationSidePanel({
                     htmlFor="charge-stop-target"
                     className="mt-2 flex items-center gap-1.5 text-sm font-medium text-foreground"
                   >
-                    Minimum battery threshold
+                    Charge each stop to
                     <HelpCircle
                       className="size-3.5 text-muted-foreground"
                       aria-hidden="true"
                     >
                       <title>
-                        Auto-added charging stops will leave at least this much battery, unless the next leg needs more.
+                        Each auto-added stop charges to at least this level, more if the next leg needs it.
                       </title>
                     </HelpCircle>
                   </label>
+                  <p
+                    id="charge-stop-target-help"
+                    className="mt-1 text-xs leading-relaxed text-muted-foreground"
+                  >
+                    Stops are added when you would arrive below {AUTO_MIN_ARRIVAL_PCT}% or on a long leg.
+                  </p>
                 </div>
                 <span className="text-lg font-bold tabular-nums text-foreground">
                   {chargeStopTargetPct}%
@@ -253,7 +284,7 @@ export function EvStationSidePanel({
                   min={AUTO_CHARGE_TARGET_MIN_PCT}
                   max={AUTO_CHARGE_TARGET_MAX_PCT}
                   step={1}
-                  ariaLabel="Set minimum battery after charging stops"
+                  ariaLabel="Set how full each auto-added charging stop charges"
                   color="var(--primary)"
                   disabled={!activeEvCar}
                   showLabels={false}

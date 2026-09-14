@@ -7,6 +7,7 @@ import {
   type EvConnectorType,
   type PlaceItem,
   type PlaceItemEvChargerDetails,
+  type TripAnchor,
   type TripBlockData,
 } from "../constants/types";
 import type { EvCar } from "../constants/vehicle.types";
@@ -19,7 +20,7 @@ const DC_CONNECTOR_TYPES = new Set<EvConnectorType>([
   "NACS",
   "GB_T",
 ]);
-const AUTO_MIN_ARRIVAL_PCT = 12;
+export const AUTO_MIN_ARRIVAL_PCT = 12;
 const AUTO_COMFORT_ARRIVAL_PCT = 24;
 export const AUTO_CHARGE_TARGET_DEFAULT_PCT = 50;
 export const AUTO_CHARGE_TARGET_MIN_PCT = 20;
@@ -28,6 +29,10 @@ const AUTO_MAX_CHARGE_TARGET_PCT = 92;
 const AUTO_HEAVY_LEG_PCT = 35;
 const AUTO_ABSOLUTE_MIN_ARRIVAL_PCT = 5;
 const MAX_AUTO_INSERTIONS_PER_LEG = 3;
+const AUTO_MIN_TOP_UP_PCT = 5;
+// Roads are longer than the straight line between two stops. Used only when a
+// leg has not been routed yet.
+const FALLBACK_ROAD_FACTOR = 1.2;
 
 export function isDcCharger(connectorTypes: EvConnectorType[]): boolean {
   return connectorTypes.some((c) => DC_CONNECTOR_TYPES.has(c));
@@ -306,6 +311,8 @@ type AutoRouteStop = {
   lng: number;
   chargerDetails?: PlaceItemEvChargerDetails;
   chargerId?: string;
+  /** Item a charger on the leg into this stop is placed before; null appends to the day. */
+  insertBeforeItemId: string | null;
 };
 
 type ChargerCandidate = {
@@ -318,7 +325,8 @@ type ChargerCandidate = {
 
 export type AutoEvChargerInsertion = {
   charger: EvCharger;
-  beforeItemId: string;
+  /** null means the leg ends at the day's end anchor, so the charger goes last. */
+  beforeItemId: string | null;
   fromItemId: string;
   toItemId: string;
   sequence: number;
@@ -342,6 +350,10 @@ type AutoEvChargerPlanInput = {
   startingBatteryPct: number;
   chargeTargetPct?: number;
   chargers: EvCharger[];
+  /** Where the day starts and ends, resolved across the whole trip. */
+  dayAnchors?: { start: TripAnchor | null; end: TripAnchor | null } | null;
+  /** Routed legs; turn straight-line distance into road distance when present. */
+  segments?: RouteSegment[];
 };
 
 type RouteProjection = {
@@ -355,8 +367,10 @@ export function planAutoEvChargers({
   startingBatteryPct,
   chargeTargetPct,
   chargers,
+  dayAnchors,
+  segments = [],
 }: AutoEvChargerPlanInput): AutoEvChargerPlan {
-  const stops = block.items.filter(isPlaceItem).map(placeItemToRouteStop);
+  const stops = getAutoRouteStops(block, dayAnchors);
   const insertions: AutoEvChargerInsertion[] = [];
   const warnings: string[] = [];
   const stopChargeTargetPct = normalizeChargeTargetPct(chargeTargetPct);
@@ -365,7 +379,7 @@ export function planAutoEvChargers({
     return {
       insertions,
       finalBatteryPct: clampPct(startingBatteryPct),
-      message: "Add at least a starting point and one destination to your itinerary before auto-planning chargers.",
+      message: "Add a place to this day, or set where it starts and ends, before auto-planning chargers.",
       warnings,
     };
   }
@@ -409,7 +423,7 @@ export function planAutoEvChargers({
       plannedChargerIds.add(preDepartureCharger.id);
       insertions.push({
         charger: preDepartureCharger,
-        beforeItemId: stops[0]!.id,
+        beforeItemId: stops[0]!.insertBeforeItemId,
         fromItemId: stops[0]!.id,
         toItemId: stops[0]!.id,
         sequence: 0,
@@ -432,6 +446,7 @@ export function planAutoEvChargers({
 
   for (let stopIndex = 1; stopIndex < stops.length; stopIndex += 1) {
     const destination = stops[stopIndex]!;
+    const roadFactor = getLegRoadFactor(segments, block.id, currentStop, destination);
     let legInsertionCount = 0;
 
     if (currentStop.chargerDetails) {
@@ -439,16 +454,18 @@ export function planAutoEvChargers({
     }
 
     while (legInsertionCount < MAX_AUTO_INSERTIONS_PER_LEG) {
-      const legKm = getDistanceKm(currentStop, destination);
+      const legKm = getDistanceKm(currentStop, destination) * roadFactor;
       const legUsePct = calcBatteryUsedPct(legKm, car);
       const projectedArrivalPct = batteryPct - legUsePct;
       const requiredStop = projectedArrivalPct < AUTO_MIN_ARRIVAL_PCT;
+      // A long leg gets one comfort top-up even when it is reachable. The charge
+      // target is not a trigger: charging to it and then driving on would always
+      // fall below it again and stack a stop per loop.
       const strategicStop =
         !requiredStop &&
-        (
-          (legUsePct >= AUTO_HEAVY_LEG_PCT && projectedArrivalPct < AUTO_COMFORT_ARRIVAL_PCT + 20) ||
-          (legUsePct >= 10 && projectedArrivalPct < stopChargeTargetPct)
-        );
+        legInsertionCount === 0 &&
+        legUsePct >= AUTO_HEAVY_LEG_PCT &&
+        projectedArrivalPct < AUTO_COMFORT_ARRIVAL_PCT + 20;
 
       if (!requiredStop && !strategicStop) {
         break;
@@ -464,6 +481,7 @@ export function planAutoEvChargers({
         plannedChargerIds,
         requiredStop,
         chargeTargetPct: stopChargeTargetPct,
+        roadFactor,
       });
 
       if (!candidate) {
@@ -489,6 +507,11 @@ export function planAutoEvChargers({
         nextLegUsePct,
         stopChargeTargetPct,
       );
+      // A comfort top-up that would barely charge is just a pointless detour.
+      if (!requiredStop && departureBatteryPct - arrivalBatteryPct < AUTO_MIN_TOP_UP_PCT) {
+        break;
+      }
+
       const chargeEnergyKwh =
         ((departureBatteryPct - arrivalBatteryPct) / 100) * car.batteryKwh;
       const estimatedChargeMinutes = calcChargeMinutesForEnergyKwh(
@@ -502,7 +525,7 @@ export function planAutoEvChargers({
       plannedChargerIds.add(candidate.charger.id);
       insertions.push({
         charger: candidate.charger,
-        beforeItemId: destination.id,
+        beforeItemId: destination.insertBeforeItemId,
         fromItemId: currentStop.id,
         toItemId: destination.id,
         sequence: legInsertionCount,
@@ -511,15 +534,15 @@ export function planAutoEvChargers({
         projectedDepartureBatteryPct: Math.round(departureBatteryPct),
         detourKm: candidate.detourKm,
         reason: requiredStop
-          ? `Keeps reserve before ${destination.name}`
-          : `Adds a faster top-up on a high-use leg to ${destination.name}`,
+          ? `Keeps at least ${AUTO_MIN_ARRIVAL_PCT}% before ${destination.name}`
+          : `Tops up on a long leg to ${destination.name}`,
       });
 
       batteryPct = departureBatteryPct;
       currentStop = chargerToRouteStop(candidate.charger);
     }
 
-    const finalLegKm = getDistanceKm(currentStop, destination);
+    const finalLegKm = getDistanceKm(currentStop, destination) * roadFactor;
     batteryPct = clampPct(batteryPct - calcBatteryUsedPct(finalLegKm, car));
     currentStop = destination;
   }
@@ -539,6 +562,46 @@ export function planAutoEvChargers({
   };
 }
 
+/**
+ * The day's stops in driving order, including where it starts and ends.
+ *
+ * Anchor ids match the route segments (`<blockId>:start` / `<blockId>:end`), so
+ * a day of "home -> one place -> hotel" plans two legs instead of none.
+ */
+function getAutoRouteStops(
+  block: TripBlockData,
+  dayAnchors: AutoEvChargerPlanInput["dayAnchors"],
+): AutoRouteStop[] {
+  const placeStops = block.items.filter(isPlaceItem).map(placeItemToRouteStop);
+  const stops = [...placeStops];
+
+  if (dayAnchors?.start) {
+    stops.unshift(
+      anchorToRouteStop(dayAnchors.start, `${block.id}:start`, placeStops[0]?.id ?? null),
+    );
+  }
+
+  if (dayAnchors?.end) {
+    stops.push(anchorToRouteStop(dayAnchors.end, `${block.id}:end`, null));
+  }
+
+  return stops;
+}
+
+function anchorToRouteStop(
+  anchor: TripAnchor,
+  id: string,
+  insertBeforeItemId: string | null,
+): AutoRouteStop {
+  return {
+    id,
+    name: anchor.name,
+    lat: anchor.lat,
+    lng: anchor.lng,
+    insertBeforeItemId,
+  };
+}
+
 function placeItemToRouteStop(item: PlaceItem): AutoRouteStop {
   const chargerId = isEvChargerPlaceItem(item)
     ? item.placeId.replace("ev-charger:", "")
@@ -551,6 +614,7 @@ function placeItemToRouteStop(item: PlaceItem): AutoRouteStop {
     lng: item.lng,
     chargerDetails: item.evCharger,
     chargerId,
+    insertBeforeItemId: item.id,
   };
 }
 
@@ -561,7 +625,30 @@ function chargerToRouteStop(charger: EvCharger): AutoRouteStop {
     lat: charger.location.lat,
     lng: charger.location.lng,
     chargerId: charger.id,
+    insertBeforeItemId: null,
   };
+}
+
+/** Road km per straight-line km for a leg, from its routed segment when known. */
+function getLegRoadFactor(
+  segments: RouteSegment[],
+  blockId: string,
+  from: AutoRouteStop,
+  to: AutoRouteStop,
+): number {
+  const straightKm = getDistanceKm(from, to);
+  const roadMeters = segments.find(
+    (segment) =>
+      segment.blockId === blockId &&
+      segment.fromItemId === from.id &&
+      segment.toItemId === to.id,
+  )?.distanceMeters;
+
+  if (roadMeters == null || straightKm < 1) {
+    return FALLBACK_ROAD_FACTOR;
+  }
+
+  return clampNumber(roadMeters / 1000 / straightKm, 1, 3);
 }
 
 function chargeAtExistingStop(
@@ -572,17 +659,7 @@ function chargeAtExistingStop(
   return projectChargingStop(currentBatteryPct, charger, car).departurePct;
 }
 
-function findBestAutoCharger({
-  car,
-  chargers,
-  currentStop,
-  destination,
-  batteryPct,
-  existingChargerIds,
-  plannedChargerIds,
-  requiredStop,
-  chargeTargetPct,
-}: {
+type AutoChargerSearch = {
   car: EvCar;
   chargers: EvCharger[];
   currentStop: AutoRouteStop;
@@ -592,36 +669,17 @@ function findBestAutoCharger({
   plannedChargerIds: Set<string>;
   requiredStop: boolean;
   chargeTargetPct: number;
-}): ChargerCandidate | null {
-  const strictCandidate = scoreAutoChargers({
-    car,
-    chargers,
-    currentStop,
-    destination,
-    batteryPct,
-    existingChargerIds,
-    plannedChargerIds,
-    requiredStop,
-    chargeTargetPct,
-    relaxed: false,
-  });
+  roadFactor: number;
+};
 
-  if (strictCandidate || !requiredStop) {
+function findBestAutoCharger(search: AutoChargerSearch): ChargerCandidate | null {
+  const strictCandidate = scoreAutoChargers({ ...search, relaxed: false });
+
+  if (strictCandidate || !search.requiredStop) {
     return strictCandidate;
   }
 
-  return scoreAutoChargers({
-    car,
-    chargers,
-    currentStop,
-    destination,
-    batteryPct,
-    existingChargerIds,
-    plannedChargerIds,
-    requiredStop,
-    chargeTargetPct,
-    relaxed: true,
-  });
+  return scoreAutoChargers({ ...search, relaxed: true });
 }
 
 function scoreAutoChargers({
@@ -634,20 +692,10 @@ function scoreAutoChargers({
   plannedChargerIds,
   requiredStop,
   chargeTargetPct,
+  roadFactor,
   relaxed,
-}: {
-  car: EvCar;
-  chargers: EvCharger[];
-  currentStop: AutoRouteStop;
-  destination: AutoRouteStop;
-  batteryPct: number;
-  existingChargerIds: Set<string>;
-  plannedChargerIds: Set<string>;
-  requiredStop: boolean;
-  chargeTargetPct: number;
-  relaxed: boolean;
-}): ChargerCandidate | null {
-  const directKm = getDistanceKm(currentStop, destination);
+}: AutoChargerSearch & { relaxed: boolean }): ChargerCandidate | null {
+  const directKm = getDistanceKm(currentStop, destination) * roadFactor;
   const desiredProgress = requiredStop
     ? getSafeReachProgressRatio(directKm, batteryPct, car)
     : 0.58;
@@ -682,8 +730,8 @@ function scoreAutoChargers({
       continue;
     }
 
-    const distanceFromCurrentKm = getDistanceKm(currentStop, chargerLocation);
-    const distanceToDestinationKm = getDistanceKm(chargerLocation, destination);
+    const distanceFromCurrentKm = getDistanceKm(currentStop, chargerLocation) * roadFactor;
+    const distanceToDestinationKm = getDistanceKm(chargerLocation, destination) * roadFactor;
     const detourKm = Math.max(
       0,
       distanceFromCurrentKm + distanceToDestinationKm - directKm,
