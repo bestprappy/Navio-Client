@@ -37,6 +37,8 @@ export type ResolvedDayAnchors = {
   end: TripAnchor | null;
   /** True when the start was inherited rather than chosen on this day. */
   startIsCarriedOver: boolean;
+  endIsCarriedOver: boolean;
+  inheritedEnd: TripAnchor | null;
   /**
    * Where the previous day left off, whether or not this day overrides it.
    *
@@ -50,6 +52,8 @@ export const EMPTY_DAY_ANCHORS: ResolvedDayAnchors = {
   start: null,
   end: null,
   startIsCarriedOver: false,
+  endIsCarriedOver: false,
+  inheritedEnd: null,
   inheritedStart: null,
 };
 
@@ -57,10 +61,9 @@ export const EMPTY_DAY_ANCHORS: ResolvedDayAnchors = {
  * Walks the itinerary in date order and works out where each day begins and
  * ends.
  *
- * A day's start is derived, not stored: you wake up where you went to sleep.
- * Storing both ends per day would let them drift apart the moment a hotel
- * changes, so only explicit choices live in the block and everything else falls
- * through from the day before.
+ * Only explicit choices are stored. Each overnight stop becomes the default
+ * start and end for following days until another end is chosen. A start-only
+ * override never changes the overnight base, including the first day's home.
  */
 export function resolveDayAnchors(
   blocks: TripBlockData[],
@@ -75,16 +78,16 @@ export function resolveDayAnchors(
   for (const day of days) {
     const own: TripAnchor | null = day.startAnchor ?? null;
     const start: TripAnchor | null = own ?? carried;
-    const end = day.endAnchor ?? null;
+    const end: TripAnchor | null = day.endAnchor ?? carried;
     resolved.set(day.id, {
       start,
       end,
       startIsCarriedOver: !own && Boolean(carried),
+      endIsCarriedOver: !day.endAnchor && Boolean(carried),
+      inheritedEnd: carried,
       inheritedStart: carried,
     });
-    // A day with no stated end leaves you where you started, so the next
-    // morning still has somewhere to depart from.
-    carried = end ?? start;
+    carried = end;
   }
 
   return resolved;

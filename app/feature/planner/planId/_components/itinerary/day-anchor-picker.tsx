@@ -472,13 +472,13 @@ function PickerBody({
             onOpenChange(false);
           }}
         >
-          {isStart && carriedOverName ? (
+          {carriedOverName ? (
             <RotateCcw className="size-4" aria-hidden="true" />
           ) : (
             <X className="size-4" aria-hidden="true" />
           )}
-          {isStart && carriedOverName
-            ? `Clear start override and follow on from ${carriedOverName}`
+          {carriedOverName
+            ? `Clear ${edge} override and use ${carriedOverName}`
             : `Clear ${isStart ? "start" : "end"} place`}
         </Button>
       )}

@@ -81,6 +81,42 @@ assert.equal(exported.searchParams.get('destination'),'14.000000,101.000000');
 console.log('Endpoint checks passed: route order, inherited starts, empty days, immutable stops, and Google Maps export.');
 
 const { getDayPlacePositions, resolveDayAnchors } = require(base + 'itinerary/day-anchors.ts');
+const overnightDays = [
+  anchorDays[0],
+  block('two', '2026-09-02', []),
+  block('three', '2026-09-03', []),
+  block('four', '2026-09-04', []),
+];
+const overnightSnapshot = JSON.stringify(overnightDays);
+const overnight = resolveDayAnchors([...overnightDays].reverse());
+assert.equal(overnight.get('one').start, home);
+for (const id of ['two', 'three', 'four']) {
+  assert.equal(overnight.get(id).start, hotel);
+  assert.equal(overnight.get(id).end, hotel);
+  assert.equal(overnight.get(id).endIsCarriedOver, true);
+}
+assert.equal(JSON.stringify(overnightDays), overnightSnapshot);
+const startOverride = resolveDayAnchors(overnightDays.map(day => day.id === 'two' ? {...day, startAnchor: home} : day));
+assert.equal(startOverride.get('two').start, home);
+assert.equal(startOverride.get('two').end, hotel);
+assert.equal(startOverride.get('three').start, hotel);
+const hotelChange = overnightDays.map(day => day.id === 'three' ? {...day, endAnchor: home} : day);
+const changed = resolveDayAnchors(hotelChange);
+assert.equal(changed.get('three').start, hotel);
+assert.equal(changed.get('four').start, home);
+assert.equal(changed.get('four').end, home);
+assert.equal(changed.get('three').endIsCarriedOver, false);
+const cleared = resolveDayAnchors(hotelChange.map(day => day.id === 'three' ? {...day, endAnchor: null} : day));
+assert.equal(cleared.get('four').end, hotel);
+const earlierChange = resolveDayAnchors(hotelChange.map(day => day.id === 'one' ? {...day, endAnchor: null} : day));
+assert.equal(earlierChange.get('two').start, null, 'Home must not seed overnight defaults');
+assert.equal(earlierChange.get('two').end, null);
+assert.equal(earlierChange.get('three').end, home, 'Explicit later ends survive earlier changes');
+assert.equal(earlierChange.get('four').end, home);
+const roundTrip = getTripRouteGroups(overnightDays.map(day => day.id === 'two' ? {...day, items: anchorDays[0].items} : day));
+assert.deepEqual(roundTrip.find(day => day.blockId === 'two').points.map(point => point.name), ['Hotel', 'Visit', 'Hotel']);
+assert.equal(resolveDayAnchors([]).size, 0);
+console.log('Overnight defaults passed: round trips, hotel changes, manual overrides, clearing, chronological order, and immutable inputs.');
 const numberedDay = { ...anchorDays[0], items: [{id:'note',type:'note'},stop('visit'),stop('charge',charger),stop('next')] };
 assert.deepEqual([...getDayPlacePositions(numberedDay,true)], [['visit',2],['next',3]]);
 assert.deepEqual([...getDayPlacePositions(numberedDay,false)], [['visit',1],['next',2]]);

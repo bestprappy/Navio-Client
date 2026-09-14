@@ -149,10 +149,11 @@ function AnchorRow({ edge, withConnector = false }: AnchorRowProps) {
   const isStart = edge === "start";
   const anchor = isStart ? anchors.start : anchors.end;
   const own = isStart ? ownStart : ownEnd;
-  const carriedOver = isStart && anchors.startIsCarriedOver;
+  const carriedOver = isStart ? anchors.startIsCarriedOver : anchors.endIsCarriedOver;
+  const inherited = isStart ? anchors.inheritedStart : anchors.inheritedEnd;
   const canClear = Boolean(own);
-  const clearLabel = isStart && anchors.inheritedStart
-    ? `Clear start override and follow on from ${anchors.inheritedStart.name}`
+  const clearLabel = inherited
+    ? `Clear ${edge} override and use ${inherited.name}`
     : `Clear ${isStart ? "start" : "end"} place`;
 
   const handleSelect = useCallback(
@@ -258,7 +259,7 @@ function AnchorRow({ edge, withConnector = false }: AnchorRowProps) {
         dayLabel={dayLabel}
         current={anchor}
         canClear={canClear}
-        carriedOverName={isStart ? (anchors.inheritedStart?.name ?? null) : null}
+        carriedOverName={inherited?.name ?? null}
         dayPlaces={dayPlaces}
         searchBias={searchBias}
         onSelect={handleSelect}
