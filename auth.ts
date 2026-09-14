@@ -30,6 +30,32 @@ function isKeycloakTokenResponse(value: unknown): value is KeycloakTokenResponse
   );
 }
 
+/**
+ * Auth.js gives every OAuth sign-in a random user id, so `token.sub` is not the Keycloak subject.
+ * Services record authors by the access token subject, so read it from there. The token came from
+ * Keycloak through this server and is only used to label the session, never to authorize.
+ */
+function getAccessTokenSubject(accessToken?: string) {
+  const payload = accessToken?.split(".")[1];
+  if (!payload) {
+    return undefined;
+  }
+
+  try {
+    const claims: unknown = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8"),
+    );
+    return claims &&
+      typeof claims === "object" &&
+      "sub" in claims &&
+      typeof claims.sub === "string"
+      ? claims.sub
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function getKeycloakEnvironment() {
   const issuer = process.env.AUTH_KEYCLOAK_ISSUER;
   const internalIssuer = process.env.AUTH_KEYCLOAK_INTERNAL_ISSUER ?? issuer;
@@ -170,6 +196,7 @@ const authConfig = {
 
         return {
           ...token,
+          sub: account.providerAccountId,
           accessToken: account.access_token,
           accessTokenExpiresAt: account.expires_at,
           refreshToken: account.refresh_token,
@@ -191,8 +218,10 @@ const authConfig = {
     async session({ session, token }) {
       session.accessToken = token.accessToken;
       session.error = token.error;
-      if (session.user && token.sub) {
-        session.user.id = token.sub;
+      // Sessions issued before sign-in stored the Keycloak subject still carry a random `sub`.
+      const userId = getAccessTokenSubject(token.accessToken) ?? token.sub;
+      if (session.user && userId) {
+        session.user.id = userId;
       }
       return session;
     },
