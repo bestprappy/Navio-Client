@@ -1307,11 +1307,12 @@ export const addEvChargerToBlockAtom = atom(
   },
 );
 
+/** Inserts planned chargers in route order and returns how many were added. */
 export const autoAddEvChargersToBlockAtom = atom(
   null,
-  (get, set, payload: AutoAddEvChargersToBlockPayload) => {
+  (get, set, payload: AutoAddEvChargersToBlockPayload): number => {
     if (payload.insertions.length === 0) {
-      return;
+      return 0;
     }
 
     const targetBlock = get(tripBlocksAtom).find(
@@ -1319,7 +1320,7 @@ export const autoAddEvChargersToBlockAtom = atom(
     );
 
     if (!targetBlock) {
-      return;
+      return 0;
     }
 
     const validBeforeItemIds = new Set(
@@ -1336,10 +1337,13 @@ export const autoAddEvChargersToBlockAtom = atom(
       string,
       AutoEvChargerInsertion[]
     >();
+    // Stops on the leg into the day's end anchor have no item to sit before.
+    const endOfDayInsertions: AutoEvChargerInsertion[] = [];
 
     for (const insertion of payload.insertions) {
       if (
-        !validBeforeItemIds.has(insertion.beforeItemId) ||
+        (insertion.beforeItemId !== null &&
+          !validBeforeItemIds.has(insertion.beforeItemId)) ||
         existingChargerIds.has(insertion.charger.id) ||
         queuedChargerIds.has(insertion.charger.id)
       ) {
@@ -1347,6 +1351,12 @@ export const autoAddEvChargersToBlockAtom = atom(
       }
 
       queuedChargerIds.add(insertion.charger.id);
+
+      if (insertion.beforeItemId === null) {
+        endOfDayInsertions.push(insertion);
+        continue;
+      }
+
       const currentInsertions =
         insertionsByBeforeItemId.get(insertion.beforeItemId) ?? [];
       insertionsByBeforeItemId.set(insertion.beforeItemId, [
@@ -1355,42 +1365,44 @@ export const autoAddEvChargersToBlockAtom = atom(
       ]);
     }
 
-    if (insertionsByBeforeItemId.size === 0) {
-      return;
+    if (queuedChargerIds.size === 0) {
+      return 0;
     }
 
     let firstInsertedPlaceId: string | null = null;
+
+    const toChargerItems = (insertions: AutoEvChargerInsertion[]) =>
+      [...insertions]
+        .sort((a, b) => a.sequence - b.sequence)
+        .map((insertion) => {
+          const nextPlaceId = createClientId("place");
+
+          if (!firstInsertedPlaceId) {
+            firstInsertedPlaceId = nextPlaceId;
+          }
+
+          return evChargerToPlaceItem(
+            insertion.charger,
+            nextPlaceId,
+            insertion.estimatedChargeMinutes,
+            "AUTO",
+          );
+        });
 
     set(
       tripBlocksAtom,
       updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
         ...block,
-        items: block.items.flatMap((item) => {
-          const insertions = insertionsByBeforeItemId.get(item.id);
+        items: [
+          ...block.items.flatMap((item) => {
+            const insertions = insertionsByBeforeItemId.get(item.id);
 
-          if (!insertions?.length) {
-            return [item];
-          }
-
-          const chargerItems = [...insertions]
-            .sort((a, b) => a.sequence - b.sequence)
-            .map((insertion) => {
-              const nextPlaceId = createClientId("place");
-
-              if (!firstInsertedPlaceId) {
-                firstInsertedPlaceId = nextPlaceId;
-              }
-
-              return evChargerToPlaceItem(
-                insertion.charger,
-                nextPlaceId,
-                insertion.estimatedChargeMinutes,
-                "AUTO",
-              );
-            });
-
-          return [...chargerItems, item];
-        }),
+            return insertions?.length
+              ? [...toChargerItems(insertions), item]
+              : [item];
+          }),
+          ...toChargerItems(endOfDayInsertions),
+        ],
       })),
     );
 
@@ -1406,6 +1418,8 @@ export const autoAddEvChargersToBlockAtom = atom(
     if (firstInsertedPlaceId) {
       set(selectedTripPlaceItemIdAtom, firstInsertedPlaceId);
     }
+
+    return queuedChargerIds.size;
   },
 );
 
