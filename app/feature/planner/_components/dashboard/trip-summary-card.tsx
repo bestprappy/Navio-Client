@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { ArrowUpRight, CalendarRange } from "lucide-react";
+import { CalendarRange } from "lucide-react";
 import { TripNameEditor } from "../../planId/_components/overview/trip-name-editor";
+import { TripActionsMenu } from "../trip-actions-menu";
 import { TripDestinationLabel } from "./trip-destination-label";
 import { TripScenery } from "./scenery";
 import { useTripPlanStats } from "./use-trip-plan-stats";
@@ -45,10 +46,7 @@ export function TripSummaryCard({ trip, className }: TripSummaryCardProps) {
       <div className="absolute inset-x-0 top-0 -z-10 h-32"><TripScenery destinations={destinations} /></div>
       <div className="flex items-start justify-between gap-3">
         <TripStatusBadge status={status} />
-        <ArrowUpRight
-          aria-hidden="true"
-          className="size-4 shrink-0 text-muted-foreground transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-foreground"
-        />
+        <TripActionsMenu tripId={trip.id} tripTitle={trip.title ?? "Untitled trip"} className="-mt-1 -mr-2" />
       </div>
 
       <TripNameEditor planId={trip.id} trip={trip} destinationName={trip.destinationName} heading="h3" />

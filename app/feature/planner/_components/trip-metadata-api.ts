@@ -2,6 +2,7 @@ import {
   isTripResponse,
   PlannerApiError,
   requestJson,
+  withDefaultTripTitle,
   type CreateTripPayload,
   type TripResponse,
 } from "./planner-api";
@@ -21,7 +22,7 @@ export async function getTripMetadata(tripId: string): Promise<TripResponse> {
   if (!isTripResponse(value)) {
     throw new PlannerApiError("The trip details could not be loaded.", 502);
   }
-  return value;
+  return withDefaultTripTitle(value);
 }
 
 export async function updateTripMetadata(
@@ -41,5 +42,5 @@ export async function updateTripMetadata(
   if (!isTripResponse(value)) {
     throw new PlannerApiError("The trip details could not be saved.", 502);
   }
-  return value;
+  return withDefaultTripTitle(value);
 }

@@ -3,24 +3,28 @@
 import type { MouseEvent } from "react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useSession } from "next-auth/react";
 import { format, isValid, parseISO } from "date-fns";
 import {
   CalendarDays,
   Compass,
-  Home,
+  LayoutDashboard,
   ListChecks,
   Map,
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
-  Settings,
+  Plus,
   type LucideIcon,
 } from "lucide-react";
 
 import { Logo } from "@/components/logo";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ProfileMenu } from "@/components/profile/profile-menu";
+import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button.variants";
+import { SidebarTrips } from "@/app/feature/planner/_components/sidebar-trips";
 import useSidebar from "@/hooks/useSidebar";
 import { sidebarCollapsedAtom } from "@/app/configs/constant";
 import type { TripBlockData } from "@/app/feature/planner/planId/_components/constants/types";
@@ -30,10 +34,16 @@ import {
   tripBlocksAtom,
   openBlockIdsAtom,
 } from "@/app/feature/planner/planId/_components/overview/trip-builder.atoms";
+import {
+  pendingPlannerBlockIdAtom,
+  recentPlanSidebarAtom,
+  recentPlanSidebarStore,
+} from "@/app/feature/planner/_components/recent-plan-sidebar";
 import { cn } from "@/lib/utils";
 
 import SidebarItem from "./sidebar.item";
 import SidebarMenu from "./sidebar.menu";
+import { SidebarAccountActions } from "./sidebar-account-actions";
 
 const PLANNER_SCROLL_PANEL_ID = "planner-scroll-panel";
 
@@ -134,7 +144,7 @@ function PlannerBlockSidebarGroup({
               "group flex min-h-9 items-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring/30",
               collapsed ? "w-9 justify-center px-0" : "w-full gap-2 px-2",
               isActive
-                ? "bg-secondary text-secondary-foreground"
+                ? "bg-sidebar-accent text-sidebar-accent-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
@@ -156,7 +166,7 @@ function PlannerBlockSidebarGroup({
                     className={cn(
                       "shrink-0 text-xs",
                       isActive
-                        ? "text-secondary-foreground/80"
+                        ? "text-sidebar-accent-foreground/80"
                         : "text-muted-foreground group-hover:text-foreground",
                     )}
                   >
@@ -176,26 +186,33 @@ function PlannerBlockSidebarGroup({
 export default function SidebarWrapper() {
   const { activeSidebar, setActiveSidebar } = useSidebar();
   const [collapsed, setCollapsed] = useAtom(sidebarCollapsedAtom);
-  const blocks = useAtomValue(tripBlocksAtom);
+  const pathName = usePathname();
+  const router = useRouter();
+  const { data: session } = useSession();
+  const isPlannerDetail = isPlannerDetailPath(pathName);
+  const planBlocks = useAtomValue(tripBlocksAtom);
+  const recentPlan = useAtomValue(recentPlanSidebarAtom, { store: recentPlanSidebarStore });
+  const setPendingBlockId = useSetAtom(pendingPlannerBlockIdAtom, { store: recentPlanSidebarStore });
+  // Outside a plan, keep showing the last saved plan this account opened.
+  const visibleRecentPlan = !isPlannerDetail && recentPlan && recentPlan.ownerId === session?.user?.id ? recentPlan : null;
+  const blocks = isPlannerDetail ? planBlocks : visibleRecentPlan?.blocks ?? [];
   const itineraryBlocks = blocks.filter((block) => block.kind !== "list");
   const listBlocks = blocks.filter((block) => block.kind === "list");
-  const activeBlockId = useAtomValue(activeBlockIdAtom);
+  const planActiveBlockId = useAtomValue(activeBlockIdAtom);
+  const activeBlockId = isPlannerDetail ? planActiveBlockId : null;
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
-  const pathName = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
   const setOpenBlocks = useSetAtom(openBlockIdsAtom);
-  const isPlannerDetail = isPlannerDetailPath(pathName);
 
   useEffect(() => {
     setActiveSidebar(pathName);
   }, [pathName, setActiveSidebar]);
 
-  const isRouteActive = (route: string) => {
-    if (route === "/") return activeSidebar === "/";
-    return activeSidebar === route || activeSidebar.startsWith(`${route}/`);
-  };
+  const isRouteActive = (route: string) =>
+    activeSidebar === route || activeSidebar.startsWith(`${route}/`);
 
   function handlePlannerClick(event: MouseEvent<HTMLAnchorElement>) {
+    setMobileOpen(false);
     if (!isPlannerDetail) {
       return;
     }
@@ -206,6 +223,14 @@ export default function SidebarWrapper() {
   }
 
   function handleSelectBlock(blockId: string) {
+    if (!isPlannerDetail) {
+      if (!visibleRecentPlan) return;
+      setPendingBlockId(blockId);
+      setMobileOpen(false);
+      router.push(visibleRecentPlan.href);
+      return;
+    }
+
     setActiveBlockId(blockId);
     setOpenBlocks((ids) => ids.includes(blockId) ? ids : [...ids, blockId]);
     setMobileOpen(false);
@@ -216,57 +241,46 @@ export default function SidebarWrapper() {
     <>
     <header className="z-40 flex h-14 shrink-0 items-center justify-between border-b border-border bg-card px-4 md:hidden">
       <Link href="/" aria-label="Navio home" className="flex items-center gap-2 font-semibold"><Logo className="size-6" />Navio</Link>
-      <div className="flex items-center gap-2"><ThemeToggle /><button type="button" aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen} className="flex size-10 items-center justify-center rounded-lg hover:bg-muted" onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? <PanelLeftClose className="size-5" /> : <PanelLeftOpen className="size-5" />}</button></div>
+      <div className="flex items-center gap-2"><ProfileMenu compact /><button type="button" aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen} className="flex size-10 items-center justify-center rounded-lg hover:bg-muted" onClick={() => setMobileOpen(!mobileOpen)}>{mobileOpen ? <PanelLeftClose className="size-5" /> : <PanelLeftOpen className="size-5" />}</button></div>
     </header>
     <aside
       className={`absolute bottom-0 left-0 top-14 z-30 shrink-0 flex-col overflow-hidden border-r border-border bg-card shadow-sm md:static md:flex md:h-full ${mobileOpen ? "flex" : "hidden"} ${
-        collapsed ? "w-24 px-2 py-3" : "w-56 px-3 py-3"
+        collapsed ? "w-24 px-2 py-3" : "w-72 px-4 py-3"
       }`}
     >
       <div className="flex shrink-0 items-center justify-between gap-1 border-b border-border/50 pb-3">
-        <Link href="/" aria-label="Navio home" className="flex min-w-0 items-center gap-2 rounded-lg p-1 focus-visible:ring-2 focus-visible:ring-ring">
-          <Logo className="size-7 shrink-0" />
-          {!collapsed && <span className="min-w-0"><span className="block text-sm font-bold">Navio</span><span className="block text-xs text-muted-foreground">EV trip planner</span></span>}
-        </Link>
-        <button type="button" onClick={() => setCollapsed((previous) => !previous)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">{collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}</button>
+        <ProfileMenu compact={collapsed} onNavigate={() => setMobileOpen(false)} />
+        <Button variant="ghost" size="icon" onClick={() => setCollapsed((previous) => !previous)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="shrink-0 text-muted-foreground">{collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}</Button>
       </div>
 
       {/* Nav */}
       <nav
         aria-label="Primary navigation"
-        className="mt-3 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain"
+        className="scrollbar-hide mt-3 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain"
       >
+        <Link href="/planner/new" onClick={() => setMobileOpen(false)} aria-label="New trip" title="New trip"
+          className={cn(buttonVariants({ size: "lg" }), "w-full rounded-full", collapsed && "px-0")}>
+          <Plus className="size-4" aria-hidden="true" />{!collapsed && "New Trip"}
+        </Link>
+        <SidebarTrips collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
         <SidebarMenu title="Travel" collapsed={collapsed}>
           <SidebarItem
-            title="Home"
-            href="/"
-            icon={<Home className="size-5" />}
-            isActive={isRouteActive("/")}
-            collapsed={collapsed}
-          />
-          <SidebarItem
-            title="Explore"
-            href="/explore"
-            icon={<Compass className="size-5" />}
-            isActive={isRouteActive("/explore")}
-            collapsed={collapsed}
-          />
-          <SidebarItem
-            title="Community"
-            href="/community"
-            icon={<MessageCircle className="size-5" />}
-            isActive={isRouteActive("/community")}
+            title="Dashboard"
+            href="/dashboard"
+            icon={<LayoutDashboard className="size-5" />}
+            isActive={isRouteActive("/dashboard")}
+            onClick={() => setMobileOpen(false)}
             collapsed={collapsed}
           />
           <SidebarItem
             title="Planner"
-            href={isPlannerDetail ? pathName : "/planner"}
+            href={isPlannerDetail ? pathName : visibleRecentPlan?.href ?? "/planner/new"}
             icon={<Map className="size-5" />}
             isActive={isRouteActive("/planner")}
             onClick={handlePlannerClick}
             collapsed={collapsed}
           />
-          {isPlannerDetail ? (
+          {isPlannerDetail || visibleRecentPlan ? (
             <>
               <PlannerBlockSidebarGroup
                 activeBlockId={activeBlockId}
@@ -295,38 +309,26 @@ export default function SidebarWrapper() {
             </>
           ) : null}
         </SidebarMenu>
-
-        <SidebarMenu title="Utility" collapsed={collapsed}>
+        <SidebarMenu title="Discover" collapsed={collapsed}>
           <SidebarItem
-            title="Settings"
-            href="/settings"
-            icon={<Settings className="size-5" />}
-            isActive={isRouteActive("/settings")}
+            title="Explore"
+            href="/explore"
+            icon={<Compass className="size-5" />}
+            isActive={isRouteActive("/explore")}
+            onClick={() => setMobileOpen(false)}
+            collapsed={collapsed}
+          />
+          <SidebarItem
+            title="Community"
+            href="/community"
+            icon={<MessageCircle className="size-5" />}
+            isActive={isRouteActive("/community")}
+            onClick={() => setMobileOpen(false)}
             collapsed={collapsed}
           />
         </SidebarMenu>
       </nav>
-
-      {/* Footer */}
-      <div className="mt-6 flex flex-col gap-3">
-        {collapsed ? (
-          <div className="flex justify-center">
-            <ThemeToggle />
-          </div>
-        ) : (
-          <>
-            <ThemeToggle showLabel className="w-full justify-start px-3" />
-            <div className="rounded-md border border-border bg-background p-3">
-              <p className="text-xs font-semibold text-foreground">
-                Your trip workspace
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Plan routes, dates, and map stops from one place.
-              </p>
-            </div>
-          </>
-        )}
-      </div>
+      <SidebarAccountActions collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
     </aside>
     </>
   );

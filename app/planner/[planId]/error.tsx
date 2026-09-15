@@ -30,8 +30,8 @@ export default function PlannerDetailError({
           We could not open this plan
         </h1>
         <p className="max-w-xl text-sm text-muted-foreground">
-          The planner placeholder hit an unexpected error. Try again or return
-          to the setup screen.
+          The planner hit an unexpected error. Try again or return to your
+          dashboard.
         </p>
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button
@@ -42,10 +42,10 @@ export default function PlannerDetailError({
             Try again
           </Button>
           <Link
-            href="/planner"
+            href="/dashboard"
             className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
           >
-            Back to planner
+            Back to dashboard
           </Link>
         </div>
       </section>

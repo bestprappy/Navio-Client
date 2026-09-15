@@ -25,24 +25,24 @@ function TripPlannerMockup() {
         className="relative min-h-44 bg-cover bg-center"
         style={{
           backgroundImage:
-            "linear-gradient(180deg, rgb(0 0 0 / 0.04), rgb(0 0 0 / 0.58)), url(https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80)",
+            "linear-gradient(180deg, color-mix(in oklch, var(--scrim) 4%, transparent), color-mix(in oklch, var(--scrim) 58%, transparent)), url(https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=900&q=80)",
         }}
       >
-        <div className="absolute inset-x-0 bottom-0 p-5 text-white">
-          <p className="text-xs font-semibold uppercase tracking-normal text-white/75">
+        <div className="absolute inset-x-0 bottom-0 p-5 text-on-media">
+          <p className="text-xs font-semibold uppercase tracking-normal text-on-media/75">
             Live route preview
           </p>
           <h2 className="mt-1 text-2xl font-extrabold leading-tight">
             Bangkok to Khao Yai
           </h2>
           <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-            <span className="rounded-full bg-white/18 px-2.5 py-1 backdrop-blur">
+            <span className="rounded-full bg-on-media/18 px-2.5 py-1 backdrop-blur">
               196 km
             </span>
-            <span className="rounded-full bg-white/18 px-2.5 py-1 backdrop-blur">
+            <span className="rounded-full bg-on-media/18 px-2.5 py-1 backdrop-blur">
               3 stops
             </span>
-            <span className="rounded-full bg-white/18 px-2.5 py-1 backdrop-blur">
+            <span className="rounded-full bg-on-media/18 px-2.5 py-1 backdrop-blur">
               78% range
             </span>
           </div>
@@ -152,7 +152,7 @@ export default function Home() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/planner"
+                  href="/dashboard"
                   className={cn(buttonVariants({ size: "lg" }), "gap-2")}
                 >
                   Start planning
@@ -250,7 +250,7 @@ export default function Home() {
                 </p>
                 <div className="flex flex-wrap gap-3">
                   <Link
-                    href="/planner"
+                    href="/dashboard"
                     className={cn(
                       buttonVariants({ size: "lg" }),
                       "border-transparent bg-background text-foreground hover:bg-background/90 focus-visible:ring-background/50",

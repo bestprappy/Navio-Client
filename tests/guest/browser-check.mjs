@@ -25,7 +25,8 @@ for (const pattern of ["**/api/trips**", "**/api/users/**"]) {
 try {
   await page.goto(`${origin}/planner`, { waitUntil: "domcontentloaded", timeout: 120000 });
   await page.getByRole("button", { name: "Sign in later", exact: true }).click({ timeout: 90000 });
-  assert.equal(new URL(page.url()).pathname, "/planner");
+  assert.equal(new URL(page.url()).pathname, "/dashboard");
+  await page.getByRole("link", { name: "Plan a new trip", exact: true }).click();
   await page.getByRole("combobox", { name: "Destination", exact: true }).fill("Bangkok");
   await page.getByRole("option").filter({ hasText: "Bangkok" }).first().click();
   await page.getByRole("button", { name: "Start planning", exact: true }).click();

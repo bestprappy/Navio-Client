@@ -3,7 +3,7 @@
 import type { FormEvent, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useAtomValue, useSetAtom } from "jotai";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { createGuestTrip, type GuestTripPayload } from "./_components/guest-planner";
 
@@ -21,6 +21,7 @@ import { PlannerSetupHeader } from "./_components/planner-setup.header";
 
 function PlannerSetupRoot({ children }: { children: ReactNode }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { isAuthenticated, isAuthenticationLoading } = useRequireAuth();
   const selectedDestination = useAtomValue(selectedDestinationAtom);
   const dateRange = useAtomValue(plannerDateRangeAtom);
@@ -36,6 +37,9 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
       setIsCreatingTrip(true);
     },
     onSuccess: (trip) => {
+      if (isAuthenticated) {
+        void queryClient.invalidateQueries({ queryKey: ["planner", "trips"] });
+      }
       const searchParams = new URLSearchParams({
         destinationId: trip.destinationId,
         destinationName: trip.destinationName,

@@ -32,7 +32,7 @@ export function SignInPrompt() {
         </p>
         <DialogFooter>
           <Button variant="outline" onClick={() => setCallbackUrl(null)}>Sign in later</Button>
-          <Link href={getSignInHref(callbackUrl?.startsWith("/planner/guest-") ? "/planner/new" : callbackUrl ?? "/planner")} className={buttonVariants()} onClick={() => setCallbackUrl(null)}>
+          <Link href={getSignInHref(callbackUrl?.startsWith("/planner/guest-") ? "/planner/new" : callbackUrl ?? "/dashboard")} className={buttonVariants()} onClick={() => setCallbackUrl(null)}>
             Sign in / Sign up
           </Link>
         </DialogFooter>

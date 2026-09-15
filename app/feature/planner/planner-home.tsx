@@ -17,13 +17,11 @@ import {
 import { TripDashboardSkeleton } from "./_components/dashboard/trip-dashboard.skeleton";
 import { listTrips } from "./_components/planner-api";
 import { PlannerErrorBoundary } from "./_components/planner-error-boundary";
-import { PlannerSetupView } from "./planner-setup";
 
 const TRIP_PAGE_SIZE = 30;
 
 /**
- * Planner entry point. Returning travellers land on a dashboard of their
- * trips; first-time travellers land straight on the setup form.
+ * Dashboard entry point, including an empty trip collection for new travellers.
  */
 export function PlannerHomeView() {
   const { isAuthenticated, isAuthenticationLoading } = useRequireAuth();
@@ -37,7 +35,7 @@ export function PlannerHomeView() {
   });
 
   if (isAuthenticationLoading) return <TripDashboardSkeleton />;
-  if (!isAuthenticated) return <PlannerSetupView />;
+  if (!isAuthenticated) return <PlannerErrorBoundary><TripDashboardView trips={[]} /></PlannerErrorBoundary>;
 
   if (tripsQuery.isPending) {
     return <TripDashboardSkeleton />;
@@ -58,10 +56,6 @@ export function PlannerHomeView() {
   }
 
   const trips = tripsQuery.data?.content ?? [];
-
-  if (trips.length === 0) {
-    return <PlannerSetupView />;
-  }
 
   return (
     <PlannerErrorBoundary

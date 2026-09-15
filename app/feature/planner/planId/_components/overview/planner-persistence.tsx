@@ -141,6 +141,7 @@ export function PlannerPersistence({
     retry: 1,
     onMutate: () => setStatus("loading"),
     onSuccess: (trip) => {
+      void queryClient.invalidateQueries({ queryKey: ["planner", "trips"] });
       router.replace(`/planner/${trip.id}${window.location.search}`);
     },
     onError: (error) => {

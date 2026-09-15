@@ -154,6 +154,12 @@ export function isPersistedTripId(value: string | undefined): value is string {
   );
 }
 
+// A trip the user has not renamed is named after its country; the destination stays the chosen place.
+export function withDefaultTripTitle(trip: TripResponse): TripResponse {
+  const title = trip.displayName ?? trip.destinationCountry ?? trip.destinationCity ?? trip.title;
+  return title === trip.title ? trip : { ...trip, title };
+}
+
 export async function createTrip(
   payload: CreateTripPayload,
 ): Promise<TripResponse> {
@@ -165,7 +171,7 @@ export async function createTrip(
   if (!isTripResponse(value)) {
     throw new PlannerApiError("Trip service returned an invalid trip.", 502);
   }
-  return value;
+  return withDefaultTripTitle(value);
 }
 
 export async function listTrips(page = 0, size = 20): Promise<TripPage> {
@@ -174,12 +180,18 @@ export async function listTrips(page = 0, size = 20): Promise<TripPage> {
     throw new PlannerApiError("Trip service returned an invalid trip list.", 502);
   }
   return {
-    content: value.content,
+    content: value.content.map(withDefaultTripTitle),
     totalElements:
       typeof value.totalElements === "number"
         ? value.totalElements
         : value.content.length,
   };
+}
+
+export async function deleteTrip(tripId: string): Promise<void> {
+  await requestJson(`/api/trips/${encodeURIComponent(tripId)}`, {
+    method: "DELETE",
+  });
 }
 
 export async function getPlannerSnapshot(

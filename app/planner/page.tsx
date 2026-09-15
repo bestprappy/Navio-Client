@@ -1,20 +1,6 @@
-import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
-import { PlannerHomeView } from "../feature/planner/planner-home";
-import { Navbar } from "@/components/navbar";
-
-export const metadata: Metadata = {
-  title: "Your trips - Navio",
-  description: "Review your saved trips or start planning a new EV journey.",
-};
-
-export default function PlannerHomePage() {
-  return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      <Navbar />
-      <main className="min-h-0 flex-1 overflow-auto">
-        <PlannerHomeView />
-      </main>
-    </div>
-  );
+/** The trip list moved to /dashboard; keep old /planner links working. */
+export default function PlannerIndexPage() {
+  redirect("/dashboard");
 }

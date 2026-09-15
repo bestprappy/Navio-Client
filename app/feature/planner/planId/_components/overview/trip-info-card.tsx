@@ -1,6 +1,12 @@
+"use client";
+
 import { UserPlus } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRequireAuth } from "@/hooks/use-require-auth";
+import { isPersistedTripId } from "@/app/feature/planner/_components/planner-api";
+import { TripActionsMenu } from "@/app/feature/planner/_components/trip-actions-menu";
+import { useTripMetadata } from "@/app/feature/planner/_components/use-trip-metadata";
 
 const AVATAR_PLACEHOLDER =
   "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRH6gP2cXHCBfE3Q4snVK7RZuquprmqEBFHkg&s";
@@ -29,9 +35,25 @@ export function TripInfoCard({
   to,
   members = [],
 }: TripInfoCardProps) {
+  const { isAuthenticated } = useRequireAuth();
+  const metadata = useTripMetadata(planId);
+  // Guest plans live only in this browser; there is no saved trip to delete.
+  const canManageTrip = isAuthenticated && isPersistedTripId(planId) && Boolean(metadata.data);
+
   return (
     <div className="relative z-10 mx-4 -mt-12 flex min-w-0 flex-col gap-4 rounded-xl border border-border/60 bg-card p-4 shadow-sm @lg/planner:mx-6 @lg/planner:p-6">
-      <TripNameEditor planId={planId} destinationName={destinationName} />
+      <div className="flex min-w-0 items-start gap-1">
+        <div className="min-w-0 flex-1">
+          <TripNameEditor planId={planId} destinationName={destinationName} />
+        </div>
+        {canManageTrip && planId && (
+          <TripActionsMenu
+            tripId={planId}
+            tripTitle={metadata.data?.title ?? destinationName}
+            redirectTo="/dashboard"
+          />
+        )}
+      </div>
       <div className="flex min-w-0 items-start justify-between gap-4">
         {/* Title + dates */}
         <div className="min-w-0 flex-1 flex-col ">

@@ -17,7 +17,7 @@ const SETTINGS_ITEMS = [
 export function SettingsSidebar() {
   return (
     <aside className="flex w-full shrink-0 flex-col gap-6 lg:sticky lg:top-24 lg:w-60 lg:self-start xl:w-64">
-      <Link href="/planner" className="flex w-fit items-center gap-2 rounded-sm text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
+      <Link href="/dashboard"className="flex w-fit items-center gap-2 rounded-sm text-xs font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
         <ArrowLeft aria-hidden="true" className="size-3.5" />
         Back to your trips
       </Link>

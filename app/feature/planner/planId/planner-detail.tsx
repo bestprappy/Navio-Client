@@ -4,6 +4,7 @@ import { useHydrateAtoms } from "jotai/utils";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { createGuestTrip, guestTripAtom, isGuestPlanner } from "../_components/guest-planner";
 import { GuestPlanNotice } from "../_components/guest-plan-notice";
+import { RecentPlanSidebarSync } from "../_components/recent-plan-sidebar-sync";
 
 import { useTripMetadata } from "../_components/use-trip-metadata";
 import { PlannerWorkspace } from "./_components/layout/planner-workspace";
@@ -114,6 +115,7 @@ export function PlannerDetail({
         longitude={longitude}
         templatePlanId={templatePlanId}
       />}
+      <RecentPlanSidebarSync planId={planId} />
       <DayNavSidebar />
     </PlannerWorkspace>
     </GarageProvider>

@@ -25,7 +25,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const params = await searchParams;
   const callbackUrl = getSafeCallbackUrl(
     firstValue(params.callbackUrl),
-    "/planner",
+    "/dashboard",
   );
   const session = await auth();
 
