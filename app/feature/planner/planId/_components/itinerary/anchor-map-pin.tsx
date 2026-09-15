@@ -38,11 +38,11 @@ export function AnchorMapPin({ roles }: { roles: readonly AnchorMapPinRole[] }) 
         onClick={(event) => event.stopPropagation()}
       >
         <MapPin
-          className="size-8 fill-black text-black drop-shadow-md [&>circle]:hidden"
+          className="size-8 fill-map-pin text-map-pin drop-shadow-md [&>circle]:hidden"
           aria-hidden="true"
         />
         <span
-          className="pointer-events-none absolute left-1/2 top-[41.67%] -translate-x-1/2 -translate-y-1/2 text-[10px] font-bold leading-none text-white"
+          className="pointer-events-none absolute left-1/2 top-[41.67%] -translate-x-1/2 -translate-y-1/2 text-[10px] font-bold leading-none text-map-pin-foreground"
           style={{ color: primary.color }}
         >
           {primary.number}
@@ -50,7 +50,7 @@ export function AnchorMapPin({ roles }: { roles: readonly AnchorMapPinRole[] }) 
         {secondary ? (
           <span
             aria-hidden="true"
-            className="pointer-events-none absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-1 text-[9px] font-bold leading-none text-white shadow-sm ring-1 ring-white"
+            className="pointer-events-none absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-map-pin px-1 text-[9px] font-bold leading-none text-map-pin-foreground shadow-sm ring-1 ring-map-pin-foreground"
             style={others.length === 1 ? { color: secondary.color } : undefined}
           >
             {others.length === 1 ? secondary.number : `+${others.length}`}

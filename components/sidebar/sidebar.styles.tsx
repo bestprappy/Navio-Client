@@ -54,7 +54,7 @@ export const Body = styled.div`
 
 // Overlay component
 export const Overlay = styled.div`
-  background-color: rgba(15, 23, 42, 0.3);
+  background-color: color-mix(in oklch, var(--scrim) 30%, transparent);
   position: fixed;
   top: 0;
   right: 0;

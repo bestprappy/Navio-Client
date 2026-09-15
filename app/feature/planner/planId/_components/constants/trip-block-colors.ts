@@ -47,6 +47,9 @@ export function getTripBlockColorById(
   );
 }
 
+/** Fallback route stroke when a segment's block is missing — map SDKs need hex. */
+export const defaultRouteMapColor = getTripBlockColorById(defaultTripBlockColorId).mapColor;
+
 export function getTripBlockColorByIndex(index: number): TripBlockColorId {
   const defaultPalette: TripBlockColorId[] = ["teal", "cyan", "blue", "emerald", "amber", "pine", "navy", "slate"];
   return defaultPalette[index % defaultPalette.length] ?? defaultTripBlockColorId;

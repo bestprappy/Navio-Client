@@ -1,12 +1,11 @@
 "use client";
 
-import { Fragment, type CSSProperties, type ReactNode, useEffect, useMemo } from "react";
+import { Fragment, type CSSProperties, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
   AlertTriangle,
   BatteryCharging,
-  BatteryWarning,
   CalendarDays,
   Car,
   CheckCircle2,
@@ -18,11 +17,9 @@ import {
   MapPin,
   MessageCircle,
   Plug,
-  PlugZap,
   Route,
   ShoppingBag,
   Star,
-  Timer,
   Utensils,
   Wallet,
   Zap,
@@ -60,7 +57,7 @@ import {
   calcTripEvSummary,
   type DayBlockSummary,
 } from "@/app/feature/planner/planId/_components/garage/ev-calculator";
-import { formatMinutes } from "@/app/feature/planner/planId/_components/garage/garage-formatters";
+import { RouteEstimate } from "@/app/feature/planner/planId/_components/garage/route-estimate";
 import { VehicleUsageOverview } from "@/app/feature/planner/planId/_components/garage/vehicle-usage-overview";
 import { ChargeSegmentInfo, DischargeSegmentInfo } from "@/app/feature/planner/planId/_components/routes/charge-segment-info";
 import { RouteSegmentInfo } from "@/app/feature/planner/planId/_components/routes/route-segment-info";
@@ -480,13 +477,13 @@ function PlaceMetaBadges({ place }: { place: ExplorePlanPlace }) {
     <div className="space-y-2 border-t border-border/70 px-4 pb-4 pt-3">
       <div className="flex flex-wrap gap-1.5">
         {place.isVisited ? (
-          <span className="inline-flex items-center gap-1 rounded-sm bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+          <span className="inline-flex items-center gap-1 rounded-sm bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
             <CheckCircle2 className="size-3" aria-hidden="true" />
             Visited
           </span>
         ) : null}
         {place.time ? (
-          <span className="inline-flex items-center gap-1 rounded-sm bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-700 dark:text-sky-400">
+          <span className="inline-flex items-center gap-1 rounded-sm bg-info/10 px-3 py-1 text-xs font-medium text-info">
             <Clock className="size-3" aria-hidden="true" />
             {place.timeEnd
               ? `${formatDisplayTime(place.time)} – ${formatDisplayTime(place.timeEnd)}`
@@ -494,7 +491,7 @@ function PlaceMetaBadges({ place }: { place: ExplorePlanPlace }) {
           </span>
         ) : null}
         {place.cost !== undefined ? (
-          <span className="inline-flex items-center gap-1 rounded-sm bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+          <span className="inline-flex items-center gap-1 rounded-sm bg-warning/10 px-3 py-1 text-xs font-medium text-warning">
             THB {place.cost.toLocaleString()}
           </span>
         ) : null}
@@ -595,7 +592,7 @@ function ReadOnlyEvCard({
         {(place.time || place.notes) ? (
           <div className="space-y-1.5">
             {place.time ? (
-              <span className="inline-flex items-center gap-1 rounded-sm bg-sky-500/10 px-3 py-1 text-xs font-medium text-sky-700 dark:text-sky-400">
+              <span className="inline-flex items-center gap-1 rounded-sm bg-info/10 px-3 py-1 text-xs font-medium text-info">
                 <Clock className="size-3" aria-hidden="true" />
                 {place.timeEnd
                   ? `${formatDisplayTime(place.time)} – ${formatDisplayTime(place.timeEnd)}`
@@ -684,9 +681,9 @@ function ReadOnlyDayRouteOverview({
   if (isRouteLoading) {
     return (
       <div className="mx-8 mt-4 pl-2">
-        <div className="flex items-center gap-2 rounded-sm border border-border bg-card/80 px-3 py-2 text-sm text-muted-foreground shadow-xs">
-          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          <span>Calculating day overview...</span>
+        <div className="flex items-center gap-2 rounded-md bg-card ring-1 ring-border px-3 py-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+          <span role="status">Calculating route estimate...</span>
         </div>
       </div>
     );
@@ -695,7 +692,7 @@ function ReadOnlyDayRouteOverview({
   if (isRouteError) {
     return (
       <div className="mx-8 mt-4 pl-2">
-        <div className="flex items-center gap-2 rounded-sm border border-border bg-card/80 px-3 py-2 text-sm text-muted-foreground shadow-xs">
+        <div className="flex items-center gap-2 rounded-md bg-card ring-1 ring-border px-3 py-2 text-sm text-muted-foreground">
           <AlertTriangle className="size-4 text-warning" aria-hidden="true" />
           <span>Route estimate unavailable.</span>
         </div>
@@ -726,141 +723,22 @@ function ReadOnlyDayRouteOverview({
         (chargeStats.chargeEnergyKwh / activeEvCar.batteryKwh) * 100,
     ),
   );
-  const batteryLow = batteryEndPct < 20;
-  const hasIncompatibleStops = chargeStats.incompatibleStops > 0;
-  const drivingMinutes = Math.round(dayStats.totalDrivingSeconds / 60);
-
   return (
-    <div
+    <section
       className="mx-8 mt-4 pl-2"
       aria-label={`Day ${blockIndex + 1} route overview`}
     >
-      <div className="rounded-sm border border-border bg-card/80 p-3 shadow-xs">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Route Estimate
-          </p>
-          <p className="text-[11px] font-semibold text-muted-foreground">
-            Start {batteryAtDayStart.toFixed(0)}%
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-2">
-          <StatPill
-            icon={<MapPin className="size-3.5" />}
-            label={`${dayStats.totalDistanceKm.toFixed(1)} km`}
-            aria="Distance"
-          />
-          <StatPill
-            icon={<Timer className="size-3.5" />}
-            label={formatMinutes(drivingMinutes)}
-            aria="Driving time"
-          />
-          <StatPill
-            icon={<Zap className="size-3.5" />}
-            label={`${dayStats.energyKwh.toFixed(1)} kWh`}
-            aria="Energy used"
-          />
-          {chargeStats.chargeMinutes > 0 ? (
-            <StatPill
-              icon={<PlugZap className="size-3.5 text-primary" />}
-              label={`Charge ${formatMinutes(chargeStats.chargeMinutes)}`}
-              aria="Charge time"
-              highlight
-            />
-          ) : null}
-          {chargeStats.compatibleStops > 0 ? (
-            <StatPill
-              icon={<PlugZap className="size-3.5" />}
-              label={`${chargeStats.compatibleStops} compatible stop${
-                chargeStats.compatibleStops === 1 ? "" : "s"
-              }`}
-              aria="Compatible charge stops"
-            />
-          ) : null}
-        </div>
-
-        {hasIncompatibleStops ? (
-          <div className="mt-3 flex items-start gap-2 rounded-sm bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
-            <AlertTriangle
-              className="mt-0.5 size-3.5 shrink-0"
-              aria-hidden="true"
-            />
-            <span>
-              {chargeStats.incompatibleStops} charger stop
-              {chargeStats.incompatibleStops === 1 ? "" : "s"} does not match
-              this vehicle connector.
-            </span>
-          </div>
-        ) : null}
-
-        <div className="mt-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Battery at end of day</span>
-            <span
-              className={cn(
-                "font-semibold tabular-nums",
-                batteryLow ? "text-destructive" : "text-foreground",
-              )}
-            >
-              {batteryEndPct.toFixed(0)}%
-              {batteryLow ? (
-                <BatteryWarning
-                  className="ml-1 inline size-3.5 text-destructive"
-                  aria-hidden="true"
-                />
-              ) : null}
-            </span>
-          </div>
-          <div
-            className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted"
-            role="progressbar"
-            aria-label={`Battery remaining: ${batteryEndPct.toFixed(0)}%`}
-            aria-valuenow={Math.round(batteryEndPct)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div
-              className={cn(
-                "h-full rounded-full transition-all",
-                batteryLow
-                  ? "bg-destructive"
-                  : batteryEndPct < 40
-                    ? "bg-warning"
-                    : "bg-primary",
-              )}
-              style={{ width: `${Math.min(100, batteryEndPct)}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type StatPillProps = {
-  icon: ReactNode;
-  label: string;
-  aria: string;
-  highlight?: boolean;
-};
-
-function StatPill({ icon, label, aria, highlight }: StatPillProps) {
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-1.5 text-xs",
-        highlight ? "font-semibold text-primary" : "text-muted-foreground",
-      )}
-      aria-label={aria}
-    >
-      <span
-        className={highlight ? "text-primary" : "text-muted-foreground"}
-        aria-hidden="true"
-      >
-        {icon}
-      </span>
-      {label}
-    </div>
+      <RouteEstimate
+        startBatteryPct={batteryAtDayStart}
+        endBatteryPct={batteryEndPct}
+        distanceKm={dayStats.totalDistanceKm}
+        drivingMinutes={Math.round(dayStats.totalDrivingSeconds / 60)}
+        energyKwh={dayStats.energyKwh}
+        chargeMinutes={chargeStats.chargeMinutes}
+        compatibleStops={chargeStats.compatibleStops}
+        incompatibleStops={chargeStats.incompatibleStops}
+      />
+    </section>
   );
 }
 
@@ -972,7 +850,7 @@ function ReadOnlyBlock({
                   >
                     <span className="h-full min-h-8 w-px bg-border" />
                   </div>
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 py-1">
                     <RouteSegmentInfo
                       segment={segment ?? null}
                       isLoading={isRouteLoading}

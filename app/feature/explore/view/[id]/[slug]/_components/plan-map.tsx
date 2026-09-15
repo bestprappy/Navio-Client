@@ -14,7 +14,7 @@ import { useAtom } from "jotai";
 
 import type { Plan } from "../../../../_components/data";
 import { getPlanCenter } from "../../../../_components/data";
-import { getTripBlockColorById } from "@/app/feature/planner/planId/_components/constants/trip-block-colors";
+import { defaultRouteMapColor, getTripBlockColorById } from "@/app/feature/planner/planId/_components/constants/trip-block-colors";
 import { GoogleMapsExportButton } from "@/app/feature/planner/planId/_components/routes/google-maps-export-button";
 import { getTripRouteGroups } from "@/app/feature/planner/planId/_components/routes/trip-route.helpers";
 import { useTripRoutesForGroups } from "@/app/feature/planner/planId/_components/routes/trip-route-query";
@@ -33,7 +33,6 @@ const DEFAULT_CENTER = {
   lat: 15.87,
   lng: 100.9925,
 };
-const DEFAULT_ROUTE_COLOR = "#1976d2";
 const FLY_TO_ZOOM = 14;
 
 type PlanMapProps = {
@@ -84,7 +83,7 @@ function RoutePolylinesLayer({
       return new mapsLib.Polyline({
         path,
         strokeColor:
-          routeColorByBlockId.get(segment.blockId) ?? DEFAULT_ROUTE_COLOR,
+          routeColorByBlockId.get(segment.blockId) ?? defaultRouteMapColor,
         strokeWeight: isFallback ? 4 : 5,
         strokeOpacity: isFallback ? 0 : 0.9,
         icons: isFallback
@@ -234,7 +233,7 @@ export function PlanMap({ plan }: PlanMapProps) {
                     style={{
                       color: blockColor.value,
                       fill: blockColor.value,
-                      filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.35))",
+                      filter: "var(--map-marker-shadow)",
                     }}
                     aria-hidden="true"
                   />
@@ -339,7 +338,7 @@ function PlanPlacePreview({
             {place.rating ? (
               <div className="flex items-center gap-2">
                 <Star
-                  className="size-4 fill-yellow-400 text-yellow-400"
+                  className="size-4 fill-rating text-rating"
                   aria-hidden="true"
                 />
                 <span>

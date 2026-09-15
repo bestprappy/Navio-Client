@@ -29,6 +29,7 @@ export default function SidebarItem({
   return (
     <Link
       href={href}
+      aria-label={collapsed ? title : undefined}
       onClick={onClick}
       aria-current={isActive ? "page" : undefined}
       title={collapsed ? title : undefined}
@@ -36,7 +37,7 @@ export default function SidebarItem({
         "group flex min-h-11 w-full items-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring/30",
         collapsed ? "justify-center px-0" : "gap-3 px-3",
         isActive
-          ? "bg-secondary text-secondary-foreground"
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >

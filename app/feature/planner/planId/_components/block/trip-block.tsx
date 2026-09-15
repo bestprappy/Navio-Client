@@ -2,6 +2,7 @@
 
 import {
   createContext,
+  type CSSProperties,
   type ReactNode,
   useContext,
   useMemo,
@@ -62,6 +63,12 @@ type TripBlockRootProps = {
 
 function TripBlockRoot({ block, children, className }: TripBlockRootProps) {
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
+  const blockColor = getTripBlockColorById(block.colorId);
+  const blockStyle: CSSProperties & Record<`--${string}`, string> = {
+    "--primary": blockColor.value,
+    "--primary-foreground": blockColor.foreground,
+    "--ring": blockColor.value,
+  };
 
   const contextValue = useMemo<TripBlockContextValue>(
     () => ({ block }),
@@ -73,6 +80,7 @@ function TripBlockRoot({ block, children, className }: TripBlockRootProps) {
       <div
         id={`trip-block-${block.id}`}
         className={cn("flex w-full scroll-mt-4 flex-col", className)}
+        style={blockStyle}
         onFocus={() => setActiveBlockId(block.id)}
         onClick={() => setActiveBlockId(block.id)}
       >
@@ -188,7 +196,7 @@ function TripBlockActions({
           type="button"
           variant="outline"
           size="lg"
-          className="h-11 min-w-0 w-full rounded-lg border-blue-300 bg-blue-100 text-blue-800 hover:bg-blue-200 hover:text-blue-800 dark:border-blue-400/40 dark:bg-blue-400/15 dark:text-blue-300 dark:hover:bg-blue-400/25 dark:hover:text-blue-300"
+          className="h-11 min-w-0 w-full rounded-lg border-note/30 bg-note/10 text-note hover:bg-note/20 hover:text-note"
           onClick={() => addNoteToBlock({ blockId: block.id })}
         >
           <FileText className="size-4" aria-hidden="true" />
@@ -198,7 +206,7 @@ function TripBlockActions({
           type="button"
           variant="outline"
           size="lg"
-          className="h-11 min-w-0 w-full rounded-lg border-yellow-300 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 hover:text-yellow-800 dark:border-yellow-400/40 dark:bg-yellow-400/15 dark:text-yellow-300 dark:hover:bg-yellow-400/25 dark:hover:text-yellow-300"
+          className="h-11 min-w-0 w-full rounded-lg border-checklist/30 bg-checklist/10 text-checklist hover:bg-checklist/20 hover:text-checklist"
           onClick={() => addChecklistToBlock({ blockId: block.id })}
         >
           <CheckSquare className="size-4" aria-hidden="true" />

@@ -18,7 +18,7 @@ export function EndAnchorRouteInfo({ blockId, routeColor }: { blockId: string; r
   const states = charging?.days.get(blockId)?.batteryByItemId;
   return <div className="my-3 grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
     <div className="flex justify-center py-1" aria-hidden="true"><span className="h-full min-h-8 w-px bg-border" /></div>
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 py-1">
       <RouteSegmentInfo segment={segment ?? null} isLoading={routes.isFetching && !routes.data} isError={routes.isError} routeColor={routeColor} />
       <DischargeSegmentInfo batteryFrom={segment ? states?.get(segment.fromItemId)?.departurePct : undefined} batteryTo={states?.get(`${blockId}:end`)?.arrivalPct} />
     </div>

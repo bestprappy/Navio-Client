@@ -42,16 +42,16 @@ export const ExploreCard = React.forwardRef<HTMLDivElement, ExploreCardProps>(
         )}
 
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-scrim/80 via-scrim/30 to-transparent" />
 
         {/* Content */}
-        <div className="relative flex h-full flex-col justify-end p-4 text-white">
+        <div className="relative flex h-full flex-col justify-end p-4 text-on-media">
           <div className="transition-transform duration-500 ease-in-out group-hover:-translate-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-1">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-on-media/60 mb-1">
               {source}
             </p>
             <h3 className="text-base font-semibold leading-snug">{title}</h3>
-            <p className="mt-1 text-xs text-white/70">{subtitle}</p>
+            <p className="mt-1 text-xs text-on-media/70">{subtitle}</p>
           </div>
         </div>
       </div>

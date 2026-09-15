@@ -113,7 +113,7 @@ export function PlacePreviewPanel({
             {place.rating ? (
               <div className="flex items-center gap-2">
                 <Star
-                  className="size-4 fill-yellow-400 text-yellow-400"
+                  className="size-4 fill-rating text-rating"
                   aria-hidden="true"
                 />
                 <span>

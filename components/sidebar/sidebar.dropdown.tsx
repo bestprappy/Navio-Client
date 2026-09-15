@@ -31,7 +31,7 @@ export default function SidebarDropdown({
         className={cn(
           "group flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring/30",
           isActive
-            ? "bg-secondary text-secondary-foreground"
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
             : "text-muted-foreground hover:bg-muted hover:text-foreground",
         )}
       >

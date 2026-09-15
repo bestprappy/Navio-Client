@@ -92,7 +92,7 @@ export function TripPlaceCard({ blockId, item, position }: TripPlaceCardProps) {
                 </span>
               ) : null}
               {item.description ? (
-                <span className="inline-flex items-center rounded-sm bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+                <span className="inline-flex items-center rounded-sm bg-tag/10 px-3 py-1 text-xs font-medium text-tag">
                   {item.description}
                 </span>
               ) : null}

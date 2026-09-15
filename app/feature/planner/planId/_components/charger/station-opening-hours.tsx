@@ -7,8 +7,8 @@ export function StationOpeningHours({ value }: { value?: string | null }) {
   const { summary, rows } = formatOpeningHours(value);
   return (
     <div className="min-w-0 text-sm">
-      <p className="flex items-start gap-2 text-muted-foreground">
-        <Clock className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
+      <p className="flex items-start gap-2 text-foreground">
+        <Clock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
         <span className="min-w-0 break-words leading-relaxed">{summary}</span>
       </p>
       {rows.length > 0 && (

@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 type LogoProps = {
   className?: string;
 };
@@ -5,14 +7,14 @@ type LogoProps = {
 export function Logo({ className }: LogoProps) {
   return (
     <svg
-      className={className}
+      className={cn("text-primary", className)}
       viewBox="0 0 39 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
       focusable="false"
     >
-      <g fill="#15803d">
+      <g fill="currentColor">
         <path
           d="m30 4.5c4.9706 0 9 4.02944 9 9 0 4.9706-4.0294 9-9 9h-9v-9c0-4.97056 4.0294-9 9-9z"
           opacity=".5"

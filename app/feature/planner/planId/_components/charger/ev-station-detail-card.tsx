@@ -44,7 +44,7 @@ export function EvStationDetailCard({
           </h3>
           {charger.ratingAvg > 0 && (
             <div className="flex shrink-0 items-center gap-1 ml-2">
-              <Star className="size-3.5 fill-yellow-400 text-yellow-400 " aria-hidden="true" />
+              <Star className="size-3.5 fill-rating text-rating" aria-hidden="true" />
               <span className="text-sm font-semibold text-foreground">
                 {charger.ratingAvg.toFixed(1)}
               </span>

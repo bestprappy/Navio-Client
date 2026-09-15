@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import { ChargerPreviewPanel } from "./_components/charger/charger-preview-panel";
-import { getTripBlockColorById } from "./_components/constants/trip-block-colors";
+import { defaultRouteMapColor, getTripBlockColorById } from "./_components/constants/trip-block-colors";
 import type { TripBlockData } from "./_components/constants/types";
 import { activeEvCarAtom } from "./_components/garage/garage.atoms";
 import { isCompatible } from "./_components/garage/ev-calculator";
@@ -95,7 +95,6 @@ type RouteFeatureCollection = {
   features: RouteFeature[];
 };
 
-const DEFAULT_ROUTE_COLOR = "#1976d2";
 const VIEWPORT_POI_ZOOM_MIN = 14;
 const VIEWPORT_POI_RADIUS_M = 800;
 const VIEWPORT_POI_REFETCH_DIST_KM = 0.35;
@@ -450,7 +449,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
                   style={{
                     color: blockColor.value,
                     fill: blockColor.value,
-                    filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.35))",
+                    filter: "var(--map-marker-shadow)",
                   }}
                   aria-hidden="true"
                 />
@@ -519,7 +518,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
                   style={{
                     color: pinColor,
                     fill: pinFill,
-                    filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.35))",
+                    filter: "var(--map-marker-shadow)",
                   }}
                   aria-hidden="true"
                 />
@@ -693,7 +692,7 @@ function getRouteFeatureCollection(
         id: segment.id,
         status: segment.status,
         routeColor:
-          routeColorByBlockId.get(segment.blockId) ?? DEFAULT_ROUTE_COLOR,
+          routeColorByBlockId.get(segment.blockId) ?? defaultRouteMapColor,
         fromName: segment.fromName,
         toName: segment.toName,
         durationSeconds: segment.durationSeconds ?? null,

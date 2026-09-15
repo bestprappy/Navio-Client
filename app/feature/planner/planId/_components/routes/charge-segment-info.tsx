@@ -1,6 +1,30 @@
-import { Battery, Zap } from "lucide-react";
+import { BatteryCharging } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+import { BATTERY_CHANGE_TEXT, BATTERY_TONES, getBatteryTone } from "../garage/garage-formatters";
+
+function clampPct(value: number): number {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+/** Battery bar for a charge: the part held on arrival is dimmed, the part added is lit in its level color. */
+export function ChargeBar({ from, to, className }: { from: number; to: number; className?: string }) {
+  const start = clampPct(Math.min(from, to));
+  const end = clampPct(Math.max(from, to));
+
+  return (
+    <div aria-hidden="true" className={cn("surface-groove relative h-2.5 rounded-full", className)}>
+      <div
+        className={cn("absolute inset-y-0 left-0 rounded-full", BATTERY_TONES[getBatteryTone(end)].fill)}
+        style={{ width: `${end}%` }}
+      />
+      {start > 0 && (
+        <div className="absolute inset-y-0 left-0 rounded-l-full bg-background/55" style={{ width: `${start}%` }} />
+      )}
+    </div>
+  );
+}
 
 type ChargeSegmentInfoProps = {
   batteryFrom?: number;
@@ -10,32 +34,26 @@ type ChargeSegmentInfoProps = {
 export function ChargeSegmentInfo({ batteryFrom, batteryTo }: ChargeSegmentInfoProps) {
   if (batteryFrom === undefined || batteryTo === undefined) return null;
 
+  const from = clampPct(batteryFrom);
+  const to = clampPct(batteryTo);
+
   return (
-    <div className="rounded-sm border border-primary/20 bg-primary/5 px-3 py-2 shadow-xs">
-      <div className="mb-1.5 flex items-center justify-between text-sm">
-        <div className="flex items-center gap-1.5 font-medium text-primary">
-          <Zap className="size-3.5 shrink-0" aria-hidden="true" />
-          <span>Charge</span>
-        </div>
-        <span
-          className="tabular-nums text-primary"
-          aria-label={`Charged from ${batteryFrom.toFixed(0)}% to ${batteryTo.toFixed(0)}%`}
-        >
-          {batteryFrom.toFixed(0)}%&nbsp;→&nbsp;{batteryTo.toFixed(0)}%
+    <div className="space-y-2">
+      <p className="flex items-center justify-between gap-3 text-sm">
+        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+          <BatteryCharging className="size-4 shrink-0" aria-hidden="true" />
+          Charging
         </span>
-      </div>
-      <div
-        className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15"
-        role="progressbar"
-        aria-valuenow={batteryTo}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div
-          className="h-full rounded-full bg-primary transition-all"
-          style={{ width: `${batteryTo}%` }}
-        />
-      </div>
+        <span className="font-mono font-medium tabular-nums">
+          <span className="sr-only">from </span>
+          <span className={BATTERY_TONES[getBatteryTone(from)].valueText}>{from}%</span>
+          <span aria-hidden="true" className="text-muted-foreground"> → </span>
+          <span className="sr-only"> to </span>
+          <span className={BATTERY_TONES[getBatteryTone(to)].valueText}>{to}%</span>
+          {to > from && <span className={cn("ml-2", BATTERY_CHANGE_TEXT.added)}>+{to - from}%</span>}
+        </span>
+      </p>
+      <ChargeBar from={from} to={to} />
     </div>
   );
 }
@@ -51,20 +69,34 @@ export function DischargeSegmentInfo({
 }: DischargeSegmentInfoProps) {
   if (batteryFrom === undefined || batteryTo === undefined) return null;
 
-  const isLow = batteryTo < 20;
+  const from = clampPct(batteryFrom);
+  const to = clampPct(batteryTo);
+  const used = Math.max(0, from - to);
+  const tone = BATTERY_TONES[getBatteryTone(to)];
 
   return (
-    <div className="flex items-center gap-2 rounded-sm border border-border bg-card/80 px-3 py-2 text-sm shadow-xs">
-      <Battery
-        className={cn("size-3.5 shrink-0", isLow ? "text-destructive" : "text-amber-500")}
-        aria-hidden="true"
-      />
-      <span
-        className={cn("tabular-nums", isLow ? "text-destructive" : "text-muted-foreground")}
-        aria-label={`Battery from ${batteryFrom.toFixed(0)}% to ${batteryTo.toFixed(0)}%`}
-      >
-        {batteryFrom.toFixed(0)}%&nbsp;→&nbsp;{batteryTo.toFixed(0)}%
+    <div className="flex h-6 items-center gap-2 text-sm leading-none">
+      <span aria-hidden="true" className="relative h-2 w-8 shrink-0 rounded-full bg-muted ring-1 ring-border ring-inset">
+        <span className={cn("absolute inset-y-0 left-0 rounded-full", tone.fill)} style={{ width: `${to}%` }} />
       </span>
+      <span className="sr-only">
+        Battery {from}% to {to}%{tone.label ? `, ${tone.label.toLowerCase()}` : ""}
+      </span>
+      <span aria-hidden="true" className="font-mono font-medium tabular-nums">
+        <span className={BATTERY_TONES[getBatteryTone(from)].valueText}>{from}%</span>
+        <span className="text-muted-foreground"> → </span>
+        <span className={tone.valueText}>{to}%</span>
+      </span>
+      {used > 0 && (
+        <span aria-hidden="true" className={cn("font-mono tabular-nums", BATTERY_CHANGE_TEXT.used)}>
+          −{used}%
+        </span>
+      )}
+      {tone.label && (
+        <span aria-hidden="true" className={cn("font-medium", tone.text)}>
+          {tone.label}
+        </span>
+      )}
     </div>
   );
 }

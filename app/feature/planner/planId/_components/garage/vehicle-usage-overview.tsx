@@ -1,21 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { BatteryCharging, Gauge, PlugZap, Route, Timer, Zap } from "lucide-react";
+import { useId } from "react";
 
 import { cn } from "@/lib/utils";
 
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
 import type { TripEvSummary } from "./ev-calculator";
-import { calcRangeKmForBatteryPct } from "./ev-calculator";
-import { formatMinutes } from "./garage-formatters";
-import { VehicleMedia } from "./vehicle-media";
-
-function getBatteryBarColor(pct: number): string {
-  if (pct <= 20) return "bg-destructive";
-  if (pct <= 50) return "bg-warning";
-  return "bg-primary";
-}
+import { AUTO_MIN_ARRIVAL_PCT, calcRangeKmForBatteryPct } from "./ev-calculator";
+import { BATTERY_TONES, formatDistanceKm, formatMinutes, getBatteryTone } from "./garage-formatters";
 
 type VehicleUsageOverviewProps = {
   car: EvCar;
@@ -32,225 +24,193 @@ export function VehicleUsageOverview({
   totalDrivingMinutes,
   plannedDays,
 }: VehicleUsageOverviewProps) {
-  const batteryPct = tripSummary?.finalBatteryPct ?? vehicle.startingBatteryPct;
-  const currentRangeKm = Math.round(calcRangeKmForBatteryPct(batteryPct, car));
-  const totalDistanceKm = tripSummary?.totalDistanceKm ?? 0;
-  const totalEnergyKwh = tripSummary?.totalEnergyKwh ?? 0;
-  const totalChargeMinutes = tripSummary?.totalChargeMinutes ?? 0;
-  const dailyBattery = tripSummary?.batteryByDay ?? [];
-  const displayName = vehicle.nickname?.trim()
-    ? vehicle.nickname
-    : `${car.make} ${car.model}`;
+  const titleId = useId();
+  const hasEstimate = tripSummary !== null;
+  const startPct = vehicle.startingBatteryPct;
+  const endPct = tripSummary?.finalBatteryPct ?? startPct;
+  const rangeLeftKm = Math.round(calcRangeKmForBatteryPct(endPct, car));
+  const distanceKm = tripSummary?.totalDistanceKm ?? 0;
+  const energyKwh = tripSummary?.totalEnergyKwh ?? 0;
+  const chargeMinutes = tripSummary?.totalChargeMinutes ?? 0;
+  const tone = BATTERY_TONES[getBatteryTone(endPct)];
+  const displayName = vehicle.nickname?.trim() || `${car.make} ${car.model}`;
 
   return (
-    <div role="region" aria-label="Vehicle usage overview" className="@container/usage min-w-0 overflow-hidden rounded-md border border-border bg-card shadow-sm">
-      <div className="border-b border-border/60 bg-background/50 p-3">
-        <VehicleMedia car={car} />
-        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-base font-bold text-foreground">
-              {displayName}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {car.make} {car.model}{car.year ? ` (${car.year})` : ""}
-            </p>
-          </div>
-          <span className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-            {vehicle.source === "custom" ? "Custom EV" : "Catalogue EV"}
-          </span>
-        </div>
-      </div>
+    <section
+      aria-labelledby={titleId}
+      className="@container/usage min-w-0 overflow-hidden rounded-lg border border-border bg-card"
+    >
+      <header className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-4 pt-4">
+        <h3 id={titleId} className="text-base font-semibold text-foreground">
+          Trip energy
+        </h3>
+        <p className="min-w-0 truncate text-sm text-muted-foreground">{displayName}</p>
+      </header>
 
-      <div className="grid gap-3 p-3">
-        <div className="grid min-w-0 grid-cols-1 gap-3 @min-[32rem]/usage:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-          <BatteryPanel batteryPct={batteryPct} currentRangeKm={currentRangeKm} />
-          <div className="grid gap-3">
-            <MetricTile
-              icon={<Zap className="size-4" />}
-              label="Consumption"
-              value={`${totalEnergyKwh.toFixed(1)} kWh`}
-              iconColor="text-warning"
-              iconBg="bg-warning/10"
-            />
-            <MetricTile
-              icon={<Gauge className="size-4" />}
-              label="Mileage"
-              value={`${totalDistanceKm.toFixed(1)} km`}
-              iconColor="text-primary"
-              iconBg="bg-primary/10"
-            />
-          </div>
-        </div>
-
-        <DailyUsageBars values={dailyBattery} plannedDays={plannedDays} />
-
-        <div className="grid min-w-0 grid-cols-1 gap-3 @min-[25rem]/usage:grid-cols-2">
-          <MetricTile
-            icon={<Route className="size-4" />}
-            label="Distance"
-            value={
-              plannedDays > 0
-                ? `${(totalDistanceKm / plannedDays).toFixed(1)} km / day`
-                : "0 km / day"
-            }
-            iconColor="text-primary"
-            iconBg="bg-primary/10"
-          />
-          <MetricTile
-            icon={<BatteryCharging className="size-4" />}
-            label="Charging Time"
-            value={totalChargeMinutes > 0 ? formatMinutes(totalChargeMinutes) : "No stops"}
-            iconColor="text-warning"
-            iconBg="bg-warning/10"
-          />
-          <MetricTile
-            icon={<PlugZap className="size-4" />}
-            label="Connector"
-            value={car.connectorTypes.join(", ")}
-            iconColor="text-primary"
-            iconBg="bg-primary/10"
-          />
-          <MetricTile
-            icon={<Timer className="size-4" />}
-            label="Driving Time"
-            value={formatMinutes(totalDrivingMinutes)}
-            iconColor="text-primary"
-            iconBg="bg-primary/10"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BatteryPanel({
-  batteryPct,
-  currentRangeKm,
-}: {
-  batteryPct: number;
-  currentRangeKm: number;
-}) {
-  const filledBars = Math.ceil(batteryPct / 12.5);
-
-  return (
-    <div className="flex h-full min-h-40 min-w-0 flex-col rounded-md border border-border bg-background/70 p-3">
-      <div className="flex flex-1 gap-3">
-        <div className="flex w-20 flex-col-reverse gap-1.5">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <span
-              key={index}
-              className={cn(
-                "flex-1 rounded-full",
-                index < filledBars ? getBatteryBarColor(batteryPct) : "bg-muted",
-              )}
-            />
-          ))}
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col justify-between">
+      <div className="px-4 pt-3 pb-4">
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
           <div>
-            <p className="text-xs font-semibold text-muted-foreground">Battery</p>
-            <p className="text-2xl font-bold tabular-nums text-foreground">
-              {batteryPct}%
+            <p className="text-sm text-muted-foreground">
+              {hasEstimate ? "Battery at trip end" : "Starting battery"}
             </p>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground">Estimated range</p>
-            <p className="text-lg font-bold tabular-nums text-foreground">
-              {currentRangeKm} km
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function DailyUsageBars({
-  values,
-  plannedDays,
-}: {
-  values: number[];
-  plannedDays: number;
-}) {
-  const barValues =
-    values.length > 0
-      ? values
-      : Array.from({ length: Math.max(plannedDays, 1) }).map(() => 0);
-
-  const count = barValues.length;
-  const gapClass = count > 14 ? "gap-0.5" : count > 7 ? "gap-1" : "gap-2";
-  const padClass = count > 14 ? "px-0.5 pb-0.5" : "px-1 pb-1";
-
-  return (
-    <div className="min-w-0 rounded-md border border-border bg-background/70 p-3">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div>
-          <p className="text-sm font-semibold text-foreground">Vehicle Usage</p>
-          <p className="text-xs text-muted-foreground">Battery after each day</p>
-        </div>
-        <span className="rounded-full bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
-          Trip
-        </span>
-      </div>
-      <div className="overflow-x-auto pb-1" tabIndex={0} role="region" aria-label="Daily battery usage">
-      <div className={cn("flex h-24 items-end pb-1", gapClass)} style={{ minWidth: `${count * 1.75}rem` }}>
-        {barValues.map((value, index) => {
-          const height = Math.max(12, value);
-          const isEmpty = values.length === 0;
-
-          return (
-            <div
-              key={`${index}-${value}`}
-              className="flex min-w-0 flex-1 flex-col items-center gap-1"
-            >
-              <div className={cn("flex h-20 w-full items-end rounded-sm bg-muted/60", padClass)}>
-                <span
-                  className={cn(
-                    "block w-full rounded-sm transition-all",
-                    isEmpty ? "bg-border" : getBatteryBarColor(value),
-                  )}
-                  style={{ height: `${height}%` }}
-                />
-              </div>
-              <span className="text-[10px] font-semibold text-muted-foreground">
-                D{index + 1}
+            <p className="mt-1 flex items-baseline gap-2">
+              <span className="font-mono text-4xl font-semibold leading-none tabular-nums text-foreground">
+                {endPct}
+                <span className="text-xl text-muted-foreground">%</span>
               </span>
-            </div>
-          );
-        })}
+              {tone.label && <span className={cn("text-sm font-medium", tone.text)}>{tone.label}</span>}
+            </p>
+          </div>
+          <div className="@min-[20rem]/usage:text-right">
+            <p className="text-sm text-muted-foreground">Range left</p>
+            <p className="mt-1 font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
+              {rangeLeftKm.toLocaleString("en-US")}
+              <span className="ml-1 font-sans text-sm font-normal text-muted-foreground">km</span>
+            </p>
+          </div>
+        </div>
+        <BatteryTrack startPct={startPct} endPct={endPct} fillClass={tone.fill} showStart={hasEstimate} />
       </div>
+
+      <dl className="grid grid-cols-2 gap-px border-t border-border bg-border @min-[30rem]/usage:grid-cols-4">
+        <Stat
+          label="Distance"
+          value={formatDistanceKm(distanceKm)}
+          unit="km"
+          note={plannedDays > 1 ? `${formatDistanceKm(distanceKm / plannedDays)} km a day` : undefined}
+        />
+        <Stat
+          label="Energy used"
+          value={energyKwh.toFixed(1)}
+          unit="kWh"
+          note={`at ${car.consumptionKwhPer100km} kWh/100 km`}
+        />
+        <Stat label="Driving" value={formatMinutes(totalDrivingMinutes)} />
+        <Stat
+          label="Charging"
+          value={chargeMinutes > 0 ? formatMinutes(chargeMinutes) : "None"}
+          note={chargeMinutes > 0 ? undefined : "No stops planned"}
+        />
+      </dl>
+
+      <DailyBattery values={tripSummary?.batteryByDay ?? []} hasEstimate={hasEstimate} />
+    </section>
+  );
+}
+
+function BatteryTrack({
+  startPct,
+  endPct,
+  fillClass,
+  showStart,
+}: {
+  startPct: number;
+  endPct: number;
+  fillClass: string;
+  showStart: boolean;
+}) {
+  return (
+    <div className="mt-4" aria-hidden="true">
+      <div className="relative h-2.5 rounded-full bg-muted ring-1 ring-border ring-inset">
+        {showStart && startPct > endPct && (
+          <div className="absolute inset-y-0 left-0 rounded-full bg-foreground/15" style={{ width: `${startPct}%` }} />
+        )}
+        <div className={cn("absolute inset-y-0 left-0 rounded-full", fillClass)} style={{ width: `${endPct}%` }} />
+        <div className="absolute -inset-y-1 w-px bg-destructive" style={{ left: `${AUTO_MIN_ARRIVAL_PCT}%` }} />
+      </div>
+      <div className="mt-2 flex flex-wrap justify-between gap-x-3 text-xs text-muted-foreground">
+        <span>Reserve {AUTO_MIN_ARRIVAL_PCT}%</span>
+        {showStart && <span>Started at {startPct}%</span>}
       </div>
     </div>
   );
 }
 
-function MetricTile({
-  icon,
-  label,
-  value,
-  iconColor = "text-primary",
-  iconBg = "bg-primary/10",
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  iconColor?: string;
-  iconBg?: string;
-}) {
+function Stat({ label, value, unit, note }: { label: string; value: string; unit?: string; note?: string }) {
   return (
-    <div className="min-w-0 rounded-md border border-border bg-background/70 p-3">
-      <div className={cn("mb-2 flex items-center gap-2", iconColor)}>
-        <span
-          className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", iconBg)}
-          aria-hidden="true"
-        >
-          {icon}
-        </span>
-        <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      </div>
-      <p className="break-words text-lg font-bold leading-tight text-foreground">
-        {value}
-      </p>
+    <div className="min-w-0 bg-card px-4 py-3">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-1">
+        <span className="font-mono text-lg font-semibold leading-tight tabular-nums text-foreground">{value}</span>
+        {unit && <span className="ml-1 text-xs text-muted-foreground">{unit}</span>}
+        {note && <span className="mt-0.5 block text-xs text-muted-foreground">{note}</span>}
+      </dd>
     </div>
+  );
+}
+
+function DailyBattery({ values, hasEstimate }: { values: number[]; hasEstimate: boolean }) {
+  const titleId = useId();
+  const scrolls = values.length > 8;
+
+  return (
+    <div className="border-t border-border p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h4 id={titleId} className="text-sm font-medium text-foreground">
+          Battery at the end of each day
+        </h4>
+        {hasEstimate && values.length > 0 && (
+          <p className="text-xs text-muted-foreground">Red line: {AUTO_MIN_ARRIVAL_PCT}% reserve</p>
+        )}
+      </div>
+
+      {!hasEstimate || values.length === 0 ? (
+        <p className="mt-3 rounded-md bg-muted px-3 py-3 text-sm text-muted-foreground">
+          Add at least two stops to a day to see how much battery is left each night.
+        </p>
+      ) : (
+        <div
+          className="mt-3 overflow-x-auto rounded-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          tabIndex={scrolls ? 0 : undefined}
+          role={scrolls ? "region" : undefined}
+          aria-label={scrolls ? "Daily battery chart, scrollable" : undefined}
+        >
+          <div className="relative h-36" style={{ minWidth: `${values.length * 2.5}rem` }}>
+            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-5 bottom-6 border-b border-border">
+              <div
+                className="absolute inset-x-0 border-t border-dashed border-destructive"
+                style={{ bottom: `${AUTO_MIN_ARRIVAL_PCT}%` }}
+              />
+            </div>
+            <ol aria-labelledby={titleId} className="relative flex h-full gap-2">
+              {values.map((value, index) => (
+                <DayBar key={index} day={index + 1} value={value} shortLabel={values.length > 7} />
+              ))}
+            </ol>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DayBar({ day, value, shortLabel }: { day: number; value: number; shortLabel: boolean }) {
+  const tone = BATTERY_TONES[getBatteryTone(value)];
+
+  return (
+    <li className="flex min-w-0 flex-1 flex-col">
+      <span className="sr-only">
+        Day {day}: {value}%{tone.label ? `, ${tone.label.toLowerCase()}` : ""}
+      </span>
+      <div className="relative flex-1" aria-hidden="true">
+        <div className="absolute inset-x-0 top-5 bottom-0 flex justify-center">
+          <div className="relative h-full w-full max-w-10">
+            <span
+              className={cn("battery-fill-up absolute inset-x-0 bottom-0 rounded-t-sm", tone.fill)}
+              style={{ height: `${Math.max(value, 1)}%` }}
+            />
+            <span
+              className="absolute inset-x-0 text-center font-mono text-xs font-medium tabular-nums text-foreground"
+              style={{ bottom: `calc(${value}% + 0.25rem)` }}
+            >
+              {value}%
+            </span>
+          </div>
+        </div>
+      </div>
+      <span aria-hidden="true" className="flex h-6 items-end justify-center text-xs text-muted-foreground">
+        {shortLabel ? day : `Day ${day}`}
+      </span>
+    </li>
   );
 }

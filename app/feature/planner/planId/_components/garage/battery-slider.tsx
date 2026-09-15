@@ -1,13 +1,20 @@
 "use client";
 
+import { getBatteryTone, type BatteryTone } from "./garage-formatters";
+
 const THUMB_SIZE = 20;
 const THUMB_HALF = THUMB_SIZE / 2;
 const LABELS = [0, 25, 50, 75, 100];
 
+const TONE_COLORS: Record<BatteryTone, string> = {
+  high: "var(--battery-high)",
+  mid: "var(--battery-mid)",
+  low: "var(--battery-low)",
+  critical: "var(--battery-critical)",
+};
+
 export function getBatteryColor(pct: number): string {
-  if (pct <= 20) return "var(--destructive)";
-  if (pct <= 50) return "var(--warning)";
-  return "var(--primary)";
+  return TONE_COLORS[getBatteryTone(pct)];
 }
 
 type BatterySliderProps = {

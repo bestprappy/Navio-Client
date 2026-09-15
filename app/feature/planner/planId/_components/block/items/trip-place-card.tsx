@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 import { useAtomValue, useSetAtom } from "jotai";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -84,21 +83,19 @@ export function TripPlaceCard({
     backgroundColor: blockColor.value,
     color: blockColor.foreground,
   };
+  // --surface-ring stacks the selection ring on top of the card's elevation shadow.
   const selectedStyle: CSSProperties | undefined = isSelected
-    ? {
+    ? ({
         borderColor: blockColor.value,
-        boxShadow: `0 0 0 2px color-mix(in oklch, ${blockColor.value} 28%, transparent)`,
-      }
+        "--surface-ring": `0 0 0 2px color-mix(in oklch, ${blockColor.value} 28%, transparent)`,
+      } as CSSProperties)
     : undefined;
   const chargerDetails = item.evCharger;
 
   return (
     <article
       className={cn(
-        "min-w-0 cursor-pointer overflow-hidden rounded-xl border shadow-2xs transition-colors",
-        isEvCharger
-          ? "border-primary/30 bg-primary/5 ring-1 ring-primary/10"
-          : "border-border bg-card",
+        "surface-card min-w-0 cursor-pointer overflow-hidden rounded-xl border border-border bg-card dark:border-border/70",
         isSelected && "border-2",
       )}
       style={selectedStyle}
@@ -107,57 +104,52 @@ export function TripPlaceCard({
       {isEvCharger ? (
         /* ── EV charger branch ── */
         <div className="space-y-4 p-4">
-          {isEvCharger ? (
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div
-                  className="flex size-9 shrink-0 items-center justify-center rounded-sm text-xs font-bold shadow-xs"
-                  style={markerStyle}
-                  aria-label="EV charging station"
-                >
-                  <Zap className="size-4" aria-hidden="true" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="h-6 rounded-sm border-primary/30 bg-background/70 px-2 text-primary"
-                    >
-                      <Zap className="size-3" aria-hidden="true" />
-                      Charging stop
-                    </Badge>
-                    {chargerDetails?.operatorName ? (
-                      <Badge variant="secondary" className="h-6 rounded-sm">
-                        {chargerDetails?.operatorName}
-                      </Badge>
-                    ) : null}
-                    {chargerDetails?.locked ? (
-                      <Badge variant="outline" className="h-6 rounded-sm">
-                        <LockKeyhole className="size-3" aria-hidden="true" />
-                        Kept during optimization
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <h3 className="mt-2 break-words text-base font-semibold leading-snug text-foreground">
-                    {item.name}
-                  </h3>
-                </div>
-              </div>
-
-              <StationSpecifications item={item} />
-              {chargerDetails && (
-                <StationChargingControl blockId={blockId} itemId={item.id} stationName={item.name} details={chargerDetails} arrivalPct={chargeBatteryFrom} />
-              )}
-
-              <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
-                <MapPin
-                  className="mt-0.5 size-3.5 shrink-0"
-                  aria-hidden="true"
-                />
-                <span>{item.address}</span>
+          <div className="flex items-start gap-3">
+            <div
+              role="img"
+              aria-label="EV charging station"
+              className="surface-tile flex size-9 shrink-0 items-center justify-center rounded-md"
+              style={markerStyle}
+            >
+              <Zap className="size-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base leading-snug font-semibold wrap-break-word text-foreground">
+                {item.name}
+              </h3>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+                <span>Charging stop</span>
+                {chargerDetails?.operatorName ? (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span>{chargerDetails.operatorName}</span>
+                  </>
+                ) : null}
+                {chargerDetails?.locked ? (
+                  <>
+                    <span aria-hidden="true">·</span>
+                    <span className="inline-flex items-center gap-1 text-foreground">
+                      <LockKeyhole className="size-3.5" aria-hidden="true" />
+                      Kept when optimizing
+                    </span>
+                  </>
+                ) : null}
               </p>
             </div>
-          ) : null}
+          </div>
+
+          <StationSpecifications item={item} />
+
+          <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+            <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            <span>{item.address}</span>
+          </p>
+
+          {chargerDetails && (
+            <div className="border-t border-border pt-4">
+              <StationChargingControl blockId={blockId} itemId={item.id} stationName={item.name} details={chargerDetails} arrivalPct={chargeBatteryFrom} />
+            </div>
+          )}
 
           {isSelected ? (
             <>
@@ -176,10 +168,13 @@ export function TripPlaceCard({
                 rows={3}
                 className="min-h-20 w-full resize-y rounded-sm border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
               />
-              <ChargeSegmentInfo
-                batteryFrom={chargeBatteryFrom}
-                batteryTo={chargeBatteryTo}
-              />
+              {/* The charging control above already shows arrival and target. */}
+              {!chargerDetails && (
+                <ChargeSegmentInfo
+                  batteryFrom={chargeBatteryFrom}
+                  batteryTo={chargeBatteryTo}
+                />
+              )}
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
@@ -261,12 +256,14 @@ export function TripPlaceCard({
             </>
           ) : (
             <>
-              <ChargeSegmentInfo
-                batteryFrom={chargeBatteryFrom}
-                batteryTo={chargeBatteryTo}
-              />
+              {!chargerDetails && (
+                <ChargeSegmentInfo
+                  batteryFrom={chargeBatteryFrom}
+                  batteryTo={chargeBatteryTo}
+                />
+              )}
               {item.isVisited && (
-                <span className="inline-flex items-center gap-1 rounded-sm bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+                <span className="inline-flex items-center gap-1 rounded-sm bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
                   <CheckCircle2 className="size-3" aria-hidden="true" />
                   Charging completed
                 </span>
@@ -388,13 +385,13 @@ export function TripPlaceCard({
                 <div className="space-y-2 border-t border-border/70 px-4 pb-4 pt-3">
                   <div className="flex flex-wrap gap-1.5">
                     {item.isVisited && (
-                      <span className="inline-flex items-center gap-1 rounded-sm bg-green-500/10 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+                      <span className="inline-flex items-center gap-1 rounded-sm bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
                         <CheckCircle2 className="size-3" aria-hidden="true" />
                         Visited
                       </span>
                     )}
                     {item.time && (
-                      <span className="inline-flex items-center gap-1 rounded-sm bg-sky-500/10 px-3 py-2 text-xs font-medium text-sky-700 dark:text-sky-400">
+                      <span className="inline-flex items-center gap-1 rounded-sm bg-info/10 px-3 py-2 text-xs font-medium text-info">
                         <Clock className="size-3" aria-hidden="true" />
                         {item.timeEnd
                           ? `${formatDisplayTime(item.time)} – ${formatDisplayTime(item.timeEnd)}`
@@ -402,7 +399,7 @@ export function TripPlaceCard({
                       </span>
                     )}
                     {item.cost !== undefined && (
-                      <span className="inline-flex items-center gap-1 rounded-sm bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                      <span className="inline-flex items-center gap-1 rounded-sm bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
                         {currency.symbol} {item.cost.toLocaleString()}
                       </span>
                     )}

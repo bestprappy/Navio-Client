@@ -4,12 +4,28 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* Slim, quiet scrollbars retain a visible thumb for mouse and keyboard users. */
-* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-*::-webkit-scrollbar { width: 5px; height: 5px; }
-*::-webkit-scrollbar-track { background: transparent; }
-*::-webkit-scrollbar-thumb { background: var(--border); border-radius: 1rem; }
-*::-webkit-scrollbar-thumb:hover { background: var(--muted-foreground); }
+/* Slim, quiet scrollbars retain a visible thumb for mouse and keyboard users.
+   Layered as base so utilities such as .scrollbar-hide can override them. */
+@layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 1rem;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+}
 
 @theme inline {
   --color-background: var(--background);
@@ -48,10 +64,25 @@
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
 
+  /* Feature tints — one base per purpose, tinted with opacity (bg-note/10) */
+  --color-rating: var(--rating);
+  --color-note: var(--note);
+  --color-checklist: var(--checklist);
+  --color-charging: var(--charging);
+  --color-premade: var(--premade);
+  --color-tag: var(--tag);
+
+  /* Theme-independent overlays and map chrome */
+  --color-scrim: var(--scrim);
+  --color-on-media: var(--on-media);
+  --color-map-pin: var(--map-pin);
+  --color-map-pin-foreground: var(--map-pin-foreground);
+
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
+  --color-well: var(--well);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
@@ -99,27 +130,34 @@
 }
 
 :root {
-  /* TColors.light & textPrimary */
-  --background: oklch(0.978 0.004 250);
-  --foreground: oklch(0.28 0.018 255);
+  /* Brand pair: Paper #FAFBFE and the dark brand navy (--brand-pine). Light
+     mode sits on Paper and writes in navy; neutrals are blue-gray (hue 265). */
+  --brand-paper: oklch(0.988 0.004 271);
+  --brand-pine: oklch(15.686% 0.04872 271.219);
 
-  /* TColors.white */
+  --background: var(--brand-paper);
+  --foreground: var(--brand-pine);
+
+  /* Raised surfaces step lighter than the Paper page */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.28 0.018 255);
+  --card-foreground: var(--brand-pine);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.28 0.018 255);
+  --popover-foreground: var(--brand-pine);
 
-  /* TColors.primary — green */
-  --primary: oklch(0.49 0.085 205);
-  --primary-foreground: oklch(1 0 0);
+  /* Neutral theme: primary actions use the brand navy */
+  --primary: oklch(64.065% 0.19745 252.99);
+  --primary-foreground: var(--brand-paper);
 
-  /* TColors.secondary #D4EAE6 (Mint) */
-  --secondary: oklch(0.94 0.023 195);
-  --secondary-foreground: oklch(0.36 0.05 205);
+  /* Pale blue tint for secondary actions and selected rows */
+  --secondary: oklch(0.94 0.018 268);
+  --secondary-foreground: oklch(25.281% 0.04969 274.087);
 
-  /* TColors.lightContainer & textSecondary */
-  --muted: oklch(0.955 0.005 250);
-  --muted-foreground: oklch(0.47 0.018 255);
+  /* Low-chroma blue-gray neutrals */
+  --muted: oklch(0.955 0.006 265);
+  --muted-foreground: oklch(0.47 0.02 265);
+
+  /* Recessed wells, grooves and tracks: one step below the white card */
+  --well: oklch(0.972 0.006 265);
 
   /* TColors.accent #30867D (Teal) */
   --accent: oklch(0.46 0.055 80);
@@ -129,12 +167,12 @@
   --destructive: oklch(0.499 0.174 25.2);
   --destructive-foreground: oklch(1 0 0);
 
-  /* TColors.borderPrimary #D9D9D9 & borderSecondary #E6E6E6 */
-  --border: oklch(0.81 0.016 230);
-  --input: oklch(0.69 0.025 230);
+  /* Blue-gray borders */
+  --border: oklch(0.87 0.01 265);
+  --input: oklch(0.63 0.016 265);
 
-  /* Focus ring uses TColors.primary */
-  --ring: oklch(0.49 0.085 205);
+  /* Focus ring follows the primary accent */
+  --ring: var(--primary);
 
   /* TColors.success #388E3C */
   --success: oklch(0.548 0.124 141.6);
@@ -148,24 +186,45 @@
   --info: oklch(0.514 0.141 261.2);
   --info-foreground: oklch(1 0 0);
 
+  /* Feature tints — dark enough to read as text; tint surfaces with opacity */
+  --rating: oklch(0.8 0.16 86);
+  --note: oklch(0.48 0.12 255);
+  --checklist: oklch(0.5 0.1 75);
+  --charging: oklch(0.5 0.12 150);
+  --premade: oklch(0.5 0.14 300);
+  --tag: oklch(0.48 0.13 275);
+
+  /* Battery level ramp: green -> yellow -> orange -> red. Graphic fills only;
+     never text. Deeper steps keep yellow visible against light tracks. */
+  --battery-high: oklch(0.7 0.19 150);
+  --battery-mid: oklch(0.82 0.17 92);
+  --battery-low: oklch(0.72 0.18 55);
+  --battery-critical: oklch(0.62 0.22 27);
+  /* Same ramp deepened so percentages stay >=4.5:1 as text on Paper and white */
+  --battery-high-text: oklch(0.48 0.14 150);
+  --battery-mid-text: oklch(0.48 0.11 85);
+  --battery-low-text: oklch(0.48 0.15 48);
+  --battery-critical-text: oklch(0.5 0.19 27);
+
   /* Charts mapped to TColors semantic palette */
   --chart-1: oklch(0.548 0.124 141.6); /* TColors.success */
-  --chart-2: oklch(0.49 0.085 205); /* TColors.primary */
+  --chart-2: var(--primary); /* TColors.primary */
   --chart-3: oklch(0.654 0.174 48.6); /* TColors.warning */
   --chart-4: oklch(0.514 0.141 261.2); /* TColors.info */
   --chart-5: oklch(0.48 0.13 285); /* TColors.accent */
 
   --radius: 1rem;
 
-  /* TColors.light #EDF0FC sidebar surface */
-  --sidebar: oklch(0.965 0.004 250);
-  --sidebar-foreground: oklch(0.28 0.018 255);
-  --sidebar-primary: oklch(0.49 0.085 205);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.94 0.023 195);
-  --sidebar-accent-foreground: oklch(0.28 0.018 255);
-  --sidebar-border: oklch(0.884 0 0);
-  --sidebar-ring: oklch(0.49 0.085 205);
+  /* Sidebar steps just below the Paper page */
+  --sidebar: oklch(0.965 0.006 265);
+  --sidebar-foreground: var(--brand-pine);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  /* Active sidebar item: neutral gray, darker than the muted hover */
+  --sidebar-accent: oklch(95.489% 0.01214 248.162);
+  --sidebar-accent-foreground: var(--brand-pine);
+  --sidebar-border: oklch(0.9 0.008 265);
+  --sidebar-ring: var(--ring);
 
   --font-sans: Plus Jakarta Sans, sans-serif;
   --font-serif: Lora, serif;
@@ -197,70 +256,91 @@
 }
 
 .dark {
-  /* TColors.dark #121725 */
-  --background: oklch(0.21 0.021 230);
-  --foreground: oklch(0.965 0.004 250);
+  /* Dark blue-gray neutrals (hue 265, low chroma), text in Paper */
+  --background: oklch(0.19 0.018 265);
+  --foreground: var(--brand-paper);
 
-  /* Elevated surface above TColors.dark */
-  --card: oklch(0.28 0.025 230);
-  --card-foreground: oklch(1 0 0);
-  --popover: oklch(0.31 0.025 230);
-  --popover-foreground: oklch(1 0 0);
+  /* Elevated surfaces step lighter in the same blue-gray */
+  --card: oklch(0.235 0.02 265);
+  --card-foreground: var(--brand-paper);
+  --popover: oklch(0.265 0.022 265);
+  --popover-foreground: var(--brand-paper);
 
-  /* TColors.primary — green */
-  --primary: oklch(0.77 0.095 190);
-  --primary-foreground: oklch(0.185 0.012 255);
+  /* Neutral theme: primary actions use Paper */
+  --primary: oklch(73.691% 0.15828 235.877);
+  --primary-foreground: var(--brand-pine);
 
-  /* Swapped for dark legibility — TColors.accent as secondary */
-  --secondary: oklch(0.305 0.032 195);
-  --secondary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.3 0.02 265);
+  --secondary-foreground: var(--brand-paper);
 
-  /* TColors.secondary mint as accent surface */
   --accent: oklch(0.79 0.065 80);
-  --accent-foreground: oklch(0.185 0.012 255);
+  --accent-foreground: var(--brand-pine);
 
-  /* TColors.darkContainer opacity simulation */
-  --muted: oklch(0.335 0.024 230);
-  --muted-foreground: oklch(0.745 0.015 250);
+  /* Low-chroma blue-gray neutrals */
+  --muted: oklch(0.28 0.02 265);
+  --muted-foreground: oklch(0.76 0.015 265);
+
+  /* Recessed wells sit between the page and the card */
+  --well: oklch(0.205 0.018 265);
 
   /* TColors.buttonPrimary #FF4B4B (bright red for dark) */
   --destructive: oklch(0.638 0.208 25.1);
   --destructive-foreground: oklch(1 0 0);
 
-  /* TColors.textPrimary as border for dark mode */
-  --border: oklch(0.42 0.022 235);
-  --input: oklch(0.54 0.025 235);
+  /* Blue-gray borders */
+  --border: oklch(0.34 0.02 265);
+  --input: oklch(0.5 0.02 265);
 
-  --ring: oklch(0.77 0.095 190);
+  --ring: var(--primary);
 
   /* TColors.success brightened for dark visibility */
   --success: oklch(0.76 0.09 145);
-  --success-foreground: oklch(0.185 0.012 255);
+  --success-foreground: var(--brand-pine);
 
   /* TColors.warning brightened for dark visibility */
   --warning: oklch(0.79 0.105 75);
-  --warning-foreground: oklch(0.185 0.012 255);
+  --warning-foreground: var(--brand-pine);
 
   /* TColors.info brightened for dark visibility */
-  --info: oklch(0.76 0.09 235);
-  --info-foreground: oklch(0.185 0.012 255);
+  --info: oklch(0.76 0 0);
+  --info-foreground: var(--brand-pine);
+
+  /* Feature tints brightened for dark backgrounds */
+  --rating: oklch(0.85 0.15 90);
+  --note: oklch(0.8 0.1 255);
+  --checklist: oklch(0.87 0.12 95);
+  --charging: oklch(0.82 0.12 150);
+  --premade: oklch(0.83 0.1 300);
+  --tag: oklch(0.8 0.1 275);
+
+  /* Battery ramp brightened so fills glow on dark tracks */
+  --battery-high: oklch(0.8 0.2 150);
+  --battery-mid: oklch(0.89 0.17 98);
+  --battery-low: oklch(0.79 0.17 60);
+  --battery-critical: oklch(0.7 0.21 28);
+  /* Bright fills already read as text on dark surfaces */
+  --battery-high-text: var(--battery-high);
+  --battery-mid-text: var(--battery-mid);
+  --battery-low-text: var(--battery-low);
+  --battery-critical-text: var(--battery-critical);
 
   /* Charts brightened for dark backgrounds */
   --chart-1: oklch(0.8 0.182 151.7); /* TColors.success */
-  --chart-2: oklch(0.77 0.095 190); /* TColors.primary */
+  --chart-2: var(--primary); /* TColors.primary */
   --chart-3: oklch(0.808 0.104 19.6); /* TColors.warning */
   --chart-4: oklch(0.669 0.157 260.1); /* TColors.info */
   --chart-5: oklch(0.706 0 0); /* TColors.darkGrey */
 
-  /* Darkest nav layer — below TColors.dark */
-  --sidebar: oklch(0.185 0.012 255);
-  --sidebar-foreground: oklch(0.965 0.004 250);
-  --sidebar-primary: oklch(0.68 0.18 145);
-  --sidebar-primary-foreground: oklch(0.185 0.012 255);
-  --sidebar-accent: oklch(0.285 0.015 255);
-  --sidebar-accent-foreground: oklch(0.965 0.004 250);
-  --sidebar-border: oklch(0.42 0.022 235);
-  --sidebar-ring: oklch(0.68 0.18 145);
+  /* Darkest nav layer — below the page */
+  --sidebar: oklch(0.165 0.016 265);
+  --sidebar-foreground: var(--brand-paper);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  /* Active sidebar item: neutral gray, stepped above the muted hover */
+  --sidebar-accent: oklch(27.039% 0.02125 257.307);
+  --sidebar-accent-foreground: var(--brand-paper);
+  --sidebar-border: oklch(0.3 0.02 265);
+  --sidebar-ring: var(--ring);
 
   --radius: 1rem;
   --font-sans: Plus Jakarta Sans, sans-serif;
@@ -360,6 +440,20 @@
   --brand-fg: var(--primary-foreground);
   --brand-subtle: oklch(from var(--primary) l c h / 0.08);
   --brand-muted: oklch(from var(--primary) l c h / 0.12);
+  --brand-gradient: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    oklch(from var(--primary) l c calc(h - 55)) 100%
+  );
+
+  /* Theme-independent overlays: scrims over content/photos, text on photos */
+  --scrim: oklch(0.16 0.02 260);
+  --on-media: oklch(1 0 0);
+
+  /* Map chrome sits on light map tiles in both themes */
+  --map-pin: oklch(0.16 0.02 260);
+  --map-pin-foreground: oklch(1 0 0);
+  --map-marker-shadow: drop-shadow(0 1px 3px oklch(0 0 0 / 0.35));
 
   /* Planner block palette */
   --planner-block-foreground: oklch(1 0 0);
@@ -416,6 +510,160 @@
     }
   }
 
+  /* Battery fill: level color as a gradient that brightens toward the charge
+     edge, a top highlight, and a soft glow. Pair with one .battery-* level. */
+  .battery-fill {
+    background: linear-gradient(
+      var(--battery-angle, 90deg),
+      oklch(from var(--battery-color) calc(l - 0.1) c h),
+      var(--battery-color)
+    );
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.35),
+      0 0 0.5rem oklch(from var(--battery-color) l c h / 0.45);
+  }
+  .battery-fill-up {
+    --battery-angle: 0deg;
+  }
+  .battery-high {
+    --battery-color: var(--battery-high);
+  }
+  .battery-mid {
+    --battery-color: var(--battery-mid);
+  }
+  .battery-low {
+    --battery-color: var(--battery-low);
+  }
+  .battery-critical {
+    --battery-color: var(--battery-critical);
+  }
+  /* Battery percentages and changes as text: level color, contrast-safe per theme */
+  .battery-text-high {
+    color: var(--battery-high-text);
+  }
+  .battery-text-mid {
+    color: var(--battery-mid-text);
+  }
+  .battery-text-low {
+    color: var(--battery-low-text);
+  }
+  .battery-text-critical {
+    color: var(--battery-critical-text);
+  }
+
+  /* Segmented control: the track sits into the surface (inner top shadow,
+     faint lower edge) and the selected option rises out of it (lighter face,
+     top highlight, soft drop shadow). */
+  .segmented-track {
+    background: var(--well);
+    box-shadow:
+      inset 0 1px 2px oklch(0 0 0 / 0.08),
+      0 1px 0 oklch(1 0 0 / 0.6);
+  }
+  .segmented-thumb {
+    background: var(--card);
+    box-shadow:
+      0 0 0 1px oklch(from var(--border) l c h / 0.9),
+      0 1px 2px oklch(0 0 0 / 0.12);
+  }
+  .dark .segmented-track {
+    background: var(--well);
+    box-shadow:
+      inset 0 1px 3px oklch(0 0 0 / 0.5),
+      inset 0 0 0 1px oklch(1 0 0 / 0.04),
+      0 1px 0 oklch(1 0 0 / 0.05);
+  }
+  .dark .segmented-thumb {
+    background: linear-gradient(
+      to bottom,
+      oklch(from var(--card) calc(l + 0.07) c h),
+      oklch(from var(--card) calc(l + 0.03) c h)
+    );
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.1),
+      0 0 0 1px oklch(0 0 0 / 0.35),
+      0 2px 4px oklch(0 0 0 / 0.45);
+  }
+
+  /* Card depth ladder: well (sunk in) < card < tile (raised).
+     The selection ring is passed in through --surface-ring so it stacks with
+     the elevation shadow instead of replacing it. */
+  .surface-card {
+    box-shadow:
+      var(--surface-ring, 0 0 #0000),
+      0 1px 2px oklch(0.25 0.03 265 / 0.06),
+      0 4px 12px oklch(0.25 0.03 265 / 0.05);
+    transition:
+      box-shadow 160ms ease,
+      border-color 160ms ease;
+  }
+  .surface-card:hover {
+    box-shadow:
+      var(--surface-ring, 0 0 #0000),
+      0 2px 4px oklch(0.25 0.03 265 / 0.07),
+      0 10px 24px oklch(0.25 0.03 265 / 0.08);
+  }
+  /* Ruled cell grids: cells paint bg-well, so the inner shadow lives on
+     ::after above them. */
+  .surface-well {
+    position: relative;
+  }
+  .surface-well::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    box-shadow:
+      inset 0 0 0 1px oklch(from var(--border) l c h / 0.8),
+      inset 0 1px 2px oklch(0.25 0.03 265 / 0.07);
+  }
+  .surface-groove {
+    background: var(--well);
+    box-shadow: inset 0 1px 2px oklch(0.25 0.03 265 / 0.14);
+  }
+  .surface-tile {
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.3),
+      inset 0 -1px 0 oklch(0 0 0 / 0.12),
+      0 1px 2px oklch(0.25 0.03 265 / 0.2);
+  }
+  .dark .surface-card {
+    background-image: linear-gradient(
+      to bottom,
+      oklch(from var(--card) calc(l + 0.012) c h),
+      var(--card)
+    );
+    box-shadow:
+      var(--surface-ring, 0 0 #0000),
+      inset 0 1px 0 oklch(1 0 0 / 0.06),
+      0 1px 2px oklch(0 0 0 / 0.35),
+      0 6px 16px oklch(0 0 0 / 0.22);
+  }
+  .dark .surface-card:hover {
+    box-shadow:
+      var(--surface-ring, 0 0 #0000),
+      inset 0 1px 0 oklch(1 0 0 / 0.08),
+      0 2px 4px oklch(0 0 0 / 0.4),
+      0 12px 28px oklch(0 0 0 / 0.3);
+  }
+  .dark .surface-well::after {
+    box-shadow:
+      inset 0 0 0 1px oklch(0 0 0 / 0.25),
+      inset 0 1px 3px oklch(0 0 0 / 0.4);
+  }
+  .dark .surface-groove {
+    box-shadow:
+      inset 0 1px 2px oklch(0 0 0 / 0.5),
+      inset 0 0 0 1px oklch(0 0 0 / 0.2);
+  }
+  .dark .surface-tile {
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.25),
+      inset 0 -1px 0 oklch(0 0 0 / 0.2),
+      0 2px 4px oklch(0 0 0 / 0.4);
+  }
+
   .section-padding {
     padding-inline: var(--section-px);
     padding-block: var(--section-py);
@@ -423,27 +671,5 @@
   .container-max {
     max-width: var(--container-max);
     margin-inline: auto;
-  }
-
-  /* TColors gradient utilities */
-  .bg-gradient-light {
-    background-image: linear-gradient(
-      to bottom,
-      rgb(103 167 250 / 0.59),
-      rgb(123 213 255 / 0.31),
-      rgb(149 221 255 / 0.2),
-      rgb(160 255 231 / 0.04),
-      rgb(160 255 219 / 0)
-    );
-  }
-  .bg-gradient-dark {
-    background-image: linear-gradient(
-      to bottom,
-      rgb(149 255 205 / 1),
-      rgb(34 223 236 / 0.59),
-      rgb(160 212 255 / 0.31),
-      rgb(238 255 160 / 0.12),
-      rgb(255 238 160 / 0)
-    );
   }
 }

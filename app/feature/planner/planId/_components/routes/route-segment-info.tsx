@@ -10,6 +10,7 @@ type RouteSegmentInfoProps = {
   segment: RouteSegment | null;
   isError: boolean;
   isLoading: boolean;
+  /** The day's block color, so the icon matches this leg's line on the map. */
   routeColor: string;
 };
 
@@ -21,41 +22,38 @@ export function RouteSegmentInfo({
 }: RouteSegmentInfoProps) {
   if (isLoading) {
     return (
-      <div
-        className="flex items-center gap-2 rounded-sm border border-border bg-card/80 px-3 py-2 text-sm text-muted-foreground shadow-xs"
-        aria-live="polite"
-      >
+      <div className="flex h-6 items-center gap-2 text-sm leading-none text-muted-foreground" aria-live="polite">
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-        <span>Calculating route...</span>
+        Finding the road route…
       </div>
     );
   }
 
   if (!segment || isError || segment.status === "fallback") {
     return (
-      <div className="flex flex-wrap items-center gap-2 rounded-sm border border-warning/30 bg-warning/10 px-3 py-2 text-sm font-medium text-warning shadow-xs">
-        <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
-        <span>Road route unavailable</span>
-        <span aria-hidden="true">/</span>
-        <span>
+      <div className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-none">
+        <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
+        <span className="font-medium text-warning">No road route</span>
+        <span className="text-muted-foreground">
           {segment?.distanceMeters
-            ? `${formatRouteDistance(segment.distanceMeters)} direct`
-            : "direct dashed line only"}
+            ? `${formatRouteDistance(segment.distanceMeters)} in a straight line`
+            : "showing a straight line"}
         </span>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-sm border border-border bg-card/80 px-3 py-2 text-sm text-muted-foreground shadow-xs">
-      <Car
-        className="size-4 shrink-0"
-        style={{ color: routeColor }}
-        aria-hidden="true"
-      />
-      <span>{formatRouteDuration(segment.durationSeconds)}</span>
-      <span aria-hidden="true">/</span>
-      <span>{formatRouteDistance(segment.distanceMeters)}</span>
+    // A layout row avoids the accordion's prose paragraph margins.
+    <div className="flex h-6 items-center gap-2 text-sm leading-none">
+      <Car className="size-4 shrink-0" style={{ color: routeColor }} aria-hidden="true" />
+      <span className="sr-only">Drive </span>
+      <span className="font-mono font-medium tabular-nums text-foreground">
+        {formatRouteDuration(segment.durationSeconds)}
+      </span>
+      <span className="font-mono tabular-nums text-muted-foreground">
+        {formatRouteDistance(segment.distanceMeters)}
+      </span>
     </div>
   );
 }

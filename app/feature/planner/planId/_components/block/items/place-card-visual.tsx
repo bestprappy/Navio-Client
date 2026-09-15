@@ -77,7 +77,7 @@ export function PlaceCardVisual({
                 {rating ? (
                   <span className="inline-flex items-center gap-1 rounded-sm bg-muted px-2 py-1 text-xs font-medium text-foreground">
                     <Star
-                      className="size-3 fill-yellow-500 text-yellow-500"
+                      className="size-3 fill-rating text-rating"
                       aria-hidden="true"
                     />
                     {rating.toFixed(1)}
@@ -90,7 +90,7 @@ export function PlaceCardVisual({
                 ) : null}
               </div>
               {description ? (
-                <span className="inline-flex items-center rounded-sm bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+                <span className="inline-flex items-center rounded-sm bg-tag/10 px-3 py-1 text-xs font-medium text-tag">
                   {description}
                 </span>
               ) : null}

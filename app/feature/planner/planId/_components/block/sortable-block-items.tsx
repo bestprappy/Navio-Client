@@ -186,7 +186,7 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
                 >
                   <span className="h-full min-h-8 w-px bg-border" />
                 </div>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 py-1">
                   <RouteSegmentInfo
                     segment={seg ?? null}
                     isLoading={tripRoutes.isFetching && !tripRoutes.data}

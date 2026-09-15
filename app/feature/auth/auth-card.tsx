@@ -32,6 +32,8 @@ type AuthCardFooterProps = {
   prompt: string;
 };
 
+// Official Google brand colors are required by Google's sign-in branding
+// guidelines, so this mark intentionally does not use theme tokens.
 function GoogleMark() {
   return (
     <svg

@@ -1,12 +1,12 @@
 "use client";
 
-import { Trash2, Zap } from "lucide-react";
+import { CircleCheck, ExternalLink, Trash2 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
+import { formatCheckedDate, formatConnector } from "./garage-formatters";
 import { VehicleMedia } from "./vehicle-media";
 
 type VehicleCardProps = {
@@ -26,118 +26,112 @@ export function VehicleCard({
   onRemove,
   disabled = false,
 }: VehicleCardProps) {
-  const batteryPct = vehicle.startingBatteryPct;
-  const batteryColor =
-    batteryPct >= 50
-      ? "bg-primary"
-      : batteryPct >= 20
-        ? "bg-warning"
-        : "bg-destructive";
+  const carName = `${car.make} ${car.model}`;
+  const nickname = vehicle.nickname?.trim();
+  const titleId = `vehicle-${vehicle.id}-title`;
+  const meta = [
+    nickname ? carName : null,
+    car.trim,
+    car.year,
+    car.market === "TH" ? "Thailand" : null,
+    vehicle.source === "custom" ? "Custom specs" : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const checkedOn = formatCheckedDate(car.verifiedAt);
+  const connectors = car.connectorTypes.map(formatConnector).join(" · ");
 
   return (
     <article
+      aria-labelledby={titleId}
       className={cn(
-        "relative min-w-0 rounded-md border bg-card p-4 text-left transition-all",
-        isActive
-          ? "border-primary shadow-sm shadow-primary/20"
-          : "border-border hover:border-border/80 hover:bg-card/80",
+        "@container/vehicle flex min-w-0 flex-col rounded-lg border bg-card p-3 transition-colors",
+        isActive ? "border-primary ring-1 ring-primary" : "border-border hover:border-input",
       )}
     >
-      <VehicleMedia car={car} className="mb-3" />
+      <VehicleMedia car={car} className="h-36" />
 
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0 basis-24 grow">
-          <p className="break-words text-sm font-semibold text-foreground">
-            {car.make} {car.model}
-          </p>
-          {vehicle.nickname && (
-            <p className="truncate text-xs text-muted-foreground">
-              {vehicle.nickname}
-            </p>
-          )}
-          <p className="text-xs text-muted-foreground">{[car.trim, car.year, car.market === "TH" ? "Thailand" : null].filter(Boolean).join(" · ")}</p>
+      <div className="mt-3 flex items-start justify-between gap-2 px-1">
+        <div className="min-w-0">
+          <h3 id={titleId} className="wrap-break-word text-base font-semibold leading-snug text-foreground">
+            {nickname || carName}
+          </h3>
+          {meta && <p className="mt-0.5 text-sm text-muted-foreground">{meta}</p>}
         </div>
-        <Badge
-          variant="outline"
-          className="shrink-0 px-1.5 py-0 text-[10px] font-medium"
-        >
-          {vehicle.source === "custom" ? "Custom" : "Catalogue"}
-        </Badge>
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
-          aria-label={`Remove ${car.make} ${car.model}`}
+          className="-mr-1 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          aria-label={`Remove ${nickname || carName} from garage`}
           disabled={disabled}
           onClick={(e) => {
             e.stopPropagation();
             onRemove();
           }}
         >
-          <Trash2 className="size-3.5" aria-hidden="true" />
+          <Trash2 aria-hidden="true" />
         </Button>
       </div>
 
-      <div className="mt-3 space-y-1.5">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Battery</span>
-          <span className="font-medium text-foreground">{batteryPct}%</span>
-        </div>
-        <div
-          className="h-1.5 overflow-hidden rounded-full bg-muted"
-          role="progressbar"
-          aria-label={`Battery at ${batteryPct}%`}
-          aria-valuenow={batteryPct}
-          aria-valuemin={0}
-          aria-valuemax={100}
-        >
-          <div
-            className={cn("h-full rounded-full transition-all", batteryColor)}
-            style={{ width: `${batteryPct}%` }}
-          />
-        </div>
-      </div>
+      <dl className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border @min-[22rem]/vehicle:grid-cols-4">
+        <Spec label={car.rangeStandard ? `Range · ${car.rangeStandard}` : "Range"} value={String(car.rangeKm)} unit="km" />
+        <Spec label="Battery" value={String(car.batteryKwh)} unit="kWh" />
+        <Spec label="DC max" {...chargeLimit(car.maxDcKw, car.chargingLimitsKnown)} />
+        <Spec label="AC max" {...chargeLimit(car.maxAcKw, car.chargingLimitsKnown)} />
+      </dl>
 
-      <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1">
-        <StatItem label={`${car.rangeStandard ?? "Reference"} range`} value={`${car.rangeKm} km`} />
-        <StatItem label="Battery" value={`${car.batteryKwh} kWh`} />
-        {car.maxDcKw > 0 && (
-          <StatItem label="Max DC" value={`${car.maxDcKw} kW`} />
-        )}
-        <StatItem label="AC" value={car.maxAcKw > 0 ? `${car.maxAcKw} kW` : car.chargingLimitsKnown === false ? "Unconfirmed" : "Unsupported"} />
-      </div>
+      <p className="mt-3 flex flex-wrap gap-x-2 px-1 text-sm">
+        <span className="text-muted-foreground">Plugs</span>
+        <span className="font-medium text-foreground">{connectors || "Not specified"}</span>
+      </p>
 
-      <div
-        className="mt-3 flex flex-wrap gap-1"
-        aria-label="Supported connectors"
-      >
-        {car.connectorTypes.map((ct) => (
-          <Badge
-            key={ct}
-            variant="outline"
-            className="gap-1 px-1.5 py-0.5 text-[10px] font-medium"
+      {car.sourceUrl && (
+        <p className="mt-2 px-1 text-xs leading-relaxed text-muted-foreground">
+          <a
+            href={car.sourceUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 rounded-sm font-medium text-foreground underline decoration-input underline-offset-4 outline-none hover:decoration-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
           >
-            <Zap className="size-2.5" aria-hidden="true" />
-            {ct}
-          </Badge>
-        ))}
-      </div>
+            Manufacturer specs
+            <ExternalLink className="size-3" aria-hidden="true" />
+            <span className="sr-only">(opens in a new tab)</span>
+          </a>
+          {checkedOn ? `, checked ${checkedOn}` : ""}. Declared capacity
+          {car.rangeStandard ? `, ${car.rangeStandard} test range` : ""}; AI-generated image.
+        </p>
+      )}
 
-      {car.sourceUrl && <a href={car.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 block text-xs text-primary underline underline-offset-4">Official specification · checked {car.verifiedAt}</a>}
-      {car.sourceUrl && <p className="mt-2 text-xs text-muted-foreground">AI illustration · manufacturer-declared capacity · test range</p>}
-      <Button type="button" variant={isActive ? "secondary" : "outline"} className="mt-4 h-auto min-h-10 w-full whitespace-normal px-3 py-2 text-center leading-snug" aria-pressed={isActive} disabled={disabled || isActive} onClick={onSelect}>
-        {isActive ? "Selected for route estimates" : "Use this vehicle"}
-      </Button>
+      <div className="mt-auto px-1 pt-3">
+        {isActive ? (
+          <p className="flex min-h-9 items-center gap-2 text-sm font-medium text-foreground">
+            <CircleCheck className="size-4 shrink-0 text-primary" aria-hidden="true" />
+            Used for this trip&apos;s battery estimates
+          </p>
+        ) : (
+          <Button type="button" variant="outline" className="h-9 w-full" disabled={disabled} onClick={onSelect}>
+            Use for this trip
+          </Button>
+        )}
+      </div>
     </article>
   );
 }
 
-function StatItem({ label, value }: { label: string; value: string }) {
+function chargeLimit(kw: number, limitsKnown?: boolean): { value: string; unit?: string } {
+  if (kw > 0) return { value: String(kw), unit: "kW" };
+  return { value: limitsKnown === false ? "Unconfirmed" : "None" };
+}
+
+function Spec({ label, value, unit }: { label: string; value: string; unit?: string }) {
   return (
-    <div className="min-w-0 break-words">
-      <p className="text-[10px] text-muted-foreground">{label}</p>
-      <p className="text-xs font-semibold text-foreground">{value}</p>
+    <div className="min-w-0 bg-card px-3 py-2">
+      <dt className="truncate text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-foreground">
+        {value}
+        {unit && <span className="ml-1 font-sans text-xs font-normal text-muted-foreground">{unit}</span>}
+      </dd>
     </div>
   );
 }

@@ -50,14 +50,14 @@ export function GarageSection() {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-foreground">{authenticated ? "My garage" : "Trip vehicle"}</h2>
-          <p className="mt-3 text-sm text-muted-foreground ">
-            {authenticated ? "Your saved EVs, ready for your next trip. Select one for route estimates." : "Add your EV specifications to estimate battery usage and charging time for this trip."}
+          <p className="mt-1 text-sm text-muted-foreground">
+            {authenticated ? "Pick the EV you're driving and the planner estimates battery and charging for every day." : "Add your EV specifications to estimate battery usage and charging time for this trip."}
           </p>
         </div>
         <Button
           type="button"
           size="lg"
-          className="mr-2 gap-2 rounded-full px-5"
+          className="gap-2"
           disabled={loadingSession || (authenticated && (query.isPending || query.isError)) || mutation.isPending || vehicles.length >= 25}
           onClick={() => { mutation.reset(); setModalOpen(true); }}
         >
@@ -72,11 +72,11 @@ export function GarageSection() {
       {mutation.isError && !isModalOpen && <p role="alert" className="mb-4 rounded-md bg-destructive/10 p-4 text-sm text-destructive">{mutation.error.message}</p>}
       {mutation.isPending && <p role="status" className="mb-3 text-sm text-muted-foreground">{authenticated ? "Saving your garage…" : "Updating trip vehicle…"}</p>}
       {(!authenticated || query.isSuccess) && vehicles.length === 0 ? (
-        <div className="mx-1 flex items-center gap-3 rounded-sm border border-primary/30 bg-primary/5 p-4">
-          <Car className="size-5 shrink-0 text-primary" aria-hidden="true" />
+        <div className="mx-1 flex items-center gap-3 rounded-md border border-dashed border-input p-4">
+          <Car className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <div>
-            <p className="text-sm font-medium text-primary">No vehicle added</p>
-            <p className="text-xs text-primary/70">
+            <p className="text-sm font-medium text-foreground">No vehicle added</p>
+            <p className="text-sm text-muted-foreground">
               Add your EV to track battery usage and charge time per day.
             </p>
           </div>
@@ -107,16 +107,7 @@ export function GarageSection() {
       {vehicles.length >= 25 && <p className="mt-3 text-sm text-muted-foreground">Your garage is full (25 vehicles). Remove a vehicle to add another.</p>}
 
       {activeVehicle && activeEvCar && (
-        <div className="mx-1 mt-6 mb-3 flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
-            Usage Overview
-          </span>
-          <div className="flex-1 border-t border-border/40" />
-        </div>
-      )}
-
-      {activeVehicle && activeEvCar && (
-        <div className="mx-1">
+        <div className="mx-1 mt-6">
           <VehicleUsageOverview
             car={activeEvCar}
             vehicle={activeVehicle}
@@ -127,7 +118,8 @@ export function GarageSection() {
         </div>
       )}
 
-      {vehicles.length > 0 && !tripSummary && (
+      {/* The usage overview shows its own empty state when it is visible. */}
+      {vehicles.length > 0 && !tripSummary && !(activeVehicle && activeEvCar) && (
         <div className="mx-1 mt-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
           <p>

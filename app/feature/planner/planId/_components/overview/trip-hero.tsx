@@ -32,7 +32,7 @@ export function TripHero({ destinationName, coverImageUrl }: TripHeroProps) {
           className="h-full w-full"
           style={{
             background:
-              "linear-gradient(135deg, oklch(0.62 0.14 200) 0%, oklch(0.7 0.16 165) 50%, oklch(0.65 0.18 145) 100%)",
+              "var(--brand-gradient)",
           }}
         />
       )}

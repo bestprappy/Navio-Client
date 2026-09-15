@@ -86,7 +86,7 @@ function ShareDialogOverlay() {
 
   return (
     <div
-      className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-40 bg-scrim/40 backdrop-blur-sm"
       role="presentation"
       onClick={onClose}
     />
