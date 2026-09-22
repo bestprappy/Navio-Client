@@ -1,20 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { HelpCircle, Search, Sparkles } from "lucide-react";
+import { HelpCircle, Search } from "lucide-react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { Checkbox } from "@/components/ui/checkbox";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { PlannerSidePanel } from "../layout/planner-side-panel";
 import type { EvCharger } from "../constants/types";
 import {
-  autoAddEvChargersToBlockAtom,
   compatibleChargersOnlyAtom,
   evChargerLoadingAtom,
-  tripBlocksAtom,
   type EvChargerMapResult,
 } from "../overview/trip-builder.atoms";
 import {
@@ -29,12 +26,9 @@ import {
   AUTO_CHARGE_TARGET_MIN_PCT,
   AUTO_MIN_ARRIVAL_PCT,
   isCompatible,
-  planAutoEvChargers,
 } from "../garage/ev-calculator";
 import { BatterySlider } from "../garage/battery-slider";
 import { useTripCharging } from "../garage/use-trip-charging";
-import { resolveDayAnchors } from "../itinerary/day-anchors";
-import { useTripRoutes } from "../routes/trip-route-query";
 
 import { EvStationListCard } from "./ev-station-list-card";
 import { EvRouteOptimizationPanel } from "./ev-route-optimization-panel";
@@ -72,75 +66,18 @@ export function EvStationSidePanel({
 }: EvStationSidePanelProps) {
   const [query, setQuery] = useState("");
   const [compatibleOnly, setCompatibleOnly] = useAtom(compatibleChargersOnlyAtom);
-  const [autoMessage, setAutoMessage] = useState<string | null>(null);
   const activeEvCar = useAtomValue(activeEvCarAtom);
   const activeVehicle = useAtomValue(activeVehicleAtom);
   const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
   const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
   const chargeStopTargetPct = useAtomValue(chargeStopTargetPctAtom);
-  const tripBlocks = useAtomValue(tripBlocksAtom);
-  const autoAddEvChargers = useSetAtom(autoAddEvChargersToBlockAtom);
   const setChargeStopTargetPct = useSetAtom(setChargeStopTargetPctAtom);
   const panelBlockId = getPanelBlockId(activeBlockId, selectedResult, results);
-  const targetBlock = useMemo(
-    () => tripBlocks.find((block) => block.id === panelBlockId) ?? null,
-    [panelBlockId, tripBlocks],
-  );
-  const routeSegments = useTripRoutes().data?.segments;
   const tripCharging = useTripCharging();
-  const dayAnchors = useMemo(
-    () => (panelBlockId ? resolveDayAnchors(tripBlocks).get(panelBlockId) ?? null : null),
-    [panelBlockId, tripBlocks],
-  );
   // Later days start with whatever the earlier days left in the battery.
   const dayStartBatteryPct = panelBlockId
     ? tripCharging?.days.get(panelBlockId)?.startBatteryPct ?? startingBatteryPct
     : startingBatteryPct;
-  const autoPlan = useMemo(() => {
-    if (!targetBlock || !activeEvCar) {
-      return null;
-    }
-
-    return planAutoEvChargers({
-      block: targetBlock,
-      car: activeEvCar,
-      startingBatteryPct: dayStartBatteryPct,
-      chargeTargetPct: chargeStopTargetPct,
-      chargers: results.map((result) => result.charger),
-      dayAnchors,
-      segments: routeSegments,
-    });
-  }, [
-    activeEvCar,
-    chargeStopTargetPct,
-    dayAnchors,
-    dayStartBatteryPct,
-    results,
-    routeSegments,
-    targetBlock,
-  ]);
-  const autoPlanMinutes = useMemo(
-    () =>
-      autoPlan?.insertions.reduce(
-        (sum, insertion) => sum + insertion.estimatedChargeMinutes,
-        0,
-      ) ?? 0,
-    [autoPlan],
-  );
-  const autoAddDisabled =
-    !panelBlockId || !activeEvCar || !autoPlan?.insertions.length;
-  const batterySummary = autoPlan
-    ? ` Day starts at ${Math.round(dayStartBatteryPct)}% and ends near ${autoPlan.finalBatteryPct}%.`
-    : "";
-  const autoStatusText =
-    autoMessage ??
-    (!activeEvCar
-      ? "Select an EV from your garage first."
-      : autoPlan?.insertions.length
-        ? `${autoPlan.insertions.length} stop${autoPlan.insertions.length === 1 ? "" : "s"} ready, about ${autoPlanMinutes} min charging.${batterySummary}`
-        : autoPlan
-          ? [autoPlan.message, ...autoPlan.warnings].join(" ") + batterySummary
-          : "Open a day with route places to auto-plan.");
   const selectedCharger =
     selectedResult?.charger ?? results[0]?.charger ?? null;
   const visibleResults = useMemo(() => {
@@ -171,26 +108,8 @@ export function EvStationSidePanel({
     }
   }
 
-  function autoAddBestChargers() {
-    if (!panelBlockId || !autoPlan?.insertions.length) {
-      setAutoMessage(autoPlan?.message ?? "No charger plan is available yet.");
-      return;
-    }
-
-    const addedCount = autoAddEvChargers({
-      blockId: panelBlockId,
-      insertions: autoPlan.insertions,
-    });
-    setAutoMessage(
-      addedCount > 0
-        ? `Added ${addedCount} charger${addedCount === 1 ? "" : "s"} in route order.`
-        : "No chargers were added. The planned stops are already on this day.",
-    );
-  }
-
   function updateChargeStopTarget(nextPct: number) {
     setChargeStopTargetPct(nextPct);
-    setAutoMessage(null);
   }
 
   function addCharger(result: EvChargerMapResult) {
@@ -229,23 +148,7 @@ export function EvStationSidePanel({
           </div>
 
           <div className="mt-3 rounded-sm border border-primary/25 bg-primary/5 p-3">
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                disabled={autoAddDisabled}
-                className="h-10 flex-1 rounded-sm border-primary/30 bg-background text-primary hover:border-primary/50 hover:bg-primary/10 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-                onClick={autoAddBestChargers}
-              >
-                <Sparkles className="size-4" aria-hidden="true" />
-                Auto add chargers
-              </Button>
-            </div>
-            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-              {autoStatusText}
-            </p>
-            <div className="mt-4 border-t border-primary/15 pt-3">
+            <div>
               <div className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
@@ -261,7 +164,7 @@ export function EvStationSidePanel({
                       aria-hidden="true"
                     >
                       <title>
-                        Each auto-added stop charges to at least this level, more if the next leg needs it.
+                        Each planned stop charges to at least this level, more if the next leg needs it.
                       </title>
                     </HelpCircle>
                   </label>
@@ -269,7 +172,7 @@ export function EvStationSidePanel({
                     id="charge-stop-target-help"
                     className="mt-1 text-xs leading-relaxed text-muted-foreground"
                   >
-                    Stops are added when you would arrive below {AUTO_MIN_ARRIVAL_PCT}% or on a long leg.
+                    Stops are planned so you never arrive below {AUTO_MIN_ARRIVAL_PCT}%.
                   </p>
                 </div>
                 <span className="text-lg font-bold tabular-nums text-foreground">
@@ -284,7 +187,7 @@ export function EvStationSidePanel({
                   min={AUTO_CHARGE_TARGET_MIN_PCT}
                   max={AUTO_CHARGE_TARGET_MAX_PCT}
                   step={1}
-                  ariaLabel="Set how full each auto-added charging stop charges"
+                  ariaLabel="Set how full each planned charging stop charges"
                   color="var(--primary)"
                   disabled={!activeEvCar}
                   showLabels={false}
@@ -294,7 +197,7 @@ export function EvStationSidePanel({
             <EvRouteOptimizationPanel
               blockId={panelBlockId}
               vehicle={activeEvCar}
-              startingSocPct={startingBatteryPct}
+              startingSocPct={dayStartBatteryPct}
               targetSocPct={chargeStopTargetPct}
             />
           </div>

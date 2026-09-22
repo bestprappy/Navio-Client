@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 import type { EvCar } from "../constants/vehicle.types";
+import { AUTO_MIN_ARRIVAL_PCT } from "../garage/ev-calculator";
 import { applyPlannerServerSnapshotAtom, tripBlocksAtom } from "../overview/trip-builder.atoms";
 
 type EvRouteOptimizationPanelProps = {
@@ -88,7 +89,7 @@ export function EvRouteOptimizationPanel({
         connectorTypes: vehicle.connectorTypes,
       },
       startingSocPct,
-      reserveSocPct: 12,
+      reserveSocPct: AUTO_MIN_ARRIVAL_PCT,
       targetSocPct,
       maximumDetourKm: 20,
     };
@@ -139,7 +140,7 @@ export function EvRouteOptimizationPanel({
       if (!tripId) return;
       applyServerSnapshot({ tripId, ...snapshot });
       setPreviewState(null);
-      setAppliedMessage("Optimized charging stops were applied to this day.");
+      setAppliedMessage("Charging stops were applied to this day.");
     },
   });
 
@@ -167,10 +168,10 @@ export function EvRouteOptimizationPanel({
         <Route className="size-4 text-primary" aria-hidden="true" />
         <div>
           <p className="text-sm font-semibold text-foreground">
-            Optimize the whole EV route
+            Plan charging stops
           </p>
           <p className="text-xs text-muted-foreground">
-            Checks live chargers and may add, remove, or replace unlocked stops.
+            Checks live chargers on the road route and may add, remove, or replace unlocked stops.
           </p>
         </div>
       </div>
@@ -187,7 +188,7 @@ export function EvRouteOptimizationPanel({
         ) : (
           <Sparkles className="size-4" aria-hidden="true" />
         )}
-        {previewMutation.isPending ? "Checking the route..." : isAuthenticated ? "Optimize EV route" : "Sign in for saved-route optimization"}
+        {previewMutation.isPending ? "Checking the route..." : isAuthenticated ? "Plan charging stops" : "Sign in to plan charging stops"}
       </Button>
 
       {!vehicle ? (
@@ -196,7 +197,7 @@ export function EvRouteOptimizationPanel({
         </p>
       ) : !tripId ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          This feature updates a saved trip. You can still add charging stops and estimate battery usage in a guest plan.
+          Charging stops are planned for saved trips. You can still add stations yourself and see battery estimates in a guest plan.
         </p>
       ) : null}
 
@@ -252,7 +253,7 @@ export function EvRouteOptimizationPanel({
               {applyMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : null}
-              {applyMutation.isPending ? "Applying changes..." : "Apply optimized route"}
+              {applyMutation.isPending ? "Applying changes..." : "Apply charging plan"}
             </Button>
           ) : null}
         </div>
