@@ -22,7 +22,6 @@ import { AddVehicleDialog } from "./add-vehicle-dialog";
 import { VehicleUsageOverview } from "./vehicle-usage-overview";
 import { VehicleSettingsForm } from "./vehicle-settings-form";
 import { useGarage } from "./garage-provider";
-import { EnergySimulationPanel } from "./energy-simulation-panel";
 
 export function GarageSection() {
   const vehicles = useAtomValue(userVehiclesAtom);
@@ -120,9 +119,6 @@ export function GarageSection() {
       )}
 
       {/* The usage overview shows its own empty state when it is visible. */}
-      {activeVehicle && activeEvCar && <EnergySimulationPanel
-        key={`${activeVehicle.id}:${activeEvCar.batteryKwh}`}
-        car={activeEvCar} startingSocPct={activeVehicle.startingBatteryPct} segments={routeData?.segments ?? []} />}
       {vehicles.length > 0 && !tripSummary && !(activeVehicle && activeEvCar) && (
         <div className="mx-1 mt-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
           <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
