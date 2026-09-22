@@ -3,6 +3,7 @@ import { AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { AUTO_MIN_ARRIVAL_PCT } from "./ev-calculator";
+import { SIMULATION_MODEL } from "./simulation-model";
 import { BATTERY_TONES, formatMinutes, getBatteryTone } from "./garage-formatters";
 
 type RouteEstimateProps = {
@@ -67,9 +68,13 @@ export function RouteEstimate({
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border px-4 py-3 @min-[28rem]/estimate:grid-cols-4">
         <RouteStat label="Distance" value={`${distanceKm.toFixed(1)} km`} />
         <RouteStat label="Driving" value={formatMinutes(drivingMinutes)} />
-        <RouteStat label="Energy used" value={`${energyKwh.toFixed(1)} kWh`} />
+        <RouteStat label="Planning energy" value={`${energyKwh.toFixed(1)} kWh`} />
         <RouteStat label="Charging" value={chargeMinutes > 0 ? formatMinutes(chargeMinutes) : "None planned"} />
       </dl>
+      <p className="border-t border-border px-4 py-2 text-xs text-muted-foreground">
+        Distance-based estimate with {SIMULATION_MODEL.planningMarginFraction * 100}% energy margin.
+        Charging includes assumed losses and DC taper; allow {SIMULATION_MODEL.stopOverheadMinutes} extra minutes per stop to connect.
+      </p>
 
       {(compatibleStops > 0 || incompatibleStops > 0) && (
         <div className="flex flex-wrap gap-x-4 gap-y-2 border-t border-border px-4 py-2 text-xs">

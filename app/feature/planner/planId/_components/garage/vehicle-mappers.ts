@@ -1,10 +1,14 @@
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
 import type { CatalogVehicle, SavedVehicle } from "./vehicle-api";
 
-// Share of the official test range typically achieved on real roads. Test cycles are optimistic by different amounts.
+/**
+ * Share of the official test range assumed achievable on real roads. Calibration assumption, not an
+ * established conversion between test procedures: NEDC and CLTC cycles are the most optimistic, and
+ * EPA labels are already adjusted. Replace with values fitted to published real-world tests.
+ */
 const REAL_WORLD_RANGE_FACTOR: Record<CatalogVehicle["rangeStandard"], number> = { NEDC: 0.7, CLTC: 0.7, WLTP: 0.85, EPA: 0.9 };
 
-/** Rough kWh/100 km from declared capacity and test range, used only when the driver does not know their average. */
+/** Rough kWh/100 km from declared capacity and adjusted test range, used only when the driver does not know their average. */
 export function estimateCatalogConsumption(vehicle: CatalogVehicle): number {
   const realWorldRangeKm = vehicle.rangeKm * REAL_WORLD_RANGE_FACTOR[vehicle.rangeStandard];
   return Math.round((vehicle.batteryCapacityKwh / realWorldRangeKm) * 1000) / 10;

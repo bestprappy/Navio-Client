@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
 import type { TripEvSummary } from "./ev-calculator";
 import { AUTO_MIN_ARRIVAL_PCT, calcRangeKmForBatteryPct } from "./ev-calculator";
+import { SIMULATION_MODEL } from "./simulation-model";
 import { BATTERY_TONES, formatDistanceKm, formatMinutes, getBatteryTone } from "./garage-formatters";
 
 type VehicleUsageOverviewProps = {
@@ -80,10 +81,10 @@ export function VehicleUsageOverview({
           note={plannedDays > 1 ? `${formatDistanceKm(distanceKm / plannedDays)} km a day` : undefined}
         />
         <Stat
-          label="Energy used"
+          label="Planning energy"
           value={energyKwh.toFixed(1)}
           unit="kWh"
-          note={`at ${car.consumptionKwhPer100km} kWh/100 km`}
+          note={`${car.consumptionKwhPer100km} kWh/100 km + ${SIMULATION_MODEL.planningMarginFraction * 100}% margin`}
         />
         <Stat label="Driving" value={formatMinutes(totalDrivingMinutes)} />
         <Stat

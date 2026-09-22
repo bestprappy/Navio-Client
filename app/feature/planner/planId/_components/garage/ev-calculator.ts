@@ -12,6 +12,7 @@ import {
 } from "../constants/types";
 import type { EvCar } from "../constants/vehicle.types";
 import type { RouteSegment } from "../routes/trip-route.types";
+import { baselineEnergy, chargeMinutes, chargeTarget, SIMULATION_MODEL } from "./simulation-model";
 
 const DC_CONNECTOR_TYPES = new Set<EvConnectorType>([
   "CCS1",
@@ -20,7 +21,7 @@ const DC_CONNECTOR_TYPES = new Set<EvConnectorType>([
   "NACS",
   "GB_T",
 ]);
-export const AUTO_MIN_ARRIVAL_PCT = 12;
+export const AUTO_MIN_ARRIVAL_PCT = SIMULATION_MODEL.reserveSocPct;
 const AUTO_COMFORT_ARRIVAL_PCT = 24;
 export const AUTO_CHARGE_TARGET_DEFAULT_PCT = 50;
 export const AUTO_CHARGE_TARGET_MIN_PCT = 20;
@@ -47,7 +48,7 @@ export function isCompatible(
 }
 
 export function calcEnergyKwh(distanceKm: number, car: EvCar): number {
-  return (distanceKm * car.consumptionKwhPer100km) / 100;
+  return baselineEnergy(distanceKm, car.consumptionKwhPer100km).planningKwh;
 }
 
 export function calcBatteryUsedPct(distanceKm: number, car: EvCar): number {
@@ -69,7 +70,7 @@ export function effectiveChargeKw(
   car: EvCar,
   isChargerDc: boolean,
 ): number {
-  const vehicleMaxKw = isChargerDc && car.maxDcKw > 0 ? car.maxDcKw : car.maxAcKw;
+  const vehicleMaxKw = isChargerDc ? car.maxDcKw : car.maxAcKw;
   return Math.min(chargerMaxKw, vehicleMaxKw);
 }
 
@@ -78,7 +79,10 @@ export function calcChargeMinutesForEnergyKwh(
   chargerMaxKw: number,
   car: EvCar,
   connectorTypes: EvConnectorType[],
+  arrivalPct = 0,
 ): number {
+  const usable = connectorTypes.filter((connector) => car.connectorTypes.includes(connector));
+  if (!usable.length) return 0;
   const effectiveKw = effectiveChargeKw(
     chargerMaxKw,
     car,
@@ -89,7 +93,8 @@ export function calcChargeMinutesForEnergyKwh(
     return 0;
   }
 
-  return Math.max(1, Math.ceil((energyKwh / effectiveKw) * 60));
+  return chargeMinutes(arrivalPct, arrivalPct + energyKwh / car.batteryKwh * 100,
+    car.batteryKwh, effectiveKw, isDcCharger(usable));
 }
 
 export type ChargingStopProjection = {
@@ -114,7 +119,8 @@ export function projectChargingStop(
   const kw = effectiveChargeKw(charger.maxKw, car, isDcCharger(charger.connectorTypes.filter((connector) => car.connectorTypes.includes(connector))));
   const availableEnergyKwh = ((100 - arrivalPct) / 100) * car.batteryKwh;
   const requestedEnergyKwh = charger.targetBatteryPct == null
-    ? (Math.max(0, charger.estimatedChargeMinutes) / 60) * kw
+    ? (chargeTarget(arrivalPct, Math.max(0, charger.estimatedChargeMinutes), car.batteryKwh, kw,
+      isDcCharger(charger.connectorTypes.filter((connector) => car.connectorTypes.includes(connector)))) - arrivalPct) / 100 * car.batteryKwh
     : ((Math.max(arrivalPct, normalizeStationTargetPct(charger.targetBatteryPct)) - arrivalPct) / 100) * car.batteryKwh;
   const chargeEnergyKwh = compatible && kw > 0 && car.batteryKwh > 0
     ? Math.max(0, Math.min(availableEnergyKwh, requestedEnergyKwh))
@@ -123,7 +129,7 @@ export function projectChargingStop(
     arrivalPct,
     departurePct: car.batteryKwh > 0 ? clampPct(arrivalPct + chargeEnergyKwh / car.batteryKwh * 100) : arrivalPct,
     chargeEnergyKwh,
-    chargeMinutes: chargeEnergyKwh > 0 ? calcChargeMinutesForEnergyKwh(chargeEnergyKwh, charger.maxKw, car, charger.connectorTypes) : 0,
+    chargeMinutes: chargeEnergyKwh > 0 ? calcChargeMinutesForEnergyKwh(chargeEnergyKwh, charger.maxKw, car, charger.connectorTypes, arrivalPct) : 0,
     compatible,
   };
 }
@@ -416,6 +422,7 @@ export function planAutoEvChargers({
         preDepartureCharger.maxKw,
         car,
         preDepartureCharger.connectorTypes,
+        batteryPct,
       );
       const detourKm = getDistanceKm(stops[0]!, preDepartureCharger.location);
       const effectiveKw = effectiveChargeKw(preDepartureCharger.maxKw, car, isChargerDc);
@@ -519,6 +526,7 @@ export function planAutoEvChargers({
         candidate.charger.maxKw,
         car,
         candidate.charger.connectorTypes,
+        arrivalBatteryPct,
       );
 
       legInsertionCount += 1;
@@ -842,7 +850,7 @@ export function normalizeChargeTargetPct(value?: number): number {
 
 export function calcRangeKmForBatteryPct(batteryPct: number, car: EvCar): number {
   const energyKwh = (clampPct(batteryPct) / 100) * car.batteryKwh;
-  return (energyKwh / car.consumptionKwhPer100km) * 100;
+  return (energyKwh / (car.consumptionKwhPer100km * (1 + SIMULATION_MODEL.planningMarginFraction))) * 100;
 }
 
 function getRouteProjection(

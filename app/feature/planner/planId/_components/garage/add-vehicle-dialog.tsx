@@ -64,7 +64,7 @@ export function AddVehicleDialog({ onClose }: { onClose: () => void }) {
             <p id="preset-consumption-help" className="text-xs text-muted-foreground">
               {knowsConsumption
                 ? "Use the average shown in your car's trip computer for the most accurate route energy."
-                : `We'll estimate about ${estimatedConsumption} kWh/100 km from the battery and ${selected.rangeStandard} range. You can change it later in vehicle settings.`}
+                : `We'll estimate about ${estimatedConsumption} kWh/100 km from the battery and ${selected.rangeStandard} range, adjusted for real-world driving. You can change it later in vehicle settings.`}
             </p>
           </div>}
           <p className="text-xs text-muted-foreground">Car images are AI illustrations. Appearance and equipment may vary by trim.</p>
