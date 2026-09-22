@@ -1,4 +1,5 @@
 import type { EvConnectorType } from "./types";
+import type { VehicleEnergyProfile } from "../garage/vehicle-api";
 
 export type EvCar = {
   id: string;
@@ -18,6 +19,8 @@ export type EvCar = {
   sourceUrl?: string;
   verifiedAt?: string;
   chargingLimitsKnown?: boolean;
+  energyProfile?: VehicleEnergyProfile | null;
+  legacyConsumptionConfirmed?: boolean;
 };
 
 type UserVehicleBase = {

@@ -1,6 +1,7 @@
 // Run with Node 24 against an isolated dev server; public data is mocked.
 import assert from "node:assert/strict";
 import { destinationFixture, placeFixture } from "./data.ts";
+import { catalogFixture } from "../garage/data.ts";
 const { chromium } = await import(process.env.NAVIO_PLAYWRIGHT_MODULE ?? "playwright");
 const origin = process.env.NAVIO_TEST_ORIGIN ?? "http://localhost:3113";
 const browser = await chromium.launch({ channel: "chrome", headless: true });
@@ -18,6 +19,9 @@ await context.route("**/api/geo/places/**", route => {
 await context.route("**/api/routes/directions", route => route.fulfill({ json: { segments: [] } }));
 for (const pattern of ["**/api/trips**", "**/api/users/**"]) {
   await context.route(pattern, route => {
+    if (route.request().method() === "GET" && new URL(route.request().url()).pathname === "/api/users/me/vehicles/catalog") {
+      return route.fulfill({ json: [catalogFixture] });
+    }
     accountRequests.push(`${route.request().method()} ${new URL(route.request().url()).pathname}`);
     return route.fulfill({ status: 401, json: { message: "Authentication required" } });
   });
@@ -56,11 +60,33 @@ try {
   await page.getByRole("button", { name: "Save to favorites", exact: true }).first().click();
   await page.getByRole("button", { name: "Sign in later", exact: true }).click();
   await page.getByRole("button", { name: "Add vehicle", exact: true }).click();
-  for (const [label, value] of [["Make", "Test"], ["Model and trim", "EV"], ["Model year", "2026"], ["Battery capacity (kWh)", "60"], ["Reference range (km)", "400"], ["Your consumption (kWh/100 km)", "15"]]) {
+  assert.equal(await page.getByRole("button", { name: "Thailand catalogue", exact: true }).getAttribute("aria-pressed"), "true");
+  await page.getByRole("textbox", { name: "Search Thailand vehicles" }).fill("ATTO");
+  await page.getByRole("radio").first().check();
+  await page.getByRole("button", { name: "Use for this trip", exact: true }).click();
+  await page.getByText(/Based on 480 km NEDC/).waitFor();
+  assert.equal(await page.locator('#energy-selection option[value="RESET_DEFAULT"]').isDisabled(), true);
+  await page.getByRole("button", { name: "About NAVIO Estimate" }).focus();
+  await page.getByRole("tooltip").waitFor();
+  await page.keyboard.press("Escape");
+  await page.locator("#starting-battery").fill("65");
+  assert.equal(await page.locator("#starting-battery").inputValue(), "65");
+  assert.equal(await page.getByRole("button", { name: "Save settings", exact: true }).isDisabled(), true);
+  await page.getByLabel("Energy Consumption", { exact: true }).selectOption("USER_OVERRIDE");
+  await page.getByLabel("Your average (kWh/100 km)", { exact: true }).fill("17.125");
+  await page.getByRole("button", { name: "Save settings", exact: true }).click();
+  assert.equal(await page.getByLabel("Your average (kWh/100 km)", { exact: true }).inputValue(), "17.125");
+  await page.waitForFunction(() => document.querySelector("button[type=submit]")?.disabled === true);
+  await page.getByLabel("Energy Consumption", { exact: true }).selectOption("USE_RATED_RANGE");
+  await page.getByRole("button", { name: "Save settings", exact: true }).click();
+  await page.getByText(/Based on 480 km NEDC/).waitFor();
+  await page.getByRole("button", { name: "Add vehicle", exact: true }).click();
+  await page.getByRole("button", { name: "Custom EV", exact: true }).click();
+  for (const [label, value] of [["Make", "Test"], ["Model and trim", "EV"], ["Model year", "2026"], ["Battery capacity (kWh)", "60"], ["Reference range (km)", "400"], ["Your average consumption (kWh/100 km, optional)", "15"]]) {
     await page.getByLabel(label, { exact: true }).fill(value);
   }
   await page.getByRole("button", { name: "Use for this trip", exact: true }).click();
-  await page.getByText("Settings used only for this guest plan.", { exact: true }).waitFor();
+  await page.getByText("Vehicle settings used only for this guest trip.", { exact: true }).waitFor();
   await page.getByRole("button", { name: "Sign in to save plans", exact: true }).click();
   await page.getByRole("button", { name: "Sign in later", exact: true }).click();
   assert.equal(await page.getByRole("heading", { name: "Temporary journey", exact: true }).count(), 1);
@@ -69,7 +95,7 @@ try {
   await page.getByRole("button", { name: "Sign in later", exact: true }).click();
   await page.getByText("Guest plan · Not saved", { exact: true }).waitFor();
   assert.equal(await page.getByRole("heading", { name: "Temporary journey", exact: true }).count(), 0);
-  assert.equal(await page.getByText("Settings used only for this guest plan.", { exact: true }).count(), 0);
+  assert.equal(await page.getByText("Vehicle settings used only for this guest trip.", { exact: true }).count(), 0);
   await page.goto(`${origin}/explore`, { waitUntil: "domcontentloaded" });
   for (const action of ["Save", "Like"]) {
     console.log(`Checking guest Explore ${action}`);

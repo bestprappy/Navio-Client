@@ -1,3 +1,4 @@
+import { canAutomaticallyPlan } from "../garage/energy-selection";
 import { atom } from "jotai";
 import { activeVehicleAtom } from "../garage/garage.atoms";
 import { getVehicleCar } from "../constants/vehicle.data";
@@ -1311,6 +1312,8 @@ export const addEvChargerToBlockAtom = atom(
 export const autoAddEvChargersToBlockAtom = atom(
   null,
   (get, set, payload: AutoAddEvChargersToBlockPayload): number => {
+    const vehicle = get(activeVehicleAtom);
+    if (!canAutomaticallyPlan(vehicle ? getVehicleCar(vehicle) : null)) return 0;
     if (payload.insertions.length === 0) {
       return 0;
     }

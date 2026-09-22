@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { evConnectorOptions } from "../constants/vehicle.data";
 import { customVehicleDefaults, customVehicleNumberFields } from "./data";
-import { customVehicleSchema, type CustomVehicleInput } from "./vehicle-api";
+import { customVehicleSchema, userObservedConsumption, type CustomVehicleInput } from "./vehicle-api";
 
 type CustomVehicleFormProps = {
   onSave: (vehicle: CustomVehicleInput) => Promise<void>;
@@ -21,7 +21,10 @@ type CustomVehicleFormProps = {
 export function CustomVehicleForm({ onSave, onCancel, pending, submitLabel = "Save custom EV" }: CustomVehicleFormProps) {
   const form = useForm<CustomVehicleInput>({ resolver: zodResolver(customVehicleSchema), defaultValues: customVehicleDefaults });
   return (
-    <form onSubmit={form.handleSubmit(onSave)} className="grid gap-4" noValidate>
+    <form onSubmit={form.handleSubmit((vehicle) => onSave({ ...vehicle,
+      energySelection: vehicle.consumptionKwhPer100km === null ? "USE_DEFAULT" : "USER_OVERRIDE",
+      ...(vehicle.consumptionKwhPer100km === null ? {} : { consumptionProvenance: userObservedConsumption }),
+    }))} className="grid gap-4" noValidate>
       <fieldset disabled={pending} className="grid gap-4 sm:grid-cols-2">
         <legend className="sr-only">Custom vehicle specifications</legend>
         {(["make", "model", "nickname"] as const).map((name) => (
@@ -69,7 +72,7 @@ export function CustomVehicleForm({ onSave, onCancel, pending, submitLabel = "Sa
           </Field>
         )} />
       </fieldset>
-      <p className="text-xs text-muted-foreground">Use the average consumption shown by your car. Leave an unknown charging limit blank; enter 0 only if charging is unsupported.</p>
+      <p className="text-xs text-muted-foreground">Average consumption is optional. Without it, the reference range is used as a provisional rated-range model, with no derived consumption or automatic charger application. Measurement basis stays unknown. Leave an unknown charging limit blank; enter 0 only if charging is unsupported.</p>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>Cancel</Button>
         <Button type="submit" disabled={pending}>{pending ? "Applying…" : submitLabel}</Button>

@@ -9,17 +9,18 @@ import { useGarage } from "./garage-provider";
 import { CustomVehicleForm } from "./custom-vehicle-form";
 import { VehicleCatalogPicker } from "./vehicle-catalog-picker";
 import type { CatalogVehicle, VehicleCommand } from "./vehicle-api";
-import { estimateCatalogConsumption } from "./vehicle-mappers";
+import { userObservedConsumption } from "./vehicle-api";
+import { defaultEnergyProfile, energySelectionDescription } from "./energy-selection";
 
 export function AddVehicleDialog({ onClose }: { onClose: () => void }) {
   const { mutation, authenticated } = useGarage();
-  const [mode, setMode] = useState<"catalog" | "custom">(authenticated ? "catalog" : "custom");
+  const [mode, setMode] = useState<"catalog" | "custom">("catalog");
   const [selected, setSelected] = useState<CatalogVehicle | null>(null);
   const [knowsConsumption, setKnowsConsumption] = useState(false);
   const [consumption, setConsumption] = useState("");
-  const estimatedConsumption = selected ? estimateCatalogConsumption(selected) : null;
-  const consumptionToSave = knowsConsumption ? Number(consumption) : estimatedConsumption;
-  const validConsumption = consumptionToSave !== null && Number.isFinite(consumptionToSave) && consumptionToSave > 0 && consumptionToSave <= 99999.999;
+  const defaultProfile = selected ? defaultEnergyProfile(selected, selected.rangeKm) : null;
+  const consumptionToSave = knowsConsumption ? Number(consumption) : undefined;
+  const validConsumption = !knowsConsumption || (consumptionToSave !== undefined && Number.isFinite(consumptionToSave) && consumptionToSave > 0 && consumptionToSave <= 99999.999);
 
   async function save(command: VehicleCommand) {
     try {
@@ -35,16 +36,20 @@ export function AddVehicleDialog({ onClose }: { onClose: () => void }) {
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl" showCloseButton={!mutation.isPending}>
         <DialogHeader>
           <DialogTitle>Add your EV</DialogTitle>
-          <DialogDescription>{authenticated ? "Choose a Thailand specification or enter your own. Your garage is saved to your account." : "Enter your EV specifications for this guest plan. This vehicle will not be saved."}</DialogDescription>
+          <DialogDescription>{authenticated ? "Choose a Thailand specification or enter your own. Your garage is saved to your account." : "Choose a catalogue EV or enter your own specifications. Used only for this guest trip."}</DialogDescription>
         </DialogHeader>
-        {authenticated && <div className="flex gap-2" aria-label="Vehicle source">
+        <div className="flex gap-2" aria-label="Vehicle source">
           <Button variant={mode === "catalog" ? "default" : "outline"} aria-pressed={mode === "catalog"} disabled={mutation.isPending} onClick={() => setMode("catalog")}>Thailand catalogue</Button>
           <Button variant={mode === "custom" ? "default" : "outline"} aria-pressed={mode === "custom"} disabled={mutation.isPending} onClick={() => setMode("custom")}>Custom EV</Button>
-        </div>}
+        </div>
         {mutation.isError && <p role="alert" className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{mutation.error.message}</p>}
         {mode === "catalog" ? <form className="grid gap-4" onSubmit={(event) => {
           event.preventDefault();
-          if (selected && validConsumption && consumptionToSave !== null && !mutation.isPending) void save({ kind: "catalog", catalogId: selected.id, consumptionKwhPer100km: consumptionToSave, startingBatteryPct: 80 });
+          if (selected && validConsumption && !mutation.isPending) void save({ kind: "catalog", catalogId: selected.id, consumptionKwhPer100km: consumptionToSave, startingBatteryPct: 80,
+            energySelection: knowsConsumption ? "USER_OVERRIDE" : "USE_DEFAULT",
+            catalogVehicle: selected,
+            ...(knowsConsumption ? { consumptionProvenance: userObservedConsumption } : {}),
+          });
         }}>
           <VehicleCatalogPicker selectedId={selected?.id ?? null} onSelect={setSelected} disabled={mutation.isPending} />
           {selected && <div className="grid gap-3 rounded-lg bg-muted/50 p-4">
@@ -63,14 +68,14 @@ export function AddVehicleDialog({ onClose }: { onClose: () => void }) {
             </>}
             <p id="preset-consumption-help" className="text-xs text-muted-foreground">
               {knowsConsumption
-                ? "Use the average shown in your car's trip computer for the most accurate route energy."
-                : `We'll estimate about ${estimatedConsumption} kWh/100 km from the battery and ${selected.rangeStandard} range. You can change it later in vehicle settings.`}
+                ? "Enter your observed average. Its measurement basis remains unknown unless explicitly specified."
+                : defaultProfile ? energySelectionDescription(defaultProfile) : "Choose a vehicle."}
             </p>
           </div>}
           <p className="text-xs text-muted-foreground">Car images are AI illustrations. Appearance and equipment may vary by trim.</p>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="ghost" onClick={onClose} disabled={mutation.isPending}>Cancel</Button>
-            <Button type="submit" disabled={!selected || !validConsumption || mutation.isPending}>{mutation.isPending ? "Saving…" : "Save to garage"}</Button>
+            <Button type="submit" disabled={!selected || !validConsumption || mutation.isPending}>{mutation.isPending ? "Adding…" : authenticated ? "Save to garage" : "Use for this trip"}</Button>
           </div>
         </form> : <CustomVehicleForm submitLabel={authenticated ? "Save custom EV" : "Use for this trip"} onSave={(vehicle) => save({ kind: "custom", vehicle })} onCancel={onClose} pending={mutation.isPending} />}
       </DialogContent>

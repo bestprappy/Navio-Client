@@ -5,12 +5,12 @@ import { useAtomValue } from "jotai";
 import { itineraryBlocksAtom } from "../overview/trip-builder.atoms";
 import { useTripRoutes } from "../routes/trip-route-query";
 import { getTripRouteGroups } from "../routes/trip-route.helpers";
-import { activeEvCarAtom, startingBatteryPctAtom } from "./garage.atoms";
+import { calculationEvCarAtom, startingBatteryPctAtom } from "./garage.atoms";
 import { projectTripCharging } from "./ev-calculator";
 
 export function useTripCharging() {
   const blocks = useAtomValue(itineraryBlocksAtom);
-  const car = useAtomValue(activeEvCarAtom);
+  const car = useAtomValue(calculationEvCarAtom);
   const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
   const { data } = useTripRoutes();
   return useMemo(() => {

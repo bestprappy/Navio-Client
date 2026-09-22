@@ -10,7 +10,7 @@ import { itineraryBlocksAtom } from "../overview/trip-builder.atoms";
 import { useTripRoutes } from "../routes/trip-route-query";
 import { getVehicleCar } from "../constants/vehicle.data";
 import {
-  activeEvCarAtom,
+  calculationEvCarAtom,
   activeVehicleAtom,
   activeVehicleIdAtom,
   garageModalOpenAtom,
@@ -27,7 +27,7 @@ export function GarageSection() {
   const vehicles = useAtomValue(userVehiclesAtom);
   const activeVehicleId = useAtomValue(activeVehicleIdAtom);
   const activeVehicle = useAtomValue(activeVehicleAtom);
-  const activeEvCar = useAtomValue(activeEvCarAtom);
+  const activeEvCar = useAtomValue(calculationEvCarAtom);
   const [isModalOpen, setModalOpen] = useAtom(garageModalOpenAtom);
   const { query, mutation, vehicles: savedVehicles, authenticated, loadingSession } = useGarage();
   const savedActiveVehicle = savedVehicles.find((vehicle) => vehicle.id === activeVehicleId);
@@ -102,7 +102,7 @@ export function GarageSection() {
       )}
 
       {savedActiveVehicle && <VehicleSettingsForm key={`${savedActiveVehicle.id}:${savedActiveVehicle.updatedAt}`} vehicle={savedActiveVehicle} />}
-      {activeVehicle && !activeEvCar && <p className="mt-3 text-sm text-muted-foreground">Save your average consumption to enable route estimates.</p>}
+      {activeVehicle && !activeEvCar && <p className="mt-3 text-sm text-muted-foreground">This vehicle remains selected. Route battery estimates are not available for this energy source yet. You can still plan stops and browse compatible chargers.</p>}
       {activeEvCar?.chargingLimitsKnown === false && <p className="mt-3 text-sm text-muted-foreground">Some charging limits are unconfirmed. Charging estimates are available only for confirmed limits.</p>}
       {vehicles.length >= 25 && <p className="mt-3 text-sm text-muted-foreground">Your garage is full (25 vehicles). Remove a vehicle to add another.</p>}
 

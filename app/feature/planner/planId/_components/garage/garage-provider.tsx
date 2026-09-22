@@ -7,7 +7,7 @@ import { useAtom, useStore } from "jotai";
 import { applyGuestVehicleCommand, guestVehiclesAtom } from "./guest-vehicles";
 import type { VehicleCommand } from "./vehicle-api";
 
-import { garageActiveIdSnapshotAtom, garageModalOpenAtom, garageVehiclesSnapshotAtom } from "./garage.atoms";
+import { garageActiveIdSnapshotAtom, garageModalOpenAtom, garageVehiclesSnapshotAtom, startingBatteryOverridesAtom } from "./garage.atoms";
 import { executeVehicleCommand, listVehicles, VehicleApiError, type SavedVehicle } from "./vehicle-api";
 import { savedVehicleForPlanner } from "./vehicle-mappers";
 
@@ -58,6 +58,7 @@ function useGarageState() {
     store.set(garageVehiclesSnapshotAtom, []);
     store.set(garageActiveIdSnapshotAtom, null);
     store.set(garageModalOpenAtom, false);
+    store.set(startingBatteryOverridesAtom, {});
   }, [store, userId]);
   return { query, mutation, vehicles, authenticated, loadingSession: status === "loading" };
 }

@@ -59,7 +59,7 @@ export function PlannerDetail({
   const tripLatitude = metadata.data?.destinationLat ?? latitude;
   const tripLongitude = metadata.data?.destinationLng ?? longitude;
   return (
-    <GarageProvider>
+    <GarageProvider key={planId ?? "guest"}>
     <PlannerWorkspace itinerary={<>
           {guest && <GuestPlanNotice />}
           <TripHero destinationName={tripDestinationName} />

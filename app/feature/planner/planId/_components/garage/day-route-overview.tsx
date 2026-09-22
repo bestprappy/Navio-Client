@@ -5,7 +5,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { useAtomValue } from "jotai";
 
 import { useTripRoutes } from "../routes/trip-route-query";
-import { activeEvCarAtom } from "./garage.atoms";
+import { calculationEvCarAtom } from "./garage.atoms";
 import { calcDayRouteStats } from "./ev-calculator";
 import { useTripCharging } from "./use-trip-charging";
 import { RouteEstimate } from "./route-estimate";
@@ -16,7 +16,7 @@ type DayRouteOverviewProps = {
 };
 
 export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps) {
-  const activeEvCar = useAtomValue(activeEvCarAtom);
+  const activeEvCar = useAtomValue(calculationEvCarAtom);
   const charging = useTripCharging();
   const chargeStats = charging?.days.get(blockId);
   const batteryAtDayStart = chargeStats?.startBatteryPct ?? 0;

@@ -1,4 +1,5 @@
 "use client";
+import { canAutomaticallyPlan } from "../garage/energy-selection";
 
 import { useMemo, useState } from "react";
 import { HelpCircle, Search, Sparkles } from "lucide-react";
@@ -97,7 +98,7 @@ export function EvStationSidePanel({
     ? tripCharging?.days.get(panelBlockId)?.startBatteryPct ?? startingBatteryPct
     : startingBatteryPct;
   const autoPlan = useMemo(() => {
-    if (!targetBlock || !activeEvCar) {
+    if (!targetBlock || !activeEvCar || !(activeEvCar.consumptionKwhPer100km > 0)) {
       return null;
     }
 
@@ -128,13 +129,13 @@ export function EvStationSidePanel({
     [autoPlan],
   );
   const autoAddDisabled =
-    !panelBlockId || !activeEvCar || !autoPlan?.insertions.length;
+    !panelBlockId || !canAutomaticallyPlan(activeEvCar) || !autoPlan?.insertions.length;
   const batterySummary = autoPlan
     ? ` Day starts at ${Math.round(dayStartBatteryPct)}% and ends near ${autoPlan.finalBatteryPct}%.`
     : "";
   const autoStatusText =
     autoMessage ??
-    (!activeEvCar
+    (activeEvCar && !canAutomaticallyPlan(activeEvCar) ? "Preview only. Rated-range vehicles cannot apply automatic chargers; legacy estimates need confirmation in vehicle settings." : !activeEvCar
       ? "Select an EV from your garage first."
       : autoPlan?.insertions.length
         ? `${autoPlan.insertions.length} stop${autoPlan.insertions.length === 1 ? "" : "s"} ready, about ${autoPlanMinutes} min charging.${batterySummary}`
@@ -172,7 +173,7 @@ export function EvStationSidePanel({
   }
 
   function autoAddBestChargers() {
-    if (!panelBlockId || !autoPlan?.insertions.length) {
+    if (!panelBlockId || !canAutomaticallyPlan(activeEvCar) || !autoPlan?.insertions.length) {
       setAutoMessage(autoPlan?.message ?? "No charger plan is available yet.");
       return;
     }

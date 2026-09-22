@@ -1,19 +1,11 @@
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
 import type { CatalogVehicle, SavedVehicle } from "./vehicle-api";
-
-// Share of the official test range typically achieved on real roads. Test cycles are optimistic by different amounts.
-const REAL_WORLD_RANGE_FACTOR: Record<CatalogVehicle["rangeStandard"], number> = { NEDC: 0.7, CLTC: 0.7, WLTP: 0.85, EPA: 0.9 };
-
-/** Rough kWh/100 km from declared capacity and test range, used only when the driver does not know their average. */
-export function estimateCatalogConsumption(vehicle: CatalogVehicle): number {
-  const realWorldRangeKm = vehicle.rangeKm * REAL_WORLD_RANGE_FACTOR[vehicle.rangeStandard];
-  return Math.round((vehicle.batteryCapacityKwh / realWorldRangeKm) * 1000) / 10;
-}
+import { legacyEnergyProfile } from "./vehicle-api";
 
 export function catalogVehicleCar(vehicle: CatalogVehicle): EvCar {
   return {
     ...vehicle, batteryKwh: vehicle.batteryCapacityKwh,
-    consumptionKwhPer100km: 0, // Not supplied by the source. Estimates are opt-in at save time via estimateCatalogConsumption.
+    consumptionKwhPer100km: 0, // Catalogue cards are specification previews, not calculation inputs.
     maxAcKw: vehicle.maxAcKw ?? 0, maxDcKw: vehicle.maxDcKw ?? 0,
     chargingLimitsKnown: vehicle.maxAcKw !== null && vehicle.maxDcKw !== null,
   };
@@ -31,6 +23,8 @@ export function savedVehicleForPlanner(vehicle: SavedVehicle): UserVehicle {
     rangeStandard: vehicle.catalog?.rangeStandard ?? "User supplied",
     sourceUrl: vehicle.catalog?.sourceUrl, verifiedAt: vehicle.catalog?.verifiedAt,
     chargingLimitsKnown: vehicle.settings.maxAcKw !== null && vehicle.settings.maxDcKw !== null,
+    energyProfile: vehicle.energyProfile ?? legacyEnergyProfile(vehicle),
+    legacyConsumptionConfirmed: vehicle.legacyConsumptionConfirmed,
   };
   const base = { id: vehicle.id, nickname: vehicle.nickname ?? undefined, startingBatteryPct: vehicle.settings.startingBatteryPct };
   return vehicle.catalog ? { ...base, source: "preset", carId: vehicle.catalog.id, car }

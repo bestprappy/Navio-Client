@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import type { PlaceItemEvChargerDetails } from "../constants/types";
 import type { EvCar } from "../constants/vehicle.types";
 import { getBatteryColor } from "../garage/battery-slider";
-import { activeEvCarAtom } from "../garage/garage.atoms";
+import { calculationEvCarAtom } from "../garage/garage.atoms";
 import { normalizeStationTargetPct, projectChargingStop, type ChargingStopProjection } from "../garage/ev-calculator";
 import { formatMinutes } from "../garage/garage-formatters";
 import { updatePlaceItemAtom } from "../overview/trip-builder.atoms";
@@ -29,7 +29,7 @@ type StationChargingControlProps = {
 export function StationChargingControl({ blockId, itemId, stationName, details, arrivalPct }: StationChargingControlProps) {
   const inputId = useId();
   const helpId = `${inputId}-help`;
-  const car = useAtomValue(activeEvCarAtom);
+  const car = useAtomValue(calculationEvCarAtom);
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const projection = car && arrivalPct !== undefined ? projectChargingStop(arrivalPct, details, car) : null;
   const target = normalizeStationTargetPct(details.targetBatteryPct ?? projection?.departurePct);
@@ -117,7 +117,7 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
 
 function ChargeEstimate({ car, projection, target }: { car: EvCar | null; projection: ChargingStopProjection | null; target: number }) {
   if (!car) {
-    return <p className="text-sm text-muted-foreground">Add your EV in My garage to estimate charging time.</p>;
+    return <p className="text-sm text-muted-foreground">Charging time needs a vehicle with a supported consumption estimate. You can still set the charging target.</p>;
   }
   if (!projection) {
     return <p className="text-sm text-muted-foreground">Charging time appears once the route is ready.</p>;

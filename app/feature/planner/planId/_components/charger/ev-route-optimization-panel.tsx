@@ -1,4 +1,5 @@
 "use client";
+import { canAutomaticallyPlan } from "../garage/energy-selection";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 
 import { useMemo, useState } from "react";
@@ -77,7 +78,7 @@ export function EvRouteOptimizationPanel({
   const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
 
   const payload = useMemo<EvOptimizationRequestPayload | null>(() => {
-    if (!blockId || !vehicle) return null;
+    if (!blockId || !vehicle || !(vehicle.consumptionKwhPer100km > 0) || (vehicle.energyProfile && vehicle.energyProfile.modelKind !== "CONSUMPTION")) return null;
     return {
       blockId,
       vehicle: {
@@ -124,9 +125,9 @@ export function EvRouteOptimizationPanel({
 
   const applyMutation = useMutation({
     mutationFn: (state: PreviewState) => {
-      if (!tripId) {
+      if (!tripId || !canAutomaticallyPlan(vehicle)) {
         throw new PlannerApiError(
-          "Save this trip before applying EV route optimization.",
+          "Confirm the vehicle energy selection before applying EV route optimization.",
           400,
         );
       }
@@ -146,7 +147,7 @@ export function EvRouteOptimizationPanel({
   const canPreview = Boolean(tripId && payload);
   const operations = currentPreview?.data.operations ?? [];
   const canApply = Boolean(
-    currentPreview?.data.feasible && operations.length > 0,
+    canAutomaticallyPlan(vehicle) && currentPreview?.data.feasible && operations.length > 0,
   );
   const error = previewMutation.error ?? applyMutation.error;
 
@@ -157,7 +158,7 @@ export function EvRouteOptimizationPanel({
   }
 
   function applyPreview() {
-    if (!currentPreview || !tripId) return;
+    if (!currentPreview || !tripId || !canApply) return;
     applyMutation.mutate(currentPreview);
   }
 
@@ -190,6 +191,7 @@ export function EvRouteOptimizationPanel({
         {previewMutation.isPending ? "Checking the route..." : isAuthenticated ? "Optimize EV route" : "Sign in for saved-route optimization"}
       </Button>
 
+      {vehicle && !canAutomaticallyPlan(vehicle) && <p className="mt-2 text-xs text-muted-foreground">Rated-range route previews are not available yet. Legacy estimates need confirmation in vehicle settings before automatic application.</p>}
       {!vehicle ? (
         <p className="mt-2 text-xs text-muted-foreground">
           Select an EV from your garage first.

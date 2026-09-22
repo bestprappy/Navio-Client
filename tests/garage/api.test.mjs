@@ -29,7 +29,7 @@ test("catalogue requests use official identifiers without posting browser specif
     assert.deepEqual(JSON.parse(options.body), { consumptionKwhPer100km: 17.5, startingBatteryPct: 80 });
     return Response.json(savedVehicleFixture, { status: 201 });
   };
-  await executeVehicleCommand({ kind: "catalog", catalogId: catalogFixture.id, consumptionKwhPer100km: 17.5, startingBatteryPct: 80 });
+  await executeVehicleCommand({ kind: "catalog", catalogId: catalogFixture.id, catalogVehicle: catalogFixture, consumptionKwhPer100km: 17.5, startingBatteryPct: 80 });
 });
 
 test("patches only the changed vehicle settings", async () => {
