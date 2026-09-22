@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import type { PlaceItemEvChargerDetails } from "../constants/types";
 import type { EvCar } from "../constants/vehicle.types";
 import { getBatteryColor } from "../garage/battery-slider";
-import { activeEvCarAtom } from "../garage/garage.atoms";
+import { activeEvCarAtom, arrivalReservePctAtom } from "../garage/garage.atoms";
 import { normalizeStationTargetPct, projectChargingStop, type ChargingStopProjection } from "../garage/ev-calculator";
 import { formatMinutes } from "../garage/garage-formatters";
 import { updatePlaceItemAtom } from "../overview/trip-builder.atoms";
@@ -30,6 +30,7 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
   const inputId = useId();
   const helpId = `${inputId}-help`;
   const car = useAtomValue(activeEvCarAtom);
+  const reservePct = useAtomValue(arrivalReservePctAtom);
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const projection = car && arrivalPct !== undefined ? projectChargingStop(arrivalPct, details, car) : null;
   const target = normalizeStationTargetPct(details.targetBatteryPct ?? projection?.departurePct);
@@ -88,7 +89,7 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
           {/* Same thumb as the garage's starting battery slider: level-colored circle with a light center dot. */}
           <span
             className="absolute top-1/2 flex size-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full shadow-md transition-[background-color] duration-100"
-            style={{ left: `${target}%`, backgroundColor: getBatteryColor(target) }}
+            style={{ left: `${target}%`, backgroundColor: getBatteryColor(target, reservePct) }}
           >
             <span className="rounded-full bg-primary-foreground/70" style={{ width: 7, height: 7 }} />
           </span>

@@ -1,7 +1,11 @@
+"use client";
+
 import { BatteryCharging } from "lucide-react";
+import { useAtomValue } from "jotai";
 
 import { cn } from "@/lib/utils";
 
+import { arrivalReservePctAtom } from "../garage/garage.atoms";
 import { BATTERY_CHANGE_TEXT, BATTERY_TONES, getBatteryTone } from "../garage/garage-formatters";
 
 function clampPct(value: number): number {
@@ -10,13 +14,14 @@ function clampPct(value: number): number {
 
 /** Battery bar for a charge: the part held on arrival is dimmed, the part added is lit in its level color. */
 export function ChargeBar({ from, to, className }: { from: number; to: number; className?: string }) {
+  const reservePct = useAtomValue(arrivalReservePctAtom);
   const start = clampPct(Math.min(from, to));
   const end = clampPct(Math.max(from, to));
 
   return (
     <div aria-hidden="true" className={cn("surface-groove relative h-2.5 rounded-full", className)}>
       <div
-        className={cn("absolute inset-y-0 left-0 rounded-full", BATTERY_TONES[getBatteryTone(end)].fill)}
+        className={cn("absolute inset-y-0 left-0 rounded-full", BATTERY_TONES[getBatteryTone(end, reservePct)].fill)}
         style={{ width: `${end}%` }}
       />
       {start > 0 && (
@@ -32,6 +37,7 @@ type ChargeSegmentInfoProps = {
 };
 
 export function ChargeSegmentInfo({ batteryFrom, batteryTo }: ChargeSegmentInfoProps) {
+  const reservePct = useAtomValue(arrivalReservePctAtom);
   if (batteryFrom === undefined || batteryTo === undefined) return null;
 
   const from = clampPct(batteryFrom);
@@ -46,10 +52,10 @@ export function ChargeSegmentInfo({ batteryFrom, batteryTo }: ChargeSegmentInfoP
         </span>
         <span className="font-mono font-medium tabular-nums">
           <span className="sr-only">from </span>
-          <span className={BATTERY_TONES[getBatteryTone(from)].valueText}>{from}%</span>
+          <span className={BATTERY_TONES[getBatteryTone(from, reservePct)].valueText}>{from}%</span>
           <span aria-hidden="true" className="text-muted-foreground"> → </span>
           <span className="sr-only"> to </span>
-          <span className={BATTERY_TONES[getBatteryTone(to)].valueText}>{to}%</span>
+          <span className={BATTERY_TONES[getBatteryTone(to, reservePct)].valueText}>{to}%</span>
           {to > from && <span className={cn("ml-2", BATTERY_CHANGE_TEXT.added)}>+{to - from}%</span>}
         </span>
       </p>
@@ -67,12 +73,13 @@ export function DischargeSegmentInfo({
   batteryFrom,
   batteryTo,
 }: DischargeSegmentInfoProps) {
+  const reservePct = useAtomValue(arrivalReservePctAtom);
   if (batteryFrom === undefined || batteryTo === undefined) return null;
 
   const from = clampPct(batteryFrom);
   const to = clampPct(batteryTo);
   const used = Math.max(0, from - to);
-  const tone = BATTERY_TONES[getBatteryTone(to)];
+  const tone = BATTERY_TONES[getBatteryTone(to, reservePct)];
 
   return (
     <div className="flex h-6 items-center gap-2 text-sm leading-none">
@@ -83,7 +90,7 @@ export function DischargeSegmentInfo({
         Battery {from}% to {to}%{tone.label ? `, ${tone.label.toLowerCase()}` : ""}
       </span>
       <span aria-hidden="true" className="font-mono font-medium tabular-nums">
-        <span className={BATTERY_TONES[getBatteryTone(from)].valueText}>{from}%</span>
+        <span className={BATTERY_TONES[getBatteryTone(from, reservePct)].valueText}>{from}%</span>
         <span className="text-muted-foreground"> → </span>
         <span className={tone.valueText}>{to}%</span>
       </span>

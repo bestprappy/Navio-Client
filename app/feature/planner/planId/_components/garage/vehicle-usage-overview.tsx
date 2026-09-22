@@ -1,12 +1,14 @@
 "use client";
 
 import { useId } from "react";
+import { useAtomValue } from "jotai";
 
 import { cn } from "@/lib/utils";
 
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
 import type { TripEvSummary } from "./ev-calculator";
-import { AUTO_MIN_ARRIVAL_PCT, calcRangeKmForBatteryPct } from "./ev-calculator";
+import { calcRangeKmForBatteryPct } from "./ev-calculator";
+import { arrivalReservePctAtom } from "./garage.atoms";
 import { SIMULATION_MODEL } from "./simulation-model";
 import { BATTERY_TONES, formatDistanceKm, formatMinutes, getBatteryTone } from "./garage-formatters";
 
@@ -26,6 +28,7 @@ export function VehicleUsageOverview({
   plannedDays,
 }: VehicleUsageOverviewProps) {
   const titleId = useId();
+  const reservePct = useAtomValue(arrivalReservePctAtom);
   const hasEstimate = tripSummary !== null;
   const startPct = vehicle.startingBatteryPct;
   const endPct = tripSummary?.finalBatteryPct ?? startPct;
@@ -33,7 +36,7 @@ export function VehicleUsageOverview({
   const distanceKm = tripSummary?.totalDistanceKm ?? 0;
   const energyKwh = tripSummary?.totalEnergyKwh ?? 0;
   const chargeMinutes = tripSummary?.totalChargeMinutes ?? 0;
-  const tone = BATTERY_TONES[getBatteryTone(endPct)];
+  const tone = BATTERY_TONES[getBatteryTone(endPct, reservePct)];
   const displayName = vehicle.nickname?.trim() || `${car.make} ${car.model}`;
 
   return (
@@ -110,6 +113,7 @@ function BatteryTrack({
   fillClass: string;
   showStart: boolean;
 }) {
+  const reservePct = useAtomValue(arrivalReservePctAtom);
   return (
     <div className="mt-4" aria-hidden="true">
       <div className="relative h-2.5 rounded-full bg-muted ring-1 ring-border ring-inset">
@@ -117,10 +121,10 @@ function BatteryTrack({
           <div className="absolute inset-y-0 left-0 rounded-full bg-foreground/15" style={{ width: `${startPct}%` }} />
         )}
         <div className={cn("absolute inset-y-0 left-0 rounded-full", fillClass)} style={{ width: `${endPct}%` }} />
-        <div className="absolute -inset-y-1 w-px bg-destructive" style={{ left: `${AUTO_MIN_ARRIVAL_PCT}%` }} />
+        <div className="absolute -inset-y-1 w-px bg-destructive" style={{ left: `${reservePct}%` }} />
       </div>
       <div className="mt-2 flex flex-wrap justify-between gap-x-3 text-xs text-muted-foreground">
-        <span>Reserve {AUTO_MIN_ARRIVAL_PCT}%</span>
+        <span>Reserve {reservePct}%</span>
         {showStart && <span>Started at {startPct}%</span>}
       </div>
     </div>
@@ -142,6 +146,7 @@ function Stat({ label, value, unit, note }: { label: string; value: string; unit
 
 function DailyBattery({ values, hasEstimate }: { values: number[]; hasEstimate: boolean }) {
   const titleId = useId();
+  const reservePct = useAtomValue(arrivalReservePctAtom);
   const scrolls = values.length > 8;
 
   return (
@@ -151,7 +156,7 @@ function DailyBattery({ values, hasEstimate }: { values: number[]; hasEstimate: 
           Battery at the end of each day
         </h4>
         {hasEstimate && values.length > 0 && (
-          <p className="text-xs text-muted-foreground">Red line: {AUTO_MIN_ARRIVAL_PCT}% reserve</p>
+          <p className="text-xs text-muted-foreground">Red line: {reservePct}% reserve</p>
         )}
       </div>
 
@@ -170,7 +175,7 @@ function DailyBattery({ values, hasEstimate }: { values: number[]; hasEstimate: 
             <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-5 bottom-6 border-b border-border">
               <div
                 className="absolute inset-x-0 border-t border-dashed border-destructive"
-                style={{ bottom: `${AUTO_MIN_ARRIVAL_PCT}%` }}
+                style={{ bottom: `${reservePct}%` }}
               />
             </div>
             <ol aria-labelledby={titleId} className="relative flex h-full gap-2">
@@ -186,7 +191,8 @@ function DailyBattery({ values, hasEstimate }: { values: number[]; hasEstimate: 
 }
 
 function DayBar({ day, value, shortLabel }: { day: number; value: number; shortLabel: boolean }) {
-  const tone = BATTERY_TONES[getBatteryTone(value)];
+  const reservePct = useAtomValue(arrivalReservePctAtom);
+  const tone = BATTERY_TONES[getBatteryTone(value, reservePct)];
 
   return (
     <li className="flex min-w-0 flex-1 flex-col">

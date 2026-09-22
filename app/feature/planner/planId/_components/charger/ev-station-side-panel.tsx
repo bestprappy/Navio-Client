@@ -24,9 +24,9 @@ import {
 import {
   AUTO_CHARGE_TARGET_MAX_PCT,
   AUTO_CHARGE_TARGET_MIN_PCT,
-  AUTO_MIN_ARRIVAL_PCT,
   isCompatible,
 } from "../garage/ev-calculator";
+import { ArrivalReserveControl } from "../garage/arrival-reserve-control";
 import { BatterySlider } from "../garage/battery-slider";
 import { useTripCharging } from "../garage/use-trip-charging";
 
@@ -148,15 +148,16 @@ export function EvStationSidePanel({
           </div>
 
           <div className="mt-3 rounded-sm border border-primary/25 bg-primary/5 p-3">
-            <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Charging preferences
+            </p>
+            <ArrivalReserveControl className="mt-2" disabled={!activeEvCar} />
+            <div className="mt-4">
               <div className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Charging preferences
-                  </p>
                   <label
                     htmlFor="charge-stop-target"
-                    className="mt-2 flex items-center gap-1.5 text-sm font-medium text-foreground"
+                    className="flex items-center gap-1.5 text-sm font-medium text-foreground"
                   >
                     Charge each stop to
                     <HelpCircle
@@ -168,12 +169,6 @@ export function EvStationSidePanel({
                       </title>
                     </HelpCircle>
                   </label>
-                  <p
-                    id="charge-stop-target-help"
-                    className="mt-1 text-xs leading-relaxed text-muted-foreground"
-                  >
-                    Stops are planned so you never arrive below {AUTO_MIN_ARRIVAL_PCT}%.
-                  </p>
                 </div>
                 <span className="text-lg font-bold tabular-nums text-foreground">
                   {chargeStopTargetPct}%

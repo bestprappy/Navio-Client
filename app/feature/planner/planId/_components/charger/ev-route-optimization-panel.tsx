@@ -20,7 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 import type { EvCar } from "../constants/vehicle.types";
-import { AUTO_MIN_ARRIVAL_PCT } from "../garage/ev-calculator";
+import { arrivalReservePctAtom } from "../garage/garage.atoms";
 import { applyPlannerServerSnapshotAtom, tripBlocksAtom } from "../overview/trip-builder.atoms";
 
 type EvRouteOptimizationPanelProps = {
@@ -74,6 +74,7 @@ export function EvRouteOptimizationPanel({
   const tripId = isPersistedTripId(params.planId) ? params.planId : null;
   const applyServerSnapshot = useSetAtom(applyPlannerServerSnapshotAtom);
   const blocks = useAtomValue(tripBlocksAtom);
+  const reserveSocPct = useAtomValue(arrivalReservePctAtom);
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
   const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
 
@@ -89,11 +90,11 @@ export function EvRouteOptimizationPanel({
         connectorTypes: vehicle.connectorTypes,
       },
       startingSocPct,
-      reserveSocPct: AUTO_MIN_ARRIVAL_PCT,
+      reserveSocPct,
       targetSocPct,
       maximumDetourKm: 20,
     };
-  }, [blockId, startingSocPct, targetSocPct, vehicle]);
+  }, [blockId, reserveSocPct, startingSocPct, targetSocPct, vehicle]);
   const requestKey = payload ? getRequestKey(payload) : null;
   const currentPreview =
     previewState && previewState.key === requestKey ? previewState : null;
