@@ -5,6 +5,8 @@ import { useAtomValue } from "jotai";
 
 import { cn } from "@/lib/utils";
 
+import { BatteryRouteChart } from "./battery-route-chart";
+import type { DayBatteryPoint } from "./ev-calculator";
 import { arrivalReservePctAtom } from "./garage.atoms";
 import { SIMULATION_MODEL } from "./simulation-model";
 import { BATTERY_TONES, formatMinutes, getBatteryTone } from "./garage-formatters";
@@ -18,6 +20,8 @@ type RouteEstimateProps = {
   chargeMinutes: number;
   compatibleStops: number;
   incompatibleStops: number;
+  /** Stops in driving order; when it covers some distance, a chart replaces the end-of-day bar. */
+  profile?: DayBatteryPoint[];
 };
 
 export function RouteEstimate({
@@ -29,10 +33,12 @@ export function RouteEstimate({
   chargeMinutes,
   compatibleStops,
   incompatibleStops,
+  profile = [],
 }: RouteEstimateProps) {
   const reservePct = useAtomValue(arrivalReservePctAtom);
   const endPct = Math.max(0, Math.min(100, endBatteryPct));
   const tone = BATTERY_TONES[getBatteryTone(endPct, reservePct)];
+  const showChart = profile.length >= 2 && (profile.at(-1)?.distanceKm ?? 0) > 0;
 
   return (
     <div className="@container/estimate min-w-0 rounded-md bg-card ring-1 ring-border">
@@ -54,19 +60,25 @@ export function RouteEstimate({
             </p>
           </div>
         </div>
-        <div
-          className="relative mt-3 h-2 rounded-full bg-muted ring-1 ring-border ring-inset"
-          role="meter"
-          aria-label="Battery at day end"
-          aria-valuenow={Math.round(endPct)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuetext={`${endPct.toFixed(0)}%${tone.label ? `, ${tone.label.toLowerCase()}` : ""}. Reserve ${reservePct}%.`}
-        >
-          <div className={cn("h-full rounded-full", tone.fill)} style={{ width: `${endPct}%` }} />
-          <div className="absolute -inset-y-0.5 w-px bg-foreground/60" style={{ left: `${reservePct}%` }} />
-        </div>
-        <p className="mt-1.5 text-xs text-muted-foreground">Reserve {reservePct}%</p>
+        {showChart ? (
+          <BatteryRouteChart className="mt-4" points={profile} reservePct={reservePct} />
+        ) : (
+          <>
+            <div
+              className="relative mt-3 h-2 rounded-full bg-muted ring-1 ring-border ring-inset"
+              role="meter"
+              aria-label="Battery at day end"
+              aria-valuenow={Math.round(endPct)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuetext={`${endPct.toFixed(0)}%${tone.label ? `, ${tone.label.toLowerCase()}` : ""}. Reserve ${reservePct}%.`}
+            >
+              <div className={cn("h-full rounded-full", tone.fill)} style={{ width: `${endPct}%` }} />
+              <div className="absolute -inset-y-0.5 w-px bg-foreground/60" style={{ left: `${reservePct}%` }} />
+            </div>
+            <p className="mt-1.5 text-xs text-muted-foreground">Reserve {reservePct}%</p>
+          </>
+        )}
       </div>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border px-4 py-3 @min-[28rem]/estimate:grid-cols-4">

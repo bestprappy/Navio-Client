@@ -121,6 +121,17 @@ export function projectChargingStop(
   };
 }
 
+/** One stop on a day's drive, in driving order; the first point is where the day starts. */
+export type DayBatteryPoint = {
+  id: string;
+  name: string;
+  /** Road distance driven since the start of the day. */
+  distanceKm: number;
+  arrivalPct: number;
+  departurePct: number;
+  isCharger: boolean;
+};
+
 export type DayEvProjection = {
   startBatteryPct: number;
   finalBatteryPct: number;
@@ -131,6 +142,7 @@ export type DayEvProjection = {
   compatibleStops: number;
   incompatibleStops: number;
   batteryByItemId: Map<string, ChargingStopProjection>;
+  profile: DayBatteryPoint[];
 };
 
 export function projectTripCharging(
@@ -146,13 +158,15 @@ export function projectTripCharging(
   const summary: TripEvSummary = { totalDistanceKm: 0, totalEnergyKwh: 0, totalChargeMinutes: 0, finalBatteryPct: currentBatteryPct, batteryByDay: [] };
 
   for (const block of blocks.filter((entry) => entry.kind === "itinerary").toSorted((a, b) => a.date.localeCompare(b.date))) {
-    const day: DayEvProjection = { startBatteryPct: currentBatteryPct, finalBatteryPct: currentBatteryPct, distanceKm: 0, energyKwh: 0, chargeEnergyKwh: 0, chargeMinutes: 0, compatibleStops: 0, incompatibleStops: 0, batteryByItemId: new Map() };
+    const day: DayEvProjection = { startBatteryPct: currentBatteryPct, finalBatteryPct: currentBatteryPct, distanceKm: 0, energyKwh: 0, chargeEnergyKwh: 0, chargeMinutes: 0, compatibleStops: 0, incompatibleStops: 0, batteryByItemId: new Map(), profile: [] };
     const stops = block.items.filter(isPlaceItem).map((item) => ({
       id: item.id,
+      name: item.name,
       charger: isEvChargerPlaceItem(item) ? item.evCharger : undefined,
     }));
-    if (anchors.get(block.id)?.start) stops.unshift({ id: `${block.id}:start`, charger: undefined });
-    if (anchors.get(block.id)?.end) stops.push({ id: `${block.id}:end`, charger: undefined });
+    const dayAnchors = anchors.get(block.id);
+    if (dayAnchors?.start) stops.unshift({ id: `${block.id}:start`, name: dayAnchors.start.name, charger: undefined });
+    if (dayAnchors?.end) stops.push({ id: `${block.id}:end`, name: dayAnchors.end.name, charger: undefined });
     for (const item of stops) {
       const segment = segmentByItem.get(`${block.id}:${item.id}`);
       const distanceKm = Math.max(0, segment?.distanceMeters ?? 0) / 1000;
@@ -163,6 +177,10 @@ export function projectTripCharging(
         ? projectChargingStop(currentBatteryPct, item.charger, car)
         : { arrivalPct: currentBatteryPct, departurePct: currentBatteryPct, chargeEnergyKwh: 0, chargeMinutes: 0, compatible: true };
       day.batteryByItemId.set(item.id, state);
+      day.profile.push({
+        id: item.id, name: item.name, distanceKm: day.distanceKm, arrivalPct: state.arrivalPct,
+        departurePct: state.departurePct, isCharger: Boolean(item.charger),
+      });
       day.chargeEnergyKwh += state.chargeEnergyKwh;
       day.chargeMinutes += state.chargeMinutes;
       if (item.charger) {
