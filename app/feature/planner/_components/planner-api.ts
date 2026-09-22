@@ -139,6 +139,8 @@ export class PlannerApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** The server's actionable reason, when it sent one alongside the headline. */
+    readonly detail?: string,
   ) {
     super(message);
     this.name = "PlannerApiError";
@@ -324,7 +326,11 @@ export async function requestJson(
         : isRecord(value) && typeof value.error === "string"
           ? value.error
         : `Planner request failed (${response.status}).`;
-    throw new PlannerApiError(message, response.status);
+    const detail =
+      isRecord(value) && typeof value.error === "string" && value.error !== message
+        ? value.error
+        : undefined;
+    throw new PlannerApiError(message, response.status, detail);
   }
   return value;
 }

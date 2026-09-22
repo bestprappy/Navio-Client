@@ -58,6 +58,10 @@ function getMutationError(error: unknown): string {
   if (error instanceof PlannerApiError && error.status === 409) {
     return "The trip changed after this preview. Preview the route again.";
   }
+  // A rejected route (422) carries the reason, such as a missing start or destination.
+  if (error instanceof PlannerApiError && error.status === 422 && error.detail) {
+    return `${error.message}. ${error.detail.replace(/\.$/, "")}.`;
+  }
   return error instanceof Error
     ? error.message
     : "The EV route could not be optimized.";
