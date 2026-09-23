@@ -72,6 +72,14 @@
   --color-premade: var(--premade);
   --color-tag: var(--tag);
 
+  /* EV connector families — one hue each, all kept clear of the brand blue */
+  --color-connector-ccs: var(--connector-ccs);
+  --color-connector-chademo: var(--connector-chademo);
+  --color-connector-type2: var(--connector-type2);
+  --color-connector-j1772: var(--connector-j1772);
+  --color-connector-nacs: var(--connector-nacs);
+  --color-connector-gbt: var(--connector-gbt);
+
   /* Theme-independent overlays and map chrome */
   --color-scrim: var(--scrim);
   --color-on-media: var(--on-media);
@@ -179,20 +187,29 @@
   --success-foreground: oklch(1 0 0);
 
   /* TColors.warning #F57C00 */
-  --warning: oklch(0.49 0.105 65);
+  --warning: oklch(0.5 0.14 58);
   --warning-foreground: oklch(1 0 0);
 
   /* TColors.info #1976D2 */
   --info: oklch(0.514 0.141 261.2);
   --info-foreground: oklch(1 0 0);
 
-  /* Feature tints — dark enough to read as text; tint surfaces with opacity */
+  /* Feature tints — dark enough to read as text; tint surfaces with opacity.
+     Chroma kept high: at this lightness, low chroma turns tints muddy on white. */
   --rating: oklch(0.8 0.16 86);
-  --note: oklch(0.48 0.12 255);
-  --checklist: oklch(0.5 0.1 75);
-  --charging: oklch(0.5 0.12 150);
-  --premade: oklch(0.5 0.14 300);
-  --tag: oklch(0.48 0.13 275);
+  --note: oklch(0.48 0.15 255);
+  --checklist: oklch(0.53 0.15 72);
+  --charging: oklch(0.5 0.15 150);
+  --premade: oklch(0.5 0.19 300);
+  --tag: oklch(0.48 0.16 275);
+
+  /* EV connector families — same lightness/chroma, hues spread away from blue */
+  --connector-ccs: oklch(0.52 0.13 150);
+  --connector-chademo: oklch(0.55 0.15 50);
+  --connector-type2: oklch(0.52 0.17 345);
+  --connector-j1772: oklch(0.5 0.16 300);
+  --connector-nacs: oklch(0.52 0.17 22);
+  --connector-gbt: oklch(0.52 0.11 100);
 
   /* Battery level ramp: green -> yellow -> orange -> red. Graphic fills only;
      never text. Deeper steps keep yellow visible against light tracks. */
@@ -201,10 +218,12 @@
   --battery-low: oklch(0.72 0.18 55);
   --battery-critical: oklch(0.62 0.22 27);
   /* Same ramp deepened so percentages stay >=4.5:1 as text on Paper and white */
-  --battery-high-text: oklch(0.48 0.14 150);
-  --battery-mid-text: oklch(0.48 0.11 85);
-  --battery-low-text: oklch(0.48 0.15 48);
-  --battery-critical-text: oklch(0.5 0.19 27);
+  /* Mid sits at amber-gold (70) not yellow: a dark yellow reads as olive, and a dark amber as brown.
+     It is a touch lighter than the others (~3.9:1), so it stays a warm gold on the large figures. */
+  --battery-high-text: oklch(0.48 0.16 148);
+  --battery-mid-text: oklch(0.56 0.15 70);
+  --battery-low-text: oklch(0.52 0.19 42);
+  --battery-critical-text: oklch(0.5 0.21 27);
 
   /* Charts mapped to TColors semantic palette */
   --chart-1: oklch(0.548 0.124 141.6); /* TColors.success */
@@ -312,6 +331,13 @@
   --charging: oklch(0.82 0.12 150);
   --premade: oklch(0.83 0.1 300);
   --tag: oklch(0.8 0.1 275);
+
+  --connector-ccs: oklch(0.8 0.14 150);
+  --connector-chademo: oklch(0.8 0.13 55);
+  --connector-type2: oklch(0.78 0.14 345);
+  --connector-j1772: oklch(0.78 0.12 300);
+  --connector-nacs: oklch(0.76 0.14 22);
+  --connector-gbt: oklch(0.85 0.13 100);
 
   /* Battery ramp brightened so fills glow on dark tracks */
   --battery-high: oklch(0.8 0.2 150);
@@ -524,6 +550,17 @@
   }
   .battery-fill-up {
     --battery-angle: 0deg;
+  }
+  /* Charge a stop adds: diagonal stripes of the full-battery green, lighter than a real fill.
+     Uses the fill green, not --charging, which is a dark text green in light mode. */
+  .charge-stripes {
+    background-color: oklch(from var(--battery-high) l c h / 0.2);
+    background-image: repeating-linear-gradient(
+      135deg,
+      oklch(from var(--battery-high) l c h / 0.7) 0 0.375rem,
+      transparent 0.375rem 0.75rem
+    );
+    box-shadow: inset 0 0 0 1px oklch(from var(--battery-high) l c h / 0.5);
   }
   .battery-high {
     --battery-color: var(--battery-high);

@@ -196,7 +196,7 @@ function TripBlockActions({
           type="button"
           variant="outline"
           size="lg"
-          className="h-11 min-w-0 w-full rounded-lg border-note/30 bg-note/10 text-note hover:bg-note/20 hover:text-note"
+          className="h-11 min-w-0 w-full rounded-lg border-note/30 bg-note/10 text-note hover:bg-note/20 hover:text-note dark:border-note/30 dark:bg-note/10 dark:hover:bg-note/20"
           onClick={() => addNoteToBlock({ blockId: block.id })}
         >
           <FileText className="size-4" aria-hidden="true" />
@@ -206,7 +206,7 @@ function TripBlockActions({
           type="button"
           variant="outline"
           size="lg"
-          className="h-11 min-w-0 w-full rounded-lg border-checklist/30 bg-checklist/10 text-checklist hover:bg-checklist/20 hover:text-checklist"
+          className="h-11 min-w-0 w-full rounded-lg border-checklist/30 bg-checklist/10 text-checklist hover:bg-checklist/20 hover:text-checklist dark:border-checklist/30 dark:bg-checklist/10 dark:hover:bg-checklist/20"
           onClick={() => addChecklistToBlock({ blockId: block.id })}
         >
           <CheckSquare className="size-4" aria-hidden="true" />

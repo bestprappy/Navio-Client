@@ -68,7 +68,6 @@ export function PlannerDetail({
             destinationName={tripDestinationName}
             from={from}
             to={to}
-            members={[{ id: "1", name: "You" }]}
           />
           <ExploreSection
             destinationName={tripDestinationName}
