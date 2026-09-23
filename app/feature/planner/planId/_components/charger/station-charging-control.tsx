@@ -9,8 +9,9 @@ import { cn } from "@/lib/utils";
 import type { PlaceItemEvChargerDetails } from "../constants/types";
 import type { EvCar } from "../constants/vehicle.types";
 import { getBatteryColor } from "../garage/battery-slider";
-import { calculationEvCarAtom } from "../garage/garage.atoms";
-import { normalizeStationTargetPct, projectChargingStop, type ChargingStopProjection } from "../garage/ev-calculator";
+import { activeEvCarAtom } from "../garage/garage.atoms";
+import { normalizeStationTargetPct } from "../garage/ev-calculator";
+import { projectCanonicalCharging, type StopBatteryProjection } from "../garage/trip-energy-projection";
 import { formatMinutes } from "../garage/garage-formatters";
 import { updatePlaceItemAtom } from "../overview/trip-builder.atoms";
 import { ChargeBar } from "../routes/charge-segment-info";
@@ -23,26 +24,25 @@ type StationChargingControlProps = {
   itemId: string;
   stationName: string;
   details: PlaceItemEvChargerDetails;
-  arrivalPct?: number;
+  arrivalPct?: number | null;
 };
 
 export function StationChargingControl({ blockId, itemId, stationName, details, arrivalPct }: StationChargingControlProps) {
   const inputId = useId();
   const helpId = `${inputId}-help`;
-  const car = useAtomValue(calculationEvCarAtom);
+  const car = useAtomValue(activeEvCarAtom);
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
-  const projection = car && arrivalPct !== undefined ? projectChargingStop(arrivalPct, details, car) : null;
+  const projection = car && arrivalPct != null ? projectCanonicalCharging(arrivalPct, details, car) : null;
   const target = normalizeStationTargetPct(details.targetBatteryPct ?? projection?.departurePct);
-  const arrival = projection ? Math.round(projection.arrivalPct) : 0;
+  const arrival = projection?.arrivalPct == null ? target : Math.round(projection.arrivalPct);
 
   function updateTarget(value: number) {
     const nextTarget = normalizeStationTargetPct(value);
     const nextDetails = { ...details, targetBatteryPct: nextTarget };
-    const nextProjection = car && arrivalPct !== undefined ? projectChargingStop(arrivalPct, nextDetails, car) : null;
     updatePlaceItem({
       blockId,
       itemId,
-      updates: { evCharger: { ...nextDetails, estimatedChargeMinutes: nextProjection?.chargeMinutes ?? details.estimatedChargeMinutes } },
+      updates: { evCharger: nextDetails },
     });
   }
 
@@ -115,13 +115,14 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
   );
 }
 
-function ChargeEstimate({ car, projection, target }: { car: EvCar | null; projection: ChargingStopProjection | null; target: number }) {
+function ChargeEstimate({ car, projection, target }: { car: EvCar | null; projection: StopBatteryProjection | null; target: number }) {
   if (!car) {
     return <p className="text-sm text-muted-foreground">Charging time needs a vehicle with a supported consumption estimate. You can still set the charging target.</p>;
   }
   if (!projection) {
     return <p className="text-sm text-muted-foreground">Charging time appears once the route is ready.</p>;
   }
+  if (projection.reasons.includes("CONNECTOR_COMPATIBILITY_UNAVAILABLE")) return <p className="text-sm text-muted-foreground">Connector compatibility is unknown; charging cannot yet be predicted.</p>;
   if (!projection.compatible) {
     return (
       <p className="flex items-start gap-2 text-sm font-medium text-warning">
@@ -130,6 +131,7 @@ function ChargeEstimate({ car, projection, target }: { car: EvCar | null; projec
       </p>
     );
   }
+  if (projection.arrivalPct === null || projection.arrivalPct < 0) return <p className="text-sm text-muted-foreground">Arrival battery is unavailable; charging cannot yet be predicted.</p>;
   const arrival = Math.round(projection.arrivalPct);
   if (target <= arrival) {
     return <p className="text-sm text-muted-foreground">You arrive with {arrival}%, already at or above this target.</p>;
@@ -137,8 +139,8 @@ function ChargeEstimate({ car, projection, target }: { car: EvCar | null; projec
   return (
     <dl className="surface-well grid grid-cols-3 gap-px overflow-hidden rounded-md bg-border/60">
       <SpecCell label="Arrive at" value={String(arrival)} unit="%" />
-      <SpecCell label="Adds" value={projection.chargeEnergyKwh.toFixed(1)} unit="kWh" />
-      <SpecCell label="Takes" value={formatMinutes(projection.chargeMinutes)} />
+      <SpecCell label="Adds" value={projection.chargeEnergyKwh === null ? "Unavailable" : projection.chargeEnergyKwh.toFixed(1)} unit="kWh" />
+      <SpecCell label="Nominal time" value={projection.chargeMinutes === null ? "Unavailable" : formatMinutes(projection.chargeMinutes)} />
     </dl>
   );
 }

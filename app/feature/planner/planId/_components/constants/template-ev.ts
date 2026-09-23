@@ -16,13 +16,6 @@ const CONNECTOR_ALIASES: Array<[RegExp, EvConnectorType]> = [
   [/GB\s*\/?\s*T/i, "GB_T"],
 ];
 
-export function getEstimatedChargeMinutes(maxKw: number): number {
-  if (maxKw >= 100) return 35;
-  if (maxKw >= 50) return 50;
-  if (maxKw >= 22) return 90;
-  return 150;
-}
-
 export function parseEvConnectorTypes(value?: string): EvConnectorType[] {
   const text = value?.trim();
   if (!text) return ["OTHER"];
@@ -51,7 +44,7 @@ export function getPlanTemplatePlaceEvChargerDetails(
     availableConnectors: null,
     priceText: null,
     openingHoursSummary: null,
-    estimatedChargeMinutes: getEstimatedChargeMinutes(maxKw),
+    estimatedChargeMinutes: null,
     operatorName: null,
   };
 }
@@ -60,9 +53,6 @@ export function getPlanGarageEvCar(
   id: string,
   garage: PlanGarage,
 ): EvCar {
-  const consumptionKwhPer100km =
-    Math.round((garage.batteryCapacityKwh / garage.rangeKm) * 100 * 10) / 10;
-
   return {
     id,
     make: garage.make,
@@ -70,9 +60,11 @@ export function getPlanGarageEvCar(
     year: garage.year,
     batteryKwh: garage.batteryCapacityKwh,
     rangeKm: garage.rangeKm,
-    consumptionKwhPer100km,
-    maxAcKw: 11,
-    maxDcKw: 250,
+    consumptionKwhPer100km: 0, // Legacy display adapter only; canonical profile carries null.
+    maxAcKw: 0, maxDcKw: 0,
+    chargingCapabilities: { acKw: null, dcKw: null },
+    chargingLimitsKnown: false,
+    energyProfile: { version: 1, modelKind: garage.rangeKm > 0 ? "RATED_RANGE" : "UNAVAILABLE", selectionMode: "LEGACY_UNCONFIRMED", consumptionKwhPer100km: null, consumptionSource: "UNKNOWN", consumptionMeasurementBasis: "UNKNOWN", consumptionStandard: "NONE", sourceUrl: null, usableBatteryCapacityKwh: null, capacityBasis: "MANUFACTURER_DECLARED_UNSPECIFIED", ratedRangeKm: garage.rangeKm > 0 ? garage.rangeKm : null, ratedRangeStandard: "NONE" },
     connectorTypes: parseEvConnectorTypes(garage.connectorType),
     imageUrl: garage.imageUrl,
   };

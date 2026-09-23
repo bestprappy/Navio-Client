@@ -8,6 +8,7 @@ export function catalogVehicleCar(vehicle: CatalogVehicle): EvCar {
     consumptionKwhPer100km: 0, // Catalogue cards are specification previews, not calculation inputs.
     maxAcKw: vehicle.maxAcKw ?? 0, maxDcKw: vehicle.maxDcKw ?? 0,
     chargingLimitsKnown: vehicle.maxAcKw !== null && vehicle.maxDcKw !== null,
+    chargingCapabilities: { acKw: vehicle.maxAcKw, dcKw: vehicle.maxDcKw },
   };
 }
 
@@ -23,6 +24,7 @@ export function savedVehicleForPlanner(vehicle: SavedVehicle): UserVehicle {
     rangeStandard: vehicle.catalog?.rangeStandard ?? "User supplied",
     sourceUrl: vehicle.catalog?.sourceUrl, verifiedAt: vehicle.catalog?.verifiedAt,
     chargingLimitsKnown: vehicle.settings.maxAcKw !== null && vehicle.settings.maxDcKw !== null,
+    chargingCapabilities: { acKw: vehicle.settings.maxAcKw, dcKw: vehicle.settings.maxDcKw },
     energyProfile: vehicle.energyProfile ?? legacyEnergyProfile(vehicle),
     legacyConsumptionConfirmed: vehicle.legacyConsumptionConfirmed,
   };

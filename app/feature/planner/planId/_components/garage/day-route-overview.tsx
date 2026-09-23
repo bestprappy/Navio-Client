@@ -5,8 +5,7 @@ import { AlertTriangle, Loader2 } from "lucide-react";
 import { useAtomValue } from "jotai";
 
 import { useTripRoutes } from "../routes/trip-route-query";
-import { calculationEvCarAtom } from "./garage.atoms";
-import { calcDayRouteStats } from "./ev-calculator";
+import { activeEvCarAtom } from "./garage.atoms";
 import { useTripCharging } from "./use-trip-charging";
 import { RouteEstimate } from "./route-estimate";
 
@@ -16,10 +15,10 @@ type DayRouteOverviewProps = {
 };
 
 export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps) {
-  const activeEvCar = useAtomValue(calculationEvCarAtom);
+  const activeEvCar = useAtomValue(activeEvCarAtom);
   const charging = useTripCharging();
   const chargeStats = charging?.days.get(blockId);
-  const batteryAtDayStart = chargeStats?.startBatteryPct ?? 0;
+  const batteryAtDayStart = chargeStats?.startBatteryPct ?? null;
   const { data: routeData, isLoading, isError } = useTripRoutes();
 
   const daySegments = useMemo(
@@ -55,17 +54,18 @@ export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps)
 
   if (!hasRouteableBlock || !chargeStats) return null;
 
-  const dayStats = calcDayRouteStats(daySegments, activeEvCar);
   const batteryEndPct = chargeStats.finalBatteryPct;
 
   return (
     <section className="ml-8 mt-4" aria-label={`Day ${blockIndex + 1} route overview`}>
       <RouteEstimate
+        predictedBelowReserve={chargeStats.predictedBelowReserve}
+        infeasible={chargeStats.infeasible}
         startBatteryPct={batteryAtDayStart}
         endBatteryPct={batteryEndPct}
-        distanceKm={dayStats.totalDistanceKm}
-        drivingMinutes={Math.round(dayStats.totalDrivingSeconds / 60)}
-        energyKwh={dayStats.energyKwh}
+        distanceKm={chargeStats.distanceKm}
+        drivingMinutes={daySegments.some(s => s.durationSeconds == null) ? null : daySegments.reduce((sum, s) => sum + (s.durationSeconds ?? 0), 0) / 60}
+        energyKwh={chargeStats.energyKwh}
         chargeMinutes={chargeStats.chargeMinutes}
         compatibleStops={chargeStats.compatibleStops}
         incompatibleStops={chargeStats.incompatibleStops}

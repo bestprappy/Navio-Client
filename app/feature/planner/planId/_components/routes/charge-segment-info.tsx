@@ -27,13 +27,14 @@ export function ChargeBar({ from, to, className }: { from: number; to: number; c
 }
 
 type ChargeSegmentInfoProps = {
-  batteryFrom?: number;
-  batteryTo?: number;
+  batteryFrom?: number | null;
+  batteryTo?: number | null;
 };
 
 export function ChargeSegmentInfo({ batteryFrom, batteryTo }: ChargeSegmentInfoProps) {
-  if (batteryFrom === undefined || batteryTo === undefined) return null;
+  if (batteryFrom == null || batteryTo == null) return null;
 
+  if (batteryTo < 0) return <p className="text-sm text-destructive">Predicted arrival {batteryTo.toFixed(1)}% ? this leg is infeasible.</p>;
   const from = clampPct(batteryFrom);
   const to = clampPct(batteryTo);
 
@@ -59,16 +60,17 @@ export function ChargeSegmentInfo({ batteryFrom, batteryTo }: ChargeSegmentInfoP
 }
 
 type DischargeSegmentInfoProps = {
-  batteryFrom?: number;
-  batteryTo?: number;
+  batteryFrom?: number | null;
+  batteryTo?: number | null;
 };
 
 export function DischargeSegmentInfo({
   batteryFrom,
   batteryTo,
 }: DischargeSegmentInfoProps) {
-  if (batteryFrom === undefined || batteryTo === undefined) return null;
+  if (batteryFrom == null || batteryTo == null) return null;
 
+  if (batteryTo < 0) return <p className="text-sm text-destructive">Predicted arrival {batteryTo.toFixed(1)}% ? this leg is infeasible.</p>;
   const from = clampPct(batteryFrom);
   const to = clampPct(batteryTo);
   const used = Math.max(0, from - to);

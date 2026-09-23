@@ -10,11 +10,12 @@ import { itineraryBlocksAtom } from "../overview/trip-builder.atoms";
 import { useTripRoutes } from "../routes/trip-route-query";
 import { getVehicleCar } from "../constants/vehicle.data";
 import {
-  calculationEvCarAtom,
+  activeEvCarAtom,
   activeVehicleAtom,
   activeVehicleIdAtom,
   garageModalOpenAtom,
   userVehiclesAtom,
+  startingBatteryPctAtom,
 } from "./garage.atoms";
 import { useTripCharging } from "./use-trip-charging";
 import { VehicleCard } from "./vehicle-card";
@@ -27,7 +28,8 @@ export function GarageSection() {
   const vehicles = useAtomValue(userVehiclesAtom);
   const activeVehicleId = useAtomValue(activeVehicleIdAtom);
   const activeVehicle = useAtomValue(activeVehicleAtom);
-  const activeEvCar = useAtomValue(calculationEvCarAtom);
+  const tripStartingBattery = useAtomValue(startingBatteryPctAtom);
+  const activeEvCar = useAtomValue(activeEvCarAtom);
   const [isModalOpen, setModalOpen] = useAtom(garageModalOpenAtom);
   const { query, mutation, vehicles: savedVehicles, authenticated, loadingSession } = useGarage();
   const savedActiveVehicle = savedVehicles.find((vehicle) => vehicle.id === activeVehicleId);
@@ -39,7 +41,7 @@ export function GarageSection() {
   const tripSummary = routeData && blocks.length ? charging?.summary ?? null : null;
 
   const totalDrivingMinutes = useMemo(() => {
-    if (!routeData) return 0;
+    if (!routeData || routeData.segments.some(s => s.durationSeconds == null)) return null;
     return Math.round(
       routeData.segments.reduce((sum, s) => sum + (s.durationSeconds ?? 0), 0) / 60,
     );
@@ -106,11 +108,11 @@ export function GarageSection() {
       {activeEvCar?.chargingLimitsKnown === false && <p className="mt-3 text-sm text-muted-foreground">Some charging limits are unconfirmed. Charging estimates are available only for confirmed limits.</p>}
       {vehicles.length >= 25 && <p className="mt-3 text-sm text-muted-foreground">Your garage is full (25 vehicles). Remove a vehicle to add another.</p>}
 
-      {activeVehicle && activeEvCar && (
+      {activeEvCar && (
         <div className="mx-1 mt-6">
           <VehicleUsageOverview
             car={activeEvCar}
-            vehicle={activeVehicle}
+            vehicle={{ nickname: activeVehicle?.nickname, startingBatteryPct: tripStartingBattery }}
             tripSummary={tripSummary}
             totalDrivingMinutes={totalDrivingMinutes}
             plannedDays={blocks.length}

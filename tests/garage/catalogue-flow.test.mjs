@@ -98,7 +98,7 @@ for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" :
   const { VehicleSettingsForm } = component(`${garage}vehicle-settings-form.tsx`, {
     react: state.react, "./battery-slider": { BatterySlider: "BatterySlider" },
     jotai: { useAtom: () => state.react.useState({}) },
-    "./garage.atoms": { startingBatteryOverridesAtom: {} },
+    "./trip-energy-state": { tripEnergyStateAtom: {} },
     "./energy-selection": energySelection,
     "./vehicle-api": { legacyEnergyProfile, userObservedConsumption },
     "./garage-provider": { useGarage: () => ({ authenticated, query: {}, mutation: { mutate: command => commands.push(command) } }) },

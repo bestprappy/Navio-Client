@@ -47,16 +47,10 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button.variants";
 import { getTripBlockColorById } from "@/app/feature/planner/planId/_components/constants/trip-block-colors";
 import { getPlanGarageEvCar, getPlanGarageUserVehicle, getPlanTemplatePlaceEvChargerDetails } from "@/app/feature/planner/planId/_components/constants/template-ev";
-import type { PlaceItemEvChargerDetails } from "@/app/feature/planner/planId/_components/constants/types";
 import type { EvCar } from "@/app/feature/planner/planId/_components/constants/vehicle.types";
 import { PlaceCardVisual } from "@/app/feature/planner/planId/_components/block/items/place-card-visual";
-import {
-  calcBatteryUsedPct,
-  calcDayChargeStats,
-  calcDayRouteStats,
-  calcTripEvSummary,
-  type DayBlockSummary,
-} from "@/app/feature/planner/planId/_components/garage/ev-calculator";
+import { projectCanonicalTrip } from "@/app/feature/planner/planId/_components/garage/trip-energy-projection";
+import type { TripBlockData } from "@/app/feature/planner/planId/_components/constants/types";
 import { RouteEstimate } from "@/app/feature/planner/planId/_components/garage/route-estimate";
 import { VehicleUsageOverview } from "@/app/feature/planner/planId/_components/garage/vehicle-usage-overview";
 import { ChargeSegmentInfo, DischargeSegmentInfo } from "@/app/feature/planner/planId/_components/routes/charge-segment-info";
@@ -112,22 +106,14 @@ function formatBlockDate(isoDate: string): string {
 }
 
 type BatteryState = {
-  arrivalPct: number;
-  departurePct: number;
+  arrivalPct: number | null;
+  departurePct: number | null;
 };
 
 const EXPLORE_STARTING_BATTERY_PCT = 80;
 
 function isItineraryBlock(block: ExplorePlanBlock): boolean {
   return block.type !== "list";
-}
-
-function getBlockChargerDetails(
-  block: ExplorePlanBlock,
-): PlaceItemEvChargerDetails[] {
-  return block.places
-    .map((place) => getPlanTemplatePlaceEvChargerDetails(place))
-    .filter((charger): charger is PlaceItemEvChargerDetails => Boolean(charger));
 }
 
 function getRouteablePositionByPlaceId(
@@ -144,76 +130,13 @@ function getRouteablePositionByPlaceId(
   return positions;
 }
 
-function buildBatteryStateMap(
-  places: ExplorePlanPlace[],
-  segments: Map<string, RouteSegment>,
-  car: EvCar,
-  startPct: number,
-): Map<string, BatteryState> {
-  const batteryByPlaceId = new Map<string, BatteryState>();
-  let currentPct = startPct;
-
-  places.forEach((place, index) => {
-    let arrivalPct = currentPct;
-
-    if (index > 0) {
-      const segment = segments.get(place.displayId);
-      const distanceKm = (segment?.distanceMeters ?? 0) / 1000;
-      const usedPct = distanceKm > 0 ? calcBatteryUsedPct(distanceKm, car) : 0;
-      arrivalPct = Math.max(0, currentPct - usedPct);
-    }
-
-    let departurePct = arrivalPct;
-    const charger = getPlanTemplatePlaceEvChargerDetails(place);
-
-    if (charger) {
-      const chargeStats = calcDayChargeStats([charger], car);
-      const addedPct = (chargeStats.chargeEnergyKwh / car.batteryKwh) * 100;
-      departurePct = Math.min(100, arrivalPct + addedPct);
-    }
-
-    batteryByPlaceId.set(place.displayId, { arrivalPct, departurePct });
-    currentPct = departurePct;
-  });
-
-  return batteryByPlaceId;
-}
-
-function getDaySummary(
-  block: ExplorePlanBlock,
-  routeSegments: RouteSegment[],
-  car: EvCar,
-): DayBlockSummary {
-  const segments = routeSegments.filter((segment) => segment.blockId === block.id);
-  const routeStats = calcDayRouteStats(segments, car);
-  const chargeStats = calcDayChargeStats(getBlockChargerDetails(block), car);
-
-  return {
-    distanceKm: routeStats.totalDistanceKm,
-    energyKwh: routeStats.energyKwh,
-    chargeEnergyKwh: chargeStats.chargeEnergyKwh,
-    chargeMinutes: chargeStats.chargeMinutes,
-  };
-}
-
-function getBatteryAtBlockStart(
-  blocks: ExplorePlanBlock[],
-  blockIndex: number,
-  routeSegments: RouteSegment[],
-  car: EvCar,
-  startingBatteryPct: number,
-): number {
-  const priorSummaries = blocks
-    .slice(0, blockIndex)
-    .filter(isItineraryBlock)
-    .map((block) => getDaySummary(block, routeSegments, car));
-
-  if (priorSummaries.length === 0) {
-    return startingBatteryPct;
-  }
-
-  return calcTripEvSummary(priorSummaries, car, startingBatteryPct)
-    .finalBatteryPct;
+function projectExplore(blocks: ExplorePlanBlock[], segments: RouteSegment[], car: EvCar) {
+  const tripBlocks: TripBlockData[] = blocks.map(block => ({
+    id: block.id, kind: block.type === "list" ? "list" : "itinerary", title: block.title,
+    date: block.date ?? "", colorId: block.colorId,
+    items: block.places.map(place => ({ ...place, id: place.displayId, type: "place", placeId: place.id, evCharger: getPlanTemplatePlaceEvChargerDetails(place) })),
+  }));
+  return projectCanonicalTrip(tripBlocks, segments, car, EXPLORE_STARTING_BATTERY_PCT);
 }
 
 /* ══════════════════════ Garage ══════════════════════ */
@@ -252,15 +175,11 @@ function GarageSection({
   const tripSummary = useMemo(() => {
     if (routeSegments.length === 0 || itineraryBlocks.length === 0) return null;
 
-    return calcTripEvSummary(
-      itineraryBlocks.map((block) => getDaySummary(block, routeSegments, car)),
-      car,
-      EXPLORE_STARTING_BATTERY_PCT,
-    );
+    return projectExplore(itineraryBlocks, routeSegments, car).summary;
   }, [car, itineraryBlocks, routeSegments]);
   const totalDrivingMinutes = useMemo(
     () =>
-      Math.round(
+      routeSegments.length === 0 || routeSegments.some(segment => segment.durationSeconds == null) ? null : Math.round(
         routeSegments.reduce(
           (sum, segment) => sum + (segment.durationSeconds ?? 0),
           0,
@@ -334,6 +253,7 @@ function GarageSection({
             totalDrivingMinutes={totalDrivingMinutes}
             plannedDays={itineraryBlocks.length}
           />
+          <p className="mt-2 text-xs text-muted-foreground">Preview assumes an 80% starting battery. Template charging capabilities may be unavailable.</p>
         </div>
       ) : null}
     </section>
@@ -514,8 +434,8 @@ function ReadOnlyEvCard({
   place: ExplorePlanPlace;
   selected: boolean;
   onSelect: () => void;
-  chargeBatteryFrom?: number;
-  chargeBatteryTo?: number;
+  chargeBatteryFrom?: number | null;
+  chargeBatteryTo?: number | null;
 }) {
   const blockColor = getTripBlockColorById(place.colorId);
   const markerStyle: CSSProperties = {
@@ -702,38 +622,23 @@ function ReadOnlyDayRouteOverview({
 
   if (daySegments.length === 0) return null;
 
-  const batteryAtDayStart = getBatteryAtBlockStart(
-    blocks,
-    blockIndex,
-    routeSegments,
-    activeEvCar,
-    EXPLORE_STARTING_BATTERY_PCT,
-  );
-  const dayStats = calcDayRouteStats(daySegments, activeEvCar);
-  const chargeStats = calcDayChargeStats(
-    getBlockChargerDetails(block),
-    activeEvCar,
-  );
-  const batteryEndPct = Math.min(
-    100,
-    Math.max(
-      0,
-      batteryAtDayStart -
-        dayStats.batteryUsedPct +
-        (chargeStats.chargeEnergyKwh / activeEvCar.batteryKwh) * 100,
-    ),
-  );
+  const chargeStats = projectExplore(blocks, routeSegments, activeEvCar).days.get(block.id);
+  if (!chargeStats) return null;
+  const batteryAtDayStart = chargeStats.startBatteryPct;
+  const batteryEndPct = chargeStats.finalBatteryPct;
   return (
     <section
       className="mx-8 mt-4 pl-2"
       aria-label={`Day ${blockIndex + 1} route overview`}
     >
       <RouteEstimate
+        predictedBelowReserve={chargeStats.predictedBelowReserve}
+        infeasible={chargeStats.infeasible}
         startBatteryPct={batteryAtDayStart}
         endBatteryPct={batteryEndPct}
-        distanceKm={dayStats.totalDistanceKm}
-        drivingMinutes={Math.round(dayStats.totalDrivingSeconds / 60)}
-        energyKwh={dayStats.energyKwh}
+        distanceKm={chargeStats.distanceKm}
+        drivingMinutes={daySegments.some(s => s.durationSeconds == null) ? null : daySegments.reduce((sum, s) => sum + (s.durationSeconds ?? 0), 0) / 60}
+        energyKwh={chargeStats.energyKwh}
         chargeMinutes={chargeStats.chargeMinutes}
         compatibleStops={chargeStats.compatibleStops}
         incompatibleStops={chargeStats.incompatibleStops}
@@ -776,37 +681,9 @@ function ReadOnlyBlock({
     () => getRouteablePositionByPlaceId(block.places),
     [block.places],
   );
-  const batteryAtBlockStart = useMemo(
-    () =>
-      activeEvCar
-        ? getBatteryAtBlockStart(
-            blocks,
-            blockIndex,
-            routeSegments,
-            activeEvCar,
-            EXPLORE_STARTING_BATTERY_PCT,
-          )
-        : EXPLORE_STARTING_BATTERY_PCT,
-    [activeEvCar, blockIndex, blocks, routeSegments],
-  );
-  const batteryStateByPlaceId = useMemo(() => {
-    if (!activeEvCar || !shouldShowRouting) {
-      return new Map<string, BatteryState>();
-    }
-
-    return buildBatteryStateMap(
-      block.places,
-      routeSegmentByToItemId,
-      activeEvCar,
-      batteryAtBlockStart,
-    );
-  }, [
-    activeEvCar,
-    batteryAtBlockStart,
-    block.places,
-    routeSegmentByToItemId,
-    shouldShowRouting,
-  ]);
+  const batteryStateByPlaceId = useMemo(() => activeEvCar && shouldShowRouting
+    ? projectExplore(blocks, routeSegments, activeEvCar).days.get(block.id)?.batteryByItemId ?? new Map<string, BatteryState>()
+    : new Map<string, BatteryState>(), [activeEvCar, shouldShowRouting, blocks, routeSegments, block.id]);
 
   return (
     <div id={`explore-block-${block.id}`} className="flex w-full scroll-mt-4 flex-col">

@@ -19,6 +19,7 @@ export type EvCar = {
   sourceUrl?: string;
   verifiedAt?: string;
   chargingLimitsKnown?: boolean;
+  chargingCapabilities?: { acKw: number | null; dcKw: number | null };
   energyProfile?: VehicleEnergyProfile | null;
   legacyConsumptionConfirmed?: boolean;
 };

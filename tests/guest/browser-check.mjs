@@ -43,6 +43,7 @@ try {
   await page.getByRole("combobox", { name: "Add a stop in Bangkok", exact: true }).click();
   await page.getByRole("option").filter({ hasText: "Guest test temple" }).first().click();
   await page.getByText("Guest test temple", { exact: true }).first().waitFor();
+  await page.getByRole("button", { name: "Add to trip", exact: true }).click();
   await page.getByRole("button", { name: /Set where this trip starts/ }).first().click();
   await page.getByRole("button", { name: "Pin on map", exact: true }).click();
   const coordinates = page.getByRole("button", { name: "Enter coordinates", exact: true });
@@ -59,6 +60,12 @@ try {
   await page.getByRole("button", { name: "Show start: Guest starting point on map", exact: true }).waitFor();
   await page.getByRole("button", { name: "Save to favorites", exact: true }).first().click();
   await page.getByRole("button", { name: "Sign in later", exact: true }).click();
+  await page.getByRole("button", { name: "Set battery level", exact: true }).first().click();
+  await page.getByLabel("Actual battery at this stop (%)", { exact: true }).fill("0");
+  await page.getByRole("button", { name: "Apply battery level", exact: true }).click();
+  await page.getByRole("button", { name: "Observed battery: 0%", exact: true }).click();
+  await page.getByRole("button", { name: "Clear", exact: true }).click();
+  await page.getByRole("button", { name: "Set battery level", exact: true }).first().waitFor();
   await page.getByRole("button", { name: "Add vehicle", exact: true }).click();
   assert.equal(await page.getByRole("button", { name: "Thailand catalogue", exact: true }).getAttribute("aria-pressed"), "true");
   await page.getByRole("textbox", { name: "Search Thailand vehicles" }).fill("ATTO");

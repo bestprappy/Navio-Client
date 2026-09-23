@@ -1,5 +1,4 @@
 import { getDistanceKm } from "../constants/place.data";
-import { resolveDayAnchors } from "../itinerary/day-anchors";
 import {
   isEvChargerPlaceItem,
   isPlaceItem,
@@ -104,6 +103,7 @@ export function normalizeStationTargetPct(value?: number | null): number {
   return value == null || !Number.isFinite(value) ? 100 : Math.round(clampPct(value));
 }
 
+/** Retained only for the deferred Auto Add candidate policy. UI projections use the canonical module. */
 export function projectChargingStop(
   arrivalBatteryPct: number,
   charger: PlaceItemEvChargerDetails,
@@ -114,7 +114,7 @@ export function projectChargingStop(
   const kw = effectiveChargeKw(charger.maxKw, car, isDcCharger(charger.connectorTypes.filter((connector) => car.connectorTypes.includes(connector))));
   const availableEnergyKwh = ((100 - arrivalPct) / 100) * car.batteryKwh;
   const requestedEnergyKwh = charger.targetBatteryPct == null
-    ? (Math.max(0, charger.estimatedChargeMinutes) / 60) * kw
+    ? (Math.max(0, charger.estimatedChargeMinutes ?? 0) / 60) * kw
     : ((Math.max(arrivalPct, normalizeStationTargetPct(charger.targetBatteryPct)) - arrivalPct) / 100) * car.batteryKwh;
   const chargeEnergyKwh = compatible && kw > 0 && car.batteryKwh > 0
     ? Math.max(0, Math.min(availableEnergyKwh, requestedEnergyKwh))
@@ -128,176 +128,8 @@ export function projectChargingStop(
   };
 }
 
-export type DayEvProjection = {
-  startBatteryPct: number;
-  finalBatteryPct: number;
-  distanceKm: number;
-  energyKwh: number;
-  chargeEnergyKwh: number;
-  chargeMinutes: number;
-  compatibleStops: number;
-  incompatibleStops: number;
-  batteryByItemId: Map<string, ChargingStopProjection>;
-};
-
-export function projectTripCharging(
-  blocks: TripBlockData[],
-  segments: RouteSegment[],
-  car: EvCar,
-  startingBatteryPct: number,
-): { days: Map<string, DayEvProjection>; summary: TripEvSummary } {
-  const days = new Map<string, DayEvProjection>();
-  const anchors = resolveDayAnchors(blocks);
-  const segmentByItem = new Map(segments.map((segment) => [`${segment.blockId}:${segment.toItemId}`, segment]));
-  let currentBatteryPct = clampPct(startingBatteryPct);
-  const summary: TripEvSummary = { totalDistanceKm: 0, totalEnergyKwh: 0, totalChargeMinutes: 0, finalBatteryPct: currentBatteryPct, batteryByDay: [] };
-
-  for (const block of blocks.filter((entry) => entry.kind === "itinerary").toSorted((a, b) => a.date.localeCompare(b.date))) {
-    const day: DayEvProjection = { startBatteryPct: currentBatteryPct, finalBatteryPct: currentBatteryPct, distanceKm: 0, energyKwh: 0, chargeEnergyKwh: 0, chargeMinutes: 0, compatibleStops: 0, incompatibleStops: 0, batteryByItemId: new Map() };
-    const stops = block.items.filter(isPlaceItem).map((item) => ({
-      id: item.id,
-      charger: isEvChargerPlaceItem(item) ? item.evCharger : undefined,
-    }));
-    if (anchors.get(block.id)?.start) stops.unshift({ id: `${block.id}:start`, charger: undefined });
-    if (anchors.get(block.id)?.end) stops.push({ id: `${block.id}:end`, charger: undefined });
-    for (const item of stops) {
-      const segment = segmentByItem.get(`${block.id}:${item.id}`);
-      const distanceKm = Math.max(0, segment?.distanceMeters ?? 0) / 1000;
-      day.distanceKm += distanceKm;
-      day.energyKwh += calcEnergyKwh(distanceKm, car);
-      currentBatteryPct = clampPct(currentBatteryPct - calcBatteryUsedPct(distanceKm, car));
-      const state: ChargingStopProjection = item.charger
-        ? projectChargingStop(currentBatteryPct, item.charger, car)
-        : { arrivalPct: currentBatteryPct, departurePct: currentBatteryPct, chargeEnergyKwh: 0, chargeMinutes: 0, compatible: true };
-      day.batteryByItemId.set(item.id, state);
-      day.chargeEnergyKwh += state.chargeEnergyKwh;
-      day.chargeMinutes += state.chargeMinutes;
-      if (item.charger) {
-        if (state.compatible) day.compatibleStops += 1;
-        else day.incompatibleStops += 1;
-      }
-      currentBatteryPct = state.departurePct;
-    }
-    day.finalBatteryPct = currentBatteryPct;
-    days.set(block.id, day);
-    summary.totalDistanceKm += day.distanceKm;
-    summary.totalEnergyKwh += day.energyKwh;
-    summary.totalChargeMinutes += day.chargeMinutes;
-    summary.batteryByDay.push(Math.round(currentBatteryPct));
-  }
-  summary.finalBatteryPct = Math.round(currentBatteryPct);
-  return { days, summary };
-}
-
-export function calcDayRouteStats(
-  segments: RouteSegment[],
-  car: EvCar,
-): {
-  totalDistanceKm: number;
-  totalDrivingSeconds: number;
-  energyKwh: number;
-  batteryUsedPct: number;
-} {
-  let totalDistanceKm = 0;
-  let totalDrivingSeconds = 0;
-
-  for (const seg of segments) {
-    totalDistanceKm += (seg.distanceMeters ?? 0) / 1000;
-    totalDrivingSeconds += seg.durationSeconds ?? 0;
-  }
-
-  const energyKwh = calcEnergyKwh(totalDistanceKm, car);
-  const batteryUsedPct = calcBatteryUsedPct(totalDistanceKm, car);
-
-  return { totalDistanceKm, totalDrivingSeconds, energyKwh, batteryUsedPct };
-}
-
-export type DayChargeStats = {
-  chargeMinutes: number;
-  chargeEnergyKwh: number;
-  compatibleStops: number;
-  incompatibleStops: number;
-};
-
-export function calcDayChargeStats(
-  chargerItems: PlaceItemEvChargerDetails[],
-  car: EvCar,
-): DayChargeStats {
-  let totalMinutes = 0;
-  let totalEnergyKwh = 0;
-  let compatibleStops = 0;
-  let incompatibleStops = 0;
-
-  for (const charger of chargerItems) {
-    if (!isCompatible(car.connectorTypes, charger.connectorTypes)) {
-      incompatibleStops += 1;
-      continue;
-    }
-
-    compatibleStops += 1;
-
-    const isChargerDc = isDcCharger(charger.connectorTypes);
-    const effectiveKw = effectiveChargeKw(charger.maxKw, car, isChargerDc);
-    if (effectiveKw <= 0) continue;
-
-    const chargerEnergyKwh = (charger.estimatedChargeMinutes / 60) * effectiveKw;
-    totalMinutes += charger.estimatedChargeMinutes;
-    totalEnergyKwh += chargerEnergyKwh;
-  }
-
-  return {
-    chargeMinutes: totalMinutes,
-    chargeEnergyKwh: totalEnergyKwh,
-    compatibleStops,
-    incompatibleStops,
-  };
-}
-
-export type DayBlockSummary = {
-  distanceKm: number;
-  energyKwh: number;
-  chargeEnergyKwh: number;
-  chargeMinutes: number;
-};
-
-export type TripEvSummary = {
-  totalDistanceKm: number;
-  totalEnergyKwh: number;
-  totalChargeMinutes: number;
-  finalBatteryPct: number;
-  batteryByDay: number[];
-};
-
-export function calcTripEvSummary(
-  blockSummaries: DayBlockSummary[],
-  car: EvCar,
-  startingBatteryPct: number,
-): TripEvSummary {
-  let totalDistanceKm = 0;
-  let totalEnergyKwh = 0;
-  let totalChargeMinutes = 0;
-  let currentBatteryPct = startingBatteryPct;
-  const batteryByDay: number[] = [];
-
-  for (const day of blockSummaries) {
-    totalDistanceKm += day.distanceKm;
-    totalEnergyKwh += day.energyKwh;
-    totalChargeMinutes += day.chargeMinutes;
-
-    const consumedPct = (day.energyKwh / car.batteryKwh) * 100;
-    const chargedPct = (day.chargeEnergyKwh / car.batteryKwh) * 100;
-    currentBatteryPct = Math.max(0, Math.min(100, currentBatteryPct - consumedPct + chargedPct));
-    batteryByDay.push(Math.round(currentBatteryPct));
-  }
-
-  return {
-    totalDistanceKm,
-    totalEnergyKwh,
-    totalChargeMinutes,
-    finalBatteryPct: Math.round(currentBatteryPct),
-    batteryByDay,
-  };
-}
+// Compatibility export; both Planner and Explore now use this canonical projection.
+export { projectCanonicalTrip as projectTripCharging } from "./trip-energy-projection";
 
 type Coordinate = {
   lat: number;

@@ -1,3 +1,4 @@
+import { tripEnergyStateSchema, type TripEnergyState } from "../planId/_components/garage/trip-energy-state";
 import { isTripAnchor } from "../planId/_components/itinerary/day-anchors";
 import { isTripDestination } from "../planId/_components/itinerary/day-destinations";
 import type {
@@ -57,6 +58,7 @@ export type TripResponse = {
 };
 
 export type PlannerSnapshot = {
+  energyState?: TripEnergyState | null;
   capabilities?: string[];
   blocks: TripBlockData[];
   budget: TripBudgetState;
@@ -76,12 +78,14 @@ export type PlannerSaveAcknowledgement = {
   localOnlySettings?: boolean;
   /** Client-side record of the supported blocks sent to the service. */
   syncedBlocks?: TripBlockData[];
+  syncedEnergyState?: TripEnergyState | null;
   capabilities?: string[];
   version: number;
   savedAt: string;
 };
 
 export type EvOptimizationVehiclePayload = {
+  energyModel?: import("../planId/_components/garage/energy-model").EnergyModel;
   batteryKwh: number;
   consumptionKwhPer100km: number;
   maxAcKw: number;
@@ -123,7 +127,7 @@ export type EvOptimizationPreview = {
   blockId: string;
   feasible: boolean;
   operations: EvOptimizationOperation[];
-  finalSocPct: number;
+  finalSocPct: number | null;
   totalDrivingSeconds: number;
   totalChargingMinutes: number;
   message: string;
@@ -209,18 +213,25 @@ export async function savePlannerSnapshot(
   blocks: TripBlockData[],
   budget: TripBudgetState,
   version: number,
+  energyState?: TripEnergyState | null,
 ): Promise<PlannerSaveAcknowledgement> {
   const requiresDestinations = blocks.some((block) => block.destination);
   const requiresAnchors = blocks.some((block) => block.startAnchor || block.endAnchor);
   const requiresTargets = blocks.some((block) => block.items.some((item) => item.type === "place" && item.evCharger?.targetBatteryPct != null));
+  const requiresEnergy = energyState !== undefined;
+  const requiresObservations = blocks.some(block => block.items.some(item => item.type === "place" && item.observedSocCheckpoint !== undefined));
+  let syncedEnergy = energyState;
   let syncedBlocks = blocks;
   let localOnlySettings = false;
-  if (requiresDestinations || requiresAnchors || requiresTargets) {
+  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations) {
     const server = await getPlannerSnapshot(tripId);
+    const energySupported = server.capabilities?.includes("trip-energy-v1");
+    const observationsSupported = server.capabilities?.includes("observed-soc-v1");
+    if (!energySupported) syncedEnergy = undefined;
     const destinationsSupported = server.capabilities?.includes("day-destinations");
     const anchorsSupported = server.capabilities?.includes("day-anchors");
     const targetsSupported = server.capabilities?.includes("charge-targets");
-    localOnlySettings = Boolean((requiresDestinations && !destinationsSupported) || (requiresAnchors && !anchorsSupported) || (requiresTargets && !targetsSupported));
+    localOnlySettings = Boolean((requiresEnergy && !energySupported) || (requiresObservations && !observationsSupported) || (requiresDestinations && !destinationsSupported) || (requiresAnchors && !anchorsSupported) || (requiresTargets && !targetsSupported));
     syncedBlocks = blocks.map((block) => ({
       ...block,
       ...(!destinationsSupported ? { destination: undefined } : {}),
@@ -229,19 +240,20 @@ export async function savePlannerSnapshot(
         ? { ...item, evCharger: { ...item.evCharger, targetBatteryPct: undefined } }
         : item),
     }));
+    if (!observationsSupported) syncedBlocks = syncedBlocks.map(block => ({ ...block, items: block.items.map(item => item.type === "place" ? { ...item, observedSocCheckpoint: undefined } : item) }));
   }
   const value = await requestJson(
     `/api/trips/${encodeURIComponent(tripId)}/planner`,
     {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ version, blocks: syncedBlocks, budget }),
+      body: JSON.stringify({ version, blocks: syncedBlocks, budget, energyState: syncedEnergy }),
     },
   );
   if (!isPlannerSaveAcknowledgement(value)) {
     throw new PlannerApiError("Trip service returned an invalid save acknowledgement.", 502);
   }
-  return { ...value, localOnlySettings, syncedBlocks };
+  return { ...value, localOnlySettings, syncedBlocks, syncedEnergyState: syncedEnergy };
 }
 
 export async function previewTripEvOptimization(
@@ -330,6 +342,7 @@ export async function requestJson(
 }
 
 function isPlannerSnapshot(value: unknown): value is PlannerSnapshot {
+  if (isRecord(value) && value.energyState != null && !tripEnergyStateSchema.safeParse(value.energyState).success) return false;
   return (
     isRecord(value) &&
     isPlannerBlocks(value.blocks) &&
@@ -351,7 +364,7 @@ function isEvOptimizationPreview(
     typeof value.feasible === "boolean" &&
     Array.isArray(value.operations) &&
     value.operations.every(isEvOptimizationOperation) &&
-    typeof value.finalSocPct === "number" &&
+    (value.finalSocPct === null || typeof value.finalSocPct === "number") &&
     typeof value.totalDrivingSeconds === "number" &&
     typeof value.totalChargingMinutes === "number" &&
     typeof value.message === "string" &&
@@ -370,7 +383,7 @@ function isEvOptimizationOperation(
     isNullableString(value.beforeItemId) &&
     typeof value.sequence === "number" &&
     (value.charger === null || isFullEvCharger(value.charger)) &&
-    typeof value.estimatedChargeMinutes === "number" &&
+    (value.estimatedChargeMinutes === null || typeof value.estimatedChargeMinutes === "number") &&
     typeof value.arrivalSocPct === "number" &&
     typeof value.departureSocPct === "number" &&
     typeof value.detourKm === "number" &&
@@ -586,6 +599,7 @@ function isChecklistItem(
 }
 
 function isPlaceItem(value: Record<string, unknown>): value is PlaceItem {
+  if (value.observedSocCheckpoint != null && (!isRecord(value.observedSocCheckpoint) || typeof value.observedSocCheckpoint.socPct !== "number" || !Number.isFinite(value.observedSocCheckpoint.socPct) || value.observedSocCheckpoint.socPct < 0 || value.observedSocCheckpoint.socPct > 100)) return false;
   return (
     typeof value.placeId === "string" &&
     typeof value.name === "string" &&
@@ -615,7 +629,7 @@ function isEvCharger(value: unknown): value is PlaceItemEvChargerDetails {
     isNullableNumber(value.availableConnectors) &&
     isNullableString(value.priceText) &&
     isNullableString(value.openingHoursSummary) &&
-    typeof value.estimatedChargeMinutes === "number" &&
+    (value.estimatedChargeMinutes === null || typeof value.estimatedChargeMinutes === "number") &&
     (value.targetBatteryPct == null ||
       (typeof value.targetBatteryPct === "number" && Number.isInteger(value.targetBatteryPct) &&
         value.targetBatteryPct >= 0 && value.targetBatteryPct <= 100)) &&

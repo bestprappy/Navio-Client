@@ -36,6 +36,7 @@ import { ChargeSegmentInfo } from "../../routes/charge-segment-info";
 import { PlaceCardVisual } from "./place-card-visual";
 import { PlaceCostPopover } from "./place-cost-popover";
 import { PlaceTimePopover } from "./place-time-popover";
+import { ObservedSocControl } from "./observed-soc-control";
 
 type TripPlaceCardProps = {
   blockId: string;
@@ -43,8 +44,8 @@ type TripPlaceCardProps = {
   blockDate: string;
   item: PlaceItem;
   position: number | null;
-  chargeBatteryFrom?: number;
-  chargeBatteryTo?: number;
+  chargeBatteryFrom?: number | null;
+  chargeBatteryTo?: number | null;
   showEvChargeDetails?: boolean;
   /** Only the day's last stop can become where the day ends. */
   canMarkAsEnd?: boolean;
@@ -415,6 +416,7 @@ export function TripPlaceCard({
           )}
         </>
       )}
+      <ObservedSocControl blockId={blockId} itemId={item.id} value={item.observedSocCheckpoint?.socPct} />
     </article>
   );
 }

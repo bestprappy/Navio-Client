@@ -7,7 +7,7 @@ require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileMo
 const base = '../app/feature/planner/planId/_components/';
 const { resolveDayDestinations, matchesDestination } = require(base + 'itinerary/day-destinations.ts');
 const { formatOpeningHours } = require(base + 'charger/opening-hours.ts');
-const { projectChargingStop, projectTripCharging } = require(base + 'garage/ev-calculator.ts');
+const { projectCanonicalCharging: projectChargingStop, projectCanonicalTrip: projectTripCharging } = require(base + 'garage/trip-energy-projection.ts');
 const { ensureItineraryDays } = require(base + 'itinerary/itinerary-days.ts');
 const { getTripDestinations } = require('../app/feature/planner/_components/trip-destinations.ts');
 const mai = { id: 'mai', name: 'Chiang Mai', lat: 18.78, lng: 98.98 };
@@ -41,7 +41,7 @@ const week = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sun
 assert.equal(formatOpeningHours(week.map(d => `${d}: Open 24 hours`).join(' | ')).summary, 'Open 24 hours, every day');
 assert.equal(formatOpeningHours('Monday: 9 AM – 5 PM | Tuesday: 9 AM – 5 PM | Wednesday: Closed').rows.length, 2);
 assert.equal(formatOpeningHours('Call ahead for holiday hours').summary, 'Call ahead for holiday hours');
-const car = { batteryKwh: 60, consumptionKwhPer100km: 20, maxAcKw: 11, maxDcKw: 150, connectorTypes: ['CCS2'] };
+const car = { energyProfile:{modelKind:'CONSUMPTION',consumptionKwhPer100km:20,usableBatteryCapacityKwh:60,ratedRangeKm:null}, chargingLimitsKnown:true, batteryKwh: 60, consumptionKwhPer100km: 20, maxAcKw: 11, maxDcKw: 150, connectorTypes: ['CCS2'] };
 const charger = { connectorTypes: ['CCS2'], maxKw: 50, estimatedChargeMinutes: 10, targetBatteryPct: 100 };
 assert.equal(projectChargingStop(30, charger, car).departurePct, 100);
 assert.equal(projectChargingStop(90, { ...charger, targetBatteryPct: 80 }, car).chargeEnergyKwh, 0);
@@ -50,8 +50,8 @@ assert.equal(projectChargingStop(50, { ...charger, connectorTypes: ['TYPE2'] }, 
 assert.equal(projectChargingStop(50, { ...charger, targetBatteryPct: null }, car).departurePct, projectChargingStop(50, { ...charger, targetBatteryPct: undefined }, car).departurePct);
 assert(projectChargingStop(10, { ...charger, connectorTypes: ['CCS2','TYPE2'] }, { ...car, connectorTypes: ['TYPE2'] }).chargeMinutes > 200, 'AC-only cars must use AC charging speed');
 const block = (id,date,items) => ({ id, date, kind: 'itinerary', items });
-const stop = (id,evCharger) => ({ id, type: 'place', placeId: evCharger ? `ev-charger:${id}` : id, evCharger });
-const projection = projectTripCharging([block('second','2026-09-02',[stop('b')]),block('first','2026-09-01',[stop('a',charger)])], [{ blockId:'second',toItemId:'b',distanceMeters:60000 }], car, 30);
+const stop = (id,evCharger) => ({ id,lat:13.7,lng:100.5, type: 'place', placeId: evCharger ? `ev-charger:${id}` : id, evCharger });
+const projection = projectTripCharging([block('second','2026-09-02',[stop('carry'),stop('b')]),block('first','2026-09-01',[stop('a',charger)])], [{ blockId:'second',fromItemId:'carry',toItemId:'b',distanceMeters:60000 }], car, 30);
 assert.equal(projection.days.get('first').finalBatteryPct, 100);
 assert.equal(projection.days.get('second').startBatteryPct, 100);
 assert.equal(projection.days.get('second').finalBatteryPct, 80);

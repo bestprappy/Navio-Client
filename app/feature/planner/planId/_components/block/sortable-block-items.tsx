@@ -35,8 +35,9 @@ type DragPayload = {
 };
 
 type BatteryState = {
-  arrivalPct: number;
-  departurePct: number;
+  observedSocPct?: number | null;
+  arrivalPct: number | null;
+  departurePct: number | null;
 };
 
 const DRAG_BLOCK_TYPE = "application/x-navio-trip-block";
@@ -48,8 +49,8 @@ function renderBlockItem(
   placePosition: number | null,
   showEvChargeDetails: boolean,
   canMarkAsEnd: boolean,
-  chargeBatteryFrom?: number,
-  chargeBatteryTo?: number,
+  chargeBatteryFrom?: number | null,
+  chargeBatteryTo?: number | null,
 ) {
   switch (item.type) {
     case "place":
@@ -264,7 +265,7 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
                 placePosition,
                 shouldShowRouting,
                 item.id === lastDayPlaceId,
-                itemBatteryState?.arrivalPct,
+                itemBatteryState?.observedSocPct ?? itemBatteryState?.arrivalPct,
                 itemBatteryState?.departurePct,
               )}
             </div>

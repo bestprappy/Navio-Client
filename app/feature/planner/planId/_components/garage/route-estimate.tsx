@@ -6,17 +6,20 @@ import { AUTO_MIN_ARRIVAL_PCT } from "./ev-calculator";
 import { BATTERY_TONES, formatMinutes, getBatteryTone } from "./garage-formatters";
 
 type RouteEstimateProps = {
-  startBatteryPct: number;
-  endBatteryPct: number;
-  distanceKm: number;
-  drivingMinutes: number;
-  energyKwh: number;
-  chargeMinutes: number;
+  predictedBelowReserve?: boolean;
+  infeasible?: boolean;
+  startBatteryPct: number | null;
+  endBatteryPct: number | null;
+  distanceKm: number | null;
+  drivingMinutes: number | null;
+  energyKwh: number | null;
+  chargeMinutes: number | null;
   compatibleStops: number;
   incompatibleStops: number;
 };
 
 export function RouteEstimate({
+  predictedBelowReserve, infeasible,
   startBatteryPct,
   endBatteryPct,
   distanceKm,
@@ -26,8 +29,8 @@ export function RouteEstimate({
   compatibleStops,
   incompatibleStops,
 }: RouteEstimateProps) {
-  const endPct = Math.max(0, Math.min(100, endBatteryPct));
-  const tone = BATTERY_TONES[getBatteryTone(endPct)];
+  const endPct = endBatteryPct === null ? null : Math.max(0, Math.min(100, endBatteryPct));
+  const tone = BATTERY_TONES[getBatteryTone(endPct ?? 100)];
 
   return (
     <div className="@container/estimate min-w-0 rounded-md bg-card ring-1 ring-border">
@@ -36,7 +39,7 @@ export function RouteEstimate({
           <div>
             <p className="text-sm font-medium text-foreground">Route estimate</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Starting battery <span className="font-mono tabular-nums text-foreground">{startBatteryPct.toFixed(0)}%</span>
+              Starting battery <span className="font-mono tabular-nums text-foreground">{startBatteryPct === null ? "Unavailable" : `${startBatteryPct.toFixed(0)}%`}</span>
             </p>
           </div>
           <div className="text-right">
@@ -44,7 +47,7 @@ export function RouteEstimate({
             <p className="mt-1 flex flex-wrap items-baseline justify-end gap-x-2 gap-y-1">
               {tone.label && <span className={cn("text-xs font-medium", tone.text)}>{tone.label}</span>}
               <span className="font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
-                {endPct.toFixed(0)}<span className="text-sm font-normal text-muted-foreground">%</span>
+                {endPct === null ? "?" : endPct.toFixed(0)}<span className="text-sm font-normal text-muted-foreground">%</span>
               </span>
             </p>
           </div>
@@ -53,22 +56,23 @@ export function RouteEstimate({
           className="relative mt-3 h-2 rounded-full bg-muted ring-1 ring-border ring-inset"
           role="meter"
           aria-label="Battery at day end"
-          aria-valuenow={Math.round(endPct)}
+          aria-valuenow={endPct === null ? undefined : Math.round(endPct)}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuetext={`${endPct.toFixed(0)}%${tone.label ? `, ${tone.label.toLowerCase()}` : ""}. Reserve ${AUTO_MIN_ARRIVAL_PCT}%.`}
+          aria-valuetext={`${endPct === null ? "?" : endPct.toFixed(0)}%${tone.label ? `, ${tone.label.toLowerCase()}` : ""}. Reserve ${AUTO_MIN_ARRIVAL_PCT}%.`}
         >
-          <div className={cn("h-full rounded-full", tone.fill)} style={{ width: `${endPct}%` }} />
+          <div className={cn("h-full rounded-full", tone.fill)} style={{ width: `${endPct ?? 0}%` }} />
           <div className="absolute -inset-y-0.5 w-px bg-foreground/60" style={{ left: `${AUTO_MIN_ARRIVAL_PCT}%` }} />
         </div>
         <p className="mt-1.5 text-xs text-muted-foreground">Reserve {AUTO_MIN_ARRIVAL_PCT}%</p>
       </div>
 
+      {(infeasible || predictedBelowReserve) && <p className="px-4 pb-3 text-sm text-warning">{infeasible ? "A driving leg is predicted infeasible. Later observations do not remove that warning." : "A predicted arrival falls below reserve, even if a later observed battery level is higher."}</p>}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-3 border-t border-border px-4 py-3 @min-[28rem]/estimate:grid-cols-4">
-        <RouteStat label="Distance" value={`${distanceKm.toFixed(1)} km`} />
-        <RouteStat label="Driving" value={formatMinutes(drivingMinutes)} />
-        <RouteStat label="Energy used" value={`${energyKwh.toFixed(1)} kWh`} />
-        <RouteStat label="Charging" value={chargeMinutes > 0 ? formatMinutes(chargeMinutes) : "None planned"} />
+        <RouteStat label="Distance" value={distanceKm === null ? "Unavailable" : `${distanceKm.toFixed(1)} km`} />
+        <RouteStat label="Driving" value={drivingMinutes === null ? "Unavailable" : formatMinutes(drivingMinutes)} />
+        <RouteStat label="Energy used" value={energyKwh === null ? "Unavailable" : `${energyKwh.toFixed(1)} kWh`} />
+        <RouteStat label="Charging" value={chargeMinutes === null ? "Unavailable" : chargeMinutes > 0 ? formatMinutes(chargeMinutes) : "None planned"} />
       </dl>
 
       {(compatibleStops > 0 || incompatibleStops > 0) && (

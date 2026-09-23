@@ -1,4 +1,5 @@
 "use client";
+import { tripEnergyStateAtom, snapshotTripVehicle } from "./trip-energy-state";
 
 import { createContext, useContext, useLayoutEffect, useMemo, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -7,7 +8,7 @@ import { useAtom, useStore } from "jotai";
 import { applyGuestVehicleCommand, guestVehiclesAtom } from "./guest-vehicles";
 import type { VehicleCommand } from "./vehicle-api";
 
-import { garageActiveIdSnapshotAtom, garageModalOpenAtom, garageVehiclesSnapshotAtom, startingBatteryOverridesAtom } from "./garage.atoms";
+import { garageActiveIdSnapshotAtom, garageModalOpenAtom, garageVehiclesSnapshotAtom } from "./garage.atoms";
 import { executeVehicleCommand, listVehicles, VehicleApiError, type SavedVehicle } from "./vehicle-api";
 import { savedVehicleForPlanner } from "./vehicle-mappers";
 
@@ -31,11 +32,17 @@ function useGarageState() {
       if (authenticated) return executeVehicleCommand(command);
       const next = applyGuestVehicleCommand(store.get(guestVehiclesAtom), command);
       setGuestVehicles(next);
-      return command.kind === "delete" ? null : next[next.length - 1];
+      return command.kind === "delete" ? null : command.kind === "update" ? next.find(vehicle => vehicle.id === command.id) ?? null : next[next.length - 1];
     },
     scope: { id: `garage-${userId}` },
     onMutate: async () => { await queryClient.cancelQueries({ queryKey }); },
     onSuccess: async (saved, command) => {
+      const explicitlySelected = command.kind === "catalog" || command.kind === "custom" ||
+        (command.kind === "update" && (command.patch.isDefault === true || command.patch.energySelection !== undefined));
+      if (saved && explicitlySelected) {
+        const current = store.get(tripEnergyStateAtom);
+        store.set(tripEnergyStateAtom, { initialSocPct: current?.initialSocPct ?? null, vehicleSnapshot: snapshotTripVehicle(saved) });
+      }
       if (!authenticated) return;
       // Apply the confirmed server response even if the subsequent refresh fails.
       queryClient.setQueryData<SavedVehicle[]>(queryKey, (current = []) => {
@@ -58,7 +65,7 @@ function useGarageState() {
     store.set(garageVehiclesSnapshotAtom, []);
     store.set(garageActiveIdSnapshotAtom, null);
     store.set(garageModalOpenAtom, false);
-    store.set(startingBatteryOverridesAtom, {});
+    store.set(tripEnergyStateAtom, undefined);
   }, [store, userId]);
   return { query, mutation, vehicles, authenticated, loadingSession: status === "loading" };
 }

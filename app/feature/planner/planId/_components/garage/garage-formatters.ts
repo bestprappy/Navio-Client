@@ -3,6 +3,7 @@ import { AUTO_MIN_ARRIVAL_PCT } from "./ev-calculator";
 export function formatMinutes(totalMinutes: number): string {
   if (totalMinutes <= 0) return "0 min";
 
+  totalMinutes = Math.round(totalMinutes);
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
 

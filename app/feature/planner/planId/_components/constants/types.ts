@@ -102,7 +102,7 @@ export type PlaceItemEvChargerDetails = {
   availableConnectors: number | null;
   priceText: string | null;
   openingHoursSummary: string | null;
-  estimatedChargeMinutes: number;
+  estimatedChargeMinutes: number | null;
   targetBatteryPct?: number | null;
   operatorName: string | null;
   selectionSource?: "AUTO" | "MANUAL";
@@ -231,6 +231,7 @@ export type TripBlockData = {
 export type TripBlockItem = PlaceItem | NoteItem | ChecklistItem;
 
 export type PlaceItem = {
+  observedSocCheckpoint?: { socPct: number } | null;
   id: string;
   type: "place";
   placeId: string;

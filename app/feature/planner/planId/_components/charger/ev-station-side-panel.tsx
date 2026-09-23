@@ -98,7 +98,7 @@ export function EvStationSidePanel({
     ? tripCharging?.days.get(panelBlockId)?.startBatteryPct ?? startingBatteryPct
     : startingBatteryPct;
   const autoPlan = useMemo(() => {
-    if (!targetBlock || !activeEvCar || !(activeEvCar.consumptionKwhPer100km > 0)) {
+    if (!targetBlock || !activeEvCar || !(activeEvCar.consumptionKwhPer100km > 0) || !(activeEvCar.energyProfile?.usableBatteryCapacityKwh && activeEvCar.energyProfile.usableBatteryCapacityKwh > 0)) {
       return null;
     }
 

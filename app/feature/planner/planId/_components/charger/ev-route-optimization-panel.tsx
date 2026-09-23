@@ -1,4 +1,5 @@
 "use client";
+import { energyModelForCar } from "../garage/trip-energy-projection";
 import { canAutomaticallyPlan } from "../garage/energy-selection";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 
@@ -78,10 +79,11 @@ export function EvRouteOptimizationPanel({
   const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
 
   const payload = useMemo<EvOptimizationRequestPayload | null>(() => {
-    if (!blockId || !vehicle || !(vehicle.consumptionKwhPer100km > 0) || (vehicle.energyProfile && vehicle.energyProfile.modelKind !== "CONSUMPTION")) return null;
+    if (!blockId || !vehicle) return null;
     return {
       blockId,
       vehicle: {
+        energyModel: energyModelForCar(vehicle),
         batteryKwh: vehicle.batteryKwh,
         consumptionKwhPer100km: vehicle.consumptionKwhPer100km,
         maxAcKw: vehicle.maxAcKw,
@@ -191,7 +193,7 @@ export function EvRouteOptimizationPanel({
         {previewMutation.isPending ? "Checking the route..." : isAuthenticated ? "Optimize EV route" : "Sign in for saved-route optimization"}
       </Button>
 
-      {vehicle && !canAutomaticallyPlan(vehicle) && <p className="mt-2 text-xs text-muted-foreground">Rated-range route previews are not available yet. Legacy estimates need confirmation in vehicle settings before automatic application.</p>}
+      {vehicle && !canAutomaticallyPlan(vehicle) && <p className="mt-2 text-xs text-muted-foreground">Rated-range previews are provisional and cannot apply automatic chargers. Legacy estimates need confirmation in vehicle settings before automatic application.</p>}
       {!vehicle ? (
         <p className="mt-2 text-xs text-muted-foreground">
           Select an EV from your garage first.
@@ -233,7 +235,7 @@ export function EvRouteOptimizationPanel({
             </ul>
           ) : null}
           <p className="mt-2 text-xs text-muted-foreground">
-            Finish at {currentPreview.data.finalSocPct}% battery
+            {currentPreview.data.finalSocPct === null ? "Final battery unavailable" : `Finish at ${currentPreview.data.finalSocPct.toFixed(1)}% battery`}
             {currentPreview.data.totalChargingMinutes > 0
               ? ` · ${currentPreview.data.totalChargingMinutes} min charging`
               : ""}

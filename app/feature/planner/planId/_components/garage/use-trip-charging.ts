@@ -4,27 +4,15 @@ import { useMemo } from "react";
 import { useAtomValue } from "jotai";
 import { itineraryBlocksAtom } from "../overview/trip-builder.atoms";
 import { useTripRoutes } from "../routes/trip-route-query";
-import { getTripRouteGroups } from "../routes/trip-route.helpers";
-import { calculationEvCarAtom, startingBatteryPctAtom } from "./garage.atoms";
-import { projectTripCharging } from "./ev-calculator";
+import { activeEvCarAtom, startingBatteryPctAtom } from "./garage.atoms";
+import { projectCanonicalTrip } from "./trip-energy-projection";
 
 export function useTripCharging() {
   const blocks = useAtomValue(itineraryBlocksAtom);
-  const car = useAtomValue(calculationEvCarAtom);
+  const car = useAtomValue(activeEvCarAtom);
   const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
   const { data } = useTripRoutes();
   return useMemo(() => {
-    if (!car || !data) return null;
-    const complete = getTripRouteGroups(blocks).every((group) =>
-      group.points.slice(1).every((point, index) =>
-        data.segments.some((segment) =>
-          segment.blockId === group.blockId &&
-          segment.fromItemId === group.points[index].id &&
-          segment.toItemId === point.id &&
-          segment.distanceMeters != null,
-        ),
-      ),
-    );
-    return complete ? projectTripCharging(blocks, data.segments, car, startingBatteryPct) : null;
+    return car ? projectCanonicalTrip(blocks, data?.segments ?? [], car, startingBatteryPct) : null;
   }, [blocks, car, data, startingBatteryPct]);
 }

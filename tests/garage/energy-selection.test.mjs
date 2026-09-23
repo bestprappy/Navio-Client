@@ -12,7 +12,8 @@ const { savedVehicleForPlanner } = await import("../../app/feature/planner/planI
 const { executeVehicleCommand, savedVehicleSchema } = await import("../../app/feature/planner/planId/_components/garage/vehicle-api.ts");
 const { catalogFixture, savedVehicleFixture } = await import("./data.ts");
 const { createStore } = await import("jotai");
-const { garageVehiclesSnapshotAtom, garageActiveIdSnapshotAtom, activeEvCarAtom, calculationEvCarAtom, startingBatteryOverridesAtom, startingBatteryPctAtom, activeVehicleAtom } = await import("../../app/feature/planner/planId/_components/garage/garage.atoms.ts");
+const { garageVehiclesSnapshotAtom, garageActiveIdSnapshotAtom, activeEvCarAtom, calculationEvCarAtom, startingBatteryPctAtom, activeVehicleAtom } = await import("../../app/feature/planner/planId/_components/garage/garage.atoms.ts");
+const { tripEnergyStateAtom } = await import("../../app/feature/planner/planId/_components/garage/trip-energy-state.ts");
 const { autoAddEvChargersToBlockAtom } = await import("../../app/feature/planner/planId/_components/overview/trip-builder.atoms.ts");
 const originalFetch = globalThis.fetch;
 afterEach(() => { globalThis.fetch = originalFetch; });
@@ -137,13 +138,13 @@ test("live starting battery reaches trip consumers immediately without editing s
   const vehicle = savedVehicleForPlanner(savedVehicleFixture);
   store.set(garageVehiclesSnapshotAtom, [vehicle]);
   store.set(garageActiveIdSnapshotAtom, vehicle.id);
-  store.set(startingBatteryOverridesAtom, { [vehicle.id]: 35 });
+  store.set(tripEnergyStateAtom, { initialSocPct: 35, vehicleSnapshot: null });
   assert.equal(store.get(startingBatteryPctAtom), 35);
-  assert.equal(store.get(activeVehicleAtom).startingBatteryPct, 35);
+  assert.equal(store.get(activeVehicleAtom).startingBatteryPct, 65);
   assert.equal(store.get(garageVehiclesSnapshotAtom)[0].startingBatteryPct, 65);
   store.set(garageVehiclesSnapshotAtom, [vehicle]);
   assert.equal(store.get(startingBatteryPctAtom), 35, "a refetch cannot overwrite a live gesture");
-  assert.equal(createStore().get(startingBatteryOverridesAtom)[vehicle.id], undefined);
+  assert.equal(createStore().get(tripEnergyStateAtom), undefined);
 });
 
 

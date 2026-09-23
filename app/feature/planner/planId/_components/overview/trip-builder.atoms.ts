@@ -87,7 +87,7 @@ type UpdatePlacePayload = {
   updates: Partial<
     Pick<
       PlaceItem,
-      "isVisited" | "notes" | "time" | "timeEnd" | "cost" | "evCharger"
+      "isVisited" | "notes" | "time" | "timeEnd" | "cost" | "evCharger" | "observedSocCheckpoint"
     >
   >;
 };
@@ -377,6 +377,7 @@ function getTripPlaceAnchors(
 
 export type TripDateRange = { from?: string; to?: string };
 export type PlannerServerSnapshotUpdate = {
+  energyState?: import("../garage/trip-energy-state").TripEnergyState | null;
   tripId: string;
   blocks: TripBlockData[];
   budget: TripBudgetState;

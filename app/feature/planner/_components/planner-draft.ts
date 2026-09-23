@@ -1,10 +1,11 @@
+import { tripEnergyStateSchema, type TripEnergyState } from "../planId/_components/garage/trip-energy-state";
 import { isPlannerBlocks, isTripBudgetState } from "./planner-api";
 import { defaultTripBudget } from "../planId/_components/budget/budget.data";
 import type { TripBudgetState } from "../planId/_components/budget/budget.types";
 import type { TripBlockData } from "../planId/_components/constants/types";
 
 const PLANNER_DRAFT_STORAGE_PREFIX = "navio:planner-draft:v1:";
-type PlannerState = { blocks: TripBlockData[]; budget: TripBudgetState };
+type PlannerState = { energyState?: TripEnergyState | null; blocks: TripBlockData[]; budget: TripBudgetState };
 export type PlannerDraft = PlannerState & { version: number; updatedAt: string };
 
 export function readPlannerDraft(planId: string): PlannerDraft | null {
@@ -31,7 +32,9 @@ export function readPlannerDraft(planId: string): PlannerDraft | null {
       "budget" in value && isTripBudgetState(value.budget)
         ? value.budget
         : defaultTripBudget;
+    const energyState = "energyState" in value ? value.energyState === null ? null : tripEnergyStateSchema.parse(value.energyState) : undefined;
     return {
+      energyState,
       version: value.version,
       blocks: value.blocks,
       budget,
@@ -52,6 +55,7 @@ export function writePlannerDraft(
     const draft: PlannerDraft = {
       version,
       blocks: state.blocks,
+      energyState: state.energyState,
       budget: state.budget,
       updatedAt: new Date().toISOString(),
     };

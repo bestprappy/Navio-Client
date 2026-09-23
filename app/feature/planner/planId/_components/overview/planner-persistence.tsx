@@ -6,6 +6,7 @@ import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
+import { tripEnergyStateAtom, type TripEnergyState } from "../garage/trip-energy-state";
 import { Button } from "@/components/ui/button";
 import { readPlannerDraft, writePlannerDraft, clearPlannerDraft } from "@/app/feature/planner/_components/planner-draft";
 import { useTripMetadata } from "@/app/feature/planner/_components/use-trip-metadata";
@@ -63,6 +64,7 @@ type SaveVariables = {
 };
 
 type PlannerState = {
+  energyState?: TripEnergyState | null;
   blocks: TripBlockData[];
   budget: TripBudgetState;
 };
@@ -81,6 +83,8 @@ export function PlannerPersistence({
   const queryClient = useQueryClient();
   const store = useStore();
   const blocks = useAtomValue(tripBlocksAtom);
+  const energyState = useAtomValue(tripEnergyStateAtom);
+  const setEnergyState = useSetAtom(tripEnergyStateAtom);
   const currency = useAtomValue(tripCurrencyAtom);
   const budgetAmount = useAtomValue(tripBudgetAtom);
   const expenses = useAtomValue(tripExpensesAtom);
@@ -104,6 +108,7 @@ export function PlannerPersistence({
   const plannerVersionRef = useRef<number | null>(null);
   const plannerState = useMemo<PlannerState>(
     () => ({
+      energyState,
       blocks,
       budget: {
         currency: currency.code,
@@ -111,10 +116,9 @@ export function PlannerPersistence({
         expenses,
       },
     }),
-    [blocks, budgetAmount, currency.code, expenses],
+    [blocks, budgetAmount, currency.code, expenses, energyState],
   );
   const latestStateRef = useRef(plannerState);
-  const skipAutosaveOnceRef = useRef(false);
   const creationAttemptRef = useRef<string | null>(null);
   const persistedPlanId = isPersistedTripId(planId) ? planId : null;
   const queryKey = ["planner", persistedPlanId] as const;
@@ -179,6 +183,7 @@ export function PlannerPersistence({
         state.blocks,
         state.budget,
         version,
+        state.energyState,
       );
     },
     scope: { id: persistedPlanId ? `planner-autosave-${persistedPlanId}` : "planner-autosave" },
@@ -201,8 +206,10 @@ export function PlannerPersistence({
       queryClient.setQueryData<PlannerSnapshot>(queryKey, (current) =>
         current
           ? {
+              ...current,
               blocks: snapshot.syncedBlocks ?? variables.state.blocks,
               budget: variables.state.budget,
+              energyState: snapshot.syncedEnergyState === undefined ? current.energyState : snapshot.syncedEnergyState,
               version: snapshot.version,
               savedAt: snapshot.savedAt,
             }
@@ -320,6 +327,7 @@ export function PlannerPersistence({
     if (hydratedPlanIdRef.current === persistedPlanId) return;
 
     const serverState: PlannerState = {
+      energyState: plannerQuery.data.energyState,
       blocks: plannerQuery.data.blocks,
       budget: plannerQuery.data.budget,
     };
@@ -336,19 +344,20 @@ export function PlannerPersistence({
       !recoverableDraft &&
       (serverState.blocks.length > 0 || currentBlocks.length === 0);
     const hydratedState: PlannerState = recoverableDraft
-      ? { blocks: recoverableDraft.blocks, budget: recoverableDraft.budget }
+      ? { blocks: recoverableDraft.blocks, budget: recoverableDraft.budget, energyState: recoverableDraft.energyState }
       : {
           blocks: shouldUseServerBlocks ? serverState.blocks : currentBlocks,
           budget: serverState.budget,
+          energyState: serverState.energyState,
         };
     hydratedState.blocks = ensureItineraryDays(hydratedState.blocks, metadata.data?.startDate || from, metadata.data?.endDate || to);
-    skipAutosaveOnceRef.current = !recoverableDraft && serializePlannerState(hydratedState) === serverSerialized;
     const hydratedBlocks = hydratedState.blocks;
     if (recoverableDraft || shouldUseServerBlocks || hydratedBlocks !== currentBlocks) {
       setBlocks(hydratedBlocks);
       setOpenBlockIds(hydratedBlocks.map((block) => block.id));
       setActiveBlockId(hydratedBlocks[0]?.id ?? null);
     }
+    setEnergyState(hydratedState.energyState);
     setCurrency(getCurrencyOption(hydratedState.budget.currency));
     setBudgetAmount(hydratedState.budget.amount);
     setExpenses(hydratedState.budget.expenses);
@@ -381,6 +390,7 @@ export function PlannerPersistence({
     setBlocks,
     setCurrency,
     setExpenses,
+    setEnergyState,
     setOpenBlockIds,
     store,
   ]);
@@ -395,11 +405,12 @@ export function PlannerPersistence({
     }
 
     const serverState: PlannerState = {
+      energyState: serverSnapshotUpdate.energyState === undefined ? store.get(tripEnergyStateAtom) : serverSnapshotUpdate.energyState,
       blocks: serverSnapshotUpdate.blocks,
       budget: serverSnapshotUpdate.budget,
     };
+    setEnergyState(serverState.energyState);
     const serialized = serializePlannerState(serverState);
-    skipAutosaveOnceRef.current = true;
     latestStateRef.current = serverState;
     lastSavedRef.current = serialized;
     plannerVersionRef.current = serverSnapshotUpdate.version;
@@ -409,7 +420,8 @@ export function PlannerPersistence({
     queryClient.setQueryData<PlannerSnapshot>(
       ["planner", persistedPlanId] as const,
       {
-        blocks: serverSnapshotUpdate.blocks,
+        energyState: serverSnapshotUpdate.energyState === undefined ? store.get(tripEnergyStateAtom) : serverSnapshotUpdate.energyState,
+      blocks: serverSnapshotUpdate.blocks,
         budget: serverSnapshotUpdate.budget,
         version: serverSnapshotUpdate.version,
         savedAt: serverSnapshotUpdate.savedAt,
@@ -426,6 +438,8 @@ export function PlannerPersistence({
     queryClient,
     serverSnapshotUpdate,
     setServerSnapshotUpdate,
+    setEnergyState,
+    store,
   ]);
 
   useEffect(() => {
@@ -445,10 +459,6 @@ export function PlannerPersistence({
       });
       hydratedPlanIdRef.current = null;
       window.setTimeout(() => setHydrationRequest((request) => request + 1), 0);
-      return;
-    }
-    if (skipAutosaveOnceRef.current) {
-      skipAutosaveOnceRef.current = false;
       return;
     }
 
@@ -614,7 +624,7 @@ function PlannerSyncStatus({
 }
 
 function serializePlannerState(state: PlannerState): string {
-  return JSON.stringify({ blocks: state.blocks, budget: state.budget });
+  return JSON.stringify({ blocks: state.blocks, budget: state.budget, energyState: state.energyState });
 }
 
 function toDateOnly(value: string | undefined): string | null {
