@@ -1,93 +1,92 @@
 "use client";
 
-import { CircleCheck, ExternalLink, Trash2 } from "lucide-react";
+import type { ReactNode } from "react";
+import { BatteryFull, ExternalLink, Plug, Route, Trash2, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
-import { formatCheckedDate, formatConnector } from "./garage-formatters";
+import { ConnectorChips } from "../charger/connector-chips";
+import { formatCheckedDate } from "./garage-formatters";
+import { estimateRealWorldRange, rangeForConsumption } from "./vehicle-mappers";
+import { SpecTile } from "./spec-tile";
 import { VehicleMedia } from "./vehicle-media";
+import { VehicleNameEditor } from "./vehicle-name-editor";
 
 type VehicleCardProps = {
   vehicle: UserVehicle;
   car: EvCar;
-  isActive: boolean;
-  onSelect: () => void;
   onRemove: () => void;
+  onRename: (nickname: string) => void;
   disabled?: boolean;
+  /** Trip settings for this vehicle, shown under the specs. */
+  children?: ReactNode;
 };
 
-export function VehicleCard({
-  vehicle,
-  car,
-  isActive,
-  onSelect,
-  onRemove,
-  disabled = false,
-}: VehicleCardProps) {
+/** The vehicle used for this trip: photo, specs and its trip settings in one card. */
+export function VehicleCard({ vehicle, car, onRemove, onRename, disabled = false, children }: VehicleCardProps) {
   const carName = `${car.make} ${car.model}`;
   const nickname = vehicle.nickname?.trim();
   const titleId = `vehicle-${vehicle.id}-title`;
   const meta = [
-    nickname ? carName : null,
     car.trim,
     car.year,
     car.market === "TH" ? "Thailand" : null,
     vehicle.source === "custom" ? "Custom specs" : null,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  ].filter(Boolean);
   const checkedOn = formatCheckedDate(car.verifiedAt);
-  const connectors = car.connectorTypes.map(formatConnector).join(" · ");
 
   return (
-    <article
-      aria-labelledby={titleId}
-      className={cn(
-        "@container/vehicle flex min-w-0 flex-col rounded-lg border bg-card p-3 transition-colors",
-        isActive ? "border-primary ring-1 ring-primary" : "border-border hover:border-input",
-      )}
-    >
-      <VehicleMedia car={car} className="h-36" />
+    <article aria-labelledby={titleId} className="@container/vehicle min-w-0 rounded-xl border border-border bg-card shadow-xs">
+      <div className="flex flex-col gap-4 p-4 @min-[34rem]/vehicle:flex-row @min-[34rem]/vehicle:items-center">
+        <VehicleMedia car={car} className="h-40 shrink-0 @min-[34rem]/vehicle:h-36 @min-[34rem]/vehicle:w-2/5" />
 
-      <div className="mt-3 flex items-start justify-between gap-2 px-1">
-        <div className="min-w-0">
-          <h3 id={titleId} className="wrap-break-word text-base font-semibold leading-snug text-foreground">
-            {nickname || carName}
-          </h3>
-          {meta && <p className="mt-0.5 text-sm text-muted-foreground">{meta}</p>}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-primary">Used for this trip</p>
+              <VehicleNameEditor
+                titleId={titleId}
+                carName={carName}
+                nickname={nickname}
+                disabled={disabled}
+                onRename={onRename}
+              />
+              {meta.length > 0 && <p className="mt-1 text-sm text-muted-foreground">{meta.join(", ")}</p>}
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="-mt-1 -mr-2 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              aria-label={`Remove ${nickname || carName} from garage`}
+              disabled={disabled}
+              onClick={onRemove}
+            >
+              <Trash2 aria-hidden="true" />
+            </Button>
+          </div>
+
+          <dl className="mt-3 grid grid-cols-2 gap-2">
+            <SpecTile icon={Route} tone="primary" {...rangeTile(car)} />
+            <SpecTile icon={BatteryFull} tone="charging" label="Battery" value={String(car.batteryKwh)} unit="kWh" />
+            <SpecTile icon={Zap} tone="warning" label="DC max" {...chargeLimit(car.maxDcKw, car.chargingLimitsKnown)} />
+            <SpecTile icon={Plug} tone="premade" label="AC max" {...chargeLimit(car.maxAcKw, car.chargingLimitsKnown)} />
+          </dl>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Plugs</span>
+            {car.connectorTypes.length > 0 ? (
+              <ConnectorChips connectors={car.connectorTypes} />
+            ) : (
+              <span className="text-foreground">Not specified</span>
+            )}
+          </div>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="-mr-1 shrink-0 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-          aria-label={`Remove ${nickname || carName} from garage`}
-          disabled={disabled}
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-        >
-          <Trash2 aria-hidden="true" />
-        </Button>
       </div>
 
-      <dl className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-border bg-border @min-[22rem]/vehicle:grid-cols-4">
-        <Spec label={car.rangeStandard ? `Range · ${car.rangeStandard}` : "Range"} value={String(car.rangeKm)} unit="km" />
-        <Spec label="Battery" value={String(car.batteryKwh)} unit="kWh" />
-        <Spec label="DC max" {...chargeLimit(car.maxDcKw, car.chargingLimitsKnown)} />
-        <Spec label="AC max" {...chargeLimit(car.maxAcKw, car.chargingLimitsKnown)} />
-      </dl>
-
-      <p className="mt-3 flex flex-wrap gap-x-2 px-1 text-sm">
-        <span className="text-muted-foreground">Plugs</span>
-        <span className="font-medium text-foreground">{connectors || "Not specified"}</span>
-      </p>
-
       {car.sourceUrl && (
-        <p className="mt-2 px-1 text-xs leading-relaxed text-muted-foreground">
+        <p className="px-4 pb-3 text-xs leading-relaxed text-muted-foreground">
           <a
             href={car.sourceUrl}
             target="_blank"
@@ -103,35 +102,24 @@ export function VehicleCard({
         </p>
       )}
 
-      <div className="mt-auto px-1 pt-3">
-        {isActive ? (
-          <p className="flex min-h-9 items-center gap-2 text-sm font-medium text-foreground">
-            <CircleCheck className="size-4 shrink-0 text-primary" aria-hidden="true" />
-            Used for this trip&apos;s battery estimates
-          </p>
-        ) : (
-          <Button type="button" variant="outline" className="h-9 w-full" disabled={disabled} onClick={onSelect}>
-            Use for this trip
-          </Button>
-        )}
-      </div>
+      {children ? <div className="border-t border-border p-4">{children}</div> : null}
     </article>
   );
+}
+
+/** Leads with the range used for planning (battery ÷ consumption); the official test figure is the secondary line. */
+function rangeTile(car: EvCar): { label: string; value: string; unit: string; detail?: string } {
+  const official = `${car.rangeStandard && car.rangeStandard !== "User supplied" ? car.rangeStandard : "Declared"} ${car.rangeKm} km`;
+  if (car.consumptionKwhPer100km > 0) {
+    return { label: "Real range", value: String(rangeForConsumption(car.batteryKwh, car.consumptionKwhPer100km)), unit: "km", detail: official };
+  }
+  const estimate = estimateRealWorldRange(car.rangeKm, car.rangeStandard);
+  return estimate
+    ? { label: "Real range", value: `~${estimate.km}`, unit: "km", detail: official }
+    : { label: "Range", value: String(car.rangeKm), unit: "km" };
 }
 
 function chargeLimit(kw: number, limitsKnown?: boolean): { value: string; unit?: string } {
   if (kw > 0) return { value: String(kw), unit: "kW" };
   return { value: limitsKnown === false ? "Unconfirmed" : "None" };
-}
-
-function Spec({ label, value, unit }: { label: string; value: string; unit?: string }) {
-  return (
-    <div className="min-w-0 bg-card px-3 py-2">
-      <dt className="truncate text-xs text-muted-foreground">{label}</dt>
-      <dd className="mt-0.5 font-mono text-sm font-semibold tabular-nums text-foreground">
-        {value}
-        {unit && <span className="ml-1 font-sans text-xs font-normal text-muted-foreground">{unit}</span>}
-      </dd>
-    </div>
-  );
 }

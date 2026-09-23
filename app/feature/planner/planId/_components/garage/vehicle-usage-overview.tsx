@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
 import type { TripEvSummary } from "./ev-calculator";
 import { calcRangeKmForBatteryPct } from "./ev-calculator";
+import { BatteryGauge } from "./battery-gauge";
 import { arrivalReservePctAtom } from "./garage.atoms";
 import { SIMULATION_MODEL } from "./simulation-model";
 import { BATTERY_TONES, formatDistanceKm, formatMinutes, getBatteryTone } from "./garage-formatters";
@@ -58,7 +59,7 @@ export function VehicleUsageOverview({
               {hasEstimate ? "Battery at trip end" : "Starting battery"}
             </p>
             <p className="mt-1 flex items-baseline gap-2">
-              <span className="font-mono text-4xl font-semibold leading-none tabular-nums text-foreground">
+              <span className={cn("text-4xl font-semibold leading-none tracking-tight tabular-nums", tone.valueText)}>
                 {endPct}
                 <span className="text-xl text-muted-foreground">%</span>
               </span>
@@ -67,13 +68,13 @@ export function VehicleUsageOverview({
           </div>
           <div className="@min-[20rem]/usage:text-right">
             <p className="text-sm text-muted-foreground">Range left</p>
-            <p className="mt-1 font-mono text-2xl font-semibold leading-none tabular-nums text-foreground">
+            <p className="mt-1 text-2xl font-semibold leading-none tabular-nums text-foreground">
               {rangeLeftKm.toLocaleString("en-US")}
-              <span className="ml-1 font-sans text-sm font-normal text-muted-foreground">km</span>
+              <span className="ml-1 text-sm font-normal text-muted-foreground">km</span>
             </p>
           </div>
         </div>
-        <BatteryTrack startPct={startPct} endPct={endPct} fillClass={tone.fill} showStart={hasEstimate} />
+        <TripBattery startPct={startPct} endPct={endPct} showStart={hasEstimate} />
       </div>
 
       <dl className="grid grid-cols-2 gap-px border-t border-border bg-border @min-[30rem]/usage:grid-cols-4">
@@ -102,30 +103,14 @@ export function VehicleUsageOverview({
   );
 }
 
-function BatteryTrack({
-  startPct,
-  endPct,
-  fillClass,
-  showStart,
-}: {
-  startPct: number;
-  endPct: number;
-  fillClass: string;
-  showStart: boolean;
-}) {
+function TripBattery({ startPct, endPct, showStart }: { startPct: number; endPct: number; showStart: boolean }) {
   const reservePct = useAtomValue(arrivalReservePctAtom);
   return (
-    <div className="mt-4" aria-hidden="true">
-      <div className="relative h-2.5 rounded-full bg-muted ring-1 ring-border ring-inset">
-        {showStart && startPct > endPct && (
-          <div className="absolute inset-y-0 left-0 rounded-full bg-foreground/15" style={{ width: `${startPct}%` }} />
-        )}
-        <div className={cn("absolute inset-y-0 left-0 rounded-full", fillClass)} style={{ width: `${endPct}%` }} />
-        <div className="absolute -inset-y-1 w-px bg-destructive" style={{ left: `${reservePct}%` }} />
-      </div>
+    <div className="mt-4">
+      <BatteryGauge value={endPct} previousValue={showStart ? startPct : undefined} reservePct={reservePct} />
       <div className="mt-2 flex flex-wrap justify-between gap-x-3 text-xs text-muted-foreground">
-        <span>Reserve {reservePct}%</span>
-        {showStart && <span>Started at {startPct}%</span>}
+        <span>Dashed line: {reservePct}% reserve</span>
+        {showStart && startPct > endPct && <span>Faded part: {startPct - endPct}% used on the trip</span>}
       </div>
     </div>
   );
@@ -136,7 +121,7 @@ function Stat({ label, value, unit, note }: { label: string; value: string; unit
     <div className="min-w-0 bg-card px-4 py-3">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="mt-1">
-        <span className="font-mono text-lg font-semibold leading-tight tabular-nums text-foreground">{value}</span>
+        <span className="text-lg font-semibold leading-tight tabular-nums text-foreground">{value}</span>
         {unit && <span className="ml-1 text-xs text-muted-foreground">{unit}</span>}
         {note && <span className="mt-0.5 block text-xs text-muted-foreground">{note}</span>}
       </dd>
@@ -156,7 +141,7 @@ function DailyBattery({ values, hasEstimate }: { values: number[]; hasEstimate: 
           Battery at the end of each day
         </h4>
         {hasEstimate && values.length > 0 && (
-          <p className="text-xs text-muted-foreground">Red line: {reservePct}% reserve</p>
+          <p className="text-xs text-muted-foreground">Dashed line: {reservePct}% reserve</p>
         )}
       </div>
 
@@ -171,13 +156,7 @@ function DailyBattery({ values, hasEstimate }: { values: number[]; hasEstimate: 
           role={scrolls ? "region" : undefined}
           aria-label={scrolls ? "Daily battery chart, scrollable" : undefined}
         >
-          <div className="relative h-36" style={{ minWidth: `${values.length * 2.5}rem` }}>
-            <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-5 bottom-6 border-b border-border">
-              <div
-                className="absolute inset-x-0 border-t border-dashed border-destructive"
-                style={{ bottom: `${reservePct}%` }}
-              />
-            </div>
+          <div className="relative h-40" style={{ minWidth: `${values.length * 2.5}rem` }}>
             <ol aria-labelledby={titleId} className="relative flex h-full gap-2">
               {values.map((value, index) => (
                 <DayBar key={index} day={index + 1} value={value} shortLabel={values.length > 7} />
@@ -199,23 +178,24 @@ function DayBar({ day, value, shortLabel }: { day: number; value: number; shortL
       <span className="sr-only">
         Day {day}: {value}%{tone.label ? `, ${tone.label.toLowerCase()}` : ""}
       </span>
-      <div className="relative flex-1" aria-hidden="true">
-        <div className="absolute inset-x-0 top-5 bottom-0 flex justify-center">
-          <div className="relative h-full w-full max-w-10">
+      {/* An upright battery per day: value on top, terminal nub, cell body with a reserve mark. */}
+      <div className="flex flex-1 flex-col items-center" aria-hidden="true">
+        <span className={cn("mb-1 text-xs font-semibold tabular-nums", tone.valueText)}>{value}%</span>
+        <span className="h-1 w-1/3 max-w-4 rounded-t-sm bg-foreground/25" />
+        <div className="relative w-full max-w-10 flex-1 rounded-md border-2 border-foreground/25 p-0.5">
+          <div className="relative h-full overflow-hidden rounded-sm bg-muted">
             <span
-              className={cn("battery-fill-up absolute inset-x-0 bottom-0 rounded-t-sm", tone.fill)}
+              className={cn("battery-fill-up absolute inset-x-0 bottom-0", tone.fill)}
               style={{ height: `${Math.max(value, 1)}%` }}
             />
             <span
-              className="absolute inset-x-0 text-center font-mono text-xs font-medium tabular-nums text-foreground"
-              style={{ bottom: `calc(${value}% + 0.25rem)` }}
-            >
-              {value}%
-            </span>
+              className="absolute -inset-x-1 border-t-2 border-dashed border-destructive"
+              style={{ bottom: `${reservePct}%` }}
+            />
           </div>
         </div>
       </div>
-      <span aria-hidden="true" className="flex h-6 items-end justify-center text-xs text-muted-foreground">
+      <span aria-hidden="true" className="flex h-6 shrink-0 items-end justify-center text-xs text-muted-foreground">
         {shortLabel ? day : `Day ${day}`}
       </span>
     </li>
