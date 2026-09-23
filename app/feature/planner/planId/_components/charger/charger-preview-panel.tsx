@@ -5,6 +5,8 @@ import { AlertTriangle, BatteryCharging, MapPin, Star, X, Zap } from "lucide-rea
 import { Button } from "@/components/ui/button";
 
 import type { EvChargerMapResult } from "../overview/trip-builder.atoms";
+import { getOpeningHoursSummary } from "./ev-station-formatters";
+import { StationOpeningHours } from "./station-opening-hours";
 
 type ChargerPreviewPanelProps = {
   result: EvChargerMapResult;
@@ -13,11 +15,6 @@ type ChargerPreviewPanelProps = {
   onAddToTrip: () => void;
   onClose: () => void;
 };
-
-function getOpeningHoursSummary(openingHours: Record<string, unknown>) {
-  const summary = openingHours.summary;
-  return typeof summary === "string" ? summary : null;
-}
 
 export function ChargerPreviewPanel({
   result,
@@ -106,9 +103,7 @@ export function ChargerPreviewPanel({
             <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <span>{charger.address ?? charger.location.address}</span>
           </div>
-          {openingHours ? (
-            <div className="text-foreground">{openingHours}</div>
-          ) : null}
+          {openingHours ? <StationOpeningHours value={openingHours} /> : null}
           {charger.priceText ? <div>{charger.priceText}</div> : null}
           <div className="flex flex-wrap gap-2">
             <span className="rounded-sm bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">

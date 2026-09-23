@@ -32,7 +32,6 @@ import { useTripCharging } from "../garage/use-trip-charging";
 
 import { EvStationListCard } from "./ev-station-list-card";
 import { EvRouteOptimizationPanel } from "./ev-route-optimization-panel";
-import { getEvStationVisual } from "./ev-station-panel.data";
 import { filterEvChargers } from "./ev-station-api";
 
 type EvStationSidePanelProps = {
@@ -218,7 +217,6 @@ export function EvStationSidePanel({
                   <EvStationListCard
                     key={charger.id}
                     charger={charger}
-                    visual={getEvStationVisual(charger.id)}
                     distanceKm={result.distanceKm}
                     isAdded={addedChargerIds.has(charger.id)}
                     isCompatible={getVehicleCompatibility(charger)}
