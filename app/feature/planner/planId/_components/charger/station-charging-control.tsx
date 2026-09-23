@@ -2,19 +2,17 @@
 
 import { useId } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, BatteryCharging, Clock } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 import type { PlaceItemEvChargerDetails } from "../constants/types";
 import type { EvCar } from "../constants/vehicle.types";
-import { getBatteryColor } from "../garage/battery-slider";
+import { BatteryGauge } from "../garage/battery-gauge";
 import { activeEvCarAtom, arrivalReservePctAtom } from "../garage/garage.atoms";
 import { normalizeStationTargetPct, projectChargingStop, type ChargingStopProjection } from "../garage/ev-calculator";
-import { formatMinutes } from "../garage/garage-formatters";
+import { BATTERY_TONES, formatMinutes, getBatteryTone } from "../garage/garage-formatters";
 import { updatePlaceItemAtom } from "../overview/trip-builder.atoms";
-import { ChargeBar } from "../routes/charge-segment-info";
-import { SpecCell } from "./spec-cell";
 
 const QUICK_TARGETS = [60, 80, 100] as const;
 
@@ -34,7 +32,8 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const projection = car && arrivalPct !== undefined ? projectChargingStop(arrivalPct, details, car) : null;
   const target = normalizeStationTargetPct(details.targetBatteryPct ?? projection?.departurePct);
-  const arrival = projection ? Math.round(projection.arrivalPct) : 0;
+  const arrival = projection ? Math.round(projection.arrivalPct) : null;
+  const targetTone = BATTERY_TONES[getBatteryTone(target, reservePct)];
 
   function updateTarget(value: number) {
     const nextTarget = normalizeStationTargetPct(value);
@@ -57,9 +56,9 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <label htmlFor={inputId} className="text-sm text-muted-foreground">Charge to</label>
-          <p className="mt-1 font-mono text-2xl leading-none font-semibold tabular-nums text-foreground" aria-hidden="true">
+          <p className={cn("mt-1 text-3xl leading-none font-semibold tracking-tight tabular-nums", targetTone.valueText)} aria-hidden="true">
             {target}
-            <span className="text-base text-muted-foreground">%</span>
+            <span className="text-base font-medium text-muted-foreground">%</span>
           </p>
         </div>
         <div role="group" aria-label="Quick charge targets" className="segmented-track inline-flex gap-0.5 rounded-full p-1">
@@ -70,10 +69,8 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
               aria-pressed={target === value}
               onClick={() => updateTarget(value)}
               className={cn(
-                "h-7 min-w-12 rounded-full px-3 font-mono text-xs font-medium tabular-nums outline-none transition-[color,background-color,box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                target === value
-                  ? "segmented-thumb text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
+                "h-7 min-w-12 rounded-full px-3 text-xs font-semibold tabular-nums outline-none transition-[color,background-color,box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                target === value ? "segmented-thumb text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
               {value}%
@@ -82,18 +79,14 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
         </div>
       </div>
 
-      {/* Visual track: the dimmed part is the battery on arrival, the lit part is what this stop adds. */}
-      <div className="relative h-7 rounded-md has-[input:focus-visible]:ring-3 has-[input:focus-visible]:ring-ring/50">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-x-2.5 inset-y-0">
-          <ChargeBar from={arrival} to={target} className="absolute inset-x-0 top-1/2 -translate-y-1/2" />
-          {/* Same thumb as the garage's starting battery slider: level-colored circle with a light center dot. */}
-          <span
-            className="absolute top-1/2 flex size-5 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full shadow-md transition-[background-color] duration-100"
-            style={{ left: `${target}%`, backgroundColor: getBatteryColor(target, reservePct) }}
-          >
-            <span className="rounded-full bg-primary-foreground/70" style={{ width: 7, height: 7 }} />
-          </span>
-        </div>
+      {/* Solid fill: battery on arrival. Stripes: what this stop adds. The knob is the target, dragged with the native range input. */}
+      <BatteryGauge
+        value={arrival ?? 0}
+        chargeTo={target}
+        markerPct={target}
+        reservePct={reservePct}
+        className="rounded-lg has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2 has-focus-visible:ring-offset-card"
+      >
         <input
           id={inputId}
           type="range"
@@ -105,9 +98,20 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
           aria-label={`Target battery at ${stationName}`}
           aria-valuetext={`${target} percent`}
           aria-describedby={helpId}
-          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          className="absolute inset-0 size-full cursor-pointer opacity-0 outline-none"
         />
-      </div>
+      </BatteryGauge>
+
+      {arrival !== null && (
+        <div className="flex justify-between gap-3 text-xs text-muted-foreground" aria-hidden="true">
+          <span>
+            Arrive with <span className="font-semibold tabular-nums text-foreground">{arrival}%</span>
+          </span>
+          <span>
+            Leave with <span className="font-semibold tabular-nums text-foreground">{Math.max(target, arrival)}%</span>
+          </span>
+        </div>
+      )}
 
       <div id={helpId}>
         <ChargeEstimate car={car} projection={projection} target={target} />
@@ -136,10 +140,34 @@ function ChargeEstimate({ car, projection, target }: { car: EvCar | null; projec
     return <p className="text-sm text-muted-foreground">You arrive with {arrival}%, already at or above this target.</p>;
   }
   return (
-    <dl className="surface-well grid grid-cols-3 gap-px overflow-hidden rounded-md bg-border/60">
-      <SpecCell label="Arrive at" value={String(arrival)} unit="%" />
-      <SpecCell label="Adds" value={projection.chargeEnergyKwh.toFixed(1)} unit="kWh" />
-      <SpecCell label="Takes" value={formatMinutes(projection.chargeMinutes)} />
+    <dl className="flex flex-wrap gap-x-6 gap-y-2 rounded-lg bg-muted/50 px-3 py-2.5">
+      <ChargeFact icon={BatteryCharging} iconClass="text-charging" label="Adds" value={projection.chargeEnergyKwh.toFixed(1)} unit="kWh" />
+      <ChargeFact icon={Clock} iconClass="text-primary" label="Takes" value={formatMinutes(projection.chargeMinutes)} />
     </dl>
+  );
+}
+
+function ChargeFact({
+  icon: Icon,
+  iconClass,
+  label,
+  value,
+  unit,
+}: {
+  icon: typeof Clock;
+  iconClass: string;
+  label: string;
+  value: string;
+  unit?: string;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <Icon className={cn("size-4 shrink-0", iconClass)} aria-hidden="true" />
+      <dt className="text-sm text-muted-foreground">{label}</dt>
+      <dd className="text-sm font-semibold tabular-nums text-foreground">
+        {value}
+        {unit && <span className="ml-1 text-xs font-normal text-muted-foreground">{unit}</span>}
+      </dd>
+    </div>
   );
 }

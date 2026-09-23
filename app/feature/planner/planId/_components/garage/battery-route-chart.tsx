@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { ChartLine, Table2 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -41,6 +42,7 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
   const titleId = useId();
   const [containerRef, width] = useElementWidth<HTMLDivElement>();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [view, setView] = useState<ChartView>("chart");
   const totalKm = points.at(-1)?.distanceKm ?? 0;
   const plotWidth = Math.max(0, width - PAD.left - PAD.right);
   const plotHeight = HEIGHT - PAD.top - PAD.bottom;
@@ -66,12 +68,21 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
 
   return (
     <figure className={cn("min-w-0", className)} aria-labelledby={titleId}>
-      <figcaption id={titleId} className="flex flex-wrap items-baseline justify-between gap-x-3 text-xs text-muted-foreground">
-        <span className="font-medium text-foreground">Battery along the route</span>
-        <span>Dashed line: {reservePct}% reserve</span>
-      </figcaption>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+        <figcaption id={titleId} className="whitespace-nowrap text-xs text-muted-foreground">
+          Battery along the route
+        </figcaption>
+        <ViewToggle view={view} onChange={setView} />
+      </div>
 
-      <div ref={containerRef} className="relative mt-2" style={{ height: HEIGHT }} onPointerLeave={() => setActiveId(null)}>
+      {/* Hidden rather than unmounted so the width observer keeps tracking it. */}
+      <div
+        ref={containerRef}
+        hidden={view !== "chart"}
+        className="relative mt-2"
+        style={{ height: HEIGHT }}
+        onPointerLeave={() => setActiveId(null)}
+      >
         {width > 0 && (
           <svg width={width} height={HEIGHT} className="block overflow-visible" role="presentation">
             {Y_TICKS.map((tick) => (
@@ -91,6 +102,13 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
               x1={PAD.left} x2={width - PAD.right} y1={geometry.y(reservePct)} y2={geometry.y(reservePct)}
               stroke={BELOW_RESERVE} strokeWidth={1.5} strokeDasharray="4 4"
             />
+            {/* Label the line where it is, instead of a legend. Left end: low points rarely sit at the start of the day. */}
+            <text
+              x={PAD.left + 4} y={geometry.y(reservePct) + 13}
+              fill={BELOW_RESERVE} className="text-[11px] font-medium tabular-nums"
+            >
+              {reservePct}% reserve
+            </text>
 
             <path d={geometry.area} fill={LINE} fillOpacity={0.1} />
             <path d={geometry.line} fill="none" stroke={LINE} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
@@ -104,10 +122,21 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
                 <g key={point.id}>
                   {/* Chargers are squares at the departure level so the stop type never relies on color. */}
                   {point.isCharger ? (
-                    <rect
-                      x={cx - 5} y={geometry.y(point.departurePct) - 5} width={10} height={10} rx={2}
-                      fill={LINE} stroke="var(--card)" strokeWidth={2}
-                    />
+                    <>
+                      <rect
+                        x={cx - 5} y={geometry.y(point.departurePct) - 5} width={10} height={10} rx={2}
+                        fill={LINE} stroke="var(--card)" strokeWidth={2}
+                      />
+                      {point.departurePct > point.arrivalPct ? (
+                        <text
+                          x={cx} y={geometry.y(point.departurePct) - 10}
+                          textAnchor={cx > width - PAD.right - 16 ? "end" : "middle"}
+                          fill={LINE} className="text-[11px] font-semibold tabular-nums"
+                        >
+                          +{Math.round(point.departurePct - point.arrivalPct)}%
+                        </text>
+                      ) : null}
+                    </>
                   ) : null}
                   <circle cx={cx} cy={arrivalY} r={isActive ? 5.5 : 4} fill={belowReserve ? BELOW_RESERVE : LINE} stroke="var(--card)" strokeWidth={2} />
                 </g>
@@ -164,9 +193,8 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
         )}
       </div>
 
-      <details className="mt-2 text-xs">
-        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Show as table</summary>
-        <table className="mt-2 w-full text-left tabular-nums">
+      {view === "table" && (
+        <table className="mt-2 w-full text-left text-xs tabular-nums">
           <thead className="text-muted-foreground">
             <tr className="border-b border-border">
               <th scope="col" className="py-1 pr-2 font-normal">Stop</th>
@@ -188,7 +216,36 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
             ))}
           </tbody>
         </table>
-      </details>
+      )}
     </figure>
+  );
+}
+
+type ChartView = "chart" | "table";
+
+const VIEW_OPTIONS: { value: ChartView; label: string; Icon: typeof ChartLine }[] = [
+  { value: "chart", label: "Chart", Icon: ChartLine },
+  { value: "table", label: "Table", Icon: Table2 },
+];
+
+function ViewToggle({ view, onChange }: { view: ChartView; onChange: (view: ChartView) => void }) {
+  return (
+    <div role="group" aria-label="Battery view" className="inline-flex shrink-0 rounded-md bg-muted p-0.5">
+      {VIEW_OPTIONS.map(({ value, label, Icon }) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={view === value}
+          onClick={() => onChange(value)}
+          className={cn(
+            "inline-flex items-center gap-1 rounded-sm px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+            view === value ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Icon className="size-3.5" aria-hidden="true" />
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }

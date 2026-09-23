@@ -18,6 +18,7 @@ import {
 } from "./garage.atoms";
 import { useTripCharging } from "./use-trip-charging";
 import { VehicleCard } from "./vehicle-card";
+import { VehicleSwitcher } from "./vehicle-switcher";
 import { AddVehicleDialog } from "./add-vehicle-dialog";
 import { VehicleUsageOverview } from "./vehicle-usage-overview";
 import { VehicleSettingsForm } from "./vehicle-settings-form";
@@ -31,6 +32,9 @@ export function GarageSection() {
   const [isModalOpen, setModalOpen] = useAtom(garageModalOpenAtom);
   const { query, mutation, vehicles: savedVehicles, authenticated, loadingSession } = useGarage();
   const savedActiveVehicle = savedVehicles.find((vehicle) => vehicle.id === activeVehicleId);
+  const featuredVehicle = vehicles.find((vehicle) => vehicle.id === activeVehicleId) ?? vehicles[0];
+  const featuredCar = featuredVehicle ? getVehicleCar(featuredVehicle) : null;
+  const controlsDisabled = mutation.isPending || loadingSession || (authenticated && query.isError);
 
   const blocks = useAtomValue(itineraryBlocksAtom);
   const { data: routeData } = useTripRoutes();
@@ -57,6 +61,7 @@ export function GarageSection() {
         <Button
           type="button"
           size="lg"
+          variant={vehicles.length > 0 ? "outline" : "default"}
           className="gap-2"
           disabled={loadingSession || (authenticated && (query.isPending || query.isError)) || mutation.isPending || vehicles.length >= 25}
           onClick={() => { mutation.reset(); setModalOpen(true); }}
@@ -81,27 +86,33 @@ export function GarageSection() {
             </p>
           </div>
         </div>
-      ) : (
-        <div className={`mx-1 grid min-w-0 grid-cols-1 gap-2 ${vehicles.length > 1 ? "@min-[28rem]/garage:grid-cols-2" : ""}`}>
-          {vehicles.map((vehicle) => {
-            const car = getVehicleCar(vehicle);
-            if (!car) return null;
-            return (
-              <VehicleCard
-                key={vehicle.id}
-                vehicle={vehicle}
-                car={car}
-                isActive={vehicle.id === activeVehicleId}
-                disabled={mutation.isPending || loadingSession || (authenticated && query.isError)}
-                onSelect={() => mutation.mutate({ kind: "update", id: vehicle.id, patch: { isDefault: true } })}
-                onRemove={() => mutation.mutate({ kind: "delete", id: vehicle.id })}
+      ) : featuredVehicle && featuredCar ? (
+        <div className="mx-1 grid min-w-0 gap-3">
+          <VehicleCard
+            vehicle={featuredVehicle}
+            car={featuredCar}
+            disabled={controlsDisabled}
+            onRemove={() => mutation.mutate({ kind: "delete", id: featuredVehicle.id })}
+            onRename={(nickname) => mutation.mutate({ kind: "update", id: featuredVehicle.id, patch: { nickname } })}
+          >
+            {savedActiveVehicle && (
+              <VehicleSettingsForm
+                key={`${savedActiveVehicle.id}:${savedActiveVehicle.updatedAt}`}
+                vehicle={savedActiveVehicle}
+                car={activeEvCar}
               />
-            );
-          })}
+            )}
+          </VehicleCard>
+          {vehicles.length > 1 && (
+            <VehicleSwitcher
+              vehicles={vehicles}
+              activeVehicleId={featuredVehicle.id}
+              disabled={controlsDisabled}
+              onSelect={(id) => mutation.mutate({ kind: "update", id, patch: { isDefault: true } })}
+            />
+          )}
         </div>
-      )}
-
-      {savedActiveVehicle && <VehicleSettingsForm key={`${savedActiveVehicle.id}:${savedActiveVehicle.updatedAt}`} vehicle={savedActiveVehicle} />}
+      ) : null}
       {activeVehicle && !activeEvCar && <p className="mt-3 text-sm text-muted-foreground">Save your average consumption to enable route estimates.</p>}
       {activeEvCar?.chargingLimitsKnown === false && <p className="mt-3 text-sm text-muted-foreground">Some charging limits are unconfirmed. Charging estimates are available only for confirmed limits.</p>}
       {vehicles.length >= 25 && <p className="mt-3 text-sm text-muted-foreground">Your garage is full (25 vehicles). Remove a vehicle to add another.</p>}

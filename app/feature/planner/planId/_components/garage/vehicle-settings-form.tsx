@@ -1,34 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
+import { useAtomValue } from "jotai";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { BatterySlider } from "./battery-slider";
+import { cn } from "@/lib/utils";
+
+import type { EvCar } from "../constants/vehicle.types";
+import { BatteryInput } from "./battery-gauge";
+import { calcRangeKmForBatteryPct } from "./ev-calculator";
+import { arrivalReservePctAtom } from "./garage.atoms";
+import { BATTERY_TONES, getBatteryTone } from "./garage-formatters";
 import { useGarage } from "./garage-provider";
+import { RangeEfficiencyField } from "./range-efficiency-field";
 import type { SavedVehicle } from "./vehicle-api";
 
-export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle }) {
+export function VehicleSettingsForm({ vehicle, car }: { vehicle: SavedVehicle; car?: EvCar | null }) {
   const [battery, setBattery] = useState(vehicle.settings.startingBatteryPct);
-  const [nickname, setNickname] = useState(vehicle.nickname ?? "");
   const [consumption, setConsumption] = useState(vehicle.consumptionKwhPer100km?.toString() ?? "");
+  const reservePct = useAtomValue(arrivalReservePctAtom);
+  const rangeId = useId();
   const { mutation, authenticated, query } = useGarage();
   const valid = Number.isFinite(Number(consumption)) && Number(consumption) > 0 && Number(consumption) <= 99999.999;
-  const dirty = battery !== vehicle.settings.startingBatteryPct || nickname !== (vehicle.nickname ?? "") || Number(consumption) !== vehicle.consumptionKwhPer100km;
+  const dirty = battery !== vehicle.settings.startingBatteryPct || Number(consumption) !== vehicle.consumptionKwhPer100km;
+  const tone = BATTERY_TONES[getBatteryTone(battery, reservePct)];
+  // Preview with the consumption being edited, so the range reacts before saving.
+  const previewCar = car && valid ? { ...car, consumptionKwhPer100km: Number(consumption) } : car;
+  const rangeKm = previewCar ? Math.round(calcRangeKmForBatteryPct(battery, previewCar)) : null;
+
   return (
-    <form className="mt-4 grid gap-4 rounded-lg border border-border bg-card p-4" onSubmit={(event) => {
-      event.preventDefault();
-      if (!valid || mutation.isPending) return;
-      mutation.mutate({ kind: "update", id: vehicle.id, patch: {
-        nickname, consumptionKwhPer100km: Number(consumption), settings: { startingBatteryPct: battery },
-      } });
-    }}>
-      <div className="flex items-center justify-between gap-3"><label htmlFor="starting-battery" className="text-sm font-medium">Starting battery</label><span className="text-sm font-semibold tabular-nums">{battery}%</span></div>
-      <BatterySlider id="starting-battery" value={battery} onChange={setBattery} disabled={mutation.isPending} />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="grid gap-2"><label htmlFor="saved-vehicle-nickname" className="text-sm font-medium">Nickname</label><Input id="saved-vehicle-nickname" maxLength={100} value={nickname} onChange={(event) => setNickname(event.target.value)} disabled={mutation.isPending} /></div>
-        <div className="grid gap-2"><label htmlFor="saved-vehicle-consumption" className="text-sm font-medium">Consumption (kWh/100 km)</label><Input id="saved-vehicle-consumption" type="number" min="0.001" max="99999.999" step="0.001" required value={consumption} onChange={(event) => setConsumption(event.target.value)} disabled={mutation.isPending} /></div>
+    <form
+      className="grid gap-5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!valid || mutation.isPending) return;
+        mutation.mutate({ kind: "update", id: vehicle.id, patch: {
+          consumptionKwhPer100km: Number(consumption), settings: { startingBatteryPct: battery },
+        } });
+      }}
+    >
+      <div>
+        <div className="mb-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+          <label htmlFor="starting-battery" className="text-sm font-medium text-foreground">Starting battery</label>
+          <p className="flex items-baseline gap-2">
+            {rangeKm !== null && (
+              <span id={rangeId} className="text-xs text-muted-foreground">
+                about <span className="font-medium tabular-nums text-foreground">{rangeKm.toLocaleString("en-US")} km</span> of range
+              </span>
+            )}
+            <span className={cn("text-2xl font-semibold leading-none tabular-nums", tone.valueText)}>
+              {battery}
+              <span className="text-sm font-medium text-muted-foreground">%</span>
+            </span>
+          </p>
+        </div>
+        <BatteryInput
+          id="starting-battery"
+          value={battery}
+          onChange={setBattery}
+          reservePct={reservePct}
+          disabled={mutation.isPending}
+          ariaDescribedBy={rangeKm !== null ? rangeId : undefined}
+        />
+        <p className="mt-2 text-xs text-muted-foreground">
+          Drag the battery or use the arrow keys. The dashed line is your {reservePct}% arrival reserve.
+        </p>
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">{dirty ? "Apply changes to update route estimates." : authenticated ? "Settings saved to your account." : "Settings used only for this guest plan."}</p><Button type="submit" disabled={!dirty || !valid || mutation.isPending || (authenticated && query.isError)}>{mutation.isPending ? "Applying…" : authenticated ? "Save settings" : "Apply to trip"}</Button></div>
+
+      <RangeEfficiencyField
+        id="saved-vehicle-range"
+        batteryKwh={vehicle.batteryCapacityKwh}
+        officialRangeKm={vehicle.rangeKm}
+        rangeStandard={vehicle.catalog?.rangeStandard}
+        consumption={consumption}
+        onConsumptionChange={setConsumption}
+        disabled={mutation.isPending}
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+        <p className="text-xs text-muted-foreground">
+          {dirty ? "Apply changes to update route estimates." : authenticated ? "Settings saved to your account." : "Settings used only for this guest plan."}
+        </p>
+        <Button type="submit" disabled={!dirty || !valid || mutation.isPending || (authenticated && query.isError)}>
+          {mutation.isPending ? "Applying…" : authenticated ? "Save settings" : "Apply to trip"}
+        </Button>
+      </div>
     </form>
   );
 }

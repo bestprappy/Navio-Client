@@ -117,22 +117,15 @@ export function TripPlaceCard({
               <h3 className="text-base leading-snug font-semibold wrap-break-word text-foreground">
                 {item.name}
               </h3>
-              <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
-                <span>Charging stop</span>
-                {chargerDetails?.operatorName ? (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <span>{chargerDetails.operatorName}</span>
-                  </>
-                ) : null}
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+                <span>
+                  Charging stop{chargerDetails?.operatorName ? `, ${chargerDetails.operatorName}` : ""}
+                </span>
                 {chargerDetails?.locked ? (
-                  <>
-                    <span aria-hidden="true">·</span>
-                    <span className="inline-flex items-center gap-1 text-foreground">
-                      <LockKeyhole className="size-3.5" aria-hidden="true" />
-                      Kept when optimizing
-                    </span>
-                  </>
+                  <span className="inline-flex items-center gap-1 rounded-sm bg-muted px-1.5 py-0.5 text-xs font-medium text-foreground">
+                    <LockKeyhole className="size-3" aria-hidden="true" />
+                    Kept when optimizing
+                  </span>
                 ) : null}
               </p>
             </div>

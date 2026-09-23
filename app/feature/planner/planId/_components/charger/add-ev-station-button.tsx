@@ -141,7 +141,7 @@ export function AddEvStationButton({
           ? undefined
           : "Add a place or choose a destination before searching for EV stations"
       }
-      className="h-11 min-w-0 w-full rounded-lg border-charging/30 bg-charging/10 text-charging hover:bg-charging/20 hover:text-charging disabled:cursor-not-allowed"
+      className="h-11 min-w-0 w-full rounded-lg border-charging/30 bg-charging/10 text-charging hover:bg-charging/20 hover:text-charging dark:border-charging/30 dark:bg-charging/10 dark:hover:bg-charging/20 disabled:cursor-not-allowed"
       onClick={openStationList}
     >
       <Zap className="size-4" aria-hidden="true" />
