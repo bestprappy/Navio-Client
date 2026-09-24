@@ -128,7 +128,7 @@ export async function vehicleRequest<T>(path: string, schema: z.ZodType<T>, init
       : response.status === 403 ? "Your account cannot access this garage."
       : response.status === 409 ? "Your garage changed elsewhere. Refresh and try again."
       : response.status >= 500 ? "Your garage is temporarily unavailable. Please try again."
-      : details.success ? Object.values(details.data.validationErrors ?? {}).join(" ") || details.data.message
+      : details.success ? Object.entries(details.data.validationErrors ?? {}).map(([field, message]) => `${field}: ${message}`).join(" ") || details.data.message
       : "Could not save your vehicle. Please try again.";
     throw new VehicleApiError(message, response.status);
   }
@@ -159,5 +159,38 @@ export async function executeVehicleCommand(command: VehicleCommand): Promise<Sa
     consumptionProvenance: command.consumptionProvenance,
     energySelection: command.energySelection,
   } : command.kind === "custom" ? { ...customVehicleSchema.parse(command.vehicle), isDefault: true } : command.patch;
-  return vehicleRequest(path, savedVehicleSchema, { method: command.kind === "update" ? "PATCH" : "POST", body: JSON.stringify(body) });
+  const selection = command.kind === "update" ? command.patch.energySelection
+    : command.kind === "custom" ? command.vehicle.energySelection : command.energySelection;
+  let saved: SavedVehicle;
+  try {
+    saved = await vehicleRequest(path, savedVehicleSchema, { method: command.kind === "update" ? "PATCH" : "POST", body: JSON.stringify(body) });
+  } catch (error) {
+    if (command.kind === "catalog" && selection && command.consumptionKwhPer100km == null
+      && error instanceof VehicleApiError && error.status === 400 && /must not be null/i.test(error.message)) {
+      throw new VehicleApiError("The connected garage service still requires the old consumption field. Its energy-selection update must be deployed before this vehicle can be added. No consumption value has been invented.", 409);
+    }
+    throw error;
+  }
+  if (selection) {
+    const requestedConsumption = command.kind === "update" ? command.patch.consumptionKwhPer100km
+      : command.kind === "custom" ? command.vehicle.consumptionKwhPer100km : command.consumptionKwhPer100km;
+    assertEnergySelectionApplied(saved, selection, requestedConsumption);
+  }
+  return saved;
+}
+
+/** Older services can ignore unknown commands and return HTTP 200 with the old vehicle. */
+function assertEnergySelectionApplied(saved: SavedVehicle, selection: EnergySelection, requestedConsumption: number | null | undefined) {
+  const profile = saved.energyProfile;
+  const matchingConsumption = profile?.consumptionKwhPer100km === saved.consumptionKwhPer100km;
+  const applied = profile && (selection === "CONFIRM_LEGACY"
+    ? profile.selectionMode === "LEGACY_UNCONFIRMED" && saved.legacyConsumptionConfirmed === true
+    : selection === "USER_OVERRIDE"
+      ? profile.selectionMode === "USER_OVERRIDE" && profile.modelKind === "CONSUMPTION"
+        && profile.consumptionSource === "USER_OBSERVED" && matchingConsumption
+        && saved.consumptionKwhPer100km === requestedConsumption
+      : profile.selectionMode === "CATALOG_DEFAULT" && matchingConsumption
+        && (selection !== "USE_RATED_RANGE" || profile.modelKind === "RATED_RANGE")
+        && (profile.modelKind === "CONSUMPTION" || saved.consumptionKwhPer100km === null));
+  if (!applied) throw new VehicleApiError("The garage service did not apply the requested energy model. The connected backend needs the energy-selection update; your trip's previous model has been kept.", 409);
 }

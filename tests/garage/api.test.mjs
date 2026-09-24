@@ -1,7 +1,7 @@
 // node --experimental-transform-types --test tests/garage/api.test.mjs
 import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
-import { executeVehicleCommand, listVehicles, listVehicleCatalog, customVehicleSchema } from "../../app/feature/planner/planId/_components/garage/vehicle-api.ts";
+import { executeVehicleCommand, listVehicles, listVehicleCatalog, customVehicleSchema, legacyEnergyProfile } from "../../app/feature/planner/planId/_components/garage/vehicle-api.ts";
 import { savedVehicleFixture, catalogFixture } from "./data.ts";
 
 const originalFetch = globalThis.fetch;
@@ -64,6 +64,34 @@ test("empty garages load normally and malformed responses fail visibly", async (
   assert.deepEqual(await listVehicles(), []);
   globalThis.fetch = async () => Response.json([{ id: "not-a-vehicle" }]);
   await assert.rejects(listVehicles(), /unexpected response/);
+});
+
+test("HTTP 200 from an old service cannot silently acknowledge ignored energy commands", async () => {
+  globalThis.fetch = async () => Response.json(savedVehicleFixture);
+  for (const energySelection of ["USE_RATED_RANGE", "RESET_DEFAULT", "USER_OVERRIDE", "CONFIRM_LEGACY"]) {
+    await assert.rejects(executeVehicleCommand({kind:"update",id:savedVehicleFixture.id,patch:{energySelection,consumptionKwhPer100km:17.5}}), /did not apply the requested energy model/);
+  }
+  // Ordinary old-client updates remain supported.
+  assert.equal((await executeVehicleCommand({kind:"update",id:savedVehicleFixture.id,patch:{nickname:"Car"}})).id,savedVehicleFixture.id);
+});
+
+test("catalogue null-consumption rejection identifies the obsolete backend without fabricating a value", async () => {
+  globalThis.fetch = async (_url,options) => {
+    assert.equal(JSON.parse(options.body).consumptionKwhPer100km,undefined);
+    return Response.json({message:"Validation failed",validationErrors:{consumptionKwhPer100km:"must not be null"}},{status:400});
+  };
+  await assert.rejects(executeVehicleCommand({kind:"catalog",catalogId:catalogFixture.id,startingBatteryPct:80,energySelection:"USE_DEFAULT"}), /connected garage service still requires the old consumption field/);
+});
+
+test("confirmed rated-range and custom commands return the server model and reject unchanged values", async () => {
+  const range={...savedVehicleFixture,consumptionKwhPer100km:null,energyProfile:{...legacyEnergyProfile(savedVehicleFixture),modelKind:"RATED_RANGE",selectionMode:"CATALOG_DEFAULT",consumptionKwhPer100km:null}};
+  globalThis.fetch=async ()=>Response.json(range);
+  assert.equal((await executeVehicleCommand({kind:"catalog",catalogId:catalogFixture.id,startingBatteryPct:80,energySelection:"USE_DEFAULT"})).energyProfile.modelKind,"RATED_RANGE");
+  const custom={...savedVehicleFixture,consumptionKwhPer100km:19,energyProfile:{...legacyEnergyProfile(savedVehicleFixture),selectionMode:"USER_OVERRIDE",consumptionSource:"USER_OBSERVED",consumptionKwhPer100km:19}};
+  globalThis.fetch=async ()=>Response.json(custom);
+  const command={kind:"update",id:custom.id,patch:{energySelection:"USER_OVERRIDE",consumptionKwhPer100km:19}};
+  assert.equal((await executeVehicleCommand(command)).consumptionKwhPer100km,19);
+  await assert.rejects(executeVehicleCommand({...command,patch:{...command.patch,consumptionKwhPer100km:20}}), /did not apply/);
 });
 
 test("session, network, timeout and gateway failures never simulate successful saves", async () => {
