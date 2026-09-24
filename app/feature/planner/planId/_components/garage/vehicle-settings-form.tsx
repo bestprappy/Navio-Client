@@ -45,7 +45,7 @@ export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle }) {
       } });
     }}>
       <div className="flex items-center justify-between gap-3"><label htmlFor="starting-battery" className="text-sm font-medium">Starting battery</label><span className="text-sm font-semibold tabular-nums">{battery}%</span></div>
-      <BatterySlider id="starting-battery" value={battery} onChange={(value) => setTripEnergy((current) => ({ initialSocPct: value, vehicleSnapshot: current?.vehicleSnapshot ?? null }))} />
+      <BatterySlider id="starting-battery" value={battery} onChange={(value) => setTripEnergy((current) => ({ ...current, initialSocPct: value, vehicleSnapshot: current?.vehicleSnapshot ?? null }))} />
       <p className="text-xs text-muted-foreground">Battery at the start of Day 1. Updates this trip immediately. {tripEnergy?.initialSocPct == null && "Using an assumed starting value until you adjust it."}</p>
       <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
         <div className="grid min-w-0 gap-2 content-start"><label htmlFor="saved-vehicle-nickname" className="text-sm font-medium">Nickname (Optional)</label><Input id="saved-vehicle-nickname" maxLength={100} value={nickname} onChange={(event) => setNickname(event.target.value)} disabled={mutation.isPending} /></div>

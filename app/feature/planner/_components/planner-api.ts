@@ -226,12 +226,16 @@ export async function savePlannerSnapshot(
   if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations) {
     const server = await getPlannerSnapshot(tripId);
     const energySupported = server.capabilities?.includes("trip-energy-v1");
+    const garageSupported = server.capabilities?.includes("trip-garage-v1");
     const observationsSupported = server.capabilities?.includes("observed-soc-v1");
     if (!energySupported) syncedEnergy = undefined;
+    // Preserve the whole energy state in the recoverable draft when membership cannot sync.
+    if (energyState?.garageVehicleIds !== undefined && !garageSupported) syncedEnergy = undefined;
     const destinationsSupported = server.capabilities?.includes("day-destinations");
     const anchorsSupported = server.capabilities?.includes("day-anchors");
     const targetsSupported = server.capabilities?.includes("charge-targets");
     localOnlySettings = Boolean((requiresEnergy && !energySupported) || (requiresObservations && !observationsSupported) || (requiresDestinations && !destinationsSupported) || (requiresAnchors && !anchorsSupported) || (requiresTargets && !targetsSupported));
+    if (energyState?.garageVehicleIds !== undefined && !garageSupported) localOnlySettings = true;
     syncedBlocks = blocks.map((block) => ({
       ...block,
       ...(!destinationsSupported ? { destination: undefined } : {}),

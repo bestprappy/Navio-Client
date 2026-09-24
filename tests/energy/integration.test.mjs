@@ -6,7 +6,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
   return nextResolve(specifier, context);
 } });
 const { projectCanonicalTrip, projectCanonicalCharging } = await import("../../app/feature/planner/planId/_components/garage/trip-energy-projection.ts");
-const { snapshotTripVehicle, tripEnergyStateAtom } = await import("../../app/feature/planner/planId/_components/garage/trip-energy-state.ts");
+const { snapshotTripVehicle, tripEnergyStateAtom, tripGarageIds, addTripVehicle, removeTripVehicle, tripEnergyStateSchema } = await import("../../app/feature/planner/planId/_components/garage/trip-energy-state.ts");
 const { activeEvCarAtom, garageVehiclesSnapshotAtom, garageActiveIdSnapshotAtom, startingBatteryPctAtom } = await import("../../app/feature/planner/planId/_components/garage/garage.atoms.ts");
 const { savedVehicleForPlanner } = await import("../../app/feature/planner/planId/_components/garage/vehicle-mappers.ts");
 const { savedVehicleFixture } = await import("../garage/data.ts");
@@ -21,6 +21,39 @@ const place = (id, lng, observation) => ({ type:"place",id,placeId:id,name:id,ad
 const blocks = [{id:"d1",kind:"itinerary",date:"2026-09-01",title:"Day 1",colorId:"mint",items:[place("a",100),place("b",101,{socPct:68})]},
   {id:"d2",kind:"itinerary",date:"2026-09-02",title:"Day 2",colorId:"mint",items:[place("c",101),place("d",102)]}];
 const segments = [{blockId:"d1",fromItemId:"a",toItemId:"b",distanceMeters:28000,status:"routed"}, {blockId:"d2",fromItemId:"c",toItemId:"d",distanceMeters:10000,status:"fallback"}];
+
+test("trip garages stay independent, survive reload and never delete reusable vehicles", () => {
+  const library = [structuredClone(savedVehicleFixture)];
+  const original = structuredClone(library);
+  assert.deepEqual(tripGarageIds(undefined), []);
+  const first = addTripVehicle({initialSocPct: 42, vehicleSnapshot:null}, library[0]);
+  const second = addTripVehicle(undefined, library[0]);
+  assert.deepEqual(tripGarageIds(tripEnergyStateSchema.parse(JSON.parse(JSON.stringify(first)))), [library[0].id]);
+  assert.equal(first.initialSocPct, 42);
+  const removed = removeTripVehicle(first, library[0].id);
+  assert.deepEqual(tripGarageIds(removed), []);
+  assert.equal(removed.vehicleSnapshot, null);
+  assert.equal(removed.initialSocPct, 42);
+  assert.deepEqual(tripGarageIds(second), [library[0].id]);
+  assert.deepEqual(library, original);
+  assert.equal(addTripVehicle(first, library[0]).garageVehicleIds.length, 1);
+  assert.deepEqual(tripGarageIds({initialSocPct:null,vehicleSnapshot:snapshotTripVehicle(library[0])}), [library[0].id]);
+});
+
+test("trip garage membership remains local on an older server instead of being silently acknowledged", async () => {
+  const previous = globalThis.fetch;
+  let sent;
+  globalThis.fetch = async (_url, options) => {
+    if (options?.method === "PUT") { sent = JSON.parse(options.body); return Response.json({version:2,savedAt:new Date().toISOString()}); }
+    return Response.json({blocks:[],budget:{currency:"THB",amount:0,expenses:[]},version:1,savedAt:new Date().toISOString(),capabilities:["trip-energy-v1"]});
+  };
+  try {
+    const result = await savePlannerSnapshot("trip", [], {currency:"THB",amount:0,expenses:[]}, 1, addTripVehicle(undefined,savedVehicleFixture));
+    assert.equal(sent.energyState, undefined);
+    assert.equal(result.localOnlySettings, true);
+    assert.equal(result.syncedEnergyState, undefined);
+  } finally { globalThis.fetch = previous; }
+});
 test("canonical itinerary adapter carries observed state across days and exposes missing/fallback distance", () => {
   const result=projectCanonicalTrip(blocks,segments,car,100);
   assert.equal(result.days.get("d1").batteryByItemId.get("b").arrivalPct,72);

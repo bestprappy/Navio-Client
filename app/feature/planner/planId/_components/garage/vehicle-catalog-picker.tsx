@@ -33,13 +33,13 @@ export function VehicleCatalogPicker({ selectedId, onSelect, disabled }: Vehicle
       <div className="relative">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <Input value={search} onChange={(event) => setSearch(event.target.value)} className="pl-9"
-          placeholder="Search make, model or trim" aria-label="Search Thailand vehicles" />
+          placeholder="Search make, model or trim" aria-label="Search EV vehicles" />
       </div>
-      {query.isPending ? <p role="status" className="flex items-center gap-2 py-4 text-muted-foreground"><Loader2 className="size-4 animate-spin" />Loading Thailand vehicles…</p>
+      {query.isPending ? <p role="status" className="flex items-center gap-2 py-4 text-muted-foreground"><Loader2 className="size-4 animate-spin" />Loading EV vehicles…</p>
         : query.isError ? <div role="alert" className="grid gap-2"><p>{query.error.message}</p><Button variant="outline" onClick={() => void query.refetch()}>Try again</Button></div>
         : vehicles.length === 0 ? <p role="status" className="py-4 text-muted-foreground">No matching vehicles. Try another search or enter a custom EV.</p>
         : <fieldset disabled={disabled} className="grid max-h-80 gap-3 overflow-y-auto p-1">
-          <legend className="sr-only">Thailand vehicle catalogue</legend>
+          <legend className="sr-only">NAVIO vehicle catalogue</legend>
           {vehicles.map((vehicle) => (
             <label key={vehicle.id} className={cn("flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors focus-within:ring-2 focus-within:ring-ring",
               selectedId === vehicle.id ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-muted/50", disabled && "cursor-wait opacity-70")}>

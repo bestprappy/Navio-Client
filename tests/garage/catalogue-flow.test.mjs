@@ -36,7 +36,7 @@ for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" :
   const state = hooks(), commands = [];
   const { AddVehicleDialog } = component(`${garage}add-vehicle-dialog.tsx`, {
     react: state.react,
-    "./garage-provider": { useGarage: () => ({ authenticated, mutation: { mutateAsync: async command => commands.push(command) } }) },
+    "./garage-provider": { useGarage: () => ({ authenticated, libraryVehicles: [{...savedVehicleFixture, catalog:null}], mutation: { mutateAsync: async command => commands.push(command) } }) },
     "./custom-vehicle-form": { CustomVehicleForm: "CustomVehicleForm" },
     "./vehicle-catalog-picker": { VehicleCatalogPicker: "VehicleCatalogPicker" },
     "./vehicle-api": { userObservedConsumption: { consumptionSource: "USER_OBSERVED", consumptionMeasurementBasis: "UNKNOWN" } },
@@ -45,10 +45,10 @@ for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" :
   const render = () => { state.reset(); return elements(AddVehicleDialog({ onClose() {} })); };
   let tree = render();
   assert.ok(tree.find(node => node.type === "VehicleCatalogPicker"));
-  assert.equal(tree.find(node => node.props?.children === "Thailand catalogue").props["aria-pressed"], true);
+  assert.equal(tree.find(node => node.props?.children === "EV Vehicle List").props["aria-pressed"], true);
   tree.find(node => node.type === "VehicleCatalogPicker").props.onSelect(catalogFixture);
   tree = render();
-  assert.ok(tree.find(node => node.props?.children === (authenticated ? "Save to garage" : "Use for this trip")));
+  assert.ok(tree.find(node => node.props?.children === "Use for this trip"));
   tree.find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
   await Promise.resolve();
   assert.equal(commands[0].kind, "catalog");
@@ -61,6 +61,17 @@ for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" :
   assert.ok(custom);
   await custom.props.onSave({ make: "Test", model: "Custom" });
   assert.equal(commands[1].kind, "custom");
+  tree.find(node => node.props?.children === "EV Vehicle List").props.onClick();
+  tree = render();
+  tree.find(node => node.props?.children === "My custom EVs").props.onClick();
+  tree = render();
+  assert.equal(tree.some(node => node.type === "VehicleCatalogPicker"), false);
+  tree.find(node => node.type === "input" && node.props.name === "saved-custom-vehicle").props.onChange();
+  tree = render();
+  tree.find(node => node.type === "form").props.onSubmit({preventDefault(){}});
+  await Promise.resolve();
+  assert.equal(commands[2].kind, "reuse");
+  assert.equal(commands[2].id, savedVehicleFixture.id);
 });
 
 test("catalogue picker browses, filters and selects catalogue data", () => {
