@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { readPlannerDraft, writePlannerDraft, clearPlannerDraft } from "@/app/feature/planner/_components/planner-draft";
+import { registerPlannerAutosaveFlush } from "@/app/feature/planner/_components/planner-autosave-flush";
 import { useTripMetadata } from "@/app/feature/planner/_components/use-trip-metadata";
 import { ensureItineraryDays } from "../itinerary/itinerary-days";
 import { tripMetadataPlannerVersionAtom } from "@/app/feature/planner/_components/trip-metadata-sync.atoms";
@@ -115,6 +116,8 @@ export function PlannerPersistence({
   );
   const latestStateRef = useRef(plannerState);
   const skipAutosaveOnceRef = useRef(false);
+  /** The debounced save that has not fired yet, so Publish can force it to. */
+  const pendingSaveRef = useRef<{ variables: SaveVariables; timeoutId: number } | null>(null);
   const creationAttemptRef = useRef<string | null>(null);
   const persistedPlanId = isPersistedTripId(planId) ? planId : null;
   const queryKey = ["planner", persistedPlanId] as const;
@@ -250,6 +253,33 @@ export function PlannerPersistence({
     },
   });
   const saveState = saveMutation.mutate;
+  const saveStateAsync = saveMutation.mutateAsync;
+
+  /**
+   * Runs the pending debounced save now and reports the version that is saved.
+   *
+   * <p>Not wrapped in a mutation of its own: it calls the autosave mutation, so a
+   * save already in flight is awaited through that mutation's scope. A caller must
+   * therefore not hold the same scope, or the two would wait on each other.
+   */
+  const flushAutosave = useCallback(async () => {
+    const pending = pendingSaveRef.current;
+    if (pending) {
+      window.clearTimeout(pending.timeoutId);
+      pendingSaveRef.current = null;
+      await saveStateAsync(pending.variables);
+    }
+    const version = plannerVersionRef.current;
+    if (version === null) {
+      throw new PlannerApiError("This plan has not finished saving yet.", 409);
+    }
+    return version;
+  }, [saveStateAsync]);
+
+  useEffect(() => {
+    if (!persistedPlanId) return;
+    return registerPlannerAutosaveFlush(persistedPlanId, flushAutosave);
+  }, [persistedPlanId, flushAutosave]);
 
   const persistMissingTrip = useCallback(() => {
     if (!planId) return;
@@ -472,12 +502,19 @@ export function PlannerPersistence({
 
     const statusTimeoutId = window.setTimeout(() => setStatus("saving"), 0);
     const saveTimeoutId = window.setTimeout(() => {
+      pendingSaveRef.current = null;
       saveState({ state: plannerState, serialized });
     }, AUTOSAVE_DELAY_MS);
+    pendingSaveRef.current = {
+      variables: { state: plannerState, serialized },
+      timeoutId: saveTimeoutId,
+    };
 
     return () => {
       window.clearTimeout(statusTimeoutId);
       window.clearTimeout(saveTimeoutId);
+      // A flush may have already consumed and replaced this entry; only clear our own.
+      if (pendingSaveRef.current?.timeoutId === saveTimeoutId) pendingSaveRef.current = null;
     };
   }, [persistedPlanId, plannerQuery.isSuccess, plannerState, saveState, serverBlockCount]);
 

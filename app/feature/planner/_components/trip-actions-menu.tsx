@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { Globe, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
+import { PublishPlanDialog } from "./share/publish-plan-dialog";
+import { usePublication } from "./share/use-publication";
 import { useDeleteTrip } from "./use-delete-trip";
 
 type TripActionsMenuProps = {
@@ -34,9 +36,15 @@ type TripActionsMenuProps = {
 export function TripActionsMenu({ tripId, tripTitle, redirectTo, className }: TripActionsMenuProps) {
   const router = useRouter();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isPublishOpen, setIsPublishOpen] = useState(false);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
   const deleteMutation = useDeleteTrip(tripId);
   const isDeleting = deleteMutation.isPending;
+  // Only while the menu is open: the dashboard renders one of these per trip card,
+  // and a link's state is not worth a request until someone looks for it.
+  const publicationQuery = usePublication(tripId, isMenuOpen);
+  const isPublished = publicationQuery.data?.published === true;
 
   function handleConfirmDelete() {
     deleteMutation.mutate(undefined, {
@@ -49,7 +57,7 @@ export function TripActionsMenu({ tripId, tripTitle, redirectTo, className }: Tr
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger
           render={
             <Button
@@ -64,7 +72,11 @@ export function TripActionsMenu({ tripId, tripTitle, redirectTo, className }: Tr
         >
           <MoreHorizontal className="size-4" aria-hidden="true" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem onClick={() => setIsPublishOpen(true)}>
+            <Globe aria-hidden="true" />
+            {isPublished ? "Manage published link" : "Publish plan as a link"}
+          </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
             onClick={() => {
@@ -77,6 +89,13 @@ export function TripActionsMenu({ tripId, tripTitle, redirectTo, className }: Tr
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <PublishPlanDialog
+        tripId={tripId}
+        tripTitle={tripTitle}
+        open={isPublishOpen}
+        onOpenChange={setIsPublishOpen}
+      />
 
       <Dialog
         open={isConfirmOpen}
