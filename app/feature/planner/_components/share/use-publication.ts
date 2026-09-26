@@ -75,11 +75,13 @@ export function usePublishPlan(tripId: string) {
       expectedRevision,
       listInExplore,
       authorDisplayName,
+      title,
     }: {
       options: PublicationOptions;
       expectedRevision: number | null;
       listInExplore: boolean;
       authorDisplayName: string | null;
+      title: string;
     }): Promise<Publication> => {
       // Null means no planner is mounted for this trip (the dashboard entry
       // point), so nothing local can be pending and the server's version is
@@ -94,6 +96,7 @@ export function usePublishPlan(tripId: string) {
         options,
         listInExplore,
         authorDisplayName,
+        title,
       });
     },
     onSuccess: (publication) => {

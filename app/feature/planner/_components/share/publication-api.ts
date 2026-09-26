@@ -31,6 +31,7 @@ export type Publication =
       listedInExplore: boolean;
       /** The byline shown on the published plan, or null for "a Navio traveler". */
       authorDisplayName: string | null;
+      title: string | null;
     };
 
 export type PublicAnchor = { name: string; redacted: boolean };
@@ -130,6 +131,7 @@ function toPublication(value: unknown): Publication {
     staleSanitizer: value.staleSanitizer === true,
     listedInExplore: value.listedInExplore === true,
     authorDisplayName: readAuthorName(value.authorDisplayName),
+    title: readAuthorName(value.title),
   };
 }
 
@@ -172,6 +174,8 @@ export type PublishPlanPayload = {
   listInExplore: boolean;
   /** The byline the owner saw in the dialog; null publishes without a name. */
   authorDisplayName: string | null;
+  /** Name frozen in the public copy and Explore card. */
+  title: string;
 };
 
 export async function publishPlan(
