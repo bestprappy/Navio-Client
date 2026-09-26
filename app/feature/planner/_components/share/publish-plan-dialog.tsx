@@ -29,6 +29,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 
 import { PlannerApiError } from "../planner-api";
 import {
@@ -89,6 +90,8 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
   const [hasEditedOptions, setHasEditedOptions] = useState(false);
   /** Draft Explore choice for a first publish. Once published, the server's value is the truth. */
   const [draftListInExplore, setDraftListInExplore] = useState(false);
+  const [publicTitle, setPublicTitle] = useState(tripTitle);
+  const [hasEditedTitle, setHasEditedTitle] = useState(false);
 
   const publication = publicationQuery.data;
   const isPublished = publication?.published === true;
@@ -109,6 +112,11 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
     setOptions(publication.published ? publication.options : NO_PUBLICATION_OPTIONS);
   }, [publication, hasEditedOptions]);
 
+  useEffect(() => {
+    if (hasEditedTitle) return;
+    setPublicTitle(publication?.published ? publication.title ?? tripTitle : tripTitle);
+  }, [publication, tripTitle, hasEditedTitle]);
+
   // A fresh open is a fresh decision; nothing from the last visit carries over.
   useEffect(() => {
     if (open) return;
@@ -116,6 +124,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
     setIsConfirmingStop(false);
     setHasEditedOptions(false);
     setDraftListInExplore(false);
+    setHasEditedTitle(false);
     publishMutation.reset();
     stopSharingMutation.reset();
     listingMutation.reset();
@@ -134,7 +143,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
     publishMutation.isPending || stopSharingMutation.isPending || listingMutation.isPending;
   const needsUpdate =
     publication?.published === true &&
-    (publication.hasUnpublishedChanges || publication.staleSanitizer || optionsChanged);
+    (publication.hasUnpublishedChanges || publication.staleSanitizer || optionsChanged || publicTitle.trim() !== (publication.title ?? tripTitle));
 
   function updateOption(key: keyof PublicationOptions, checked: boolean) {
     setHasEditedOptions(true);
@@ -148,6 +157,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
         expectedRevision: publication?.published ? publication.revision : null,
         listInExplore: listedInExplore,
         authorDisplayName: ownerName,
+        title: publicTitle.trim(),
       },
       { onSuccess: () => setHasEditedOptions(false) },
     );
@@ -207,7 +217,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
               isLoading={previewQuery.isPending}
               isError={previewQuery.isError}
               onRetry={() => void previewQuery.refetch()}
-              plan={previewQuery.data}
+              plan={previewQuery.data ? { ...previewQuery.data, title: publicTitle.trim() || previewQuery.data.title } : undefined}
             />
           ) : publicationQuery.isPending ? (
             <div className="space-y-3" aria-busy="true">
@@ -227,6 +237,10 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
             </div>
           ) : (
             <div className="space-y-6">
+              <label className="flex flex-col gap-2 text-sm font-medium">Shared plan name
+                <Input value={publicTitle} maxLength={120} disabled={isBusy} onChange={(event) => { setHasEditedTitle(true); setPublicTitle(event.target.value); }} placeholder="Top 10 things to do in Japan" />
+                <span className="text-xs font-normal text-muted-foreground">This name appears on the shared page and Explore. Your private trip keeps its own name.</span>
+              </label>
               <section aria-label="Who can see this plan" className="space-y-2">
                 <AccessRow
                   icon={<UserRound className="size-4" aria-hidden="true" />}
