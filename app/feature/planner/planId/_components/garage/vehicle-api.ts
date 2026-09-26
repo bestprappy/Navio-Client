@@ -17,11 +17,11 @@ export const vehicleSettingsSchema = z.object({
 
 export const vehicleCatalogSchema = z.object({
   id: z.string().min(1),
-  make: z.string().min(1), model: z.string().min(1), trim: z.string().min(1),
+  make: z.string().min(1), model: z.string().min(1), trim: z.string(),
   year: z.number().int().min(1900).max(2200).nullable(),
-  market: z.literal("TH"),
+  market: z.string().regex(/^[A-Z]{2}$/),
   batteryCapacityKwh: positiveNumber,
-  batteryCapacityBasis: z.literal("MANUFACTURER_DECLARED"),
+  batteryCapacityBasis: z.enum(["MANUFACTURER_DECLARED", "USABLE", "GROSS", "UNKNOWN"]),
   rangeKm: positiveNumber,
   rangeStandard: z.enum(["NEDC", "WLTP", "EPA", "CLTC"]),
   connectorTypes: z.array(connectorSchema).min(1),
@@ -29,6 +29,7 @@ export const vehicleCatalogSchema = z.object({
   imageUrl: imageUrlSchema,
   sourceUrl: z.url({ protocol: /^https$/ }),
   verifiedAt: z.iso.date(),
+  version: z.number().int().nonnegative().nullable().optional(),
 });
 
 export const savedVehicleSchema = z.object({
@@ -103,6 +104,27 @@ export function listVehicles(signal?: AbortSignal) {
 
 export function listVehicleCatalog(signal?: AbortSignal) {
   return vehicleRequest("/catalog", z.array(vehicleCatalogSchema), { signal });
+}
+
+export const publishedCatalogPageSchema = z.object({ content: z.array(vehicleCatalogSchema), number: z.number().int(), totalElements: z.number().int(), totalPages: z.number().int() });
+async function publicCatalogRequest<T>(path: string, schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(`/api/vehicle-models${path}`, { cache: "no-store", signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20000)]) : AbortSignal.timeout(20000) });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new VehicleApiError("Could not reach the vehicle catalog. Try again.", 0);
+  }
+  if (!response.ok) throw new VehicleApiError(response.status === 404 ? "This vehicle is no longer available. Refresh the catalog and choose another." : "The vehicle catalog is unavailable. Try again.", response.status);
+  const parsed = schema.safeParse(await response.json().catch(() => null));
+  if (!parsed.success) throw new VehicleApiError("The catalog returned an unreadable response. Try again.", 502);
+  return parsed.data;
+}
+export function listPublishedVehicles(term: string, page: number, signal?: AbortSignal) {
+  return publicCatalogRequest(`?${new URLSearchParams({ term, page: String(page), size: "20" })}`, publishedCatalogPageSchema, signal);
+}
+export function getPublishedVehicle(id: string) {
+  return publicCatalogRequest(`/${encodeURIComponent(id)}`, vehicleCatalogSchema);
 }
 
 export async function executeVehicleCommand(command: VehicleCommand): Promise<SavedVehicle | null> {
