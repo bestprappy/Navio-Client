@@ -30,6 +30,13 @@ import {
   CarouselItem,
 } from "@/components/ui/carousel";
 import { ShareDialog } from "./share-dialog";
+import {
+  explorePlanSearchText,
+  type ExplorePlansPage,
+} from "./shared-plans/explore-plans-api";
+import { SharedPlanCard } from "./shared-plans/shared-plan-card";
+import { SharedPlansSection } from "./shared-plans/shared-plans-section";
+import { useExplorePlans } from "./shared-plans/use-explore-plans";
 
 type FilterSection = {
   title: string;
@@ -95,7 +102,13 @@ const FILTER_GROUPS: FilterGroup[] = [
   },
 ];
 
-export function ExplorePage() {
+type ExplorePageProps = {
+  /** First page of travellers' listed plans, fetched with the route; null if that failed. */
+  initialSharedPlans: ExplorePlansPage | null;
+};
+
+export function ExplorePage({ initialSharedPlans }: ExplorePageProps) {
+  const sharedPlans = useExplorePlans(initialSharedPlans);
   const [shareOpen, setShareOpen] = useAtom(shareDialogOpenAtom);
   const [sharePlanId, setSharePlanId] = useAtom(shareDialogPlanIdAtom);
   const [recentView, setRecentView] = useState<1 | 2 | 3 | 4>(1);
@@ -159,8 +172,24 @@ export function ExplorePage() {
     });
   }, [normalizedQuery, selectedFilters]);
 
+  // Travellers' plans match on the same terms as curated ones, so a search
+  // returns one list rather than two products side by side.
+  const filteredSharedPlans = useMemo(() => {
+    if (!normalizedQuery && selectedFilters.length === 0) return [];
+    const activeFilters = selectedFilters.map((filter) => filter.toLowerCase());
+    return sharedPlans.plans.filter((plan) => {
+      const text = explorePlanSearchText(plan);
+      return (
+        (!normalizedQuery || text.includes(normalizedQuery)) &&
+        activeFilters.every((filter) => text.includes(filter))
+      );
+    });
+  }, [normalizedQuery, selectedFilters, sharedPlans.plans]);
+
   const isFiltering = normalizedQuery.length > 0 || selectedFilters.length > 0;
   const visiblePlans = isFiltering ? filteredPlans : RECENT_PLANS;
+  const visibleSharedPlans = isFiltering ? filteredSharedPlans : [];
+  const resultCount = visiblePlans.length + visibleSharedPlans.length;
   const resultsLabel = isFiltering ? "Results" : "Recent plans";
 
   const scrollTrendingPlans = useCallback(
@@ -343,6 +372,22 @@ export function ExplorePage() {
           </ExploreErrorBoundary>
         ) : null}
 
+        {!isFiltering ? (
+          <ExploreErrorBoundary fallbackTitle="Shared plans unavailable">
+            <SharedPlansSection
+              plans={sharedPlans.plans}
+              total={sharedPlans.total}
+              isLoading={sharedPlans.isLoading}
+              isError={sharedPlans.isError}
+              isFetchingMore={sharedPlans.isFetchingMore}
+              hasMore={sharedPlans.hasMore}
+              loadMoreFailed={sharedPlans.loadMoreFailed}
+              onLoadMore={() => void sharedPlans.fetchMore()}
+              onRetry={() => void sharedPlans.refetch()}
+            />
+          </ExploreErrorBoundary>
+        ) : null}
+
         <ExploreErrorBoundary fallbackTitle="Recent plans unavailable">
           <section className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-3">
@@ -351,8 +396,8 @@ export function ExplorePage() {
                   {resultsLabel}
                 </h2>
                 {isFiltering ? (
-                  <p className="text-xs text-muted-foreground">
-                    {visiblePlans.length} matches found
+                  <p className="text-xs text-muted-foreground" role="status">
+                    {resultCount} {resultCount === 1 ? "match" : "matches"} found
                   </p>
                 ) : null}
               </div>
@@ -411,7 +456,7 @@ export function ExplorePage() {
                 </button>
               </div>
             </div>
-            {visiblePlans.length === 0 ? (
+            {resultCount === 0 ? (
               <div className="rounded-2xl border border-border bg-card px-6 py-10 text-center">
                 <p className="text-sm font-semibold text-foreground">
                   No plans match your search.
@@ -423,6 +468,9 @@ export function ExplorePage() {
             ) : null}
             {recentView === 1 ? (
               <div className="flex flex-col gap-6">
+                {visibleSharedPlans.map((plan) => (
+                  <SharedPlanCard key={plan.token} plan={plan} layout="row" />
+                ))}
                 {visiblePlans.map((plan) => {
                   const author = getUserById(plan.authorId);
                   if (!author) {
@@ -443,6 +491,9 @@ export function ExplorePage() {
             ) : null}
             {recentView === 2 ? (
               <div className="grid gap-6 sm:grid-cols-2">
+                {visibleSharedPlans.map((plan) => (
+                  <SharedPlanCard key={plan.token} plan={plan} />
+                ))}
                 {visiblePlans.map((plan) => {
                   const author = getUserById(plan.authorId);
                   if (!author) {
@@ -467,6 +518,9 @@ export function ExplorePage() {
                   recentView === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"
                 }`}
               >
+                {visibleSharedPlans.map((plan) => (
+                  <SharedPlanCard key={plan.token} plan={plan} />
+                ))}
                 {visiblePlans.map((plan) => {
                   const author = getUserById(plan.authorId);
                   if (!author) {
