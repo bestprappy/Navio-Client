@@ -7,13 +7,15 @@ import {
   describeAdminFailure,
   fetchAdminStatistics,
   fetchModerationEvents,
+  grantUserRole,
   moderateUser,
+  revokeUserRole,
   moderationReasonSchema,
   searchAdminUsers,
 } from "../../app/feature/admin/_components/admin-api.ts";
 import { adminUsersHref, readAdminUsersView } from "../../app/feature/admin/_components/admin-users-url.ts";
 import { isAllowedAdminUsersRoute } from "../../app/api/admin/users/admin-users-routes.ts";
-import { canUseAdminConsole, isAdministrator, readNavioRoles } from "../../lib/navio-roles.ts";
+import { canUseAdminConsole, isAdministrator, isOwner, readNavioRoles } from "../../lib/navio-roles.ts";
 import { statisticsFixture, TARGET_ID, userPageFixture } from "./data.ts";
 
 const originalFetch = globalThis.fetch;
@@ -52,6 +54,9 @@ test("only moderators and administrators see the admin console", () => {
   assert.equal(canUseAdminConsole(["USER", "MODERATOR"]), true);
   assert.equal(isAdministrator(["USER", "MODERATOR"]), false);
   assert.equal(isAdministrator(["ADMIN"]), true);
+  assert.equal(isAdministrator(["OWNER"]), true);
+  assert.equal(isOwner(["ADMIN"]), false);
+  assert.equal(isOwner(["OWNER"]), true);
 });
 
 test("the proxy forwards the console's routes and nothing else", () => {
@@ -62,12 +67,24 @@ test("the proxy forwards the console's routes and nothing else", () => {
   assert.equal(isAllowedAdminUsersRoute("POST", [TARGET_ID, "suspend"]), true);
   assert.equal(isAllowedAdminUsersRoute("POST", [TARGET_ID, "reactivate"]), true);
 
-  // Role changes have no UI, so the browser cannot reach them.
-  assert.equal(isAllowedAdminUsersRoute("POST", [TARGET_ID, "roles"]), false);
-  assert.equal(isAllowedAdminUsersRoute("DELETE", [TARGET_ID, "roles", "ADMIN"]), false);
+  assert.equal(isAllowedAdminUsersRoute("POST", [TARGET_ID, "roles"]), true);
+  assert.equal(isAllowedAdminUsersRoute("DELETE", [TARGET_ID, "roles", "ADMIN"]), true);
+  assert.equal(isAllowedAdminUsersRoute("DELETE", [TARGET_ID, "roles", "OWNER"]), false);
   assert.equal(isAllowedAdminUsersRoute("POST", ["statistics", "suspend"]), false);
   assert.equal(isAllowedAdminUsersRoute("GET", ["..", "..", "trips"]), false);
   assert.equal(isAllowedAdminUsersRoute("PATCH", [TARGET_ID]), false);
+});
+
+test("role changes send an audited reason and cannot proxy OWNER revocation", async () => {
+  const calls = respondWith(200, {
+    userId: TARGET_ID, roles: ["USER", "MODERATOR"], updatedAt: "2026-09-24T10:00:00Z",
+  });
+  await grantUserRole(TARGET_ID, "MODERATOR", "  Community work  ");
+  await revokeUserRole(TARGET_ID, "MODERATOR", "  Shift ended  ");
+  assert.equal(calls[0].url, `/api/admin/users/${TARGET_ID}/roles`);
+  assert.deepEqual(JSON.parse(calls[0].init.body), { role: "MODERATOR", reason: "Community work" });
+  assert.equal(calls[1].init.method, "DELETE");
+  assert.equal(new URL(calls[1].url, "https://navio.test").searchParams.get("reason"), "Shift ended");
 });
 
 test("the users URL round-trips and rejects values it does not understand", () => {
@@ -129,6 +146,7 @@ test("failure messages explain what happened in the console's words", () => {
     "Your account does not have access to this.",
   );
   assert.match(describeAdminFailure(401, null), /sign in again/i);
+  assert.match(describeAdminFailure(500, { message: "An unexpected error occurred" }), /try again/i);
 });
 
 test("a ban needs a real reason", () => {

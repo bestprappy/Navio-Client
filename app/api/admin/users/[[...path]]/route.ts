@@ -22,3 +22,4 @@ async function proxyAdminUsersRequest(
 
 export const GET = proxyAdminUsersRequest;
 export const POST = proxyAdminUsersRequest;
+export const DELETE = proxyAdminUsersRequest;

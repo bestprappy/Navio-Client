@@ -20,9 +20,10 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 type AdminUsersWorkspaceProps = {
   viewerIsAdmin: boolean;
+  viewerIsOwner: boolean;
 };
 
-export function AdminUsersWorkspace({ viewerIsAdmin }: AdminUsersWorkspaceProps) {
+export function AdminUsersWorkspace({ viewerIsAdmin, viewerIsOwner }: AdminUsersWorkspaceProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -138,7 +139,7 @@ export function AdminUsersWorkspace({ viewerIsAdmin }: AdminUsersWorkspaceProps)
         )}
       </section>
 
-      <AdminUserDrawer userId={view.userId} viewerIsAdmin={viewerIsAdmin} onClose={closeUser} />
+      <AdminUserDrawer userId={view.userId} viewerIsAdmin={viewerIsAdmin} viewerIsOwner={viewerIsOwner} onClose={closeUser} />
     </div>
   );
 }

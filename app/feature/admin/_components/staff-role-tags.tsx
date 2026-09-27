@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 import { roleLabel, staffRoles, type AdminRole } from "./admin-api";
 
@@ -8,16 +9,23 @@ type StaffRoleTagsProps = {
   fallback?: string;
 };
 
-/** Moderator and administrator tags. Every account is a member, so that is not repeated. */
+const ROLE_TONE: Record<AdminRole, string> = {
+  USER: "bg-muted/60 text-muted-foreground",
+  OWNER: "border-primary/30 bg-primary/15 text-primary",
+  ADMIN: "border-chart-4/30 bg-chart-4/15 text-chart-4",
+  MODERATOR: "border-warning/30 bg-warning/15 text-warning",
+};
+
+/** Highest role, with a distinct token-driven color and a readable label. */
 export function StaffRoleTags({ roles, fallback = "Member" }: StaffRoleTagsProps) {
   const staff = staffRoles(roles);
   if (staff.length === 0) {
-    return <span className="text-sm text-muted-foreground">{fallback}</span>;
+    return <Badge variant="outline" className="bg-muted/60 text-muted-foreground">{fallback}</Badge>;
   }
   return (
     <span className="inline-flex flex-wrap gap-1">
       {staff.map((role) => (
-        <Badge key={role} variant={role === "ADMIN" ? "default" : "secondary"}>
+        <Badge key={role} variant="outline" className={cn("border font-semibold", ROLE_TONE[role])}>
           {roleLabel(role)}
         </Badge>
       ))}
