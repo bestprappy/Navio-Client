@@ -60,6 +60,10 @@ export type PublicItem = {
   checklistTitle?: string;
   checklistLabels?: string[];
   charger?: PublicCharger;
+  placeId?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
 };
 
 export type PublicDay = {

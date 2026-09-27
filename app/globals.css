@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Generated Next build folders are ignored by Git so Tailwind scans source files only. */
+
 @custom-variant dark (&:is(.dark *));
 
 /* Slim, quiet scrollbars retain a visible thumb for mouse and keyboard users.

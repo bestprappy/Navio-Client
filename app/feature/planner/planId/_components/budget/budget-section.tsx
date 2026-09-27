@@ -10,6 +10,8 @@ import {
   Settings,
 } from "lucide-react";
 
+import { useAtomValue } from "jotai";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -21,15 +23,17 @@ import { ItemSelectModal } from "./item-select-modal";
 import { BudgetEditModal } from "./budget-edit-modal";
 import { BudgetSettingsModal } from "./budget-settings-modal";
 import { BreakdownModal } from "./breakdown-modal";
+import { plannerReadOnlyAtom } from "../overview/trip-builder.atoms";
 
 export function BudgetSection() {
   const b = useBudget();
+  const readOnly = useAtomValue(plannerReadOnlyAtom);
 
   return (
     <section className="px-4 pb-12 pt-2">
       <div className="mb-5 flex items-center justify-between pl-4">
         <h2 className="text-2xl font-bold text-foreground">Budgeting</h2>
-        <Button
+        {!readOnly && <Button
           type="button"
           size="lg"
           className="mr-4 gap-2 rounded-full px-6"
@@ -37,7 +41,7 @@ export function BudgetSection() {
         >
           <Plus className="size-4" aria-hidden="true" />
           Add expense
-        </Button>
+        </Button>}
       </div>
 
       <div className="mx-2 rounded-sm bg-card border p-5">
@@ -72,7 +76,7 @@ export function BudgetSection() {
               </div>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button
+              {!readOnly && <Button
                 type="button"
                 variant="secondary"
                 size="lg"
@@ -81,7 +85,7 @@ export function BudgetSection() {
               >
                 <Pencil className="size-4" aria-hidden="true" />
                 Edit budget
-              </Button>
+              </Button>}
               {b.budget > 0 && (
                 <div className="flex items-center gap-2 rounded-full bg-background px-4 py-2 text-sm font-semibold text-foreground">
                   <Coins
@@ -100,11 +104,11 @@ export function BudgetSection() {
               label="View breakdown"
               onClick={() => b.setActiveModal("breakdown")}
             />
-            <BudgetSideAction
+            {!readOnly && <BudgetSideAction
               icon={<Settings className="size-4" aria-hidden="true" />}
               label="Settings"
               onClick={() => b.setActiveModal("settings")}
-            />
+            />}
           </div>
         </div>
       </div>
@@ -114,7 +118,9 @@ export function BudgetSection() {
           <p className="text-lg font-semibold text-foreground">Expenses</p>
           {/* //TODO Add sorting in the future */}
         </div>
-        {b.expenses.length === 0 ? (
+        {b.expenses.length === 0 && readOnly ? (
+          <p className="text-sm text-muted-foreground">No expenses were shared with this plan.</p>
+        ) : b.expenses.length === 0 ? (
           <div className="flex items-center gap-3 rounded-sm border border-primary/30 bg-primary/5 p-4">
             <Info className="size-4 shrink-0 text-primary" aria-hidden="true" />
             <p className="text-sm font-medium text-primary">
@@ -128,8 +134,8 @@ export function BudgetSection() {
                 key={expense.id}
                 expense={expense}
                 currencyCode={b.currency.code}
-                onEdit={b.openExpenseModal}
-                onDelete={b.deleteExpense}
+                onEdit={readOnly ? undefined : b.openExpenseModal}
+                onDelete={readOnly ? undefined : b.deleteExpense}
               />
             ))}
           </div>

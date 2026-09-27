@@ -7,8 +7,9 @@ import { ArrowRight, Compass, Plus, Route } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button.variants";
 import { cn } from "@/lib/utils";
-import { PLANS } from "../../../explore/_components/data";
-import { PlanPreviewCard } from "../../../explore/_components/plan-preview-card";
+import { SharedPlanCard } from "../../../explore/_components/shared-plans/shared-plan-card";
+import { explorePlanSearchText } from "../../../explore/_components/shared-plans/explore-plans-api";
+import { useExplorePlans } from "../../../explore/_components/shared-plans/use-explore-plans";
 import type { TripResponse } from "../planner-api";
 import { TripSummaryCard } from "./trip-summary-card";
 import { getTripStatus, sortTrips } from "./trip-dashboard.utils";
@@ -87,12 +88,13 @@ function TripDashboardUpcoming() {
 function TripDashboardExplore() {
   const { upcomingTrips } = useTripDashboardContext();
   const destination = upcomingTrips[0]?.destinationName;
+  const shared = useExplorePlans(null);
   const matchingPlans = useMemo(() => {
     if (!destination) return [];
     const normalized = destination.toLocaleLowerCase();
-    return PLANS.filter((plan) => normalized.includes(plan.province.toLocaleLowerCase()));
-  }, [destination]);
-  const plans = matchingPlans.length ? matchingPlans : PLANS;
+    return shared.plans.filter((plan) => explorePlanSearchText(plan).includes(normalized));
+  }, [destination, shared.plans]);
+  const plans = matchingPlans.length ? matchingPlans : shared.plans;
 
   const recommendations = plans.slice(0, 3);
   return (
@@ -106,9 +108,10 @@ function TripDashboardExplore() {
           </div>
           <Link href="/explore" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-primary")}>Explore more<ArrowRight aria-hidden="true" className="size-4" /></Link>
         </div>
-        <div className="divide-y divide-border/50">
-          {recommendations.map((plan) => <div key={plan.id} className="py-2"><PlanPreviewCard plan={plan} /></div>)}
-          {!recommendations.length && <p className="p-4 text-sm text-muted-foreground">New itineraries will appear here when available.</p>}
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {recommendations.map((plan) => <SharedPlanCard key={plan.token} plan={plan} />)}
+          {!recommendations.length && !shared.isLoading && <p className="p-4 text-sm text-muted-foreground">New shared itineraries will appear here when available.</p>}
+          {shared.isLoading && <p className="p-4 text-sm text-muted-foreground">Loading shared itineraries…</p>}
         </div>
       </div>
       

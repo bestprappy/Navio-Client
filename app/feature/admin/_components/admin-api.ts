@@ -18,7 +18,7 @@ export const ADMIN_PAGE_SIZE = 20;
 export const REASON_MIN_LENGTH = 3;
 export const REASON_MAX_LENGTH = 2000;
 
-const roleSchema = z.enum(["USER", "MODERATOR", "ADMIN"]);
+const roleSchema = z.enum(["USER", "MODERATOR", "ADMIN", "OWNER"]);
 export const userStatusSchema = z.enum(["active", "suspended", "deleted"]);
 
 export const adminUserSummarySchema = z.object({
@@ -94,6 +94,12 @@ export const moderationResultSchema = z.object({
   updatedAt: z.string(),
 });
 
+export const roleAssignmentSchema = z.object({
+  userId: z.string().uuid(),
+  roles: z.array(roleSchema),
+  updatedAt: z.string(),
+});
+
 export const moderationReasonSchema = z
   .string()
   .trim()
@@ -109,6 +115,7 @@ export type AdminUserDetail = z.infer<typeof adminUserDetailSchema>;
 export type ModerationEvent = z.infer<typeof moderationEventSchema>;
 export type ModerationEventPage = z.infer<typeof moderationEventPageSchema>;
 export type ModerationResult = z.infer<typeof moderationResultSchema>;
+export type RoleAssignment = z.infer<typeof roleAssignmentSchema>;
 export type ModerationAction = "ban" | "unban";
 
 export type AdminUserSearch = {
@@ -161,6 +168,8 @@ export function describeAdminFailure(status: number, body: unknown, isMutation =
     case 502:
     case 504:
       return "Navio is temporarily unavailable. Try again in a moment.";
+    case 500:
+      return "Navio could not load this information. Try again in a moment.";
     default:
       return upstream ?? "The Navio service could not complete this. Try again.";
   }
@@ -170,7 +179,7 @@ async function adminRequest<T>(
   path: string,
   schema: z.ZodType<T>,
   operation: string,
-  init?: { method: "POST"; body: unknown },
+  init?: { method: "POST" | "DELETE"; body?: unknown },
 ): Promise<T> {
   let response: Response;
   try {
@@ -178,10 +187,10 @@ async function adminRequest<T>(
       method: init?.method ?? "GET",
       cache: "no-store",
       credentials: "same-origin",
-      headers: init
+      headers: init?.body !== undefined
         ? { "Content-Type": "application/json", Accept: "application/json" }
         : { Accept: "application/json" },
-      body: init ? JSON.stringify(init.body) : undefined,
+      body: init?.body !== undefined ? JSON.stringify(init.body) : undefined,
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
   } catch (cause) {
@@ -199,7 +208,8 @@ async function adminRequest<T>(
 
   const body: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    console.error("Admin request failed.", { component: "admin-api", operation, status: response.status });
+    // The query or mutation surfaces this error in the page. Logging every
+    // handled response also opens Next's development error overlay on retries.
     throw new AdminApiError(describeAdminFailure(response.status, body, Boolean(init)), response.status);
   }
 
@@ -260,6 +270,19 @@ export function moderateUser(userId: string, action: ModerationAction, reason: s
   );
 }
 
+export function grantUserRole(userId: string, role: "MODERATOR" | "ADMIN", reason: string): Promise<RoleAssignment> {
+  return adminRequest(`${BASE_PATH}/${encodeURIComponent(userId)}/roles`, roleAssignmentSchema, "grant-role", {
+    method: "POST", body: { role, reason: reason.trim() },
+  });
+}
+
+export function revokeUserRole(userId: string, role: "MODERATOR" | "ADMIN", reason: string): Promise<RoleAssignment> {
+  const params = new URLSearchParams({ reason: reason.trim() });
+  return adminRequest(`${BASE_PATH}/${encodeURIComponent(userId)}/roles/${role}?${params}`, roleAssignmentSchema, "revoke-role", {
+    method: "DELETE",
+  });
+}
+
 export function userStatusLabel(status: UserStatus): string {
   switch (status) {
     case "active":
@@ -290,6 +313,8 @@ export function roleLabel(role: string): string {
   switch (role) {
     case "ADMIN":
       return "Administrator";
+    case "OWNER":
+      return "Owner";
     case "MODERATOR":
       return "Moderator";
     case "USER":
@@ -299,7 +324,10 @@ export function roleLabel(role: string): string {
   }
 }
 
-/** Only these roles are worth showing; every account is a USER. */
+/** Show the highest staff role when a user holds several roles. */
 export function staffRoles(roles: readonly AdminRole[]): AdminRole[] {
-  return roles.filter((role) => role !== "USER");
+  if (roles.includes("OWNER")) return ["OWNER"];
+  if (roles.includes("ADMIN")) return ["ADMIN"];
+  if (roles.includes("MODERATOR")) return ["MODERATOR"];
+  return [];
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import type { ReactNode } from "react";
 import { isPersistedTripId } from "@/app/feature/planner/_components/planner-api";
 import { TripActionsMenu } from "@/app/feature/planner/_components/trip-actions-menu";
 import { useTripMetadata } from "@/app/feature/planner/_components/use-trip-metadata";
@@ -15,6 +16,10 @@ type TripInfoCardProps = {
   to?: string;
 };
 
+export function TripInfoCardShell({ children }: { children: ReactNode }) {
+  return <div className="relative z-10 mx-4 -mt-12 flex min-w-0 flex-col gap-4 rounded-xl border border-border/60 bg-card p-4 shadow-sm @lg/planner:mx-6 @lg/planner:p-6">{children}</div>;
+}
+
 export function TripInfoCard({
   planId,
   destinationName,
@@ -27,7 +32,7 @@ export function TripInfoCard({
   const canManageTrip = isAuthenticated && isPersistedTripId(planId) && Boolean(metadata.data);
 
   return (
-    <div className="relative z-10 mx-4 -mt-12 flex min-w-0 flex-col gap-4 rounded-xl border border-border/60 bg-card p-4 shadow-sm @lg/planner:mx-6 @lg/planner:p-6">
+    <TripInfoCardShell>
       <div className="flex min-w-0 items-start gap-1">
         <div className="min-w-0 flex-1">
           <TripNameEditor planId={planId} destinationName={destinationName} />
@@ -48,6 +53,6 @@ export function TripInfoCard({
           </div>
         </div>
       </div>
-    </div>
+    </TripInfoCardShell>
   );
 }

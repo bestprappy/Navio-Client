@@ -48,6 +48,7 @@ const explorePlansPageSchema = z.object({
 export type ExplorePlansPage = z.infer<typeof explorePlansPageSchema>;
 
 export const EXPLORE_PAGE_SIZE = 12;
+export type ExploreSort = "recent" | "trending";
 
 /** Shared with the planner's publish hooks, which invalidate it after listing changes. */
 export const EXPLORE_SHARED_PLANS_QUERY_KEY = ["explore", "shared-plans"] as const;
@@ -74,8 +75,9 @@ export function parseExplorePlansPage(value: unknown): ExplorePlansPage {
 export async function fetchExplorePlansPage(
   page: number,
   signal?: AbortSignal,
+  sort: ExploreSort = "recent",
 ): Promise<ExplorePlansPage> {
-  const params = new URLSearchParams({ page: String(page), size: String(EXPLORE_PAGE_SIZE) });
+  const params = new URLSearchParams({ page: String(page), size: String(EXPLORE_PAGE_SIZE), sort });
   const response = await fetch(`/api/shared-plans?${params}`, {
     headers: { Accept: "application/json" },
     cache: "no-store",

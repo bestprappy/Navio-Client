@@ -24,6 +24,7 @@ import {
 } from "../../constants/types";
 import {
   markPlaceAsDayEndAtom,
+  plannerReadOnlyAtom,
   removeItemFromBlockAtom,
   selectedTripPlaceItemIdReadonlyAtom,
   selectTripPlaceAtom,
@@ -34,6 +35,7 @@ import { StationChargingControl } from "../../charger/station-charging-control";
 import { StationSpecifications } from "../../charger/station-specifications";
 import { ChargeSegmentInfo } from "../../routes/charge-segment-info";
 import { PlaceCardVisual } from "./place-card-visual";
+import { PlaceCardFrame } from "./place-card-frame";
 import { PlaceCostPopover } from "./place-cost-popover";
 import { PlaceTimePopover } from "./place-time-popover";
 
@@ -76,7 +78,10 @@ export function TripPlaceCard({
     selectedTripPlaceItemIdReadonlyAtom,
   );
   const currency = useAtomValue(tripCurrencyAtom);
+  const readOnly = useAtomValue(plannerReadOnlyAtom);
   const isSelected = selectedTripPlaceItemId === item.id;
+  // A shared plan keeps selection (it drives the map) but never opens the editor.
+  const isEditing = isSelected && !readOnly;
   const isEvCharger = isEvChargerPlaceItem(item);
   const blockColor = getTripBlockColorById(blockColorId);
   const markerStyle: CSSProperties = {
@@ -93,9 +98,9 @@ export function TripPlaceCard({
   const chargerDetails = item.evCharger;
 
   return (
-    <article
+    <PlaceCardFrame
       className={cn(
-        "surface-card min-w-0 cursor-pointer overflow-hidden rounded-xl border border-border bg-card dark:border-border/70",
+        "cursor-pointer",
         isSelected && "border-2",
       )}
       style={selectedStyle}
@@ -133,18 +138,20 @@ export function TripPlaceCard({
 
           <StationSpecifications item={item} />
 
-          <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
-            <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-            <span>{item.address}</span>
-          </p>
+          {item.address && (
+            <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
+              <MapPin className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+              <span>{item.address}</span>
+            </p>
+          )}
 
-          {chargerDetails && (
+          {chargerDetails && !readOnly && (
             <div className="border-t border-border pt-4">
               <StationChargingControl blockId={blockId} itemId={item.id} stationName={item.name} details={chargerDetails} arrivalPct={chargeBatteryFrom} />
             </div>
           )}
 
-          {isSelected ? (
+          {isEditing ? (
             <>
               <textarea
                 value={item.notes ?? ""}
@@ -283,7 +290,7 @@ export function TripPlaceCard({
             colorId={blockColorId}
           />
 
-          {isSelected ? (
+          {isEditing ? (
             <div className="space-y-3 border-t border-border/70 px-4 pb-4 pt-3">
               <textarea
                 value={item.notes ?? ""}
@@ -408,6 +415,6 @@ export function TripPlaceCard({
           )}
         </>
       )}
-    </article>
+    </PlaceCardFrame>
   );
 }

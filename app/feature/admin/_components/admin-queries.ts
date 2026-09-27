@@ -8,10 +8,13 @@ import {
   fetchAdminUser,
   fetchAdminUserSample,
   fetchModerationEvents,
+  grantUserRole,
   moderateUser,
+  revokeUserRole,
   searchAdminUsers,
   type AdminUserSearch,
   type ModerationAction,
+  type AdminRole,
   type UserStatus,
 } from "./admin-api";
 
@@ -34,6 +37,22 @@ const ADMIN_STALE_MS = 15_000;
 function retryTransient(failureCount: number, error: Error): boolean {
   if (error instanceof AdminApiError && error.status >= 400 && error.status < 500) return false;
   return failureCount < 2;
+}
+
+export function useChangeUserRole() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, role, action, reason }: {
+      userId: string;
+      role: Extract<AdminRole, "MODERATOR" | "ADMIN">;
+      action: "grant" | "revoke";
+      reason: string;
+    }) => action === "grant"
+      ? grantUserRole(userId, role, reason)
+      : revokeUserRole(userId, role, reason),
+    retry: false,
+    onSettled: () => queryClient.invalidateQueries({ queryKey: adminQueryKeys.root }),
+  });
 }
 
 export function useAdminStatistics() {

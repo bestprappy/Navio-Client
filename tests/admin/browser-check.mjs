@@ -37,8 +37,8 @@ try {
     headers: { Origin: "https://other.example" }, data: { reason: "Must not be sent" },
   });
   assert.equal(blockedWrite.status(), 403, "Proxy rejects cross-origin moderation writes");
-  const blockedRoute = await context.request.post(`${origin}/api/admin/users/${TARGET_ID}/roles`, { data: { role: "ADMIN" } });
-  assert.equal(blockedRoute.status(), 404, "Proxy does not expose role-management routes");
+  const blockedRoute = await context.request.delete(`${origin}/api/admin/users/${TARGET_ID}/roles/OWNER`);
+  assert.equal(blockedRoute.status(), 404, "Proxy never exposes OWNER revocation");
   let account = structuredClone(userDetailFixture);
   let failModeration = true;
   let failHistory = false;
@@ -58,6 +58,15 @@ try {
       const number = Number(url.searchParams.get("page"));
       if (failHistory && number === 1) return route.fulfill({ status: 403, json: { message: "History unavailable" } });
       return route.fulfill({ json: paged(historyFixture.slice(number * 20, number * 20 + 20), number, 21) });
+    }
+    if (url.pathname.endsWith("/roles") && request.method() === "POST") {
+      const role = request.postDataJSON().role;
+      account.roles = [...new Set([...account.roles, role])];
+      return route.fulfill({ json: { userId: TARGET_ID, roles: account.roles, updatedAt: account.updatedAt } });
+    }
+    if (url.pathname.endsWith("/roles/MODERATOR") && request.method() === "DELETE") {
+      account.roles = account.roles.filter((role) => role !== "MODERATOR");
+      return route.fulfill({ json: { userId: TARGET_ID, roles: account.roles, updatedAt: account.updatedAt } });
     }
     if (request.method() === "POST") {
       requests.writes++;
@@ -127,6 +136,12 @@ try {
   await confirmation.getByRole("alert").waitFor();
   assert.match(await confirmation.getByRole("alert").innerText(), /check its current state/);
   assert.equal(account.status, "active");
+  await page.getByRole("button", { name: "Grant moderator", exact: true }).click();
+  const roleDialog = page.getByRole("dialog", { name: "Grant moderator role?", exact: true });
+  await roleDialog.getByLabel("Reason", { exact: true }).fill("Community moderation");
+  await roleDialog.getByRole("button", { name: "Grant role", exact: true }).click();
+  await roleDialog.waitFor({ state: "hidden" });
+  await page.getByRole("button", { name: "Remove moderator", exact: true }).waitFor();
   await confirmation.getByRole("button", { name: "Ban account", exact: true }).click();
   await confirmation.waitFor({ state: "hidden" });
   await page.getByRole("button", { name: "Unban account", exact: true }).waitFor();
