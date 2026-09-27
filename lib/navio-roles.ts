@@ -1,12 +1,12 @@
 /**
- * The three global Navio roles, as Keycloak puts them in `realm_access.roles`.
+ * The four global Navio roles, as Keycloak puts them in `realm_access.roles`.
  *
  * These decide what the UI *shows*. They never authorize anything: every admin
  * request is re-checked by the API gateway and user-management-service, which
  * validate the token themselves. A user who edits their session only unlocks
  * screens whose requests will then be refused.
  */
-export const NAVIO_ROLES = ["USER", "MODERATOR", "ADMIN"] as const;
+export const NAVIO_ROLES = ["USER", "MODERATOR", "ADMIN", "OWNER"] as const;
 export type NavioRole = (typeof NAVIO_ROLES)[number];
 
 function isNavioRole(value: string): value is NavioRole {
@@ -37,9 +37,13 @@ export function readNavioRoles(claims: unknown): NavioRole[] {
 
 /** Moderators and admins both reach the admin console; admins see more of it. */
 export function canUseAdminConsole(roles: readonly NavioRole[] | undefined): boolean {
-  return Boolean(roles?.includes("MODERATOR") || roles?.includes("ADMIN"));
+  return Boolean(roles?.includes("MODERATOR") || roles?.includes("ADMIN") || roles?.includes("OWNER"));
 }
 
 export function isAdministrator(roles: readonly NavioRole[] | undefined): boolean {
-  return Boolean(roles?.includes("ADMIN"));
+  return Boolean(roles?.includes("ADMIN") || roles?.includes("OWNER"));
+}
+
+export function isOwner(roles: readonly NavioRole[] | undefined): boolean {
+  return Boolean(roles?.includes("OWNER"));
 }

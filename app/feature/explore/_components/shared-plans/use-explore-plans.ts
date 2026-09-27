@@ -9,6 +9,7 @@ import {
   fetchExplorePlansPage,
   type ExplorePlan,
   type ExplorePlansPage,
+  type ExploreSort,
 } from "./explore-plans-api";
 
 const NO_PLANS: ExplorePlan[] = [];
@@ -21,11 +22,11 @@ const NO_PLANS: ExplorePlan[] = [];
  *                    skeleton. Null when that fetch failed; the browser then
  *                    retries on its own.
  */
-export function useExplorePlans(initialPage: ExplorePlansPage | null) {
+export function useExplorePlans(initialPage: ExplorePlansPage | null, sort: ExploreSort = "recent") {
   const query = useInfiniteQuery({
-    queryKey: EXPLORE_SHARED_PLANS_QUERY_KEY,
+    queryKey: [...EXPLORE_SHARED_PLANS_QUERY_KEY, sort],
     initialPageParam: 0,
-    queryFn: ({ pageParam, signal }) => fetchExplorePlansPage(pageParam, signal),
+    queryFn: ({ pageParam, signal }) => fetchExplorePlansPage(pageParam, signal, sort),
     getNextPageParam: (page) => (page.last ? undefined : page.number + 1),
     initialData: initialPage ? { pages: [initialPage], pageParams: [0] } : undefined,
     // Server-rendered data is fresh for a moment; after that a revisit refetches

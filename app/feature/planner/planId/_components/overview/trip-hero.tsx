@@ -7,10 +7,11 @@ const PLACEHOLDER_IMAGE =
 type TripHeroProps = {
   destinationName: string;
   coverImageUrl?: string;
+  readOnly?: boolean;
 };
 
-export function TripHero({ destinationName, coverImageUrl }: TripHeroProps) {
-  const imageUrl = coverImageUrl ?? PLACEHOLDER_IMAGE;
+export function TripHero({ destinationName, coverImageUrl, readOnly = false }: TripHeroProps) {
+  const imageUrl = coverImageUrl ?? (readOnly ? null : PLACEHOLDER_IMAGE);
 
   return (
     <div
@@ -23,6 +24,7 @@ export function TripHero({ destinationName, coverImageUrl }: TripHeroProps) {
           src={imageUrl}
           alt={`Cover photo for trip to ${destinationName}`}
           fill
+          unoptimized={readOnly}
           sizes="(max-width: 1023px) 100vw, 50vw"
           className="object-cover"
           priority
@@ -36,13 +38,13 @@ export function TripHero({ destinationName, coverImageUrl }: TripHeroProps) {
           }}
         />
       )}
-      <button
+      {!readOnly && <button
         type="button"
         className="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full bg-card/80 text-foreground backdrop-blur-sm transition-colors hover:bg-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         aria-label="Edit cover photo"
       >
         <Pencil className="size-3.5" aria-hidden="true" />
-      </button>
+      </button>}
     </div>
   );
 }

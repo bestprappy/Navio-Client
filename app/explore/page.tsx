@@ -6,7 +6,7 @@ import { fetchExplorePlansFromGateway } from "../feature/explore/_components/sha
 export const metadata: Metadata = {
   title: "Explore plans - Navio",
   description:
-    "Discover trending EV trip plans and recent guides across Thailand.",
+    "Explore real trip plans shared by Navio travelers.",
 };
 
 /** Rendered per request: a plan its owner just unlisted must not linger in a cached page. */
@@ -15,13 +15,19 @@ export const dynamic = "force-dynamic";
 export default async function ExploreRoute() {
   // The first page arrives with the route so shared plans paint with the rest of
   // the page. A failure here is not fatal: the section retries in the browser.
-  const sharedPlans = await fetchExplorePlansFromGateway();
+  const [sharedPlans, trendingPlans] = await Promise.all([
+    fetchExplorePlansFromGateway(),
+    fetchExplorePlansFromGateway(0, 3, "trending"),
+  ]);
 
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-background">
-        <ExplorePage initialSharedPlans={sharedPlans.status === "ok" ? sharedPlans.page : null} />
+        <ExplorePage
+          initialSharedPlans={sharedPlans.status === "ok" ? sharedPlans.page : null}
+          initialTrendingPlans={trendingPlans.status === "ok" ? trendingPlans.page : null}
+        />
       </main>
     </>
   );

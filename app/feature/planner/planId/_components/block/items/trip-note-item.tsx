@@ -2,12 +2,13 @@
 
 import { type ChangeEvent, useEffect, useRef } from "react";
 import { FileText, X } from "lucide-react";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
 
 import type { NoteItem } from "../../constants/types";
 import {
+  plannerReadOnlyAtom,
   removeItemFromBlockAtom,
   updateNoteItemAtom,
 } from "../../overview/trip-builder.atoms";
@@ -21,6 +22,7 @@ export function TripNoteItem({ blockId, item }: TripNoteItemProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const updateNoteItem = useSetAtom(updateNoteItemAtom);
   const removeItemFromBlock = useSetAtom(removeItemFromBlockAtom);
+  const readOnly = useAtomValue(plannerReadOnlyAtom);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -39,6 +41,17 @@ export function TripNoteItem({ blockId, item }: TripNoteItemProps) {
       itemId: item.id,
       content: event.target.value,
     });
+  }
+
+  if (readOnly) {
+    return (
+      <article className="rounded-sm border border-border bg-card p-4 shadow-xs">
+        <div className="flex items-start gap-3">
+          <FileText className="mt-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <p className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word text-sm leading-6 text-foreground">{item.content}</p>
+        </div>
+      </article>
+    );
   }
 
   return (

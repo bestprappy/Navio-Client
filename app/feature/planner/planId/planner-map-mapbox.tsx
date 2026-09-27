@@ -53,6 +53,7 @@ import {
   selectedTripPlacesAtom,
   selectSearchResultAtom,
   selectTripPlaceAtom,
+  plannerReadOnlyAtom,
   startPlaceSearchAtom,
   stepSearchResultAtom,
   tripBlocksAtom,
@@ -138,6 +139,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
   const routeLineMode = useAtomValue(routeLineModeAtom);
   const revealPlanCard = useRevealPlanCard();
   const startPlaceSearch = useSetAtom(startPlaceSearchAtom);
+  const readOnly = useAtomValue(plannerReadOnlyAtom);
   const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   const [viewportPois, setViewportPois] = useState<PlaceSearchResult[]>([]);
   const lastPoiFetchRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -275,7 +277,8 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
   const handleMoveEnd = useCallback(async () => {
     const map = mapRef.current;
 
-    if (!map) {
+    // A shared plan cannot be added to, so nearby places would only be noise.
+    if (!map || readOnly) {
       return;
     }
 
@@ -305,14 +308,15 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
     } catch {
       // Viewport POIs are a best-effort enhancement — fail silently.
     }
-  }, []);
+  }, [readOnly]);
 
   const handleViewportPoiClick = useCallback(
     (poi: PlaceSearchResult) => {
+      if (readOnly) return;
       const blockId = (activeBlockId || tripBlocks[0]?.id) ?? "";
       startPlaceSearch({ blockId, result: poi });
     },
-    [activeBlockId, startPlaceSearch, tripBlocks],
+    [activeBlockId, readOnly, startPlaceSearch, tripBlocks],
   );
 
   if (!mapboxToken) {

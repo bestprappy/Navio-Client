@@ -1,7 +1,14 @@
-import { Clock, ClipboardList, MapPin, Star, StickyNote, Zap } from "lucide-react";
+import { Clock, ClipboardList, MapPin, StickyNote, Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { PlaceCardVisual } from "../../planId/_components/block/items/place-card-visual";
+import { PlaceCardFrame } from "../../planId/_components/block/items/place-card-frame";
+import { TripBlock } from "../../planId/_components/block/trip-block";
+import { getTripBlockColorByIndex } from "../../planId/_components/constants/trip-block-colors";
+import type { TripBlockColorId, TripBlockData } from "../../planId/_components/constants/types";
 
+import { EvPlanDisclaimer, hasChargerStops } from "./ev-plan-disclaimer";
 import type { PublicAnchor, PublicDay, PublicItem, PublicPlanSnapshot } from "./publication-api";
 
 /**
@@ -26,16 +33,6 @@ function formatMoney(amount: number, currency: string): string {
     // An unknown currency code must not take the page down with it.
     return `${amount.toLocaleString()} ${currency}`;
   }
-}
-
-function formatDate(value: string): string {
-  const parsed = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return value;
-  return parsed.toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
 }
 
 function AnchorRow({ anchor, kind }: { anchor: PublicAnchor; kind: "start" | "end" }) {
@@ -75,7 +72,7 @@ function ChargerDetails({ item }: { item: PublicItem }) {
   );
 }
 
-function ItemCard({ item, currency }: { item: PublicItem; currency?: string }) {
+function ItemCard({ item, currency, position, colorId }: { item: PublicItem; currency?: string; position: number | null; colorId: TripBlockColorId }) {
   if (item.type === "note") {
     return (
       <li className="rounded-lg border border-border bg-muted/40 p-3">
@@ -113,12 +110,24 @@ function ItemCard({ item, currency }: { item: PublicItem; currency?: string }) {
   const timeLabel = [item.time, item.timeEnd].filter(Boolean).join(" – ");
 
   return (
-    <li className="rounded-lg border border-border bg-card p-3">
+    <li className="list-none">
+    <PlaceCardFrame>
+      <PlaceCardVisual
+        name={item.name ?? "Untitled stop"}
+        imageUrl={item.imageUrl}
+        rating={item.rating}
+        reviewCount={item.reviewCount}
+        description={item.description}
+        position={position}
+        colorId={colorId}
+        unoptimized
+      />
+      <div className="border-t border-border/60 px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="flex items-center gap-2 font-medium text-foreground">
             {isCharger && <Zap className="size-4 shrink-0 text-primary" aria-hidden="true" />}
-            <span className="truncate">{item.name ?? "Untitled stop"}</span>
+            <span>{isCharger ? "Charging stop" : "Planned stop"}</span>
           </p>
           {item.description && (
             <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">{item.description}</p>
@@ -138,13 +147,6 @@ function ItemCard({ item, currency }: { item: PublicItem; currency?: string }) {
             {timeLabel}
           </span>
         )}
-        {typeof item.rating === "number" && (
-          <span className="flex items-center gap-1">
-            <Star className="size-3.5" aria-hidden="true" />
-            {item.rating.toFixed(1)}
-            {typeof item.reviewCount === "number" && ` (${item.reviewCount})`}
-          </span>
-        )}
       </div>
 
       <ChargerDetails item={item} />
@@ -154,35 +156,49 @@ function ItemCard({ item, currency }: { item: PublicItem; currency?: string }) {
           {item.notes}
         </p>
       )}
+      </div>
+    </PlaceCardFrame>
     </li>
   );
 }
 
-function DaySection({ day, currency }: { day: PublicDay; currency?: string }) {
+function DaySection({ day, currency, index }: { day: PublicDay; currency?: string; index: number }) {
   const items = day.items ?? [];
+  const colorId = getTripBlockColorByIndex(index);
+  const block: TripBlockData = {
+    id: `published-day-${index}`,
+    kind: "itinerary",
+    title: day.label,
+    date: day.date ?? "",
+    colorId,
+    items: [],
+  };
+  let placePosition = 0;
   return (
-    <section className="space-y-3" aria-labelledby={`shared-${day.label.replace(/\s+/g, "-")}`}>
-      <header>
-        <h3
-          id={`shared-${day.label.replace(/\s+/g, "-")}`}
-          className="text-base font-semibold text-foreground"
-        >
-          {day.label}
-          {day.date && (
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              {formatDate(day.date)}
-            </span>
-          )}
-        </h3>
-        {day.title && <p className="text-sm text-muted-foreground">{day.title}</p>}
-      </header>
+    <AccordionItem value={`day-${index}`} className="border-none">
+      <TripBlock.Root block={block} variant="day" readOnly>
+        <TripBlock.Header>
+          <TripBlock.Title />
+          {day.date && <p className="text-xs text-muted-foreground">{day.label}</p>}
+          <AccordionTrigger className="min-h-10 w-full px-2 text-sm text-primary hover:bg-muted hover:no-underline">
+            <span>{items.length} {items.length === 1 ? "item" : "items"}</span>
+          </AccordionTrigger>
+        </TripBlock.Header>
+        <AccordionContent className="space-y-3 pb-2">
+        {day.title && day.title !== day.date && day.title !== day.label && <p className="text-sm text-muted-foreground">{day.title}</p>}
 
       {day.startsAt && <AnchorRow anchor={day.startsAt} kind="start" />}
 
       {items.length > 0 ? (
         <ul className="space-y-2">
           {items.map((item, index) => (
-            <ItemCard key={`${day.label}-${index}`} item={item} currency={currency} />
+            <ItemCard
+              key={`${day.label}-${index}`}
+              item={item}
+              currency={currency}
+              position={item.type === "place" || item.type === "charger" ? ++placePosition : null}
+              colorId={colorId}
+            />
           ))}
         </ul>
       ) : (
@@ -190,7 +206,9 @@ function DaySection({ day, currency }: { day: PublicDay; currency?: string }) {
       )}
 
       {day.endsAt && <AnchorRow anchor={day.endsAt} kind="end" />}
-    </section>
+        </AccordionContent>
+      </TripBlock.Root>
+    </AccordionItem>
   );
 }
 
@@ -200,8 +218,12 @@ export function SharedPlanContent({ plan }: { plan: PublicPlanSnapshot }) {
 
   return (
     <div className="space-y-6">
+      {hasChargerStops(plan) && <EvPlanDisclaimer />}
+
       {days.length > 0 ? (
-        days.map((day) => <DaySection key={day.label} day={day} currency={currency} />)
+        <Accordion defaultValue={days.map((_, index) => `day-${index}`)} className="gap-4">
+          {days.map((day, index) => <DaySection key={`${day.label}-${index}`} day={day} currency={currency} index={index} />)}
+        </Accordion>
       ) : (
         <p className="text-sm text-muted-foreground">
           This plan does not have any days to show yet.

@@ -19,6 +19,7 @@ type SharedPlansSectionProps = {
   loadMoreFailed: boolean;
   onLoadMore: () => void;
   onRetry: () => void;
+  query?: string;
 };
 
 export const SHARED_PLANS_HEADING_ID = "explore-shared-plans";
@@ -38,16 +39,17 @@ export function SharedPlansSection({
   loadMoreFailed,
   onLoadMore,
   onRetry,
+  query = "",
 }: SharedPlansSectionProps) {
   return (
     <section className="space-y-4" aria-labelledby={SHARED_PLANS_HEADING_ID}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 id={SHARED_PLANS_HEADING_ID} className="text-lg font-semibold text-foreground">
-            Shared by travelers
+            Recent plans shared by travelers
           </h2>
           <p className="text-sm text-muted-foreground">
-            Real trips people planned in Navio and chose to publish.
+            The newest plans travelers chose to share.
           </p>
         </div>
         {total > 0 && (
@@ -76,12 +78,20 @@ export function SharedPlansSection({
       ) : isError ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-4">
           <p role="alert" className="text-sm text-foreground">
-            Shared plans could not be loaded. The curated plans below still work.
+            Shared plans could not be loaded. Try again.
           </p>
           <Button type="button" variant="outline" size="sm" onClick={onRetry}>
             <RefreshCw className="size-4" aria-hidden="true" />
             Try again
           </Button>
+        </div>
+      ) : plans.length === 0 && query ? (
+        <div className="rounded-lg border border-dashed border-border bg-card px-5 py-6">
+          <p className="text-sm font-medium text-foreground">No loaded plans match “{query}”.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Try another search or load more plans.</p>
+          {(hasMore || loadMoreFailed) && <Button type="button" variant="outline" size="sm" className="mt-3" disabled={isFetchingMore} onClick={onLoadMore}>
+            {isFetchingMore ? "Loading…" : "Load more plans"}
+          </Button>}
         </div>
       ) : plans.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-card px-5 py-6">

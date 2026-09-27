@@ -12,11 +12,12 @@ import { fetchExplorePlansFromGateway } from "@/app/feature/explore/_components/
 export async function GET(request: NextRequest): Promise<Response> {
   const page = Number(request.nextUrl.searchParams.get("page") ?? "0");
   const size = Number(request.nextUrl.searchParams.get("size") ?? "12");
+  const sort = request.nextUrl.searchParams.get("sort") === "trending" ? "trending" : "recent";
   if (!Number.isFinite(page) || !Number.isFinite(size)) {
     return NextResponse.json({ message: "Invalid page" }, { status: 400 });
   }
 
-  const result = await fetchExplorePlansFromGateway(page, size);
+  const result = await fetchExplorePlansFromGateway(page, size, sort);
   if (result.status === "error") {
     return NextResponse.json(
       { message: "Shared plans could not be loaded" },

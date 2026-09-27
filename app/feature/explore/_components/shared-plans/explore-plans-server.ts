@@ -4,6 +4,7 @@ import {
   EXPLORE_PAGE_SIZE,
   parseExplorePlansPage,
   type ExplorePlansPage,
+  type ExploreSort,
 } from "./explore-plans-api";
 
 /** Short: the Explore route waits on this before painting, and the section can retry in the browser. */
@@ -23,6 +24,7 @@ export type ExplorePlansResult =
 export async function fetchExplorePlansFromGateway(
   page = 0,
   size = EXPLORE_PAGE_SIZE,
+  sort: ExploreSort = "recent",
 ): Promise<ExplorePlansResult> {
   const backendBaseUrl = process.env.NAVIO_API_BASE_URL;
   if (!backendBaseUrl) {
@@ -42,6 +44,7 @@ export async function fetchExplorePlansFromGateway(
   }
   upstreamUrl.searchParams.set("page", String(Math.max(0, Math.trunc(page))));
   upstreamUrl.searchParams.set("size", String(Math.min(MAX_PAGE_SIZE, Math.max(1, Math.trunc(size)))));
+  upstreamUrl.searchParams.set("sort", sort);
 
   try {
     const response = await fetch(upstreamUrl, {

@@ -12,12 +12,14 @@ import { AdminErrorState, AdminLoadingRows } from "./admin-query-state";
 import { useAdminUser } from "./admin-queries";
 import { ModerationDialog } from "./moderation-dialog";
 import { ModerationHistory } from "./moderation-history";
+import { RoleManagementPanel } from "./role-management-panel";
 import { StaffRoleTags } from "./staff-role-tags";
 import { UserStatusLabel } from "./user-status-label";
 
 type AdminUserDrawerProps = {
   userId: string | null;
   viewerIsAdmin: boolean;
+  viewerIsOwner: boolean;
   onClose: () => void;
 };
 
@@ -27,7 +29,7 @@ type AdminUserDrawerProps = {
  * Open state is the `user` URL parameter, owned by the caller, so a drawer can
  * be linked to and survives a refresh.
  */
-export function AdminUserDrawer({ userId, viewerIsAdmin, onClose }: AdminUserDrawerProps) {
+export function AdminUserDrawer({ userId, viewerIsAdmin, viewerIsOwner, onClose }: AdminUserDrawerProps) {
   const titleId = useId();
 
   return (
@@ -45,7 +47,7 @@ export function AdminUserDrawer({ userId, viewerIsAdmin, onClose }: AdminUserDra
             </SheetClose>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
-            {userId ? <DrawerBody key={userId} userId={userId} titleId={titleId} viewerIsAdmin={viewerIsAdmin} /> : null}
+            {userId ? <DrawerBody key={userId} userId={userId} titleId={titleId} viewerIsAdmin={viewerIsAdmin} viewerIsOwner={viewerIsOwner} /> : null}
           </div>
         </SheetContent>
     </Sheet>
@@ -56,9 +58,10 @@ type DrawerBodyProps = {
   userId: string;
   titleId: string;
   viewerIsAdmin: boolean;
+  viewerIsOwner: boolean;
 };
 
-function DrawerBody({ userId, titleId, viewerIsAdmin }: DrawerBodyProps) {
+function DrawerBody({ userId, titleId, viewerIsAdmin, viewerIsOwner }: DrawerBodyProps) {
   const user = useAdminUser(userId);
   const historyHeadingId = useId();
   const [announcement, setAnnouncement] = useState("");
@@ -95,6 +98,8 @@ function DrawerBody({ userId, titleId, viewerIsAdmin }: DrawerBodyProps) {
       <AccountStanding account={account} titleId={titleId} />
 
       <ModerationControl account={account} viewerIsAdmin={viewerIsAdmin} onCompleted={handleCompleted} />
+
+      {viewerIsAdmin ? <RoleManagementPanel account={account} viewerIsOwner={viewerIsOwner} /> : null}
 
       <section aria-labelledby={`${titleId}-details`} className="flex flex-col gap-3">
         <h3 id={`${titleId}-details`} className="text-sm font-semibold">Details</h3>
@@ -169,6 +174,9 @@ function ModerationControl({ account, viewerIsAdmin, onCompleted }: ModerationCo
 
   if (account.status === "deleted") {
     return <Notice>This account was deleted, so it cannot be banned or unbanned.</Notice>;
+  }
+  if (account.roles.includes("OWNER")) {
+    return <Notice>Owner accounts are managed in Keycloak.</Notice>;
   }
   // Mirrors the backend rule so a moderator is told up front rather than
   // refused after writing a reason. The backend still enforces it.

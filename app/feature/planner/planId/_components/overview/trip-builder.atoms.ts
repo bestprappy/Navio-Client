@@ -377,6 +377,12 @@ export type PlannerServerSnapshotUpdate = {
   savedAt: string;
 };
 export const tripDateRangeAtom = atom<TripDateRange>({});
+/**
+ * True when the planner renders someone else's published plan. Every editing
+ * control reads it, so a shared plan is the planner itself with editing removed
+ * rather than a second renderer that can drift from it.
+ */
+export const plannerReadOnlyAtom = atom(false);
 export const tripBlocksAtom = atom<TripBlockData[]>([]);
 export const activePlannerKeyAtom = atom<string | null>(null);
 export const itineraryBlocksAtom = atom<TripBlockData[]>((get) =>
