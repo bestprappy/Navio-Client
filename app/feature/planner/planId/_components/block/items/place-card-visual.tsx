@@ -13,6 +13,7 @@ export type PlaceCardVisualProps = {
   description?: string;
   position: number | null;
   colorId: TripBlockColorId;
+  unoptimized?: boolean;
 };
 
 function formatReviewCount(count: number): string {
@@ -40,6 +41,7 @@ export function PlaceCardVisual({
   description,
   position,
   colorId,
+  unoptimized = false,
 }: PlaceCardVisualProps) {
   const blockColor = getTripBlockColorById(colorId);
   const markerStyle = {
@@ -55,7 +57,7 @@ export function PlaceCardVisual({
           alt=""
           width={640}
           height={240}
-          unoptimized={isGooglePlacePhoto(imageUrl)}
+          unoptimized={unoptimized || isGooglePlacePhoto(imageUrl)}
           className="h-32 w-full object-cover"
         />
       ) : null}

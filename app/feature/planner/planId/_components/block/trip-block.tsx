@@ -39,6 +39,7 @@ import { SortableBlockItems } from "./sortable-block-items";
 
 type TripBlockContextValue = {
   block: TripBlockData;
+  readOnly: boolean;
 };
 
 const TripBlockContext = createContext<TripBlockContextValue | null>(null);
@@ -59,9 +60,11 @@ type TripBlockRootProps = {
   block: TripBlockData;
   children: ReactNode;
   className?: string;
+  variant?: "default" | "day";
+  readOnly?: boolean;
 };
 
-function TripBlockRoot({ block, children, className }: TripBlockRootProps) {
+function TripBlockRoot({ block, children, className, variant = "default", readOnly = false }: TripBlockRootProps) {
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
   const blockColor = getTripBlockColorById(block.colorId);
   const blockStyle: CSSProperties & Record<`--${string}`, string> = {
@@ -71,18 +74,18 @@ function TripBlockRoot({ block, children, className }: TripBlockRootProps) {
   };
 
   const contextValue = useMemo<TripBlockContextValue>(
-    () => ({ block }),
-    [block],
+    () => ({ block, readOnly }),
+    [block, readOnly],
   );
 
   return (
     <TripBlockContext.Provider value={contextValue}>
       <div
         id={`trip-block-${block.id}`}
-        className={cn("flex w-full scroll-mt-4 flex-col", className)}
+        className={cn("flex w-full scroll-mt-4 flex-col", variant === "day" && "mb-6 rounded-xl border border-border bg-card/35 p-3 @lg/planner:p-4", className)}
         style={blockStyle}
-        onFocus={() => setActiveBlockId(block.id)}
-        onClick={() => setActiveBlockId(block.id)}
+        onFocus={readOnly ? undefined : () => setActiveBlockId(block.id)}
+        onClick={readOnly ? undefined : () => setActiveBlockId(block.id)}
       >
         {children}
       </div>
@@ -95,7 +98,7 @@ function TripBlockHeader({ children }: { children: ReactNode }) {
 }
 
 function TripBlockTitle() {
-  const { block } = useTripBlockContext();
+  const { block, readOnly } = useTripBlockContext();
   const tripDateRange = useAtomValue(tripDateRangeAtom);
   const updateBlockDate = useSetAtom(updateBlockDateAtom);
   const updateBlockTitle = useSetAtom(updateBlockTitleAtom);
@@ -107,6 +110,16 @@ function TripBlockTitle() {
   );
   const shouldShowListEditor =
     isListBlock && (isEditingListTitle || listTitle.length === 0);
+
+  if (readOnly) {
+    const heading = block.date
+      ? new Date(`${block.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", month: "short", day: "numeric", year: "numeric" })
+      : block.title;
+    return <div className="flex items-center gap-2">
+      <h3 className="min-w-0 flex-1 break-words py-1 text-xl font-bold leading-tight text-foreground">{heading}</h3>
+      <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: blockColor.value }} aria-hidden="true" />
+    </div>;
+  }
 
   return (
     <div className="flex items-center gap-2">

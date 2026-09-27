@@ -2,7 +2,7 @@
 
 import { Fragment, type DragEvent, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, GripVertical } from "lucide-react";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import {
 import { useTripCharging } from "../garage/use-trip-charging";
 import { getDayPlacePositions, getLastDayPlaceId } from "../itinerary/day-anchors";
 import { getTripItemElementId } from "../itinerary/use-reveal-plan-card";
-import { reorderBlockItemsAtom } from "../overview/trip-builder.atoms";
+import { plannerReadOnlyAtom, reorderBlockItemsAtom } from "../overview/trip-builder.atoms";
 import { DischargeSegmentInfo } from "../routes/charge-segment-info";
 import { RouteSegmentInfo } from "../routes/route-segment-info";
 import { getRouteSegmentByToItemId } from "../routes/trip-route.helpers";
@@ -79,6 +79,7 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const shouldShowRouting = block.kind !== "list";
   const reorderBlockItems = useSetAtom(reorderBlockItemsAtom);
+  const readOnly = useAtomValue(plannerReadOnlyAtom);
   const charging = useTripCharging();
   const tripRoutes = useTripRoutes();
   const routeSegments = useMemo(
@@ -204,31 +205,36 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
             <div
               id={getTripItemElementId(item.id)}
               role="listitem"
-              draggable={interactiveItemId !== item.id}
+              draggable={!readOnly && interactiveItemId !== item.id}
               onPointerDownCapture={(event) => {
                 const target = event.target as HTMLElement;
                 setInteractiveItemId(target.closest("input, textarea, select, a, [data-no-drag]") ? item.id : null);
               }}
               onPointerUpCapture={() => setInteractiveItemId(null)}
               onPointerCancel={() => setInteractiveItemId(null)}
-              onDragStart={(event) => handleDragStart(event, item.id)}
+              onDragStart={readOnly ? undefined : (event) => handleDragStart(event, item.id)}
               onDragEnd={() => {
                 setDraggedItemId(null);
                 setDropTargetId(null);
               }}
-              onDragOver={(event) => {
+              onDragOver={readOnly ? undefined : (event) => {
                 event.preventDefault();
                 setDropTargetId(item.id);
               }}
-              onDragLeave={() => setDropTargetId(null)}
-              onDrop={(event) => handleDrop(event, item.id)}
+              onDragLeave={readOnly ? undefined : () => setDropTargetId(null)}
+              onDrop={readOnly ? undefined : (event) => handleDrop(event, item.id)}
               className={cn(
                 "min-w-0 grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 rounded-sm transition-colors",
                 isDragging && "opacity-50",
                 isDropTarget && "bg-primary/10 p-2",
               )}
             >
-              <div className="flex flex-col items-center gap-1">
+              {readOnly ? (
+                // The gutter stays so stops line up with the route connectors.
+                <div className="flex justify-center pt-3" aria-hidden="true">
+                  <span className="size-2 rounded-full" style={{ backgroundColor: blockColor.value }} />
+                </div>
+              ) : <div className="flex flex-col items-center gap-1">
                 <button
                   type="button"
                   className="flex size-8 cursor-grab items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 active:cursor-grabbing"
@@ -256,7 +262,7 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
                 >
                   <ChevronDown className="size-3" aria-hidden="true" />
                 </Button>
-              </div>
+              </div>}
 
               {renderBlockItem(
                 block,
