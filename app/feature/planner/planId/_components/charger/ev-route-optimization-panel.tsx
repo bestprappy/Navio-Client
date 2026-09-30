@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 import type { EvCar } from "../constants/vehicle.types";
+import { arrivalReservePctAtom } from "../garage/garage.atoms";
 import { applyPlannerServerSnapshotAtom, tripBlocksAtom } from "../overview/trip-builder.atoms";
 
 type EvRouteOptimizationPanelProps = {
@@ -59,6 +60,10 @@ function getMutationError(error: unknown): string {
   if (error instanceof PlannerApiError && error.status === 409) {
     return "The trip changed after this preview. Preview the route again.";
   }
+  // A rejected route (422) carries the reason, such as a missing start or destination.
+  if (error instanceof PlannerApiError && error.status === 422 && error.detail) {
+    return `${error.message}. ${error.detail.replace(/\.$/, "")}.`;
+  }
   return error instanceof Error
     ? error.message
     : "The EV route could not be optimized.";
@@ -75,6 +80,7 @@ export function EvRouteOptimizationPanel({
   const tripId = isPersistedTripId(params.planId) ? params.planId : null;
   const applyServerSnapshot = useSetAtom(applyPlannerServerSnapshotAtom);
   const blocks = useAtomValue(tripBlocksAtom);
+  const reserveSocPct = useAtomValue(arrivalReservePctAtom);
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
   const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
 
@@ -91,11 +97,11 @@ export function EvRouteOptimizationPanel({
         connectorTypes: vehicle.connectorTypes,
       },
       startingSocPct,
-      reserveSocPct: 12,
+      reserveSocPct,
       targetSocPct,
       maximumDetourKm: 20,
     };
-  }, [blockId, startingSocPct, targetSocPct, vehicle]);
+  }, [blockId, reserveSocPct, startingSocPct, targetSocPct, vehicle]);
   const requestKey = payload ? getRequestKey(payload) : null;
   const currentPreview =
     previewState && previewState.key === requestKey ? previewState : null;
@@ -142,7 +148,7 @@ export function EvRouteOptimizationPanel({
       if (!tripId) return;
       applyServerSnapshot({ tripId, ...snapshot });
       setPreviewState(null);
-      setAppliedMessage("Optimized charging stops were applied to this day.");
+      setAppliedMessage("Charging stops were applied to this day.");
     },
   });
 
@@ -170,10 +176,10 @@ export function EvRouteOptimizationPanel({
         <Route className="size-4 text-primary" aria-hidden="true" />
         <div>
           <p className="text-sm font-semibold text-foreground">
-            Optimize the whole EV route
+            Plan charging stops
           </p>
           <p className="text-xs text-muted-foreground">
-            Checks live chargers and may add, remove, or replace unlocked stops.
+            Checks live chargers on the road route and may add, remove, or replace unlocked stops.
           </p>
         </div>
       </div>
@@ -190,7 +196,7 @@ export function EvRouteOptimizationPanel({
         ) : (
           <Sparkles className="size-4" aria-hidden="true" />
         )}
-        {previewMutation.isPending ? "Checking the route..." : isAuthenticated ? "Optimize EV route" : "Sign in for saved-route optimization"}
+        {previewMutation.isPending ? "Checking the route..." : isAuthenticated ? "Plan charging stops" : "Sign in to plan charging stops"}
       </Button>
 
       {vehicle && !canAutomaticallyPlan(vehicle) && <p className="mt-2 text-xs text-muted-foreground">Rated-range previews are provisional and cannot apply automatic chargers. Legacy estimates need confirmation in vehicle settings before automatic application.</p>}
@@ -200,7 +206,7 @@ export function EvRouteOptimizationPanel({
         </p>
       ) : !tripId ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          This feature updates a saved trip. You can still add charging stops and estimate battery usage in a guest plan.
+          Charging stops are planned for saved trips. You can still add stations yourself and see battery estimates in a guest plan.
         </p>
       ) : null}
 
@@ -256,7 +262,7 @@ export function EvRouteOptimizationPanel({
               {applyMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               ) : null}
-              {applyMutation.isPending ? "Applying changes..." : "Apply optimized route"}
+              {applyMutation.isPending ? "Applying changes..." : "Apply charging plan"}
             </Button>
           ) : null}
         </div>

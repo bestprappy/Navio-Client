@@ -1,5 +1,8 @@
 "use client";
 
+import { useAtomValue } from "jotai";
+
+import { arrivalReservePctAtom } from "./garage.atoms";
 import { getBatteryTone, type BatteryTone } from "./garage-formatters";
 
 const THUMB_SIZE = 20;
@@ -13,8 +16,8 @@ const TONE_COLORS: Record<BatteryTone, string> = {
   critical: "var(--battery-critical)",
 };
 
-export function getBatteryColor(pct: number): string {
-  return TONE_COLORS[getBatteryTone(pct)];
+export function getBatteryColor(pct: number, reservePct: number): string {
+  return TONE_COLORS[getBatteryTone(pct, reservePct)];
 }
 
 type BatterySliderProps = {
@@ -42,8 +45,9 @@ export function BatterySlider({
   disabled = false,
   showLabels = true,
 }: BatterySliderProps) {
+  const reservePct = useAtomValue(arrivalReservePctAtom);
   const ratio = (value - min) / (max - min);
-  const sliderColor = color ?? getBatteryColor(value);
+  const sliderColor = color ?? getBatteryColor(value, reservePct);
 
   return (
     <div className="relative w-full select-none">

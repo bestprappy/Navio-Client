@@ -1,7 +1,7 @@
 "use client";
 
-import { Plus, Trash2, X } from "lucide-react";
-import { useSetAtom } from "jotai";
+import { Plus, Square, Trash2, X } from "lucide-react";
+import { useAtomValue, useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import type { ChecklistItem } from "../../constants/types";
 import {
   addChecklistSubItemAtom,
+  plannerReadOnlyAtom,
   removeChecklistSubItemAtom,
   removeItemFromBlockAtom,
   updateChecklistSubItemAtom,
@@ -27,6 +28,23 @@ export function TripChecklistItem({ blockId, item }: TripChecklistItemProps) {
   const updateChecklistSubItem = useSetAtom(updateChecklistSubItemAtom);
   const removeChecklistSubItem = useSetAtom(removeChecklistSubItemAtom);
   const removeItemFromBlock = useSetAtom(removeItemFromBlockAtom);
+  const readOnly = useAtomValue(plannerReadOnlyAtom);
+
+  if (readOnly) {
+    return (
+      <article className="rounded-sm border border-border bg-card p-4 shadow-xs">
+        <h4 className="px-1 py-1 text-base font-bold text-foreground">{item.title || "Checklist"}</h4>
+        <ul className="mt-2 space-y-2">
+          {item.items.map((subItem) => (
+            <li key={subItem.id} className="flex items-center gap-2 px-1 text-sm text-foreground">
+              <Square className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              {subItem.label}
+            </li>
+          ))}
+        </ul>
+      </article>
+    );
+  }
 
   return (
     <article className="rounded-sm border border-border bg-card p-4 shadow-xs">

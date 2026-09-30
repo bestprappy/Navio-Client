@@ -15,7 +15,7 @@ function component(file, dependencies) {
   const source = readFileSync(new URL(file, import.meta.url), "utf8");
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
   const exports = {};
-  vm.runInNewContext(code, { exports, require: name => dependencies[name] ?? (name.startsWith("@/components/ui/")
+  vm.runInNewContext(code, { exports, window: { setTimeout: fn => { fn(); return 1; }, clearTimeout() {} }, require: name => dependencies[name] ?? (name.startsWith("@/components/ui/")
     ? new Proxy({}, { get: (_target, key) => key }) : require(name)) });
   return exports;
 }
@@ -24,6 +24,7 @@ function hooks() {
   return { reset() { cursor = 0; }, react: {
     useState(initial) { const index = cursor++; if (!(index in values)) values[index] = initial;
       return [values[index], value => { values[index] = typeof value === "function" ? value(values[index]) : value; }]; },
+    useEffect(fn) { fn(); },
     useMemo(fn) { return fn(); }, useId() { return "test-info"; },
   } };
 }
@@ -48,7 +49,7 @@ for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" :
   assert.equal(tree.find(node => node.props?.children === "EV Vehicle List").props["aria-pressed"], true);
   tree.find(node => node.type === "VehicleCatalogPicker").props.onSelect(catalogFixture);
   tree = render();
-  assert.ok(tree.find(node => node.props?.children === "Use for this trip"));
+  assert.ok(tree.find(node => node.props?.children === (authenticated ? "Save to garage" : "Use for this trip")));
   tree.find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
   await Promise.resolve();
   assert.equal(commands[0].kind, "catalog");
@@ -66,9 +67,7 @@ for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" :
   tree.find(node => node.props?.children === "My custom EVs").props.onClick();
   tree = render();
   assert.equal(tree.some(node => node.type === "VehicleCatalogPicker"), false);
-  tree.find(node => node.type === "input" && node.props.name === "saved-custom-vehicle").props.onChange();
-  tree = render();
-  tree.find(node => node.type === "form").props.onSubmit({preventDefault(){}});
+  tree.find(node => node.type === "Button" && node.props.children === (savedVehicleFixture.nickname || `${savedVehicleFixture.make} ${savedVehicleFixture.model}`)).props.onClick();
   await Promise.resolve();
   assert.equal(commands[2].kind, "reuse");
   assert.equal(commands[2].id, savedVehicleFixture.id);
@@ -77,8 +76,8 @@ for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" :
 test("catalogue picker browses, filters and selects catalogue data", () => {
   const state = hooks(); let selected;
   const { VehicleCatalogPicker } = component(`${garage}vehicle-catalog-picker.tsx`, {
-    react: state.react, "@tanstack/react-query": { useQuery: () => ({ data: [catalogFixture], isPending: false }) },
-    "./vehicle-api": { listVehicleCatalog() {} }, "./vehicle-mappers": { catalogVehicleCar: value => value },
+    react: state.react, "@tanstack/react-query": { useQuery: ({queryKey}) => ({ data: { content: queryKey[2] === "no-such-model" ? [] : [catalogFixture], totalPages: 1 }, isPending: false }) },
+    "./vehicle-api": { listPublishedVehicles() {} }, "./vehicle-mappers": { catalogVehicleCar: value => value },
     "./vehicle-media": { VehicleMedia: "VehicleMedia" }, "@/lib/utils": { cn: (...parts) => parts.join(" ") },
   });
   const render = () => { state.reset(); return elements(VehicleCatalogPicker({ selectedId: null, onSelect: value => { selected = value; }, disabled: false })); };
@@ -86,8 +85,10 @@ test("catalogue picker browses, filters and selects catalogue data", () => {
   tree.find(node => node.type === "input" && node.props.type === "radio").props.onChange();
   assert.equal(selected.id, catalogFixture.id);
   tree.find(node => node.type === "Input").props.onChange({ target: { value: "no-such-model" } });
+  render();
   assert.equal(render().filter(node => node.type === "input" && node.props.type === "radio").length, 0);
   render().find(node => node.type === "Input").props.onChange({ target: { value: "atto" } });
+  render();
   assert.equal(render().filter(node => node.type === "input" && node.props.type === "radio").length, 1);
 });
 
@@ -107,8 +108,8 @@ test("frontend proxy enables anonymous access only for exact catalogue GET", asy
 for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" : "guest"} settings use one save action for reset and override`, () => {
   const state = hooks(), commands = [];
   const { VehicleSettingsForm } = component(`${garage}vehicle-settings-form.tsx`, {
-    react: state.react, "./battery-slider": { BatterySlider: "BatterySlider" },
-    jotai: { useAtom: () => state.react.useState({}) },
+    react: state.react, "./battery-gauge": { BatteryInput: "BatteryInput" }, "./garage.atoms": { arrivalReservePctAtom: {} },
+    jotai: { useAtomValue: () => 12, useAtom: () => state.react.useState({}) },
     "./trip-energy-state": { tripEnergyStateAtom: {} },
     "./energy-selection": energySelection,
     "./vehicle-api": { legacyEnergyProfile, userObservedConsumption },
@@ -119,9 +120,9 @@ for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" :
   assert.equal(tree.some(node => node.props?.children === "Confirm existing estimate for automatic planning"), false);
   assert.equal(tree.find(node => node.type === "option" && node.props.value === "RESET_DEFAULT").props.disabled, true);
   assert.ok(tree.find(node => node.props?.children === "Nickname (Optional)"));
-  tree.find(node => node.type === "BatterySlider").props.onChange(62);
+  tree.find(node => node.type === "BatteryInput").props.onChange(62);
   tree = render();
-  assert.equal(tree.find(node => node.type === "BatterySlider").props.value, 62);
+  assert.equal(tree.find(node => node.type === "BatteryInput").props.value, 62);
   assert.equal(commands.length, 0);
   assert.equal(tree.find(node => node.type === "Button" && node.props.type === "submit").props.disabled, true);
   tree.find(node => node.type === "select").props.onChange({ target: { value: "USE_RATED_RANGE" } });

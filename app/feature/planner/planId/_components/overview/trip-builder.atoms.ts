@@ -1,4 +1,3 @@
-import { canAutomaticallyPlan } from "../garage/energy-selection";
 import { atom } from "jotai";
 import { activeVehicleAtom } from "../garage/garage.atoms";
 import { getVehicleCar } from "../constants/vehicle.data";
@@ -15,7 +14,6 @@ import type {
 import { getDistanceKm } from "../constants/place.data";
 import { getTripBlockColorByIndex } from "../constants/trip-block-colors";
 import { mockPremadeLists } from "../constants/trip.data";
-import type { AutoEvChargerInsertion } from "../garage/ev-calculator";
 import {
   isEvChargerPlaceItem,
   isPlaceItem,
@@ -137,11 +135,6 @@ type SelectTripPlacePayload = {
 type AddEvChargerToBlockPayload = {
   blockId: string;
   charger: EvCharger;
-};
-
-type AutoAddEvChargersToBlockPayload = {
-  blockId: string;
-  insertions: AutoEvChargerInsertion[];
 };
 
 export type TripPlaceAnchor = PlaceItem & {
@@ -385,6 +378,12 @@ export type PlannerServerSnapshotUpdate = {
   savedAt: string;
 };
 export const tripDateRangeAtom = atom<TripDateRange>({});
+/**
+ * True when the planner renders someone else's published plan. Every editing
+ * control reads it, so a shared plan is the planner itself with editing removed
+ * rather than a second renderer that can drift from it.
+ */
+export const plannerReadOnlyAtom = atom(false);
 export const tripBlocksAtom = atom<TripBlockData[]>([]);
 export const activePlannerKeyAtom = atom<string | null>(null);
 export const itineraryBlocksAtom = atom<TripBlockData[]>((get) =>
@@ -1306,124 +1305,6 @@ export const addEvChargerToBlockAtom = atom(
     set(activeSearchAtom, null);
     set(selectedEvChargerIdAtom, null);
     set(selectedTripPlaceItemIdAtom, nextPlaceId);
-  },
-);
-
-/** Inserts planned chargers in route order and returns how many were added. */
-export const autoAddEvChargersToBlockAtom = atom(
-  null,
-  (get, set, payload: AutoAddEvChargersToBlockPayload): number => {
-    const vehicle = get(activeVehicleAtom);
-    if (!canAutomaticallyPlan(vehicle ? getVehicleCar(vehicle) : null)) return 0;
-    if (payload.insertions.length === 0) {
-      return 0;
-    }
-
-    const targetBlock = get(tripBlocksAtom).find(
-      (block) => block.id === payload.blockId,
-    );
-
-    if (!targetBlock) {
-      return 0;
-    }
-
-    const validBeforeItemIds = new Set(
-      targetBlock.items.map((item) => item.id),
-    );
-    const existingChargerIds = new Set(
-      targetBlock.items
-        .filter(isPlaceItem)
-        .filter(isEvChargerPlaceItem)
-        .map((item) => item.placeId.replace("ev-charger:", "")),
-    );
-    const queuedChargerIds = new Set<string>();
-    const insertionsByBeforeItemId = new Map<
-      string,
-      AutoEvChargerInsertion[]
-    >();
-    // Stops on the leg into the day's end anchor have no item to sit before.
-    const endOfDayInsertions: AutoEvChargerInsertion[] = [];
-
-    for (const insertion of payload.insertions) {
-      if (
-        (insertion.beforeItemId !== null &&
-          !validBeforeItemIds.has(insertion.beforeItemId)) ||
-        existingChargerIds.has(insertion.charger.id) ||
-        queuedChargerIds.has(insertion.charger.id)
-      ) {
-        continue;
-      }
-
-      queuedChargerIds.add(insertion.charger.id);
-
-      if (insertion.beforeItemId === null) {
-        endOfDayInsertions.push(insertion);
-        continue;
-      }
-
-      const currentInsertions =
-        insertionsByBeforeItemId.get(insertion.beforeItemId) ?? [];
-      insertionsByBeforeItemId.set(insertion.beforeItemId, [
-        ...currentInsertions,
-        insertion,
-      ]);
-    }
-
-    if (queuedChargerIds.size === 0) {
-      return 0;
-    }
-
-    let firstInsertedPlaceId: string | null = null;
-
-    const toChargerItems = (insertions: AutoEvChargerInsertion[]) =>
-      [...insertions]
-        .sort((a, b) => a.sequence - b.sequence)
-        .map((insertion) => {
-          const nextPlaceId = createClientId("place");
-
-          if (!firstInsertedPlaceId) {
-            firstInsertedPlaceId = nextPlaceId;
-          }
-
-          return evChargerToPlaceItem(
-            insertion.charger,
-            nextPlaceId,
-            insertion.estimatedChargeMinutes,
-            "AUTO",
-          );
-        });
-
-    set(
-      tripBlocksAtom,
-      updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
-        ...block,
-        items: [
-          ...block.items.flatMap((item) => {
-            const insertions = insertionsByBeforeItemId.get(item.id);
-
-            return insertions?.length
-              ? [...toChargerItems(insertions), item]
-              : [item];
-          }),
-          ...toChargerItems(endOfDayInsertions),
-        ],
-      })),
-    );
-
-    set(activeSearchAtom, null);
-    set(selectedEvChargerIdAtom, null);
-    set(activeBlockIdAtom, payload.blockId);
-    set(openBlockIdsAtom, (openIds) =>
-      openIds.includes(payload.blockId)
-        ? openIds
-        : [...openIds, payload.blockId],
-    );
-
-    if (firstInsertedPlaceId) {
-      set(selectedTripPlaceItemIdAtom, firstInsertedPlaceId);
-    }
-
-    return queuedChargerIds.size;
   },
 );
 

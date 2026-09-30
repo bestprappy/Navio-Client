@@ -69,6 +69,7 @@ export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps)
         chargeMinutes={chargeStats.chargeMinutes}
         compatibleStops={chargeStats.compatibleStops}
         incompatibleStops={chargeStats.incompatibleStops}
+        profile={chargeStats.profile}
       />
     </section>
   );

@@ -1,6 +1,6 @@
-import { AUTO_MIN_ARRIVAL_PCT } from "./ev-calculator";
 
-export function formatMinutes(totalMinutes: number): string {
+export function formatMinutes(totalMinutes: number | null): string {
+  if (totalMinutes === null || !Number.isFinite(totalMinutes)) return "Unavailable";
   if (totalMinutes <= 0) return "0 min";
 
   totalMinutes = Math.round(totalMinutes);
@@ -12,7 +12,8 @@ export function formatMinutes(totalMinutes: number): string {
   return `${h} hr ${m} min`;
 }
 
-export function formatDistanceKm(km: number): string {
+export function formatDistanceKm(km: number | null): string {
+  if (km === null || !Number.isFinite(km)) return "Unavailable";
   return km > 0 && km < 10 ? km.toFixed(1) : Math.round(km).toLocaleString("en-US");
 }
 
@@ -35,14 +36,15 @@ export function formatCheckedDate(value?: string): string | null {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
 
-/** Level bands: green from 50%, yellow from 26%, orange down to the planner reserve, red below it. */
+/** Level bands: green from 50%, yellow from 26%, orange down to the arrival reserve, red below it. */
 export const BATTERY_HIGH_PCT = 50;
 export const BATTERY_LOW_PCT = 25;
 
 export type BatteryTone = "high" | "mid" | "low" | "critical";
 
-export function getBatteryTone(pct: number): BatteryTone {
-  if (pct < AUTO_MIN_ARRIVAL_PCT) return "critical";
+export function getBatteryTone(pct: number | null, reservePct: number): BatteryTone {
+  if (pct === null) return "mid";
+  if (pct < reservePct) return "critical";
   if (pct <= BATTERY_LOW_PCT) return "low";
   if (pct < BATTERY_HIGH_PCT) return "mid";
   return "high";

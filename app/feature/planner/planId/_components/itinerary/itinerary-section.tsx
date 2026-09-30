@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTripMetadata, useUpdateTripMetadata } from "../../../_components/use-trip-metadata";
 import { DayDestinationPicker } from "./day-destination-picker";
@@ -10,7 +10,7 @@ import { AnchorStopCard, EndAnchorRouteInfo } from "./anchor-stop-card";
 import { getTripBlockColorById } from "../constants/trip-block-colors";
 import { DayAnchorRail } from "./day-anchor-rail";
 import { EMPTY_DAY_ANCHORS, getDayPlacePositions, resolveDayAnchors } from "./day-anchors";
-import { isPlaceItem, type TripAnchor, type TripDestination } from "../constants/types";
+import { isPlaceItem, type TripAnchor, type TripBlockData, type TripDestination } from "../constants/types";
 import { useTripDates } from "../overview/use-trip-dates";
 import { CalendarIcon, CalendarPlus, ChevronsDownUp, ChevronsUpDown, Route } from "lucide-react";
 import { addDays, format, isAfter, parseISO } from "date-fns";
@@ -32,6 +32,7 @@ import {
   setDayAnchorAtom,
   tripBlocksAtom,
   openBlockIdsAtom,
+  plannerReadOnlyAtom,
   routeLineModeAtom,
   toggleBlockOpenAtom,
   type DayAnchorEdge,
@@ -61,14 +62,18 @@ type ItinerarySectionProps = {
   destinationName: string;
   latitude: number;
   longitude: number;
+  /** Read-only plans show where each day starts and ends here, in place of the anchor editor. */
+  renderDayAnchors?: (block: TripBlockData) => ReactNode;
 };
 
 export function ItinerarySection({
   destinationName,
   latitude,
   longitude,
+  renderDayAnchors,
 }: ItinerarySectionProps) {
   const blocks = useAtomValue(itineraryBlocksAtom);
+  const readOnly = useAtomValue(plannerReadOnlyAtom);
   const params = useParams<{ planId?: string }>();
   const metadata = useTripMetadata(params.planId);
   const updateMetadata = useUpdateTripMetadata(params.planId);
@@ -148,7 +153,14 @@ export function ItinerarySection({
               Itinerary
             </AccordionTrigger>
 
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
+            {readOnly ? (
+              tripDateLabel && (
+                <p className="flex items-center gap-1.5 py-1 text-sm text-muted-foreground">
+                  <CalendarIcon className="size-3.5 shrink-0" aria-hidden="true" />
+                  {tripDateLabel}
+                </p>
+              )
+            ) : <div className="flex min-w-0 flex-wrap items-center gap-2">
               {isEditingDates || !tripDateLabel ? (
                 <DateRangePicker
                   value={pickerValue}
@@ -194,14 +206,16 @@ export function ItinerarySection({
                 <CalendarPlus className="size-3.5" aria-hidden="true" />
                 Add day
               </button>
-            </div>
+            </div>}
           </div>
 
           {isSavingDates && <p role="status" className="mb-2 text-xs text-muted-foreground">Saving dates...</p>}
           {datesSaveFailed && <p role="alert" className="mb-2 text-xs text-destructive">Dates could not be saved. Please select your dates again to retry.</p>}
           <AccordionContent className="pt-0">
             <div className="space-y-4 pb-10 pt-2">
-              {blocks.length === 0 ? (
+              {blocks.length === 0 && readOnly ? (
+                <p className="text-sm text-muted-foreground">This plan does not have any days yet.</p>
+              ) : blocks.length === 0 ? (
                 <EmptyItineraryCallout
                   nextBlockDate={nextBlockDate}
                   tripDateLabel={tripDateLabel}
@@ -246,10 +260,12 @@ export function ItinerarySection({
                     return <TripBlock.Root
                       key={block.id}
                       block={block}
-                      className="mb-6 rounded-xl border border-border bg-card/35 p-3 @lg/planner:p-4"
+                      variant="day"
+                      readOnly={readOnly}
                     >
                       <TripBlock.Header>
                         <TripBlock.Title />
+                        {readOnly ? renderDayAnchors?.(block) : <>
                         <DayDestinationPicker destination={destination} isFirstDay={block.id === firstBlockId} isOverride={!!block.destination} onChange={(next) => changeDestination(block.id, next)} />
                         <DayAnchorRail.Root
                           anchors={dayAnchors.get(block.id) ?? EMPTY_DAY_ANCHORS}
@@ -273,6 +289,7 @@ export function ItinerarySection({
                             <DayAnchorRail.Summary />
                           )}
                         </DayAnchorRail.Root>
+                        </>}
                         <button type="button" aria-expanded={isOpen} aria-controls={`day-content-${block.id}`} className="flex min-h-10 w-full items-center justify-between rounded-lg px-2 text-sm text-primary hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={() => toggleOpen(block.id)}>
                           <span>{block.items.length} {block.items.length === 1 ? "item" : "items"}</span><span>{isOpen ? "Show less" : "Show more"}</span>
                         </button>
@@ -287,7 +304,7 @@ export function ItinerarySection({
                           blockId={block.id}
                           blockIndex={index}
                         />
-                        <TripBlock.Actions
+                        {!readOnly && <TripBlock.Actions
                           evSearchAnchor={{
                             id: `destination-${block.id}`,
                             lat: destination.lat,
@@ -298,13 +315,13 @@ export function ItinerarySection({
                             lat: destination.lat,
                             lng: destination.lng,
                           }}
-                        />
+                        />}
                       </TripBlock.Content>}
                       </div>
                     </TripBlock.Root>;
                   })}
 
-                  {nextBlockDate && (
+                  {nextBlockDate && !readOnly && (
                     <InlineAddDivider
                       onClick={handleAddBlock}
                       label={`Add day for ${format(parseISO(nextBlockDate), "MMM d")}`}

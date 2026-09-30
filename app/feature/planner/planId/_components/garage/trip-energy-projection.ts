@@ -39,7 +39,9 @@ export type CanonicalTripSummary = {
   finalBatteryPct: number | null; batteryByDay: (number | null)[];
   infeasible: boolean; provisional: boolean; reasons: string[];
 };
+export type DayBatteryPoint = { id: string; name: string; distanceKm: number; arrivalPct: number; departurePct: number; isCharger: boolean };
 export type CanonicalDayProjection = {
+  profile: DayBatteryPoint[];
   startBatteryPct: number | null; finalBatteryPct: number | null;
   predictedBelowReserve: boolean; infeasible: boolean;
   distanceKm: number | null; energyKwh: number | null; chargeMinutes: number | null;
@@ -49,7 +51,7 @@ export type CanonicalDayProjection = {
 const sum = (values: (number | null)[]) => values.some(v => v === null) ? null : values.reduce<number>((a, b) => a + (b ?? 0), 0);
 
 /** Planner and Explore feed the same ordered itinerary/route adapter. */
-export function projectCanonicalTrip(blocks: TripBlockData[], segments: RouteSegment[], car: EvCar, initialSoc: number | null) {
+export function projectCanonicalTrip(blocks: TripBlockData[], segments: RouteSegment[], car: EvCar, initialSoc: number | null, reserveSocPct = 12) {
   const days = blocks.filter(b => b.kind === "itinerary").toSorted((a,b) => a.date.localeCompare(b.date));
   const groups = new Map(getTripRouteGroups(blocks).map(g => [g.blockId, g.points]));
   const anchors = resolveDayAnchors(blocks);
@@ -75,14 +77,23 @@ export function projectCanonicalTrip(blocks: TripBlockData[], segments: RouteSeg
       previousPosition=point;
     }
   }
-  const results=projectEnergyTrip(energyModelForCar(car),initialSoc,events);
+  const results=projectEnergyTrip(energyModelForCar(car),initialSoc,events,reserveSocPct);
   const projections=new Map<string,CanonicalDayProjection>();
   let forward=initialSoc;
   for(const day of days) {
     const states=results.filter(r=>r.dayId===day.id);
     const start=forward; forward=states.length ? states[states.length-1].departureSocPct : forward;
     const dayEvents=events.filter(e=>e.dayId===day.id);
-    projections.set(day.id,{startBatteryPct:start,finalBatteryPct:forward,
+    let distance = 0;
+    const profile: DayBatteryPoint[] = [];
+    const points = groups.get(day.id) ?? [];
+    for (const state of states) {
+      const event = dayEvents.find(value => value.id === state.id);
+      if (event?.distanceKm == null || state.rawPredictedArrivalSocPct == null || state.departureSocPct == null || event.observedSocPct != null) { profile.length = 0; break; }
+      distance += event.distanceKm;
+      profile.push({ id: state.id, name: points.find(point => point.id === state.id)?.name ?? "Stop", distanceKm: distance, arrivalPct: state.rawPredictedArrivalSocPct, departurePct: state.departureSocPct, isCharger: !!event.charging });
+    }
+    projections.set(day.id,{profile,startBatteryPct:start,finalBatteryPct:forward,
       predictedBelowReserve:states.some(r=>r.predictedArrivalReserveStatus==="BELOW_RESERVE"),infeasible:states.some(r=>r.predictedLegFeasibility==="INFEASIBLE"),
       distanceKm:sum(dayEvents.map(e=>e.distanceKm)),energyKwh:sum(states.map(r=>r.nominalEnergyKwh)),
       chargeEnergyKwh:sum(states.map(r=>r.chargeEnergyKwh)),chargeMinutes:sum(states.map(r=>r.nominalChargeMinutes)),

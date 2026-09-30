@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useAtom, useStore } from "jotai";
 import { applyGuestVehicleCommand, guestVehiclesAtom } from "./guest-vehicles";
-import type { VehicleCommand } from "./vehicle-api";
+import { getPublishedVehicle, type VehicleCommand } from "./vehicle-api";
 
 import { garageActiveIdSnapshotAtom, garageModalOpenAtom, garageVehiclesSnapshotAtom } from "./garage.atoms";
 import { executeVehicleCommand, listVehicles, VehicleApiError, type SavedVehicle } from "./vehicle-api";
@@ -56,7 +56,8 @@ function useGarageState() {
           } })
           : executeVehicleCommand(command);
       }
-      const next = applyGuestVehicleCommand(store.get(guestVehiclesAtom), command);
+      const guestCommand = command.kind === "catalog" ? { ...command, catalogVehicle: await getPublishedVehicle(command.catalogId) } : command;
+      const next = applyGuestVehicleCommand(store.get(guestVehiclesAtom), guestCommand);
       setGuestVehicles(next);
       return command.kind === "update" ? next.find(vehicle => vehicle.id === command.id) ?? null : next[next.length - 1];
     },

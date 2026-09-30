@@ -1,15 +1,15 @@
 "use client";
 
-import { AlertTriangle, Check, Zap } from "lucide-react";
+import { AlertTriangle, Check, Navigation, PlugZap, Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 import type { EvCharger } from "../constants/types";
-import type { EvStationVisual } from "./ev-station-panel.data";
+import { ConnectorChips } from "./connector-chips";
+import { getAvailabilityLabel } from "./ev-station-formatters";
 
 type EvStationListCardProps = {
   charger: EvCharger;
-  visual: EvStationVisual;
   distanceKm?: number;
   isAdded: boolean;
   isCompatible?: boolean;
@@ -18,17 +18,38 @@ type EvStationListCardProps = {
   onSelect: () => void;
 };
 
-function formatDistance(distanceKm?: number, maxKw?: number): string {
-  if (distanceKm === undefined || distanceKm <= 0) {
-    return maxKw != null ? `Up to ${maxKw} kW` : "—";
-  }
+const MAX_CONNECTOR_CHIPS = 3;
 
-  return `${distanceKm.toFixed(3)}km`;
+function formatDistance(distanceKm: number): string {
+  if (distanceKm < 1) return `${Math.max(10, Math.round(distanceKm * 100) * 10)} m`;
+  return `${distanceKm.toFixed(1)} km`;
+}
+
+/** Faster chargers get a stronger tile; the kW figure itself always carries the meaning. */
+function getPowerTone(maxKw: number): string {
+  if (maxKw >= 100) return "bg-primary text-primary-foreground";
+  if (maxKw >= 40) return "bg-primary/15 text-primary";
+  return "bg-muted text-foreground";
+}
+
+function PowerTile({ maxKw }: { maxKw: number }) {
+  const hasPower = maxKw > 0;
+  return (
+    <span
+      className={cn(
+        "flex size-14 shrink-0 flex-col items-center justify-center rounded-md leading-none",
+        hasPower ? getPowerTone(maxKw) : "bg-muted text-muted-foreground",
+      )}
+    >
+      <span className="text-lg font-bold tabular-nums">{hasPower ? Math.round(maxKw) : "–"}</span>
+      <span className="mt-1 text-xs font-medium opacity-80">kW</span>
+      <span className="sr-only">{hasPower ? "maximum power" : "power not listed"}</span>
+    </span>
+  );
 }
 
 export function EvStationListCard({
   charger,
-  visual,
   distanceKm,
   isAdded,
   isCompatible = true,
@@ -37,49 +58,46 @@ export function EvStationListCard({
   onSelect,
 }: EvStationListCardProps) {
   const addDisabled = isAdded || !isCompatible;
-  const backgroundImage = charger.imageUrl
-    ? `url(${charger.imageUrl}), url(${visual.imageUrl})`
-    : `url(${visual.imageUrl})`;
-  const imageAlt = charger.imageUrl ? `Photo of ${charger.name}` : visual.alt;
+  const address = charger.address ?? charger.location.address;
 
   return (
     <article
       className={cn(
-        "flex w-full items-center gap-3 rounded-sm bg-background p-2 text-left transition-all",
-        isSelected ? "ring-2 ring-primary/20" : "hover:border-primary/40",
+        "flex w-full items-center gap-3 rounded-sm border bg-background p-3 text-left transition-colors",
+        isSelected ? "border-primary/50 bg-card" : "border-transparent hover:border-border",
       )}
     >
       <button
         type="button"
         aria-pressed={isSelected}
         onClick={onSelect}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+        className="flex min-w-0 flex-1 items-start gap-3 rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
       >
-        <span
-          role="img"
-          aria-label={imageAlt}
-          className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-muted bg-cover bg-center"
-          style={{ backgroundImage }}
-        >
-          {isAdded ? (
-            <span className="absolute left-1.5 top-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xs">
-              <Check className="size-3" aria-hidden="true" />
+        <PowerTile maxKw={charger.maxKw} />
+
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-foreground">{charger.name}</span>
+          <ConnectorChips connectors={charger.connectorTypes} max={MAX_CONNECTOR_CHIPS} className="mt-1.5" />
+          <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+            {distanceKm !== undefined && distanceKm > 0 ? (
+              <span className="inline-flex items-center gap-1">
+                <Navigation className="size-3 text-primary" aria-hidden="true" />
+                <span className="font-medium tabular-nums text-foreground">{formatDistance(distanceKm)}</span>
+                from stop
+              </span>
+            ) : null}
+            <span className="inline-flex items-center gap-1">
+              <PlugZap className="size-3 text-rating" aria-hidden="true" />
+              {getAvailabilityLabel(charger)}
+            </span>
+          </span>
+          {address ? (
+            <span className="mt-1 block truncate text-xs text-muted-foreground" title={address}>
+              {address}
             </span>
           ) : null}
-        </span>
-
-        <span className="min-w-0">
-          <span className="block truncate text-xs font-bold text-foreground">
-            {charger.name}
-          </span>
-          <span className="mt-1 block line-clamp-2 text-[11px] font-medium leading-tight text-muted-foreground">
-            {charger.address ?? charger.location.address}
-          </span>
-          <span className="mt-1 block text-[11px] font-semibold text-primary">
-            {formatDistance(distanceKm, charger.maxKw)}
-          </span>
           {!isCompatible ? (
-            <span className="mt-1 inline-flex items-center gap-1 rounded-sm bg-warning/10 px-1.5 py-0.5 text-[10px] font-semibold text-warning">
+            <span className="mt-1.5 inline-flex items-center gap-1 rounded-sm bg-warning/10 px-1.5 py-0.5 text-xs font-semibold text-warning">
               <AlertTriangle className="size-3" aria-hidden="true" />
               Connector mismatch
             </span>

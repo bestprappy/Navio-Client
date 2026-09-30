@@ -51,6 +51,7 @@ import {
   selectedTripPlacesAtom,
   selectSearchResultAtom,
   selectTripPlaceAtom,
+  plannerReadOnlyAtom,
   startPlaceSearchAtom,
   stepSearchResultAtom,
   tripBlocksAtom,
@@ -264,6 +265,7 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
   const closeSelectedSearchPlace = useSetAtom(closeSelectedSearchPlaceAtom);
   const closeSelectedTripPlace = useSetAtom(closeSelectedTripPlaceAtom);
   const startPlaceSearch = useSetAtom(startPlaceSearchAtom);
+  const readOnly = useAtomValue(plannerReadOnlyAtom);
 
   const selectedTripPlaceIds = useMemo(
     () => new Set(selectedTripPlaces.map((place) => place.placeId)),
@@ -335,7 +337,7 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
   const handleMapPoiClick = useCallback(
     async (event: MapMouseEvent) => {
       const placeId = event.detail.placeId;
-      if (!placeId) return;
+      if (!placeId || readOnly) return;
       event.stop();
 
       try {
@@ -346,7 +348,7 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
         // Silently ignore failed POI detail fetches
       }
     },
-    [activeBlockId, startPlaceSearch, tripBlocks],
+    [activeBlockId, readOnly, startPlaceSearch, tripBlocks],
   );
 
   if (!googleMapsApiKey) {
@@ -363,7 +365,7 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
           defaultZoom={11}
           mapId={googleMapsMapId}
           gestureHandling="greedy"
-          clickableIcons={true}
+          clickableIcons={!readOnly}
           disableDefaultUI={false}
           mapTypeControl={false}
           streetViewControl={false}

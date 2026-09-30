@@ -1,19 +1,23 @@
 "use client";
 
 import { useId, useState } from "react";
-import { useAtom } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BatterySlider } from "./battery-slider";
+import { BatteryInput } from "./battery-gauge";
+import type { EvCar } from "../constants/vehicle.types";
 import { useGarage } from "./garage-provider";
 import type { SavedVehicle } from "./vehicle-api";
 import { defaultEnergyProfile, isLegacyVehicle } from "./energy-selection";
 import { userObservedConsumption } from "./vehicle-api";
 import { tripEnergyStateAtom } from "./trip-energy-state";
 
+import { arrivalReservePctAtom } from "./garage.atoms";
+
 type Selection = "RESET_DEFAULT" | "USE_RATED_RANGE" | "USER_OVERRIDE" | "";
 
-export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle }) {
+export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle; car?: EvCar | null }) {
+  const reservePct = useAtomValue(arrivalReservePctAtom);
   const [tripEnergy, setTripEnergy] = useAtom(tripEnergyStateAtom);
   const battery = tripEnergy?.initialSocPct ?? vehicle.settings.startingBatteryPct;
   const [nickname, setNickname] = useState(vehicle.nickname ?? "");
@@ -34,7 +38,7 @@ export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle }) {
     : selection !== "USER_OVERRIDE" || (Number.isFinite(Number(consumption)) && Number(consumption) > 0 && Number(consumption) <= 99999.999);
   const dirty = nickname !== (vehicle.nickname ?? "") || energyDirty;
   return (
-    <form className="mt-4 grid gap-4 rounded-lg border border-border bg-card p-4" onSubmit={(event) => {
+    <form className="grid gap-5" onSubmit={(event) => {
       event.preventDefault();
       if (!dirty || !valid || mutation.isPending) return;
       mutation.mutate({ kind: "update", id: vehicle.id, patch: {
@@ -45,7 +49,7 @@ export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle }) {
       } });
     }}>
       <div className="flex items-center justify-between gap-3"><label htmlFor="starting-battery" className="text-sm font-medium">Starting battery</label><span className="text-sm font-semibold tabular-nums">{battery}%</span></div>
-      <BatterySlider id="starting-battery" value={battery} onChange={(value) => setTripEnergy((current) => ({ ...current, initialSocPct: value, vehicleSnapshot: current?.vehicleSnapshot ?? null }))} />
+      <BatteryInput reservePct={reservePct} id="starting-battery" value={battery} onChange={(value) => setTripEnergy((current) => ({ ...current, initialSocPct: value, vehicleSnapshot: current?.vehicleSnapshot ?? null }))} />
       <p className="text-xs text-muted-foreground">Battery at the start of Day 1. Updates this trip immediately. {tripEnergy?.initialSocPct == null && "Using an assumed starting value until you adjust it."}</p>
       <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
         <div className="grid min-w-0 gap-2 content-start"><label htmlFor="saved-vehicle-nickname" className="text-sm font-medium">Nickname (Optional)</label><Input id="saved-vehicle-nickname" maxLength={100} value={nickname} onChange={(event) => setNickname(event.target.value)} disabled={mutation.isPending} /></div>

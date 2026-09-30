@@ -1,6 +1,7 @@
 import NextAuth, { type DefaultSession, type NextAuthConfig } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import Keycloak from "next-auth/providers/keycloak";
+import { readNavioRoles, type NavioRole } from "@/lib/navio-roles";
 import { createTokenRefreshCoordinator } from "@/lib/token-refresh-coordinator";
 
 const REFRESH_BUFFER_SECONDS = 30;
@@ -35,25 +36,26 @@ function isKeycloakTokenResponse(value: unknown): value is KeycloakTokenResponse
  * Services record authors by the access token subject, so read it from there. The token came from
  * Keycloak through this server and is only used to label the session, never to authorize.
  */
-function getAccessTokenSubject(accessToken?: string) {
+function readAccessTokenClaims(accessToken?: string): unknown {
   const payload = accessToken?.split(".")[1];
   if (!payload) {
     return undefined;
   }
 
   try {
-    const claims: unknown = JSON.parse(
-      Buffer.from(payload, "base64url").toString("utf8"),
-    );
-    return claims &&
-      typeof claims === "object" &&
-      "sub" in claims &&
-      typeof claims.sub === "string"
-      ? claims.sub
-      : undefined;
+    return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
   } catch {
     return undefined;
   }
+}
+
+function getAccessTokenSubject(claims: unknown) {
+  return claims &&
+    typeof claims === "object" &&
+    "sub" in claims &&
+    typeof claims.sub === "string"
+    ? claims.sub
+    : undefined;
 }
 
 function getKeycloakEnvironment() {
@@ -218,10 +220,17 @@ const authConfig = {
     async session({ session, token }) {
       session.accessToken = token.accessToken;
       session.error = token.error;
+      const claims = readAccessTokenClaims(token.accessToken);
       // Sessions issued before sign-in stored the Keycloak subject still carry a random `sub`.
-      const userId = getAccessTokenSubject(token.accessToken) ?? token.sub;
+      const userId = getAccessTokenSubject(claims) ?? token.sub;
       if (session.user && userId) {
         session.user.id = userId;
+      }
+      // Display only: decides which navigation and screens appear. The gateway
+      // and services authorize every request from the token itself. Roles track
+      // the access token, so a change reaches the UI at the next refresh.
+      if (session.user) {
+        session.user.roles = token.error ? [] : readNavioRoles(claims);
       }
       return session;
     },
@@ -253,6 +262,7 @@ declare module "next-auth" {
     error?: "RefreshTokenError";
     user: DefaultSession["user"] & {
       id?: string;
+      roles?: NavioRole[];
     };
   }
 }

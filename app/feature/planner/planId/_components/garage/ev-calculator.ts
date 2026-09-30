@@ -673,8 +673,11 @@ export function normalizeChargeTargetPct(value?: number): number {
 }
 
 export function calcRangeKmForBatteryPct(batteryPct: number, car: EvCar): number {
-  const energyKwh = (clampPct(batteryPct) / 100) * car.batteryKwh;
-  return (energyKwh / car.consumptionKwhPer100km) * 100;
+  const profile = car.energyProfile;
+  if (profile?.modelKind === "RATED_RANGE" && profile.ratedRangeKm !== null) return clampPct(batteryPct) / 100 * profile.ratedRangeKm;
+  const usable = profile?.usableBatteryCapacityKwh;
+  if (!usable || !(car.consumptionKwhPer100km > 0)) return Number.NaN;
+  return clampPct(batteryPct) / 100 * usable / car.consumptionKwhPer100km * 100;
 }
 
 function getRouteProjection(
@@ -750,3 +753,5 @@ function clampNumber(value: number, min: number, max: number): number {
 
   return Math.max(min, Math.min(max, value));
 }
+
+export type { DayBatteryPoint, CanonicalTripSummary as TripEvSummary } from "./trip-energy-projection";

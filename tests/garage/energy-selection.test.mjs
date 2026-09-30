@@ -125,12 +125,12 @@ test("range vehicle stays active for identity/connectors but never enters the co
   assert.equal(store.get(activeEvCarAtom).energyProfile.modelKind, "RATED_RANGE");
   assert.deepEqual(store.get(activeEvCarAtom).connectorTypes, catalogFixture.connectorTypes);
   assert.equal(store.get(calculationEvCarAtom), null);
-  // Guard lives at the mutation boundary too, not only on a disabled button.
-  assert.equal(store.set(autoAddEvChargersToBlockAtom, { blockId: "day", insertions: [null] }), 0);
+  assert.equal(autoAddEvChargersToBlockAtom, undefined, "Published planner has no client-side auto-insertion path");
+  assert.equal(canAutomaticallyPlan(store.get(activeEvCarAtom)), false);
   store.set(garageVehiclesSnapshotAtom, [savedVehicleForPlanner(savedVehicleFixture)]);
   store.set(garageActiveIdSnapshotAtom, savedVehicleFixture.id);
   assert.equal(store.get(calculationEvCarAtom).consumptionKwhPer100km, 17.5);
-  assert.equal(store.set(autoAddEvChargersToBlockAtom, { blockId: "day", insertions: [null] }), 0);
+  assert.equal(canAutomaticallyPlan(store.get(activeEvCarAtom)), false);
 });
 
 test("live starting battery reaches trip consumers immediately without editing saved settings", () => {

@@ -9,7 +9,10 @@ import { useSession } from "next-auth/react";
 import { format, isValid, parseISO } from "date-fns";
 import {
   CalendarDays,
+  ClipboardList,
+  CarFront,
   Compass,
+  Gauge,
   LayoutDashboard,
   ListChecks,
   Map,
@@ -17,6 +20,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 
@@ -39,6 +43,7 @@ import {
   recentPlanSidebarAtom,
   recentPlanSidebarStore,
 } from "@/app/feature/planner/_components/recent-plan-sidebar";
+import { canUseAdminConsole, isAdministrator } from "@/lib/navio-roles";
 import { cn } from "@/lib/utils";
 
 import SidebarItem from "./sidebar.item";
@@ -327,6 +332,28 @@ export default function SidebarWrapper() {
             collapsed={collapsed}
           />
         </SidebarMenu>
+        {canUseAdminConsole(session?.user?.roles) ? (
+          <SidebarMenu title="Admin" collapsed={collapsed}>
+            <SidebarItem
+              title="Admin dashboard"
+              href="/admin"
+              icon={<Gauge className="size-5" />}
+              isActive={activeSidebar === "/admin"}
+              onClick={() => setMobileOpen(false)}
+              collapsed={collapsed}
+            />
+            <SidebarItem
+              title="Users"
+              href="/admin/users"
+              icon={<Users className="size-5" />}
+              isActive={isRouteActive("/admin/users")}
+              onClick={() => setMobileOpen(false)}
+              collapsed={collapsed}
+            />
+            {isAdministrator(session?.user?.roles) && <SidebarItem title="Vehicle catalog" href="/admin/vehicles" icon={<CarFront className="size-5" />} isActive={isRouteActive("/admin/vehicles")} onClick={() => setMobileOpen(false)} collapsed={collapsed} />}
+            {isAdministrator(session?.user?.roles) && <SidebarItem title="Activity" href="/admin/activity" icon={<ClipboardList className="size-5" />} isActive={isRouteActive("/admin/activity")} onClick={() => setMobileOpen(false)} collapsed={collapsed} />}
+          </SidebarMenu>
+        ) : null}
       </nav>
       <SidebarAccountActions collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
     </aside>
