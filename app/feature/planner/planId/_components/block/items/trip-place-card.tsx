@@ -146,7 +146,6 @@ export function TripPlaceCard({
             </p>
           )}
 
-          {!chargerDetails && !readOnly && <ObservedSocControl blockId={blockId} itemId={item.id} value={item.observedSocCheckpoint?.socPct} />}
           {chargerDetails && !readOnly && (
             <div className="border-t border-border pt-4">
               <StationChargingControl blockId={blockId} itemId={item.id} stationName={item.name} details={chargerDetails} arrivalPct={chargeBatteryFrom} />
@@ -291,6 +290,8 @@ export function TripPlaceCard({
             position={position}
             colorId={blockColorId}
           />
+
+          {!readOnly && <ObservedSocControl blockId={blockId} itemId={item.id} value={item.observedSocCheckpoint?.socPct} />}
 
           {isEditing ? (
             <div className="space-y-3 border-t border-border/70 px-4 pb-4 pt-3">

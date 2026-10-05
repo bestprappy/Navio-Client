@@ -5,13 +5,14 @@ import { useRequireAuth } from "@/hooks/use-require-auth";
 
 import { useMemo, useState } from "react";
 import { CheckCircle2, Loader2, Route, Sparkles } from "lucide-react";
-import { useAtomValue, useSetAtom } from "jotai";
+import { atom, useAtomValue, useSetAtom, useStore } from "jotai";
+import { optimizationStateKey, prepareOptimizationSnapshot } from "@/app/feature/planner/_components/optimization-state";
+import { tripEnergyStateAtom } from "../garage/trip-energy-state";
 import { useMutation } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
 
 import {
   applyTripEvOptimization,
-  getPlannerSnapshot,
   isPersistedTripId,
   PlannerApiError,
   previewTripEvOptimization,
@@ -23,7 +24,11 @@ import { Button } from "@/components/ui/button";
 
 import type { EvCar } from "../constants/vehicle.types";
 import { arrivalReservePctAtom } from "../garage/garage.atoms";
-import { applyPlannerServerSnapshotAtom, tripBlocksAtom } from "../overview/trip-builder.atoms";
+import { applyPlannerServerSnapshotAtom, tripBlocksAtom, tripBudgetAtom, tripCurrencyAtom, tripExpensesAtom } from "../overview/trip-builder.atoms";
+
+const optimizationBudgetAtom = atom(get => ({
+  amount: get(tripBudgetAtom), currency: get(tripCurrencyAtom).code, expenses: get(tripExpensesAtom),
+}));
 
 type EvRouteOptimizationPanelProps = {
   blockId: string | null;
@@ -37,10 +42,6 @@ type PreviewState = {
   payload: EvOptimizationRequestPayload;
   key: string;
 };
-
-function getRequestKey(payload: EvOptimizationRequestPayload): string {
-  return JSON.stringify(payload);
-}
 
 function describeOperation(operation: EvOptimizationOperation): string {
   const chargerName = operation.charger?.name ?? "charger stop";
@@ -80,6 +81,9 @@ export function EvRouteOptimizationPanel({
   const tripId = isPersistedTripId(params.planId) ? params.planId : null;
   const applyServerSnapshot = useSetAtom(applyPlannerServerSnapshotAtom);
   const blocks = useAtomValue(tripBlocksAtom);
+  const energyState = useAtomValue(tripEnergyStateAtom);
+  const budget = useAtomValue(optimizationBudgetAtom);
+  const store = useStore();
   const reserveSocPct = useAtomValue(arrivalReservePctAtom);
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
   const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
@@ -102,50 +106,61 @@ export function EvRouteOptimizationPanel({
       maximumDetourKm: 20,
     };
   }, [blockId, reserveSocPct, startingSocPct, targetSocPct, vehicle]);
-  const requestKey = payload ? getRequestKey(payload) : null;
+  const requestKey = payload ? optimizationStateKey(payload, blocks, energyState, budget) : null;
   const currentPreview =
     previewState && previewState.key === requestKey ? previewState : null;
 
   const previewMutation = useMutation({
-    mutationFn: async (request: EvOptimizationRequestPayload) => {
+    mutationFn: async ({ request, key }: { request: EvOptimizationRequestPayload; key: string }) => {
       if (!tripId) {
         throw new PlannerApiError(
           "Save this trip before using EV route optimization.",
           400,
         );
       }
-      const snapshot = await getPlannerSnapshot(tripId);
+      const snapshot = await prepareOptimizationSnapshot(tripId);
+      if (key !== optimizationStateKey(request, store.get(tripBlocksAtom), store.get(tripEnergyStateAtom), store.get(optimizationBudgetAtom))) {
+        throw new PlannerApiError("The trip changed while preparing optimization. Preview again.", 409);
+      }
       const needsTargets = blocks.some((block) => block.items.some((item) => item.type === "place" && item.evCharger?.targetBatteryPct != null));
       const needsDestinations = blocks.some((block) => block.destination);
       if ((needsTargets && !snapshot.capabilities?.includes("charge-targets")) || (needsDestinations && !snapshot.capabilities?.includes("day-destinations"))) {
         throw new PlannerApiError("Route optimization needs the server update to preserve your destination changes and charging targets. You can continue editing your itinerary.", 409);
       }
-      return previewTripEvOptimization(tripId, request);
+      return previewTripEvOptimization(tripId, { ...request, expectedVersion: snapshot.version });
     },
     onMutate: () => {
       setAppliedMessage(null);
       setPreviewState(null);
     },
-    onSuccess: (data, request) => {
-      setPreviewState({ data, payload: request, key: getRequestKey(request) });
+    onSuccess: (data, { request, key }) => {
+      setPreviewState({ data, payload: request, key });
     },
   });
 
   const applyMutation = useMutation({
-    mutationFn: (state: PreviewState) => {
+    mutationFn: async (state: PreviewState) => {
       if (!tripId || !canAutomaticallyPlan(vehicle)) {
         throw new PlannerApiError(
           "Confirm the vehicle energy selection before applying EV route optimization.",
           400,
         );
       }
+      const snapshot = await prepareOptimizationSnapshot(tripId);
+      if (snapshot.version !== state.data.baseVersion || state.key !== optimizationStateKey(state.payload, store.get(tripBlocksAtom), store.get(tripEnergyStateAtom), store.get(optimizationBudgetAtom))) {
+        throw new PlannerApiError("The trip changed after this preview. Preview the route again.", 409);
+      }
       return applyTripEvOptimization(tripId, {
         ...state.payload,
         expectedVersion: state.data.baseVersion,
       });
     },
-    onSuccess: (snapshot) => {
+    onSuccess: (snapshot, state) => {
       if (!tripId) return;
+      if (state.key !== optimizationStateKey(state.payload, store.get(tripBlocksAtom), store.get(tripEnergyStateAtom), store.get(optimizationBudgetAtom))) {
+        setPreviewState(null);
+        throw new PlannerApiError("Charging changes were saved, but newer local edits were kept on this device. Reconcile the saved trip before retrying.", 409);
+      }
       applyServerSnapshot({ tripId, ...snapshot });
       setPreviewState(null);
       setAppliedMessage("Charging stops were applied to this day.");
@@ -162,7 +177,7 @@ export function EvRouteOptimizationPanel({
   function previewRoute() {
     if (!payload || !tripId) return;
     applyMutation.reset();
-    previewMutation.mutate(payload);
+    previewMutation.mutate({ request: payload, key: requestKey! });
   }
 
   function applyPreview() {

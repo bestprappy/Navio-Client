@@ -24,6 +24,7 @@ await context.route(`${origin}/api/**`,async route=>{
   const req=route.request(),path=new URL(req.url()).pathname;
   let body;
   if(path==="/api/auth/session") body={user:{id:"22222222-2222-4222-8222-222222222222",name:"Energy test",email:"test@example.com"},expires:"2099-01-01T00:00:00Z"};
+  else if(path==="/api/users/me") body={id:"22222222-2222-4222-8222-222222222222",displayName:"Energy test",email:"test@example.com"};
   else if(path===`/api/trips/${secondId}/planner`) {
     if(req.method()==="PUT") {const payload=req.postDataJSON();writes.push(payload);secondSnapshot={...secondSnapshot,...payload,version:secondSnapshot.version+1,savedAt:new Date().toISOString()};}
     body=secondSnapshot;
@@ -73,8 +74,7 @@ try {
   await garage.getByText("No vehicle added",{exact:true}).waitFor();
   await garage.getByRole("button",{name:"Add vehicle",exact:true}).click();
   await page.getByRole("button",{name:"My custom EVs",exact:true}).click();
-  await page.getByRole("radio",{name:"Reusable custom EV"}).check();
-  await page.getByRole("button",{name:"Use for this trip",exact:true}).click();
+  await page.getByRole("button",{name:"Reusable custom EV",exact:true}).click();
   await eventually(()=>secondSnapshot.energyState?.garageVehicleIds?.includes(customVehicle.id),"trip membership did not save");
   await page.reload();
   await garage.getByRole("heading",{name:"Reusable custom EV",exact:true}).waitFor();
@@ -84,7 +84,7 @@ try {
   await garage.getByText("No vehicle added",{exact:true}).waitFor();
   await garage.getByRole("button",{name:"Add vehicle",exact:true}).click();
   await page.getByRole("button",{name:"My custom EVs",exact:true}).click();
-  await page.getByRole("radio",{name:"Reusable custom EV"}).waitFor();
+  await page.getByRole("button",{name:"Reusable custom EV",exact:true}).waitFor();
   assert.equal(snapshot.energyState.vehicleSnapshot.vehicleId,vehicle.id);
   assert.deepEqual(garageWrites,[]);
   assert.ok(writes.length>=3);

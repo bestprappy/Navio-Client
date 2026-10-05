@@ -274,14 +274,24 @@ export function PlannerPersistence({
     if (pending) {
       window.clearTimeout(pending.timeoutId);
       pendingSaveRef.current = null;
-      await saveStateAsync(pending.variables);
+    }
+    const inFlight = queryClient.getMutationCache().getAll().some(mutation =>
+      mutation.options.scope?.id === `planner-autosave-${persistedPlanId}` && mutation.state.status === "pending");
+    const state = latestStateRef.current;
+    const serialized = serializePlannerState(state);
+    if (pending || inFlight || serialized !== lastSavedRef.current) {
+      // Joining the autosave scope waits for any in-flight older save before saving the latest state.
+      await saveStateAsync({ state, serialized });
+    }
+    if (localSettingsPendingRef.current || serializePlannerState(latestStateRef.current) !== lastSavedRef.current) {
+      throw new PlannerApiError("The latest trip settings have not finished syncing. Retry after they are saved.", 409);
     }
     const version = plannerVersionRef.current;
     if (version === null) {
       throw new PlannerApiError("This plan has not finished saving yet.", 409);
     }
     return version;
-  }, [saveStateAsync]);
+  }, [saveStateAsync, queryClient, persistedPlanId]);
 
   useEffect(() => {
     if (!persistedPlanId) return;

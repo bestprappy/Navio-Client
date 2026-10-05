@@ -17,6 +17,9 @@ await context.route("**/api/geo/places/**", route => {
     : path.endsWith("ev-chargers") ? { items: [] } : placeFixture });
 });
 await context.route("**/api/routes/directions", route => route.fulfill({ json: { segments: [] } }));
+await context.route("**/api/vehicle-models**", route => route.fulfill({ json:
+  new URL(route.request().url()).pathname === "/api/vehicle-models"
+    ? { content: [catalogFixture], number: 0, totalElements: 1, totalPages: 1 } : catalogFixture }));
 for (const pattern of ["**/api/trips**", "**/api/users/**"]) {
   await context.route(pattern, route => {
     if (route.request().method() === "GET" && new URL(route.request().url()).pathname === "/api/users/me/vehicles/catalog") {
@@ -40,7 +43,7 @@ try {
   await page.getByLabel("Trip name", { exact: true }).fill("Temporary journey");
   await page.getByRole("button", { name: "Save name", exact: true }).click();
   await page.getByRole("heading", { name: "Temporary journey", exact: true }).waitFor();
-  await page.getByRole("combobox", { name: "Add a stop in Bangkok", exact: true }).click();
+  await page.getByRole("region", { name: "Itinerary", exact: true }).getByRole("combobox", { name: "Add a stop in Bangkok", exact: true }).click();
   await page.getByRole("option").filter({ hasText: "Guest test temple" }).first().click();
   await page.getByText("Guest test temple", { exact: true }).first().waitFor();
   await page.getByRole("button", { name: "Add to trip", exact: true }).click();
@@ -67,8 +70,8 @@ try {
   await page.getByRole("button", { name: "Clear", exact: true }).click();
   await page.getByRole("button", { name: "Set battery level", exact: true }).first().waitFor();
   await page.getByRole("button", { name: "Add vehicle", exact: true }).click();
-  assert.equal(await page.getByRole("button", { name: "Thailand catalogue", exact: true }).getAttribute("aria-pressed"), "true");
-  await page.getByRole("textbox", { name: "Search Thailand vehicles" }).fill("ATTO");
+  assert.equal(await page.getByRole("button", { name: "EV Vehicle List", exact: true }).getAttribute("aria-pressed"), "true");
+  await page.getByRole("textbox", { name: "Search vehicle catalog" }).fill("ATTO");
   await page.getByRole("radio").first().check();
   await page.getByRole("button", { name: "Use for this trip", exact: true }).click();
   await page.getByText(/Based on 480 km NEDC/).waitFor();
@@ -103,14 +106,7 @@ try {
   await page.getByText("Guest plan · Not saved", { exact: true }).waitFor();
   assert.equal(await page.getByRole("heading", { name: "Temporary journey", exact: true }).count(), 0);
   assert.equal(await page.getByText("Vehicle settings used only for this guest trip.", { exact: true }).count(), 0);
-  await page.goto(`${origin}/explore`, { waitUntil: "domcontentloaded" });
-  for (const action of ["Save", "Like"]) {
-    console.log(`Checking guest Explore ${action}`);
-    const button = page.getByRole("button", { name: action, exact: true }).first();
-    await button.click();
-    await page.getByRole("button", { name: "Sign in later", exact: true }).click();
-    assert.equal(await button.getAttribute("aria-pressed"), "false");
-  }
+  // Explore now renders shared plans server-side; its copy/auth coverage is separate.
   await page.goto(`${origin}/planner/11111111-1111-4111-8111-111111111111`, { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Sign in later", exact: true }).click();
   await page.getByRole("heading", { name: "This is a saved trip", exact: true }).waitFor();
@@ -123,7 +119,7 @@ try {
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
   assert.deepEqual(accountRequests, [], "guest UI must not request or save private account data");
   assert.deepEqual(errors, []);
-  console.log("PASS: guest setup, rename, manual map anchor, favorite guards, temporary EV, sign-in-later, refresh reset, Explore gates, private-trip protection; no account requests or browser errors.");
+  console.log("PASS: guest setup, rename, manual map anchor, favorite guards, temporary EV, sign-in-later, refresh reset, private-trip protection; no account requests or browser errors.");
 } catch (error) {
   console.error("Browser errors:", errors);
   console.error((await page.locator("body").innerText()).slice(0, 7000));
