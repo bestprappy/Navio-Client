@@ -17,7 +17,7 @@ import type { PublicCharger, PublicItem, PublicPlanSnapshot } from "./publicatio
  */
 
 const CONNECTOR_TYPES: readonly EvConnectorType[] = ["CCS1", "CCS2", "CHADEMO", "TYPE2", "J1772", "NACS", "GB_T", "OTHER"];
-const CURRENCY_CODES: readonly CurrencyCode[] = ["THB", "USD", "EUR", "JPY"];
+const CURRENCY_CODES: readonly CurrencyCode[] = ["THB", "USD", "EUR", "JPY", "TWD"];
 const EV_CHARGER_PLACE_PREFIX = "ev-charger:";
 
 function isConnectorType(value: string): value is EvConnectorType {

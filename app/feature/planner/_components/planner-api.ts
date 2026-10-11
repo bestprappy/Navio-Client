@@ -519,7 +519,7 @@ function isCurrencyRateResponse(value: unknown): value is CurrencyRateResponse {
 }
 
 function isCurrencyCode(value: unknown): value is CurrencyCode {
-  return value === "THB" || value === "USD" || value === "EUR" || value === "JPY";
+  return value === "THB" || value === "USD" || value === "EUR" || value === "JPY" || value === "TWD";
 }
 
 function isPlannerSaveAcknowledgement(

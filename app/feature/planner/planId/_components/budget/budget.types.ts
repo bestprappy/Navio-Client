@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
-export type CurrencyCode = "THB" | "USD" | "EUR" | "JPY";
+export type CurrencyCode = "THB" | "USD" | "EUR" | "JPY" | "TWD";
 
 export type CurrencyOption = {
   code: CurrencyCode;

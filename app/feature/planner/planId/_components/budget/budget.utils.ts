@@ -11,7 +11,7 @@ export function formatMoney(amount: number, currency: CurrencyCode): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
-    currencyDisplay: "narrowSymbol",
+    currencyDisplay: currency === "TWD" ? "symbol" : "narrowSymbol",
   }).format(amount);
 }
 

@@ -24,6 +24,7 @@ export const currencyOptions: CurrencyOption[] = [
   { code: "USD", label: "US Dollar", symbol: "$" },
   { code: "EUR", label: "Euro", symbol: "€" },
   { code: "JPY", label: "Japanese Yen", symbol: "¥" },
+  { code: "TWD", label: "New Taiwan Dollar", symbol: "NT$" },
 ];
 
 export const expenseCategories: ExpenseCategory[] = [
