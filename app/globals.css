@@ -74,6 +74,34 @@
   --color-premade: var(--premade);
   --color-tag: var(--tag);
 
+  /* Place-category palette: also available as text-place-tag-* utilities. */
+  --color-place-tag-rail: var(--place-tag-rail);
+  --color-place-tag-bus: var(--place-tag-bus);
+  --color-place-tag-airport: var(--place-tag-airport);
+  --color-place-tag-ferry: var(--place-tag-ferry);
+  --color-place-tag-parking: var(--place-tag-parking);
+  --color-place-tag-charging: var(--place-tag-charging);
+  --color-place-tag-restaurant: var(--place-tag-restaurant);
+  --color-place-tag-cafe: var(--place-tag-cafe);
+  --color-place-tag-bakery: var(--place-tag-bakery);
+  --color-place-tag-bar: var(--place-tag-bar);
+  --color-place-tag-lodging: var(--place-tag-lodging);
+  --color-place-tag-shopping: var(--place-tag-shopping);
+  --color-place-tag-groceries: var(--place-tag-groceries);
+  --color-place-tag-culture: var(--place-tag-culture);
+  --color-place-tag-landmark: var(--place-tag-landmark);
+  --color-place-tag-worship: var(--place-tag-worship);
+  --color-place-tag-nature: var(--place-tag-nature);
+  --color-place-tag-beach: var(--place-tag-beach);
+  --color-place-tag-wildlife: var(--place-tag-wildlife);
+  --color-place-tag-entertainment: var(--place-tag-entertainment);
+  --color-place-tag-sports: var(--place-tag-sports);
+  --color-place-tag-wellness: var(--place-tag-wellness);
+  --color-place-tag-healthcare: var(--place-tag-healthcare);
+  --color-place-tag-education: var(--place-tag-education);
+  --color-place-tag-services: var(--place-tag-services);
+  --color-place-tag-general: var(--place-tag-general);
+
   /* EV connector families — one hue each, all kept clear of the brand blue */
   --color-connector-ccs: var(--connector-ccs);
   --color-connector-chademo: var(--connector-chademo);
@@ -205,6 +233,36 @@
   --premade: oklch(0.5 0.19 300);
   --tag: oklch(0.48 0.16 275);
 
+  /* Google place tags: edit each family here and in .dark below.
+     One ink color supplies the text and the softly tinted background. */
+  --place-tag-tint: 12%;
+  --place-tag-rail: oklch(0.48 0.16 265);
+  --place-tag-bus: oklch(0.47 0.12 185);
+  --place-tag-airport: oklch(0.48 0.12 235);
+  --place-tag-ferry: oklch(0.47 0.11 215);
+  --place-tag-parking: oklch(0.48 0.045 250);
+  --place-tag-charging: oklch(0.46 0.12 152);
+  --place-tag-restaurant: oklch(0.49 0.15 40);
+  --place-tag-cafe: oklch(0.46 0.1 65);
+  --place-tag-bakery: oklch(0.49 0.12 85);
+  --place-tag-bar: oklch(0.48 0.16 315);
+  --place-tag-lodging: oklch(0.48 0.15 285);
+  --place-tag-shopping: oklch(0.48 0.17 350);
+  --place-tag-groceries: oklch(0.47 0.11 118);
+  --place-tag-culture: oklch(0.47 0.17 300);
+  --place-tag-landmark: oklch(0.48 0.1 75);
+  --place-tag-worship: oklch(0.47 0.07 95);
+  --place-tag-nature: oklch(0.46 0.12 162);
+  --place-tag-beach: oklch(0.46 0.1 200);
+  --place-tag-wildlife: oklch(0.47 0.13 137);
+  --place-tag-entertainment: oklch(0.48 0.18 330);
+  --place-tag-sports: oklch(0.46 0.13 145);
+  --place-tag-wellness: oklch(0.46 0.08 175);
+  --place-tag-healthcare: oklch(0.49 0.17 25);
+  --place-tag-education: oklch(0.48 0.12 275);
+  --place-tag-services: oklch(0.48 0.04 70);
+  --place-tag-general: oklch(0.49 0.03 260);
+
   /* EV connector families — same lightness/chroma, hues spread away from blue */
   --connector-ccs: oklch(0.52 0.13 150);
   --connector-chademo: oklch(0.55 0.15 50);
@@ -333,6 +391,35 @@
   --charging: oklch(0.82 0.12 150);
   --premade: oklch(0.83 0.1 300);
   --tag: oklch(0.8 0.1 275);
+
+  /* Place tags: brighter inks for dark cards. */
+  --place-tag-tint: 16%;
+  --place-tag-rail: oklch(0.8 0.1 265);
+  --place-tag-bus: oklch(0.82 0.11 185);
+  --place-tag-airport: oklch(0.82 0.1 235);
+  --place-tag-ferry: oklch(0.83 0.1 215);
+  --place-tag-parking: oklch(0.79 0.045 250);
+  --place-tag-charging: oklch(0.82 0.14 152);
+  --place-tag-restaurant: oklch(0.82 0.12 40);
+  --place-tag-cafe: oklch(0.82 0.09 65);
+  --place-tag-bakery: oklch(0.86 0.13 85);
+  --place-tag-bar: oklch(0.82 0.12 315);
+  --place-tag-lodging: oklch(0.81 0.11 285);
+  --place-tag-shopping: oklch(0.82 0.12 350);
+  --place-tag-groceries: oklch(0.83 0.12 118);
+  --place-tag-culture: oklch(0.81 0.12 300);
+  --place-tag-landmark: oklch(0.85 0.1 75);
+  --place-tag-worship: oklch(0.85 0.07 95);
+  --place-tag-nature: oklch(0.83 0.12 162);
+  --place-tag-beach: oklch(0.83 0.1 200);
+  --place-tag-wildlife: oklch(0.84 0.14 137);
+  --place-tag-entertainment: oklch(0.82 0.12 330);
+  --place-tag-sports: oklch(0.81 0.13 145);
+  --place-tag-wellness: oklch(0.82 0.09 175);
+  --place-tag-healthcare: oklch(0.81 0.12 25);
+  --place-tag-education: oklch(0.81 0.09 275);
+  --place-tag-services: oklch(0.8 0.04 70);
+  --place-tag-general: oklch(0.8 0.025 260);
 
   --connector-ccs: oklch(0.8 0.14 150);
   --connector-chademo: oklch(0.8 0.13 55);
@@ -514,6 +601,119 @@
   --text-primary: var(--foreground);
   --text-secondary: var(--muted-foreground);
   --text-tertiary: oklch(from var(--muted-foreground) calc(l + 0.08) c h);
+}
+
+@layer components {
+  /* All place badges share this surface recipe; category inks stay above. */
+  .place-type-tag {
+    --place-tag-color: var(--place-tag-general);
+    color: var(--place-tag-color);
+    background-color: color-mix(
+      in oklab,
+      var(--place-tag-color) var(--place-tag-tint),
+      var(--card)
+    );
+  }
+
+  .place-type-tag[data-place-category="rail"] {
+    --place-tag-color: var(--place-tag-rail);
+  }
+
+  .place-type-tag[data-place-category="bus"] {
+    --place-tag-color: var(--place-tag-bus);
+  }
+
+  .place-type-tag[data-place-category="airport"] {
+    --place-tag-color: var(--place-tag-airport);
+  }
+
+  .place-type-tag[data-place-category="ferry"] {
+    --place-tag-color: var(--place-tag-ferry);
+  }
+
+  .place-type-tag[data-place-category="parking"] {
+    --place-tag-color: var(--place-tag-parking);
+  }
+
+  .place-type-tag[data-place-category="charging"] {
+    --place-tag-color: var(--place-tag-charging);
+  }
+
+  .place-type-tag[data-place-category="restaurant"] {
+    --place-tag-color: var(--place-tag-restaurant);
+  }
+
+  .place-type-tag[data-place-category="cafe"] {
+    --place-tag-color: var(--place-tag-cafe);
+  }
+
+  .place-type-tag[data-place-category="bakery"] {
+    --place-tag-color: var(--place-tag-bakery);
+  }
+
+  .place-type-tag[data-place-category="bar"] {
+    --place-tag-color: var(--place-tag-bar);
+  }
+
+  .place-type-tag[data-place-category="lodging"] {
+    --place-tag-color: var(--place-tag-lodging);
+  }
+
+  .place-type-tag[data-place-category="shopping"] {
+    --place-tag-color: var(--place-tag-shopping);
+  }
+
+  .place-type-tag[data-place-category="groceries"] {
+    --place-tag-color: var(--place-tag-groceries);
+  }
+
+  .place-type-tag[data-place-category="culture"] {
+    --place-tag-color: var(--place-tag-culture);
+  }
+
+  .place-type-tag[data-place-category="landmark"] {
+    --place-tag-color: var(--place-tag-landmark);
+  }
+
+  .place-type-tag[data-place-category="worship"] {
+    --place-tag-color: var(--place-tag-worship);
+  }
+
+  .place-type-tag[data-place-category="nature"] {
+    --place-tag-color: var(--place-tag-nature);
+  }
+
+  .place-type-tag[data-place-category="beach"] {
+    --place-tag-color: var(--place-tag-beach);
+  }
+
+  .place-type-tag[data-place-category="wildlife"] {
+    --place-tag-color: var(--place-tag-wildlife);
+  }
+
+  .place-type-tag[data-place-category="entertainment"] {
+    --place-tag-color: var(--place-tag-entertainment);
+  }
+
+  .place-type-tag[data-place-category="sports"] {
+    --place-tag-color: var(--place-tag-sports);
+  }
+
+  .place-type-tag[data-place-category="wellness"] {
+    --place-tag-color: var(--place-tag-wellness);
+  }
+
+  .place-type-tag[data-place-category="healthcare"] {
+    --place-tag-color: var(--place-tag-healthcare);
+  }
+
+  .place-type-tag[data-place-category="education"] {
+    --place-tag-color: var(--place-tag-education);
+  }
+
+  .place-type-tag[data-place-category="services"] {
+    --place-tag-color: var(--place-tag-services);
+  }
 }
 
 @layer base {

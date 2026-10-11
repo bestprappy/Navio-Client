@@ -5,6 +5,7 @@ import { Flag, MapPin } from "lucide-react";
 import type { TripAnchor, TripBlockColorId } from "../constants/types";
 import { getTripBlockColorById } from "../constants/trip-block-colors";
 import { focusedAnchorAtom } from "./anchor-map.atoms";
+import { getTripItemElementId } from "./use-reveal-plan-card";
 import { SaveFavoritePlaceButton } from "./save-favorite-place-button";
 import { useTripCharging } from "../garage/use-trip-charging";
 import { useTripRoutes } from "../routes/trip-route-query";
@@ -25,14 +26,14 @@ export function EndAnchorRouteInfo({ blockId, routeColor }: { blockId: string; r
   </div>;
 }
 
-export function AnchorStopCard({ anchor, edge, position, colorId }: { anchor: TripAnchor | null; edge: "start" | "end"; position?: number; colorId: TripBlockColorId }) {
+export function AnchorStopCard({ anchor, edge, position, colorId, blockId }: { anchor: TripAnchor | null; edge: "start" | "end"; position?: number; colorId: TripBlockColorId; blockId?: string }) {
   const focus = useSetAtom(focusedAnchorAtom);
   if (!anchor) return null;
   const blockColor = getTripBlockColorById(colorId);
   const Icon = edge === "start" ? MapPin : Flag;
   return (
     // Same gutter column as sortable item rows so anchors line up with stops.
-    <div className="my-3 grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
+    <div id={blockId ? getTripItemElementId(`${blockId}:${edge}`) : undefined} className="my-3 grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
     <div aria-hidden="true" />
     <div className="min-w-0 rounded-xl border border-primary/30 bg-card p-4">
     <button type="button" onClick={() => focus({ ...anchor })}

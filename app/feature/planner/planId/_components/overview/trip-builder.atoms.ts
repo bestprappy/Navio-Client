@@ -3,6 +3,7 @@ import { activeVehicleAtom } from "../garage/garage.atoms";
 import { getVehicleCar } from "../constants/vehicle.data";
 import { isCompatible } from "../garage/ev-calculator";
 import { getDayPlacePositions, placeItemToAnchor, resolveDayAnchors } from "../itinerary/day-anchors";
+import { createPlaceVisit, getPlaceUsage } from "../itinerary/trip-location-markers";
 
 import { currencyOptions, getCurrencyOption } from "../budget/budget.data";
 import { roundMoney } from "../budget/budget.utils";
@@ -516,24 +517,18 @@ export const selectedSearchPlaceAtom = atom((get) => {
   return activeSearch.results[activeSearch.selectedIndex] ?? null;
 });
 
-export const selectedSearchPlaceIsAddedAtom = atom((get) => {
+export const selectedSearchPlaceUsageAtom = atom((get) => {
   const activeSearch = get(activeSearchAtom);
   const selectedPlace = get(selectedSearchPlaceAtom);
 
   if (!activeSearch || !selectedPlace) {
-    return false;
+    return { isAdded: false, label: undefined, targetLabel: undefined };
   }
 
-  const activeBlock = get(tripBlocksAtom).find(
-    (block) => block.id === activeSearch.blockId,
-  );
-
-  return Boolean(
-    activeBlock?.items.some(
-      (item) => isPlaceItem(item) && item.placeId === selectedPlace.id,
-    ),
-  );
+  return getPlaceUsage(get(tripBlocksAtom), { ...selectedPlace, placeId: selectedPlace.id }, activeSearch.blockId);
 });
+
+export const selectedSearchPlaceIsAddedAtom = atom((get) => get(selectedSearchPlaceUsageAtom).isAdded);
 
 export const selectedEvChargerResultAtom = atom((get) => {
   const selectedId = get(selectedEvChargerIdAtom);
@@ -1217,6 +1212,23 @@ export const closeSelectedSearchPlaceAtom = atom(null, (get, set) => {
   });
 });
 
+export const addPlaceVisitToBlockAtom = atom(null, (get, set, payload: {
+  blockId: string;
+  place: Parameters<typeof createPlaceVisit>[0];
+}) => {
+  if (get(plannerReadOnlyAtom)) return;
+  if (!get(tripBlocksAtom).some((block) => block.id === payload.blockId)) return;
+  const visit = createPlaceVisit(payload.place, createClientId("place"));
+  set(tripBlocksAtom, updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
+    ...block, items: [...block.items, visit],
+  })));
+  set(activeBlockIdAtom, payload.blockId);
+  set(openBlockIdsAtom, (ids) => ids.includes(payload.blockId) ? ids : [...ids, payload.blockId]);
+  set(activeSearchAtom, null);
+  set(selectedTripPlaceItemIdAtom, visit.id);
+  return visit.id;
+});
+
 export const addSelectedPlaceToTripAtom = atom(null, (get, set) => {
   const activeSearch = get(activeSearchAtom);
   const selectedPlace = get(selectedSearchPlaceAtom);
@@ -1225,50 +1237,10 @@ export const addSelectedPlaceToTripAtom = atom(null, (get, set) => {
     return;
   }
 
-  const activeBlock = get(tripBlocksAtom).find(
-    (block) => block.id === activeSearch.blockId,
-  );
-  const existingPlace = activeBlock?.items.find(
-    (item) => isPlaceItem(item) && item.placeId === selectedPlace.id,
-  );
-  const nextPlaceId = existingPlace?.id ?? createClientId("place");
-
-  set(
-    tripBlocksAtom,
-    updateBlock(get(tripBlocksAtom), activeSearch.blockId, (block) => {
-      const isAlreadyAdded = block.items.some(
-        (item) => isPlaceItem(item) && item.placeId === selectedPlace.id,
-      );
-
-      if (isAlreadyAdded) {
-        return block;
-      }
-
-      return {
-        ...block,
-        items: [
-          ...block.items,
-          {
-            id: nextPlaceId,
-            type: "place",
-            placeId: selectedPlace.id,
-            name: selectedPlace.name,
-            description: selectedPlace.description,
-            address: selectedPlace.address,
-            lat: selectedPlace.lat,
-            lng: selectedPlace.lng,
-            rating: selectedPlace.rating,
-            reviewCount: selectedPlace.reviewCount,
-            imageUrl: selectedPlace.imageUrl,
-            placeType: selectedPlace.primaryType,
-            isVisited: false,
-          },
-        ],
-      };
-    }),
-  );
-  set(activeSearchAtom, null);
-  set(selectedTripPlaceItemIdAtom, nextPlaceId);
+  return set(addPlaceVisitToBlockAtom, {
+    blockId: activeSearch.blockId,
+    place: { ...selectedPlace, placeId: selectedPlace.id, placeType: selectedPlace.primaryType },
+  });
 });
 
 export const addEvChargerToBlockAtom = atom(

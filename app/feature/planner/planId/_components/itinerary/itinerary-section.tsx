@@ -296,10 +296,10 @@ export function ItinerarySection({
                       </TripBlock.Header>
                       <div id={`day-content-${block.id}`} hidden={!isOpen}>
                       {isOpen && <TripBlock.Content>
-                        <AnchorStopCard edge="start" anchor={anchors.start} position={1} colorId={block.colorId} />
+                        <AnchorStopCard blockId={block.id} edge="start" anchor={anchors.start} position={1} colorId={block.colorId} />
                         <TripBlock.Items hasStart={!!anchors.start} />
                         {anchors.end && (anchors.start || block.items.some(isPlaceItem)) && <EndAnchorRouteInfo blockId={block.id} routeColor={getTripBlockColorById(block.colorId).value} />}
-                        <AnchorStopCard edge="end" anchor={anchors.end} position={placeCount + (anchors.start ? 2 : 1)} colorId={block.colorId} />
+                        <AnchorStopCard blockId={block.id} edge="end" anchor={anchors.end} position={placeCount + (anchors.start ? 2 : 1)} colorId={block.colorId} />
                         <DayRouteOverview
                           blockId={block.id}
                           blockIndex={index}

@@ -14,6 +14,7 @@ import {
   updatePlaceItemAtom,
 } from "./trip-builder.atoms";
 import { PlaceItem } from "../constants/types";
+import { PlaceTypeTag } from "../place/place-type-tag";
 
 type TripPlaceCardProps = {
   blockId: string;
@@ -92,9 +93,7 @@ export function TripPlaceCard({ blockId, item, position }: TripPlaceCardProps) {
                 </span>
               ) : null}
               {item.description ? (
-                <span className="inline-flex items-center rounded-sm bg-tag/10 px-3 py-1 text-xs font-medium text-tag">
-                  {item.description}
-                </span>
+                <PlaceTypeTag label={item.description} placeType={item.placeType} />
               ) : null}
             </div>
 

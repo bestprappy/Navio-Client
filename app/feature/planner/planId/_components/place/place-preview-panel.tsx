@@ -4,6 +4,7 @@ import Image from "next/image";
 import {
   ChevronLeft,
   ChevronRight,
+  Check,
   ExternalLink,
   MapPin,
   MessageSquareOff,
@@ -16,16 +17,37 @@ import { Button } from "@/components/ui/button";
 import { StationOpeningHours } from "../charger/station-opening-hours";
 
 import type { PlaceSearchResult } from "./place-api";
+import { PlaceTypeTag } from "./place-type-tag";
+
+type PlacePreviewDetails = Pick<
+  PlaceSearchResult,
+  | "name"
+  | "address"
+  | "imageUrl"
+  | "category"
+  | "description"
+  | "primaryType"
+  | "rating"
+  | "reviewCount"
+  | "openingHours"
+  | "phone"
+  | "website"
+> & { notes?: string };
 
 type PlacePreviewPanelProps = {
-  place: PlaceSearchResult;
-  currentIndex: number;
-  total: number;
+  place: PlacePreviewDetails;
+  currentIndex?: number;
+  total?: number;
   isAdded: boolean;
+  usageLabel?: string;
+  targetLabel?: string;
+  showAddAction?: boolean;
+  savedToTrip?: boolean;
+  isLoadingDetails?: boolean;
   canAddToTrip?: boolean;
-  onPrevious: () => void;
-  onNext: () => void;
-  onAddToTrip: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  onAddToTrip?: () => void;
   onClose: () => void;
 };
 
@@ -47,9 +69,14 @@ function isGooglePlacePhoto(imageUrl?: string): boolean {
 
 export function PlacePreviewPanel({
   place,
-  currentIndex,
-  total,
+  currentIndex = 0,
+  total = 1,
   isAdded,
+  usageLabel,
+  targetLabel,
+  showAddAction = true,
+  savedToTrip = false,
+  isLoadingDetails = false,
   canAddToTrip = true,
   onPrevious,
   onNext,
@@ -57,7 +84,7 @@ export function PlacePreviewPanel({
   onClose,
 }: PlacePreviewPanelProps) {
   return (
-    <aside className="absolute bottom-4 left-4 right-4 z-10 overflow-hidden rounded-sm border border-border bg-card text-card-foreground shadow-xl">
+    <aside aria-label="Place details" className="absolute bottom-4 left-4 right-4 z-10 max-h-[calc(100%-2rem)] overflow-y-auto rounded-sm border border-border bg-card text-card-foreground shadow-xl">
       {place.imageUrl ? (
         <div className="relative h-32 w-full bg-muted sm:h-36">
           <Image
@@ -74,7 +101,7 @@ export function PlacePreviewPanel({
       <div className="p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <span className="rounded-sm bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
-            {currentIndex + 1} of {total}
+            {savedToTrip ? "Saved to trip" : `${currentIndex + 1} of ${total}`}
           </span>
           <button
             type="button"
@@ -93,9 +120,11 @@ export function PlacePreviewPanel({
                 {place.name}
               </h2>
               {place.category ? (
-                <span className="rounded-sm bg-secondary px-2 py-1 text-xs font-medium text-secondary-foreground">
-                  {place.category}
-                </span>
+                <PlaceTypeTag
+                  label={place.category}
+                  placeType={place.primaryType}
+                  className="px-2"
+                />
               ) : null}
             </div>
 
@@ -132,7 +161,11 @@ export function PlacePreviewPanel({
               <span className="min-w-0 break-words leading-relaxed">{place.address}</span>
             </div>
 
-            {place.openingHours ? <StationOpeningHours value={place.openingHours} /> : null}
+            {isLoadingDetails ? (
+              <p role="status" className="text-xs text-muted-foreground">Loading opening hours…</p>
+            ) : (
+              <StationOpeningHours value={place.openingHours} />
+            )}
 
             {place.phone ? (
               <div className="flex items-center gap-2">
@@ -152,52 +185,65 @@ export function PlacePreviewPanel({
                 <ExternalLink className="size-3.5" aria-hidden="true" />
               </a>
             ) : null}
+
+            {place.notes ? (
+              <p className="rounded-sm bg-muted/60 p-3 text-sm leading-6 text-muted-foreground">
+                {place.notes}
+              </p>
+            ) : null}
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-sm"
-              onClick={onPrevious}
-              disabled={total <= 1}
-            >
-              <ChevronLeft className="size-4" aria-hidden="true" />
-              Previous
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="rounded-sm"
-              onClick={onNext}
-              disabled={total <= 1}
-            >
-              Next
-              <ChevronRight className="size-4" aria-hidden="true" />
-            </Button>
-          </div>
+        {showAddAction || !savedToTrip ? <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+          {!savedToTrip ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-sm"
+                onClick={onPrevious}
+                disabled={total <= 1}
+              >
+                <ChevronLeft className="size-4" aria-hidden="true" />
+                Previous
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-sm"
+                onClick={onNext}
+                disabled={total <= 1}
+              >
+                Next
+                <ChevronRight className="size-4" aria-hidden="true" />
+              </Button>
+            </div>
+          ) : null}
 
-          <div className="flex flex-col items-end gap-1">
+          {showAddAction ? <div className="ml-auto flex max-w-full flex-col items-end gap-1.5">
+            {usageLabel ? <p role="status" className="flex items-center gap-1.5 text-right text-xs text-muted-foreground">
+              <Check className="size-3.5 shrink-0" aria-hidden="true" />{usageLabel}
+            </p> : null}
             <Button
               type="button"
               size="sm"
               className="rounded-sm"
               onClick={onAddToTrip}
-              disabled={isAdded || !canAddToTrip}
+              disabled={!canAddToTrip || !onAddToTrip}
+              aria-label={targetLabel && onAddToTrip ? `${isAdded ? "Add another visit to" : "Add to"} ${targetLabel}` : undefined}
             >
-              {isAdded ? "Added" : "Add to trip"}
+              {isAdded ? onAddToTrip ? "Add another visit" : "Added" : "Add to trip"}
             </Button>
+            {targetLabel && canAddToTrip ? <p className="text-xs text-muted-foreground">To {targetLabel}</p> : null}
             {!canAddToTrip ? (
               <p className="text-xs text-muted-foreground">
                 Add a day to your itinerary first
               </p>
             ) : null}
-          </div>
-        </div>
+          </div> : null}
+        </div> : null}
       </div>
     </aside>
   );

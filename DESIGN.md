@@ -475,6 +475,50 @@ Generous, soft corners with a base `--radius` of **1rem**.
 Nested shapes use a smaller radius than their container. Icons are lucide at
 1rem inside controls (0.75rem in `xs` controls); never emoji.
 
+## Place category tags
+
+Place tags use `PlaceTypeTag` in itinerary cards, search previews, Explore and
+shared plans. Provider `primaryType` / saved `placeType` chooses the family;
+older and shared items fall back to their category label. Unknown categories
+use `general`. Labels remain visible, so color is an additional cue.
+
+Edit `--place-tag-*` in `app/globals.css` under `:root` and `.dark` to change
+the palette. `--place-tag-tint` controls the background mix against `--card`
+(12% light, 16% dark). The same inks are exposed as `text-place-tag-*`
+utilities. Keep tag text at least 4.5:1 against its mixed background.
+
+| Token suffix | Color / examples | Light ink | Dark ink |
+| --- | --- | --- | --- |
+| `rail` | Blue: Subway, train, MRT, tram | `oklch(0.48 0.16 265)` | `oklch(0.8 0.1 265)` |
+| `bus` | Teal: Bus stations and stops | `oklch(0.47 0.12 185)` | `oklch(0.82 0.11 185)` |
+| `airport` | Sky: Airports and heliports | `oklch(0.48 0.12 235)` | `oklch(0.82 0.1 235)` |
+| `ferry` | Ocean: Ferries and marinas | `oklch(0.47 0.11 215)` | `oklch(0.83 0.1 215)` |
+| `parking` | Slate: Parking lots and garages | `oklch(0.48 0.045 250)` | `oklch(0.79 0.045 250)` |
+| `charging` | Green: EV and e-bike charging | `oklch(0.46 0.12 152)` | `oklch(0.82 0.14 152)` |
+| `restaurant` | Tangerine: Restaurants and food courts | `oklch(0.49 0.15 40)` | `oklch(0.82 0.12 40)` |
+| `cafe` | Coffee: Cafes, coffee, tea houses | `oklch(0.46 0.1 65)` | `oklch(0.82 0.09 65)` |
+| `bakery` | Honey: Bakeries, desserts, ice cream | `oklch(0.49 0.12 85)` | `oklch(0.86 0.13 85)` |
+| `bar` | Plum: Bars, breweries, nightlife | `oklch(0.48 0.16 315)` | `oklch(0.82 0.12 315)` |
+| `lodging` | Indigo: Hotels, resorts, campsites | `oklch(0.48 0.15 285)` | `oklch(0.81 0.11 285)` |
+| `shopping` | Rose: Malls, shops and stores | `oklch(0.48 0.17 350)` | `oklch(0.82 0.12 350)` |
+| `groceries` | Olive: Markets, groceries, supermarkets | `oklch(0.47 0.11 118)` | `oklch(0.83 0.12 118)` |
+| `culture` | Violet: Museums, galleries, performing arts | `oklch(0.47 0.17 300)` | `oklch(0.81 0.12 300)` |
+| `landmark` | Ochre: Landmarks, castles, viewpoints | `oklch(0.48 0.1 75)` | `oklch(0.85 0.1 75)` |
+| `worship` | Brass: Temples, shrines, places of worship | `oklch(0.47 0.07 95)` | `oklch(0.85 0.07 95)` |
+| `nature` | Emerald: Parks, gardens, hiking, waterfalls | `oklch(0.46 0.12 162)` | `oklch(0.83 0.12 162)` |
+| `beach` | Aqua: Beaches and coasts | `oklch(0.46 0.1 200)` | `oklch(0.83 0.1 200)` |
+| `wildlife` | Leaf: Zoos, aquariums, wildlife parks | `oklch(0.47 0.13 137)` | `oklch(0.84 0.14 137)` |
+| `entertainment` | Fuchsia: Amusement parks, cinemas, arcades | `oklch(0.48 0.18 330)` | `oklch(0.82 0.12 330)` |
+| `sports` | Fern: Sports venues, gyms, stadiums | `oklch(0.46 0.13 145)` | `oklch(0.81 0.13 145)` |
+| `wellness` | Mint: Spas, salons, wellness | `oklch(0.46 0.08 175)` | `oklch(0.82 0.09 175)` |
+| `healthcare` | Coral: Hospitals, pharmacies, clinics | `oklch(0.49 0.17 25)` | `oklch(0.81 0.12 25)` |
+| `education` | Periwinkle: Schools, universities, libraries | `oklch(0.48 0.12 275)` | `oklch(0.81 0.09 275)` |
+| `services` | Stone: Banks, post offices, useful services | `oklch(0.48 0.04 70)` | `oklch(0.8 0.04 70)` |
+| `general` | Neutral: Unknown or custom categories | `oklch(0.49 0.03 260)` | `oklch(0.8 0.025 260)` |
+
+Category matching lives in `place/place-tag-category.ts`, beside the shared
+badge component; specific families take precedence over broader types.
+
 ## Components
 
 Use the shadcn primitives in `client/components/ui` before building anything.

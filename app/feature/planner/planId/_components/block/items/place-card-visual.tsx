@@ -3,6 +3,7 @@ import { Star } from "lucide-react";
 
 import type { TripBlockColorId } from "../../constants/types";
 import { getTripBlockColorById } from "../../constants/trip-block-colors";
+import { PlaceTypeTag } from "../../place/place-type-tag";
 
 export type PlaceCardVisualProps = {
   name: string;
@@ -11,6 +12,7 @@ export type PlaceCardVisualProps = {
   reviewCount?: number;
   address?: string;
   description?: string;
+  placeType?: string;
   position: number | null;
   colorId: TripBlockColorId;
   unoptimized?: boolean;
@@ -39,6 +41,7 @@ export function PlaceCardVisual({
   reviewCount,
   address,
   description,
+  placeType,
   position,
   colorId,
   unoptimized = false,
@@ -92,9 +95,7 @@ export function PlaceCardVisual({
                 ) : null}
               </div>
               {description ? (
-                <span className="inline-flex items-center rounded-sm bg-tag/10 px-3 py-1 text-xs font-medium text-tag">
-                  {description}
-                </span>
+                <PlaceTypeTag label={description} placeType={placeType} />
               ) : null}
             </div>
             {address ? (

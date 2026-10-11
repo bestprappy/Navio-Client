@@ -11,16 +11,13 @@ import Map, {
   Source,
 } from "react-map-gl/mapbox";
 import { MapPin, Zap } from "lucide-react";
+import { MapboxMapAppearance } from "@/components/map/mapbox-map-appearance";
 
-import { AnchorMapPin } from "./_components/itinerary/anchor-map-pin";
-import {
-  buildAnchorMarkers,
-  countPlacesByBlockId,
-  orderRolesForActiveBlock,
-} from "./_components/itinerary/anchor-map-markers";
-import { resolveDayAnchors } from "./_components/itinerary/day-anchors";
-import { focusedAnchorAtom } from "./_components/itinerary/anchor-map.atoms";
+import { TripLocationPin } from "./_components/itinerary/trip-location-pin";
+import { buildTripLocationMarkers, orderVisitsForActiveBlock } from "./_components/itinerary/trip-location-markers";
+import { useTripLocationSelection } from "./_components/itinerary/use-trip-location-selection";
 import { useRevealPlanCard } from "./_components/itinerary/use-reveal-plan-card";
+import { focusedAnchorAtom } from "./_components/itinerary/anchor-map.atoms";
 import { sidebarCollapsedAtom } from "@/app/configs/constant";
 import { cn } from "@/lib/utils";
 
@@ -47,12 +44,10 @@ import {
   selectedEvChargerIsAddedAtom,
   selectedEvChargerResultAtom,
   selectedSearchPlaceAtom,
-  selectedSearchPlaceIsAddedAtom,
+  selectedSearchPlaceUsageAtom,
   selectedTripPlaceAtom,
-  selectedTripPlaceMarkersAtom,
   selectedTripPlacesAtom,
   selectSearchResultAtom,
-  selectTripPlaceAtom,
   plannerReadOnlyAtom,
   startPlaceSearchAtom,
   stepSearchResultAtom,
@@ -106,25 +101,19 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
   const activeSearch = useAtomValue(activeSearchAtom);
   const tripBlocks = useAtomValue(tripBlocksAtom);
   const focusedAnchor = useAtomValue(focusedAnchorAtom);
-  const dayAnchors = useMemo(() => resolveDayAnchors(tripBlocks), [tripBlocks]);
   const selectedPlace = useAtomValue(selectedSearchPlaceAtom);
   const selectedTripPlace = useAtomValue(selectedTripPlaceAtom);
   const selectedTripPlaces = useAtomValue(selectedTripPlacesAtom);
-  const selectedTripPlaceMarkers = useAtomValue(selectedTripPlaceMarkersAtom);
-  const anchorMarkers = useMemo(
-    () => buildAnchorMarkers(dayAnchors, countPlacesByBlockId(selectedTripPlaceMarkers)),
-    [dayAnchors, selectedTripPlaceMarkers],
-  );
+  const locationMarkers = useMemo(() => buildTripLocationMarkers(tripBlocks), [tripBlocks]);
   const activeEvCar = useAtomValue(activeEvCarAtom);
   const evChargerResults = useAtomValue(visibleEvChargerResultsAtom);
   const selectedEvChargerResult = useAtomValue(selectedEvChargerResultAtom);
   const selectedEvChargerIsAdded = useAtomValue(selectedEvChargerIsAddedAtom);
   const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
   const evChargerError = useAtomValue(evChargerErrorAtom);
-  const isSelectedPlaceAdded = useAtomValue(selectedSearchPlaceIsAddedAtom);
+  const selectedPlaceUsage = useAtomValue(selectedSearchPlaceUsageAtom);
   const selectSearchResult = useSetAtom(selectSearchResultAtom);
   const selectEvCharger = useSetAtom(selectEvChargerAtom);
-  const selectTripPlace = useSetAtom(selectTripPlaceAtom);
   const stepSearchResult = useSetAtom(stepSearchResultAtom);
   const addSelectedEvChargerToTrip = useSetAtom(addSelectedEvChargerToTripAtom);
   const addSelectedPlaceToTrip = useSetAtom(addSelectedPlaceToTripAtom);
@@ -133,6 +122,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
   const closeSelectedTripPlace = useSetAtom(closeSelectedTripPlaceAtom);
   const activeBlockId = useAtomValue(activeBlockIdAtom);
   const routeLineMode = useAtomValue(routeLineModeAtom);
+  const selectLocationVisit = useTripLocationSelection();
   const revealPlanCard = useRevealPlanCard();
   const startPlaceSearch = useSetAtom(startPlaceSearchAtom);
   const readOnly = useAtomValue(plannerReadOnlyAtom);
@@ -371,16 +361,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
           setMapError("The map could not load. Please check the Mapbox token.");
         }}
       >
-          {anchorMarkers.map(({ key, lat, lng, roles }) => {
-            const orderedRoles = orderRolesForActiveBlock(roles, activeBlockId);
-            return (
-              <Marker key={key} latitude={lat} longitude={lng} anchor="bottom" style={{ zIndex: orderedRoles[0]?.blockId === activeBlockId ? 21 : 20 }}>
-                <AnchorMapPin
-                  roles={orderedRoles.map((role) => ({ ...role, color: blockColorById.get(role.blockId)?.mapColor }))}
-                />
-              </Marker>
-            );
-          })}
+        <MapboxMapAppearance hidePOIs />
         <NavigationControl position="top-right" />
         <FullscreenControl position="top-right" />
 
@@ -466,57 +447,11 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
           </Source>
         ) : null}
 
-        {selectedTripPlaceMarkers.map((place) => {
-          const isSelected = selectedTripPlace?.id === place.id;
-          const blockColor = getTripBlockColorById(place.blockColorId);
-
+        {locationMarkers.map(({ key, lat, lng, visits }) => {
+          const ordered = orderVisitsForActiveBlock(visits, activeBlockId, selectedTripPlace?.id);
           return (
-            <Marker
-              key={place.id}
-              latitude={place.lat}
-              longitude={place.lng}
-              anchor="bottom"
-            >
-              <button
-                type="button"
-                className="relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-                aria-label={`Select saved ${place.isEvCharger ? "EV station" : "place"} ${place.name}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  selectTripPlace({ itemId: place.id });
-                  revealPlanCard(place.blockId, place.id);
-                }}
-              >
-                <MapPin
-                  className={cn(
-                    "transition-all [&>circle]:hidden",
-                    isSelected ? "size-12 drop-shadow-lg" : "size-8 drop-shadow-md",
-                  )}
-                  style={{
-                    color: blockColor.value,
-                    fill: blockColor.value,
-                    filter: "var(--map-marker-shadow)",
-                  }}
-                  aria-hidden="true"
-                />
-                <span
-                  className={cn(
-                    "pointer-events-none absolute left-1/2 -translate-x-1/2 -translate-y-1/2 font-bold leading-none transition-all",
-                    isSelected ? "text-sm" : "text-[10px]",
-                  )}
-                  style={{ top: "41.67%", color: blockColor.foreground }}
-                >
-                  {place.isEvCharger ? (
-                    <Zap
-                      className={isSelected ? "size-5" : "size-3"}
-                      fill="currentColor"
-                      aria-hidden="true"
-                    />
-                  ) : (
-                    place.placeSequence ?? 0
-                  )}
-                </span>
-              </button>
+            <Marker key={key} latitude={lat} longitude={lng} anchor="bottom" style={{ zIndex: ordered[0]?.blockId === activeBlockId ? 21 : 20 }}>
+              <TripLocationPin visits={ordered} selectedItemId={selectedTripPlace?.id} onSelect={selectLocationVisit} />
             </Marker>
           );
         })}
@@ -694,11 +629,16 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
           place={selectedPlace}
           currentIndex={activeSearch.selectedIndex}
           total={activeSearch.results.length}
-          isAdded={isSelectedPlaceAdded}
+          isAdded={selectedPlaceUsage.isAdded}
+          usageLabel={selectedPlaceUsage.label}
+          targetLabel={selectedPlaceUsage.targetLabel}
           canAddToTrip={canAddToTrip}
           onPrevious={() => stepSearchResult({ direction: "previous" })}
           onNext={() => stepSearchResult({ direction: "next" })}
-          onAddToTrip={() => addSelectedPlaceToTrip()}
+          onAddToTrip={() => {
+            const itemId = addSelectedPlaceToTrip();
+            if (itemId) revealPlanCard(activeSearch.blockId, itemId);
+          }}
           onClose={() => closeSelectedSearchPlace()}
         />
       ) : selectedEvChargerResult ? (

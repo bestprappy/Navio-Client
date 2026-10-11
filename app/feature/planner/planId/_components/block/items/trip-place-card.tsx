@@ -39,6 +39,7 @@ import { PlaceCardVisual } from "./place-card-visual";
 import { PlaceCardFrame } from "./place-card-frame";
 import { PlaceCostPopover } from "./place-cost-popover";
 import { PlaceTimePopover } from "./place-time-popover";
+import { PlaceOpeningHours } from "../../place/place-opening-hours";
 
 type TripPlaceCardProps = {
   blockId: string;
@@ -287,9 +288,12 @@ export function TripPlaceCard({
             reviewCount={item.reviewCount}
             address={item.address}
             description={item.description}
+            placeType={item.placeType}
             position={position}
             colorId={blockColorId}
           />
+
+          <PlaceOpeningHours placeId={item.placeId} />
 
           {!readOnly && <ObservedSocControl blockId={blockId} itemId={item.id} value={item.observedSocCheckpoint?.socPct} />}
 
