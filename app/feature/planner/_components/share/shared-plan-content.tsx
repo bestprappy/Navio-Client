@@ -1,6 +1,7 @@
 import { Clock, ClipboardList, MapPin, StickyNote, Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { NoteContent } from "@/components/block-editor/note-content";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { PlaceCardVisual } from "../../planId/_components/block/items/place-card-visual";
 import { PlaceCardFrame } from "../../planId/_components/block/items/place-card-frame";
@@ -80,7 +81,7 @@ function ItemCard({ item, currency, position, colorId }: { item: PublicItem; cur
           <StickyNote className="size-3.5" aria-hidden="true" />
           Note
         </p>
-        <p className="mt-1 text-sm whitespace-pre-wrap text-foreground">{item.noteContent}</p>
+        <NoteContent className="mt-1" content={item.noteContent ?? ""} mode="readonly" />
       </li>
     );
   }
