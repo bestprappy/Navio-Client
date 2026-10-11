@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import MapboxMap, { Marker, NavigationControl, useMap } from "react-map-gl/mapbox";
+import { MapboxMapAppearance } from "@/components/map/mapbox-map-appearance";
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -42,6 +43,7 @@ export function PinPickerMapMapbox({ initial, point, onPointChange, onError }: P
       }}
       onClick={(event) => onPointChange({ lat: event.lngLat.lat, lng: event.lngLat.lng })}
     >
+      <MapboxMapAppearance />
       <NavigationControl showCompass={false} />
       {point && (
         <Marker

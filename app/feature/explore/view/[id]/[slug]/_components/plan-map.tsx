@@ -3,12 +3,12 @@
 import { useEffect, useMemo } from "react";
 import Image from "next/image";
 import {
-  AdvancedMarker,
   APIProvider,
-  Map,
   useMap,
 } from "@vis.gl/react-google-maps";
 import { MapPin, Star, X, Zap } from "lucide-react";
+import { AppearanceGoogleMap as Map } from "@/components/map/appearance-google-map";
+import { AppearanceGoogleMarker as MapMarker } from "@/components/map/appearance-google-marker";
 import { useAtom } from "jotai";
 
 import type { Plan } from "../../../../_components/data";
@@ -63,8 +63,6 @@ function PlanMapController({ selectedPlace }: PlanMapControllerProps) {
 
 export function PlanMap({ plan }: PlanMapProps) {
   const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  const googleMapsMapId =
-    process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID";
   const [selectedPlaceId, setSelectedPlaceId] = useAtom(
     selectedExplorePlanPlaceIdAtom,
   );
@@ -145,7 +143,6 @@ export function PlanMap({ plan }: PlanMapProps) {
         <Map
           defaultCenter={center}
           defaultZoom={places.length > 1 ? 10 : 12}
-          mapId={googleMapsMapId}
           gestureHandling="greedy"
           disableDefaultUI={false}
           mapTypeControl={false}
@@ -163,7 +160,7 @@ export function PlanMap({ plan }: PlanMapProps) {
             const blockColor = getTripBlockColorById(place.colorId);
 
             return (
-              <AdvancedMarker
+              <MapMarker
                 key={place.displayId}
                 position={{ lat: place.lat, lng: place.lng }}
               >
@@ -209,7 +206,7 @@ export function PlanMap({ plan }: PlanMapProps) {
                     )}
                   </span>
                 </button>
-              </AdvancedMarker>
+              </MapMarker>
             );
           })}
         </Map>

@@ -3,14 +3,10 @@
 import { useMutation } from "@tanstack/react-query";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { useTheme } from "next-themes";
-import { LogIn, LogOut, Monitor, Moon, Palette, Settings, Sun } from "lucide-react";
+import { LogIn, LogOut, Settings } from "lucide-react";
 
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuLabel,
-  DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { SidebarAppearance } from "./sidebar-appearance";
 import SidebarItem from "./sidebar.item";
 
 type SidebarAccountActionsProps = {
@@ -21,7 +17,6 @@ type SidebarAccountActionsProps = {
 export function SidebarAccountActions({ collapsed, onNavigate }: SidebarAccountActionsProps) {
   const pathName = usePathname();
   const { status } = useSession();
-  const { theme, setTheme } = useTheme();
   const logout = useMutation({
     mutationFn: () => signOut({ redirectTo: "/" }),
     onError: (error) => console.error("SidebarAccountActions: sign out failed", error),
@@ -36,22 +31,7 @@ export function SidebarAccountActions({ collapsed, onNavigate }: SidebarAccountA
       <SidebarItem title="Settings" href="/settings/profile" icon={<Settings className="size-5" />}
         isActive={pathName === "/settings" || pathName.startsWith("/settings/")}
         collapsed={collapsed} onClick={onNavigate} />
-      <DropdownMenu>
-        <DropdownMenuTrigger className={actionClassName} aria-label="Appearance" title={collapsed ? "Appearance" : undefined}>
-          <Palette className="size-5 shrink-0" aria-hidden="true" />
-          {!collapsed && "Appearance"}
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="start" className="w-56">
-          <DropdownMenuGroup>
-            <DropdownMenuLabel>Mode</DropdownMenuLabel>
-            <DropdownMenuRadioGroup aria-label="Mode" value={theme ?? "system"} onValueChange={setTheme}>
-              <DropdownMenuRadioItem value="light"><Sun />Light mode</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="dark"><Moon />Dark mode</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="system"><Monitor />System</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <SidebarAppearance collapsed={collapsed} className={actionClassName} />
       {status === "authenticated" ? (
         <button type="button" className={cn(actionClassName, "text-destructive hover:text-destructive")}
           aria-label={logout.isPending ? "Logging out" : "Log out"} title={collapsed ? "Log out" : undefined}

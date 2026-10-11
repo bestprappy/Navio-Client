@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { APIProvider, AdvancedMarker, Map, useMap } from "@vis.gl/react-google-maps";
+import { APIProvider, useMap } from "@vis.gl/react-google-maps";
+import { AppearanceGoogleMap as Map } from "@/components/map/appearance-google-map";
+import { AppearanceGoogleMarker as MapMarker } from "@/components/map/appearance-google-marker";
 
 import type { Coordinate, PinPickerMapProps } from "./pin-picker-map";
 
@@ -28,7 +30,6 @@ export function PinPickerMapGoogle({ initial, point, onPointChange, onError }: P
       <Map
         defaultCenter={initial}
         defaultZoom={14}
-        mapId={process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID ?? "DEMO_MAP_ID"}
         style={{ width: "100%", height: "100%" }}
         // Cooperative: the wheel scrolls the dialog, ctrl/two fingers zoom the map.
         gestureHandling="cooperative"
@@ -40,12 +41,10 @@ export function PinPickerMapGoogle({ initial, point, onPointChange, onError }: P
         }}
       >
         {point && (
-          <AdvancedMarker
+          <MapMarker
             position={point}
             draggable
-            onDragEnd={(event) => {
-              if (event.latLng) onPointChange(event.latLng.toJSON());
-            }}
+            onDragEnd={onPointChange}
           />
         )}
         <FollowPoint point={point} />
