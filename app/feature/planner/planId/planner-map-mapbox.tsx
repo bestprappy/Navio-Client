@@ -66,10 +66,10 @@ import {
 import { TripPlacePreviewPanel } from "./_components/place/trip-place-preview-panel";
 import { GoogleMapsExportButton } from "./_components/routes/google-maps-export-button";
 import { useTripRoutes } from "./_components/routes/trip-route-query";
+import { getRouteDrawPieces, type RouteDrawKind } from "./_components/routes/route-draw";
 import type {
   RouteLineString,
   RouteSegment,
-  RouteSegmentStatus,
 } from "./_components/routes/trip-route.types";
 
 type PlannerMapProps = {
@@ -81,12 +81,8 @@ type RouteFeature = {
   type: "Feature";
   properties: {
     id: string;
-    status: RouteSegmentStatus;
+    kind: RouteDrawKind;
     routeColor: string;
-    fromName: string;
-    toName: string;
-    durationSeconds: number | null;
-    distanceMeters: number | null;
   };
   geometry: RouteLineString;
 };
@@ -394,7 +390,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
               id="trip-route-solid"
               type="line"
               source="trip-route"
-              filter={["==", ["get", "status"], "routed"]}
+              filter={["==", ["get", "kind"], "drive"]}
               layout={{
                 "line-join": "round",
                 "line-cap": "round",
@@ -405,11 +401,57 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
                 "line-opacity": 0.9,
               }}
             />
+            {/* A transit ride is drawn in its line colour over a white casing. */}
+            <Layer
+              id="trip-route-ride-casing"
+              type="line"
+              source="trip-route"
+              filter={["==", ["get", "kind"], "ride"]}
+              layout={{
+                "line-join": "round",
+                "line-cap": "round",
+              }}
+              paint={{
+                "line-color": "#ffffff",
+                "line-width": 9,
+                "line-opacity": 0.95,
+              }}
+            />
+            <Layer
+              id="trip-route-ride"
+              type="line"
+              source="trip-route"
+              filter={["==", ["get", "kind"], "ride"]}
+              layout={{
+                "line-join": "round",
+                "line-cap": "round",
+              }}
+              paint={{
+                "line-color": ["get", "routeColor"],
+                "line-width": 5,
+              }}
+            />
+            <Layer
+              id="trip-route-walk"
+              type="line"
+              source="trip-route"
+              filter={["==", ["get", "kind"], "walk"]}
+              layout={{
+                "line-join": "round",
+                "line-cap": "round",
+              }}
+              paint={{
+                "line-color": ["get", "routeColor"],
+                "line-width": 4,
+                "line-opacity": 0.9,
+                "line-dasharray": [0, 2],
+              }}
+            />
             <Layer
               id="trip-route-fallback"
               type="line"
               source="trip-route"
-              filter={["==", ["get", "status"], "fallback"]}
+              filter={["==", ["get", "kind"], "fallback"]}
               layout={{
                 "line-join": "round",
                 "line-cap": "round",
@@ -690,19 +732,10 @@ function getRouteFeatureCollection(
 ): RouteFeatureCollection {
   return {
     type: "FeatureCollection",
-    features: segments.map((segment) => ({
+    features: getRouteDrawPieces(segments, routeColorByBlockId, defaultRouteMapColor).map((piece) => ({
       type: "Feature",
-      properties: {
-        id: segment.id,
-        status: segment.status,
-        routeColor:
-          routeColorByBlockId.get(segment.blockId) ?? defaultRouteMapColor,
-        fromName: segment.fromName,
-        toName: segment.toName,
-        durationSeconds: segment.durationSeconds ?? null,
-        distanceMeters: segment.distanceMeters ?? null,
-      },
-      geometry: segment.geometry,
+      properties: { id: piece.id, kind: piece.kind, routeColor: piece.color },
+      geometry: { type: "LineString", coordinates: piece.coordinates },
     })),
   };
 }

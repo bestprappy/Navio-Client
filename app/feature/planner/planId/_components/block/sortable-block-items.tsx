@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 
 import { getTripBlockColorById } from "../constants/trip-block-colors";
 import {
+  isPlaceItem,
+  type PlaceItem,
   type TripBlockData,
   type TripBlockItem,
 } from "../constants/types";
@@ -17,6 +19,8 @@ import { getDayPlacePositions, getLastDayPlaceId } from "../itinerary/day-anchor
 import { getTripItemElementId } from "../itinerary/use-reveal-plan-card";
 import { plannerReadOnlyAtom, reorderBlockItemsAtom } from "../overview/trip-builder.atoms";
 import { DischargeSegmentInfo } from "../routes/charge-segment-info";
+import { automaticLegTravelMode, resolveLegTravelMode } from "../routes/leg-travel-mode";
+import { LegTravelModeMenu } from "../routes/leg-travel-mode-menu";
 import { RouteSegmentInfo } from "../routes/route-segment-info";
 import { getRouteSegmentByToItemId } from "../routes/trip-route.helpers";
 import { useTripRoutes } from "../routes/trip-route-query";
@@ -98,6 +102,10 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
     () => getRouteablePositionByItemId(block.items),
     [block.items],
   );
+  const previousPlaceByItemId = useMemo(
+    () => getPreviousPlaceByItemId(block.items),
+    [block.items],
+  );
   const batteryStateByItemId = charging?.days.get(block.id)?.batteryByItemId ?? new Map<string, BatteryState>();
 
   const blockColor = getTripBlockColorById(block.colorId);
@@ -174,6 +182,10 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
           ? batteryStateByItemId.get(item.id)
           : undefined;
         const itemBatteryState = batteryStateByItemId.get(item.id);
+        // The first stop after the day's start anchor leaves from the anchor, which is never a station.
+        const legFrom = previousPlaceByItemId.get(item.id);
+        const legMode = isPlaceItem(item) ? resolveLegTravelMode(legFrom, item) : "drive";
+        const automaticMode = isPlaceItem(item) ? automaticLegTravelMode(legFrom, item) : "drive";
 
         return (
           <Fragment key={item.id}>
@@ -194,11 +206,23 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
                     isLoading={tripRoutes.isFetching && !tripRoutes.data}
                     isError={tripRoutes.isError}
                     routeColor={blockColor.value}
+                    plannedMode={legMode}
+                    modeControl={readOnly ? undefined : (
+                      <LegTravelModeMenu
+                        blockId={block.id}
+                        itemId={item.id}
+                        mode={legMode}
+                        automaticMode={automaticMode}
+                        routeColor={blockColor.value}
+                      />
+                    )}
                   />
-                  <DischargeSegmentInfo
-                    batteryFrom={fromState?.departurePct}
-                    batteryTo={toState?.arrivalPct}
-                  />
+                  {legMode === "drive" ? (
+                    <DischargeSegmentInfo
+                      batteryFrom={fromState?.departurePct}
+                      batteryTo={toState?.arrivalPct}
+                    />
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -280,6 +304,20 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
       })}
     </div>
   );
+}
+
+/** The place each stop's leg starts from; absent for the day's first place. */
+function getPreviousPlaceByItemId(items: TripBlockItem[]): Map<string, PlaceItem> {
+  const previous = new Map<string, PlaceItem>();
+  let last: PlaceItem | undefined;
+
+  items.forEach((item) => {
+    if (!isPlaceItem(item)) return;
+    if (last) previous.set(item.id, last);
+    last = item;
+  });
+
+  return previous;
 }
 
 function getRouteablePositionByItemId(

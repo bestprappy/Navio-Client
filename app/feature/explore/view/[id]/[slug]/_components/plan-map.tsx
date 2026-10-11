@@ -7,18 +7,21 @@ import {
   APIProvider,
   Map,
   useMap,
-  useMapsLibrary,
 } from "@vis.gl/react-google-maps";
 import { MapPin, Star, X, Zap } from "lucide-react";
 import { useAtom } from "jotai";
 
 import type { Plan } from "../../../../_components/data";
 import { getPlanCenter } from "../../../../_components/data";
-import { defaultRouteMapColor, getTripBlockColorById } from "@/app/feature/planner/planId/_components/constants/trip-block-colors";
+import { getTripBlockColorById } from "@/app/feature/planner/planId/_components/constants/trip-block-colors";
 import { GoogleMapsExportButton } from "@/app/feature/planner/planId/_components/routes/google-maps-export-button";
+import {
+  GoogleRoutePolylines,
+  GoogleTransitLayer,
+  TransitLinesToggle,
+} from "@/app/feature/planner/planId/_components/routes/google-route-layers";
 import { getTripRouteGroups } from "@/app/feature/planner/planId/_components/routes/trip-route.helpers";
 import { useTripRoutesForGroups } from "@/app/feature/planner/planId/_components/routes/trip-route-query";
-import type { RouteSegment } from "@/app/feature/planner/planId/_components/routes/trip-route.types";
 import { cn } from "@/lib/utils";
 
 import { selectedExplorePlanPlaceIdAtom } from "./plan-view-atoms";
@@ -43,11 +46,6 @@ type PlanMapControllerProps = {
   selectedPlace: ExplorePlanPlace | null;
 };
 
-type RoutePolylinesLayerProps = {
-  segments: RouteSegment[];
-  routeColorByBlockId: globalThis.Map<string, string>;
-};
-
 function PlanMapController({ selectedPlace }: PlanMapControllerProps) {
   const map = useMap();
 
@@ -59,54 +57,6 @@ function PlanMapController({ selectedPlace }: PlanMapControllerProps) {
     map.panTo({ lat: selectedPlace.lat, lng: selectedPlace.lng });
     map.setZoom(FLY_TO_ZOOM);
   }, [map, selectedPlace]);
-
-  return null;
-}
-
-function RoutePolylinesLayer({
-  segments,
-  routeColorByBlockId,
-}: RoutePolylinesLayerProps) {
-  const map = useMap();
-  const mapsLib = useMapsLibrary("maps");
-
-  useEffect(() => {
-    if (!map || !mapsLib || !segments.length) return;
-
-    const polylines = segments.map((segment) => {
-      const path = segment.geometry.coordinates.map(([lng, lat]) => ({
-        lat,
-        lng,
-      }));
-      const isFallback = segment.status === "fallback";
-
-      return new mapsLib.Polyline({
-        path,
-        strokeColor:
-          routeColorByBlockId.get(segment.blockId) ?? defaultRouteMapColor,
-        strokeWeight: isFallback ? 4 : 5,
-        strokeOpacity: isFallback ? 0 : 0.9,
-        icons: isFallback
-          ? [
-              {
-                icon: {
-                  path: "M 0,-1 0,1",
-                  strokeOpacity: 0.65,
-                  scale: 4,
-                },
-                offset: "0",
-                repeat: "20px",
-              },
-            ]
-          : undefined,
-        map,
-      });
-    });
-
-    return () => {
-      polylines.forEach((polyline) => polyline.setMap(null));
-    };
-  }, [map, mapsLib, routeColorByBlockId, segments]);
 
   return null;
 }
@@ -203,7 +153,8 @@ export function PlanMap({ plan }: PlanMapProps) {
           style={{ width: "100%", height: "100%" }}
         >
           <PlanMapController selectedPlace={selectedPlace} />
-          <RoutePolylinesLayer
+          <GoogleTransitLayer />
+          <GoogleRoutePolylines
             segments={visibleRouteSegments}
             routeColorByBlockId={routeColorByBlockId}
           />
@@ -264,10 +215,10 @@ export function PlanMap({ plan }: PlanMapProps) {
         </Map>
       </APIProvider>
 
-      <GoogleMapsExportButton
-        blocks={tripBlocks}
-        className="absolute left-4 top-4 z-10"
-      />
+      <div className="absolute left-4 top-4 z-10 flex flex-wrap items-start gap-2">
+        <GoogleMapsExportButton blocks={tripBlocks} />
+        <TransitLinesToggle />
+      </div>
 
       {routeStatusMessage ? (
         <div className="absolute left-4 top-16 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md">

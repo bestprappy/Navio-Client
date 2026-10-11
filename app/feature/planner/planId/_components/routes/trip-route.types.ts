@@ -1,3 +1,5 @@
+import type { LegTravelMode } from "../constants/types";
+
 export type RouteProfile =
   | "driving-traffic"
   | "driving"
@@ -19,6 +21,8 @@ export type RoutePoint = {
   type: RoutePointType;
   lat: number;
   lng: number;
+  /** How the leg ending here is travelled; omitted means drive. */
+  arrivalMode?: LegTravelMode;
 };
 
 export type RoutePointGroup = {
@@ -32,6 +36,28 @@ export type DirectionsRequest = {
 };
 
 export type RouteSegmentStatus = "routed" | "fallback";
+
+export type TransitLine = {
+  name?: string | null;
+  shortName?: string | null;
+  /** Operator line colour as `#rrggbb`, when published. */
+  color?: string | null;
+  textColor?: string | null;
+  /** Provider vehicle type, e.g. SUBWAY, HEAVY_RAIL, BUS. */
+  vehicleType?: string | null;
+};
+
+/** One ride on a single line, or one walk, within a transit leg. */
+export type RouteStep = {
+  travelMode: LegTravelMode;
+  geometry: RouteLineString;
+  distanceMeters?: number | null;
+  durationSeconds?: number | null;
+  line?: TransitLine | null;
+  departureStop?: string | null;
+  arrivalStop?: string | null;
+  stopCount?: number | null;
+};
 
 export type RouteSegment = {
   id: string;
@@ -47,6 +73,9 @@ export type RouteSegment = {
   distanceMeters?: number | null;
   durationSeconds?: number | null;
   fallbackReason?: string | null;
+  /** Absent from older mobility releases, which only drive. */
+  travelMode?: LegTravelMode;
+  steps?: RouteStep[];
 };
 
 export type DirectionsResponse = {

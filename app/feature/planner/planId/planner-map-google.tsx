@@ -8,7 +8,6 @@ import {
   Map,
   type MapMouseEvent,
   useMap,
-  useMapsLibrary,
 } from "@vis.gl/react-google-maps";
 import { MapPin, Zap } from "lucide-react";
 
@@ -25,7 +24,7 @@ import { sidebarCollapsedAtom } from "@/app/configs/constant";
 import { cn } from "@/lib/utils";
 
 import { ChargerPreviewPanel } from "./_components/charger/charger-preview-panel";
-import { defaultRouteMapColor, getTripBlockColorById } from "./_components/constants/trip-block-colors";
+import { getTripBlockColorById } from "./_components/constants/trip-block-colors";
 import type { TripBlockData } from "./_components/constants/types";
 import { activeEvCarAtom } from "./_components/garage/garage.atoms";
 import { isCompatible } from "./_components/garage/ev-calculator";
@@ -60,11 +59,12 @@ import { PlacePreviewPanel } from "./_components/place/place-preview-panel";
 import { fetchPlaceDetail } from "./_components/place/place-api";
 import { TripPlacePreviewPanel } from "./_components/place/trip-place-preview-panel";
 import { GoogleMapsExportButton } from "./_components/routes/google-maps-export-button";
+import {
+  GoogleRoutePolylines,
+  GoogleTransitLayer,
+  TransitLinesToggle,
+} from "./_components/routes/google-route-layers";
 import { useTripRoutes } from "./_components/routes/trip-route-query";
-import type {
-  RouteSegment,
-  RouteSegmentStatus,
-} from "./_components/routes/trip-route.types";
 
 // --- Types ---
 
@@ -74,11 +74,6 @@ type PlannerMapGoogleProps = {
 };
 
 type LatLng = { lat: number; lng: number };
-
-type RoutePolylinesLayerProps = {
-  segments: RouteSegment[];
-  routeColorByBlockId: globalThis.Map<string, string>;
-};
 
 type MapControllerProps = {
   selectedPlaceCoord: LatLng | null;
@@ -144,55 +139,6 @@ function MapResizeHandler({ sidebarCollapsed }: MapResizeHandlerProps) {
     }, 260);
     return () => window.clearTimeout(timeout);
   }, [map, sidebarCollapsed]);
-
-  return null;
-}
-
-function RoutePolylinesLayer({
-  segments,
-  routeColorByBlockId,
-}: RoutePolylinesLayerProps) {
-  const map = useMap();
-  const mapsLib = useMapsLibrary("maps");
-
-  useEffect(() => {
-    if (!map || !mapsLib || !segments.length) return;
-
-    const polylines = segments.map((segment) => {
-      const path = segment.geometry.coordinates.map(([lng, lat]) => ({
-        lat,
-        lng,
-      }));
-      const color =
-        routeColorByBlockId.get(segment.blockId) ?? defaultRouteMapColor;
-      const isFallback = segment.status === "fallback";
-
-      return new mapsLib.Polyline({
-        path,
-        strokeColor: color,
-        strokeWeight: isFallback ? 4 : 5,
-        strokeOpacity: isFallback ? 0 : 0.9,
-        icons: isFallback
-          ? [
-              {
-                icon: {
-                  path: "M 0,-1 0,1",
-                  strokeOpacity: 0.65,
-                  scale: 4,
-                },
-                offset: "0",
-                repeat: "20px",
-              },
-            ]
-          : undefined,
-        map,
-      });
-    });
-
-    return () => {
-      polylines.forEach((p) => p.setMap(null));
-    };
-  }, [map, mapsLib, segments, routeColorByBlockId]);
 
   return null;
 }
@@ -379,7 +325,8 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
             anchorCoord={focusedAnchor}
           />
           <MapResizeHandler sidebarCollapsed={sidebarCollapsed} />
-          <RoutePolylinesLayer
+          <GoogleTransitLayer />
+          <GoogleRoutePolylines
             segments={visibleRouteSegments}
             routeColorByBlockId={routeColorByBlockId}
           />
@@ -555,10 +502,10 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
         </Map>
       </APIProvider>
 
-      <GoogleMapsExportButton
-        blocks={tripBlocks}
-        className="absolute left-4 top-4 z-10"
-      />
+      <div className="absolute left-4 top-4 z-10 flex flex-wrap items-start gap-2">
+        <GoogleMapsExportButton blocks={tripBlocks} />
+        <TransitLinesToggle />
+      </div>
 
       {routeStatusMessage ? (
         <div className="absolute left-4 top-16 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md">

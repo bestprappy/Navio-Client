@@ -149,6 +149,8 @@ export type PlaceSearchResult = {
   rating?: number;
   reviewCount?: number;
   category?: string;
+  /** Provider machine type, e.g. "subway_station"; `category` is its display text. */
+  primaryType?: string;
 };
 
 export type TripBlockColorId =
@@ -230,6 +232,9 @@ export type TripBlockData = {
 
 export type TripBlockItem = PlaceItem | NoteItem | ChecklistItem;
 
+/** How a leg of the day is travelled. */
+export type LegTravelMode = "drive" | "transit" | "walk";
+
 export type PlaceItem = {
   observedSocCheckpoint?: { socPct: number } | null;
   id: string;
@@ -249,6 +254,13 @@ export type PlaceItem = {
   timeEnd?: string;
   cost?: number;
   evCharger?: PlaceItemEvChargerDetails;
+  /** Provider machine type, e.g. "subway_station", used to recognise stations. */
+  placeType?: string;
+  /**
+   * How this stop is reached from the previous one. `null` or absent means automatic:
+   * transit between two stations, otherwise drive.
+   */
+  arrivalMode?: LegTravelMode | null;
 };
 
 export type NoteItem = {

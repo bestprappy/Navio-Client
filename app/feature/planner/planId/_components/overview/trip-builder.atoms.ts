@@ -85,7 +85,7 @@ type UpdatePlacePayload = {
   updates: Partial<
     Pick<
       PlaceItem,
-      "isVisited" | "notes" | "time" | "timeEnd" | "cost" | "evCharger" | "observedSocCheckpoint"
+      "isVisited" | "notes" | "time" | "timeEnd" | "cost" | "evCharger" | "observedSocCheckpoint" | "arrivalMode"
     >
   >;
 };
@@ -1260,6 +1260,7 @@ export const addSelectedPlaceToTripAtom = atom(null, (get, set) => {
             rating: selectedPlace.rating,
             reviewCount: selectedPlace.reviewCount,
             imageUrl: selectedPlace.imageUrl,
+            placeType: selectedPlace.primaryType,
             isVisited: false,
           },
         ],

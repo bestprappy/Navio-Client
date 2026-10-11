@@ -27,6 +27,7 @@ type PlaceDetailApiResponse = {
   openingHours: Record<string, unknown>;
   category?: string;
   description?: string;
+  primaryType?: string | null;
   rating?: number | null;
   reviewCount?: number | null;
 };
@@ -75,6 +76,7 @@ function placeDetailToSearchResult(
     openingHours: extractOpeningHoursSummary(detail.openingHours),
     category: detail.category,
     description: detail.description,
+    primaryType: detail.primaryType ?? undefined,
     rating: detail.rating ?? undefined,
     reviewCount: detail.reviewCount ?? undefined,
   };

@@ -1,6 +1,6 @@
 import type { EvCar } from "../constants/vehicle.types";
 import { isPlaceItem, type PlaceItemEvChargerDetails, type TripBlockData } from "../constants/types";
-import { getTripRouteGroups } from "../routes/trip-route.helpers";
+import { getSegmentTravelMode, getTripRouteGroups } from "../routes/trip-route.helpers";
 import { resolveDayAnchors } from "../itinerary/day-anchors";
 import type { RouteSegment } from "../routes/trip-route.types";
 import { calculateEnergy, positive, projectEnergyTrip, type ChargingEvent, type EnergyModel, type EnergyResult, type EnergyStop } from "./energy-model";
@@ -71,8 +71,10 @@ export function projectCanonicalTrip(blocks: TripBlockData[], segments: RouteSeg
       const point=points[index], item=items.get(point.id);
       const segment=index ? byEndpoints.get(`${day.id}:${points[index-1].id}:${point.id}`) : undefined;
       const discontinuity=index===0 && previousPosition && (Math.abs(previousPosition.lat-point.lat)>1e-6 || Math.abs(previousPosition.lng-point.lng)>1e-6);
-      const distanceKm=index===0 && !discontinuity ? 0 : segment?.distanceMeters == null ? null : segment.distanceMeters/1000;
-      events.push({ id:point.id,dayId:day.id,distanceKm,distanceQuality:distanceKm===null ? "UNAVAILABLE" : segment?.status==="fallback" ? "FALLBACK" : "ROUTED",
+      // A train or walking leg moves the traveller, not the car: it costs the battery nothing.
+      const carless=index>0 && !!segment && getSegmentTravelMode(segment)!=="drive";
+      const distanceKm=carless || (index===0 && !discontinuity) ? 0 : segment?.distanceMeters == null ? null : segment.distanceMeters/1000;
+      events.push({ id:point.id,dayId:day.id,distanceKm,distanceQuality:distanceKm===null ? "UNAVAILABLE" : !carless && segment?.status==="fallback" ? "FALLBACK" : "ROUTED",
         observedSocPct:item?.observedSocCheckpoint?.socPct,charging:item?.evCharger ? chargingEventForCar(item.evCharger,car) : null });
       previousPosition=point;
     }

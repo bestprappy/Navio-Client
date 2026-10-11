@@ -1,6 +1,7 @@
 import { tripEnergyStateSchema, type TripEnergyState } from "../planId/_components/garage/trip-energy-state";
 import { isTripAnchor } from "../planId/_components/itinerary/day-anchors";
 import { isTripDestination } from "../planId/_components/itinerary/day-destinations";
+import { isLegTravelMode } from "../planId/_components/routes/leg-travel-mode";
 import type {
   ChecklistItem,
   EvCharger,
@@ -222,21 +223,23 @@ export async function savePlannerSnapshot(
   const requiresTargets = blocks.some((block) => block.items.some((item) => item.type === "place" && item.evCharger?.targetBatteryPct != null));
   const requiresEnergy = energyState !== undefined;
   const requiresObservations = blocks.some(block => block.items.some(item => item.type === "place" && item.observedSocCheckpoint !== undefined));
+  const requiresTravelModes = blocks.some(block => block.items.some(item => item.type === "place" && item.arrivalMode !== undefined));
   let syncedEnergy = energyState;
   let syncedBlocks = blocks;
   let localOnlySettings = false;
-  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations) {
+  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations || requiresTravelModes) {
     const server = await getPlannerSnapshot(tripId);
     const energySupported = server.capabilities?.includes("trip-energy-v1");
     const garageSupported = server.capabilities?.includes("trip-garage-v1");
     const observationsSupported = server.capabilities?.includes("observed-soc-v1");
+    const travelModesSupported = server.capabilities?.includes("leg-travel-mode-v1");
     if (!energySupported) syncedEnergy = undefined;
     // Preserve the whole energy state in the recoverable draft when membership cannot sync.
     if (energyState?.garageVehicleIds !== undefined && !garageSupported) syncedEnergy = undefined;
     const destinationsSupported = server.capabilities?.includes("day-destinations");
     const anchorsSupported = server.capabilities?.includes("day-anchors");
     const targetsSupported = server.capabilities?.includes("charge-targets");
-    localOnlySettings = Boolean((requiresEnergy && !energySupported) || (requiresObservations && !observationsSupported) || (requiresDestinations && !destinationsSupported) || (requiresAnchors && !anchorsSupported) || (requiresTargets && !targetsSupported));
+    localOnlySettings = Boolean((requiresEnergy && !energySupported) || (requiresObservations && !observationsSupported) || (requiresDestinations && !destinationsSupported) || (requiresAnchors && !anchorsSupported) || (requiresTargets && !targetsSupported) || (requiresTravelModes && !travelModesSupported));
     if (energyState?.garageVehicleIds !== undefined && !garageSupported) localOnlySettings = true;
     syncedBlocks = blocks.map((block) => ({
       ...block,
@@ -247,6 +250,7 @@ export async function savePlannerSnapshot(
         : item),
     }));
     if (!observationsSupported) syncedBlocks = syncedBlocks.map(block => ({ ...block, items: block.items.map(item => item.type === "place" ? { ...item, observedSocCheckpoint: undefined } : item) }));
+    if (!travelModesSupported) syncedBlocks = syncedBlocks.map(block => ({ ...block, items: block.items.map(item => item.type === "place" ? { ...item, arrivalMode: undefined } : item) }));
   }
   const value = await requestJson(
     `/api/trips/${encodeURIComponent(tripId)}/planner`,
@@ -617,6 +621,8 @@ function isPlaceItem(value: Record<string, unknown>): value is PlaceItem {
     typeof value.lat === "number" &&
     typeof value.lng === "number" &&
     isOptionalString(value.description) &&
+    isOptionalString(value.placeType) &&
+    (value.arrivalMode == null || isLegTravelMode(value.arrivalMode)) &&
     isOptionalNumber(value.rating) &&
     isOptionalNumber(value.reviewCount) &&
     isOptionalString(value.imageUrl) &&
