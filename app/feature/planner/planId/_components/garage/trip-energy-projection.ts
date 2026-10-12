@@ -18,8 +18,8 @@ export function chargingEventForCar(details: PlaceItemEvChargerDetails, car: EvC
   const limits = car.chargingCapabilities ?? { acKw: car.chargingLimitsKnown === true ? car.maxAcKw : null, dcKw: car.chargingLimitsKnown === true ? car.maxDcKw : null };
   const powers = matching.map(c => DC.has(c) ? limits.dcKw : limits.acKw).filter(positive);
   return {
-    targetSocPct: details.targetBatteryPct ?? null,
-    durationMinutes: details.estimatedChargeMinutes !== null && details.estimatedChargeMinutes >= 0 ? details.estimatedChargeMinutes : null,
+    targetSocPct: details.targetBatteryPct ?? details.plannedDepartureSocPct ?? null,
+    durationMinutes: details.chargingDurationMinutes ?? (details.estimatedChargeMinutes !== null && details.estimatedChargeMinutes >= 0 ? details.estimatedChargeMinutes : null),
     compatible: matching.length > 0 ? true : details.connectorTypes.includes("OTHER") || car.connectorTypes.includes("OTHER") ? null : false,
     effectivePowerKw: positive(details.maxKw) && powers.length ? Math.min(details.maxKw, Math.max(...powers)) : null,
   };

@@ -11,7 +11,7 @@ test("optimization flushes pending trip state before reading a versioned capable
   const original = globalThis.fetch;
   const order = [];
   const unregister = registerPlannerAutosaveFlush("trip", async () => { order.push("save"); return 7; });
-  globalThis.fetch = async () => { order.push("read"); return Response.json({blocks:[],budget:{currency:"THB",amount:0,expenses:[]},version:7,savedAt:new Date().toISOString(),capabilities:["canonical-optimization-v1"]}); };
+  globalThis.fetch = async () => { order.push("read"); return Response.json({blocks:[],budget:{currency:"THB",amount:0,expenses:[]},version:7,savedAt:new Date().toISOString(),capabilities:["canonical-optimization-v1","precise-charging-v1"]}); };
   try {
     assert.equal((await prepareOptimizationSnapshot("trip")).version, 7);
     assert.deepEqual(order, ["save", "read"]);
@@ -23,7 +23,9 @@ test("optimization refuses old servers, concurrent versions and unmounted planne
   try {
     globalThis.fetch = async () => Response.json({blocks:[],budget:{currency:"THB",amount:0,expenses:[]},version:7,savedAt:new Date().toISOString()});
     await assert.rejects(prepareOptimizationSnapshot("trip"), /server update/);
-    globalThis.fetch = async () => Response.json({blocks:[],budget:{currency:"THB",amount:0,expenses:[]},version:8,savedAt:new Date().toISOString(),capabilities:["canonical-optimization-v1"]});
+    globalThis.fetch = async () => Response.json({blocks:[],budget:{currency:"THB",amount:0,expenses:[]},version:7,savedAt:new Date().toISOString(),capabilities:["canonical-optimization-v1"]});
+    await assert.rejects(prepareOptimizationSnapshot("trip"), /server update/);
+    globalThis.fetch = async () => Response.json({blocks:[],budget:{currency:"THB",amount:0,expenses:[]},version:8,savedAt:new Date().toISOString(),capabilities:["canonical-optimization-v1","precise-charging-v1"]});
     await assert.rejects(prepareOptimizationSnapshot("trip"), /trip changed/);
     await assert.rejects(prepareOptimizationSnapshot("unmounted"), /finish loading/);
   } finally { unregister(); globalThis.fetch = original; }

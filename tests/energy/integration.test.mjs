@@ -148,3 +148,32 @@ test("capable server preserves zero and checkpoints; a version conflict never ac
     await assert.rejects(savePlannerSnapshot("trip",blocks,{currency:"THB",amount:0,expenses:[]},4,state),error=>error.status===409);
   } finally { globalThis.fetch=original; }
 });
+
+
+test("precise charging survives JSON reload and manual target overrides optimizer target", () => {
+  const vehicle = {...car, energyProfile: {modelKind:"CONSUMPTION",consumptionKwhPer100km:20,usableBatteryCapacityKwh:50}};
+  const details = {connectorTypes:["CCS2"],maxKw:50,totalConnectors:1,availableConnectors:null,priceText:null,openingHoursSummary:null,
+    operatorName:null,estimatedChargeMinutes:15,chargingDurationMinutes:15.125,plannedDepartureSocPct:55.125};
+  const reloaded=JSON.parse(JSON.stringify(details));
+  assert.equal(projectCanonicalCharging(30,reloaded,vehicle).departurePct,55.125);
+  assert.ok(Math.abs(projectCanonicalCharging(30,{...reloaded,plannedDepartureSocPct:null},vehicle).departurePct - 55.208333333333336) < 1e-9);
+  assert.equal(projectCanonicalCharging(30,{...reloaded,targetBatteryPct:60},vehicle).departurePct,60);
+  const values=new Map(); const previousWindow=globalThis.window;
+  globalThis.window={localStorage:{getItem:k=>values.get(k)??null,setItem:(k,v)=>values.set(k,v),removeItem:k=>values.delete(k)}};
+  try {
+    const state={blocks:[{...blocks[0],items:[{...place("a",100),evCharger:details}]}],budget:{currency:"THB",amount:0,expenses:[]}};
+    assert.equal(writePlannerDraft("guest",0,state),true);
+    assert.deepEqual(readPlannerDraft("guest").blocks[0].items[0].evCharger,details);
+  } finally { if(previousWindow===undefined) delete globalThis.window; else globalThis.window=previousWindow; }
+});
+
+test("older servers cannot silently acknowledge precise charging", async () => {
+  const old=globalThis.fetch;let writes=0;
+  globalThis.fetch=async (_url,options)=>{if(options?.method==="PUT") writes++;
+    return Response.json({blocks:[],budget:{currency:"THB",amount:0,expenses:[]},version:1,savedAt:new Date().toISOString(),capabilities:[]});};
+  try {
+    const charged=[{...blocks[0],items:[{...place("a",100),evCharger:{chargingDurationMinutes:1.25}}]}];
+    await assert.rejects(savePlannerSnapshot("trip",charged,{currency:"THB",amount:0,expenses:[]},1),/must be updated/);
+    assert.equal(writes,0);
+  } finally {globalThis.fetch=old;}
+});
