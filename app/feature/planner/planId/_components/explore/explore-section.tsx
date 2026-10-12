@@ -1,20 +1,120 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { ArrowUpRight, Compass, MapPin } from "lucide-react";
 
 import { SharedPlanCard } from "@/app/feature/explore/_components/shared-plans/shared-plan-card";
-import { explorePlanSearchText } from "@/app/feature/explore/_components/shared-plans/explore-plans-api";
+import {
+  EXPLORE_MAX_PAGE_SIZE,
+  type ExplorePlan,
+} from "@/app/feature/explore/_components/shared-plans/explore-plans-api";
 import { useExplorePlans } from "@/app/feature/explore/_components/shared-plans/use-explore-plans";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { getTripDestinations } from "../../../_components/trip-destinations";
+import { Button } from "@/components/ui/button";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  getPlannerExploreDestinations,
+  getTripDestinations,
+  selectPlannerExplorePlans,
+} from "../../../_components/trip-destinations";
 import { itineraryBlocksAtom } from "../overview/trip-builder.atoms";
+
+type PlannerExploreCarouselProps = {
+  destinations: readonly string[];
+  plans: readonly ExplorePlan[];
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
+};
+
+const CAROUSEL_ARROW_CLASS =
+  "z-20 size-10 border-border/70 bg-background/80 text-foreground opacity-80 shadow-lg backdrop-blur-sm transition-[opacity,transform,background-color] duration-200 ease-out hover:bg-background/95 hover:opacity-100 active:scale-95 focus-visible:opacity-100 disabled:opacity-30 motion-reduce:transition-none motion-reduce:hover:translate-x-0 motion-reduce:active:scale-100";
+
+export function PlannerExploreCarousel({
+  destinations,
+  plans,
+  isLoading,
+  isError,
+  onRetry,
+}: PlannerExploreCarouselProps) {
+  const destinationLabel = destinations.join(", ") || "your trip";
+
+  if (isLoading) {
+    return (
+      <div className="space-y-3" role="status" aria-label="Loading shared plans">
+        <Skeleton className="aspect-video w-full rounded-lg" />
+        <div className="space-y-2 px-1">
+          <Skeleton className="h-5 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-4">
+        <p role="alert" className="text-sm text-foreground">Shared plans could not be loaded.</p>
+        <Button type="button" variant="outline" size="sm" onClick={onRetry}>Try again</Button>
+      </div>
+    );
+  }
+
+  if (plans.length === 0) {
+    return (
+      <p className="rounded-xl border border-dashed border-border bg-secondary/20 p-4 text-sm leading-relaxed text-muted-foreground">
+        No shared itineraries for {destinationLabel} yet.
+      </p>
+    );
+  }
+
+  return (
+    <Carousel
+      opts={{ align: "start", loop: plans.length > 1 }}
+      aria-label={`Shared plans for ${destinationLabel}`}
+    >
+      <CarouselContent className="ml-0">
+        {plans.map((plan) => (
+          <CarouselItem key={plan.token} className="basis-full pl-0">
+            <SharedPlanCard plan={plan} />
+          </CarouselItem>
+        ))}
+      </CarouselContent>
+      {plans.length > 1 && (
+        <>
+          <CarouselPrevious
+            className={`${CAROUSEL_ARROW_CLASS} left-3 hover:-translate-x-0.5`}
+          />
+          <CarouselNext
+            className={`${CAROUSEL_ARROW_CLASS} right-3 hover:translate-x-0.5`}
+          />
+        </>
+      )}
+    </Carousel>
+  );
+}
 
 export function ExploreSection({ destinationName, country }: { destinationName: string; country: string }) {
   const blocks = useAtomValue(itineraryBlocksAtom);
-  const destinations = getTripDestinations(destinationName, blocks);
-  const shared = useExplorePlans(null);
+  const destinations = useMemo(
+    () => getPlannerExploreDestinations(getTripDestinations(destinationName, blocks)),
+    [blocks, destinationName],
+  );
+  const shared = useExplorePlans(null, "trending", EXPLORE_MAX_PAGE_SIZE);
+  const plans = useMemo(
+    () => selectPlannerExplorePlans(destinations, shared.plans),
+    [destinations, shared.plans],
+  );
+  const destinationLabel = destinations.join(", ") || destinationName;
 
   return (
     <section className="mt-4 px-4 py-4">
@@ -26,25 +126,20 @@ export function ExploreSection({ destinationName, country }: { destinationName: 
           </div>
           <AccordionContent className="pt-4 [&_a]:no-underline">
             <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"><Compass className="size-4 text-primary" aria-hidden="true" />Explore {country === "Your trip" ? destinationName : country}</p>
-            {shared.isError && <p role="alert" className="text-sm text-destructive">Shared plans could not be loaded.</p>}
-            <div className="space-y-5">
-              {destinations.map((destination) => {
-                const place = destination.split(",")[0]?.trim().toLowerCase() ?? "";
-                const matches = shared.plans.filter((plan) => place && explorePlanSearchText(plan).includes(place)).slice(0, 2);
-                return (
-                  <div key={destination}>
-                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold"><MapPin className="size-4 text-accent" aria-hidden="true" />{destination}</h3>
-                    <div className="grid gap-3 @2xl/planner:grid-cols-2">
-                      {matches.map((plan) => <SharedPlanCard key={plan.token} plan={plan} />)}
-                      {!matches.length && !shared.isLoading && !shared.isError && (
-                        <p className="rounded-xl border border-dashed border-border bg-secondary/20 p-4 text-sm leading-relaxed text-muted-foreground">No shared itineraries for {destination} yet.</p>
-                      )}
-                      {shared.isLoading && <p className="text-sm text-muted-foreground">Loading shared plans…</p>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <h3
+              className="mb-3 flex min-w-0 items-start gap-2 text-sm font-semibold"
+              title={destinationLabel}
+            >
+              <MapPin className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
+              <span className="line-clamp-2 min-w-0 break-words">{destinationLabel}</span>
+            </h3>
+            <PlannerExploreCarousel
+              destinations={destinations}
+              plans={plans}
+              isLoading={shared.isLoading}
+              isError={shared.isError}
+              onRetry={() => { void shared.refetch(); }}
+            />
           </AccordionContent>
         </AccordionItem>
       </Accordion>

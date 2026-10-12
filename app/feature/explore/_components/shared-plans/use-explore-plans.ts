@@ -5,6 +5,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 
 import {
   EXPLORE_SHARED_PLANS_QUERY_KEY,
+  EXPLORE_PAGE_SIZE,
   ExplorePlansError,
   fetchExplorePlansPage,
   type ExplorePlan,
@@ -22,11 +23,15 @@ const NO_PLANS: ExplorePlan[] = [];
  *                    skeleton. Null when that fetch failed; the browser then
  *                    retries on its own.
  */
-export function useExplorePlans(initialPage: ExplorePlansPage | null, sort: ExploreSort = "recent") {
+export function useExplorePlans(
+  initialPage: ExplorePlansPage | null,
+  sort: ExploreSort = "recent",
+  pageSize: number = EXPLORE_PAGE_SIZE,
+) {
   const query = useInfiniteQuery({
-    queryKey: [...EXPLORE_SHARED_PLANS_QUERY_KEY, sort],
+    queryKey: [...EXPLORE_SHARED_PLANS_QUERY_KEY, sort, pageSize],
     initialPageParam: 0,
-    queryFn: ({ pageParam, signal }) => fetchExplorePlansPage(pageParam, signal, sort),
+    queryFn: ({ pageParam, signal }) => fetchExplorePlansPage(pageParam, signal, sort, pageSize),
     getNextPageParam: (page) => (page.last ? undefined : page.number + 1),
     initialData: initialPage ? { pages: [initialPage], pageParams: [0] } : undefined,
     // Server-rendered data is fresh for a moment; after that a revisit refetches
