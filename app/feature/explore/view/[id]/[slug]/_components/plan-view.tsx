@@ -136,7 +136,7 @@ function projectExplore(blocks: ExplorePlanBlock[], segments: RouteSegment[], ca
     date: block.date ?? "", colorId: block.colorId,
     items: block.places.map(place => ({ ...place, id: place.displayId, type: "place", placeId: place.id, evCharger: getPlanTemplatePlaceEvChargerDetails(place) })),
   }));
-  return projectCanonicalTrip(tripBlocks, segments, car, EXPLORE_STARTING_BATTERY_PCT);
+  return { ...projectCanonicalTrip(tripBlocks, segments, car, EXPLORE_STARTING_BATTERY_PCT), blocks: tripBlocks };
 }
 
 /* ══════════════════════ Garage ══════════════════════ */
@@ -172,11 +172,12 @@ function GarageSection({
     () => blocks.filter(isItineraryBlock),
     [blocks],
   );
-  const tripSummary = useMemo(() => {
+  const energyProjection = useMemo(() => {
     if (routeSegments.length === 0 || itineraryBlocks.length === 0) return null;
 
-    return projectExplore(itineraryBlocks, routeSegments, car).summary;
+    return projectExplore(itineraryBlocks, routeSegments, car);
   }, [car, itineraryBlocks, routeSegments]);
+  const tripSummary = energyProjection?.summary ?? null;
   const totalDrivingMinutes = useMemo(
     () =>
       routeSegments.length === 0 || routeSegments.some(segment => segment.durationSeconds == null) ? null : Math.round(
@@ -252,6 +253,10 @@ function GarageSection({
             tripSummary={tripSummary}
             totalDrivingMinutes={totalDrivingMinutes}
             plannedDays={itineraryBlocks.length}
+            initialSocPct={EXPLORE_STARTING_BATTERY_PCT}
+            reserveSocPct={12}
+            blocks={energyProjection?.blocks}
+            days={energyProjection?.days}
           />
           <p className="mt-2 text-xs text-muted-foreground">Preview assumes an 80% starting battery. Template charging capabilities may be unavailable.</p>
         </div>
