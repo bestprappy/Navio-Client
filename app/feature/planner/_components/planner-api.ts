@@ -220,13 +220,17 @@ export async function savePlannerSnapshot(
   const requiresDestinations = blocks.some((block) => block.destination);
   const requiresAnchors = blocks.some((block) => block.startAnchor || block.endAnchor);
   const requiresTargets = blocks.some((block) => block.items.some((item) => item.type === "place" && item.evCharger?.targetBatteryPct != null));
+  const requiresPreciseCharging = blocks.some(block => block.items.some(item => item.type === "place" && (item.evCharger?.chargingDurationMinutes != null || item.evCharger?.plannedDepartureSocPct != null)));
   const requiresEnergy = energyState !== undefined;
   const requiresObservations = blocks.some(block => block.items.some(item => item.type === "place" && item.observedSocCheckpoint !== undefined));
   let syncedEnergy = energyState;
   let syncedBlocks = blocks;
   let localOnlySettings = false;
-  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations) {
+  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations || requiresPreciseCharging) {
     const server = await getPlannerSnapshot(tripId);
+    if (requiresPreciseCharging && !server.capabilities?.includes("precise-charging-v1")) {
+      throw new PlannerApiError("The trip service must be updated before this precise charging plan can be saved. Your local changes have been kept.", 409);
+    }
     const energySupported = server.capabilities?.includes("trip-energy-v1");
     const garageSupported = server.capabilities?.includes("trip-garage-v1");
     const observationsSupported = server.capabilities?.includes("observed-soc-v1");
@@ -640,6 +644,8 @@ function isEvCharger(value: unknown): value is PlaceItemEvChargerDetails {
     isNullableString(value.priceText) &&
     isNullableString(value.openingHoursSummary) &&
     (value.estimatedChargeMinutes === null || typeof value.estimatedChargeMinutes === "number") &&
+    (value.chargingDurationMinutes == null || (typeof value.chargingDurationMinutes === "number" && Number.isFinite(value.chargingDurationMinutes) && value.chargingDurationMinutes >= 0 && value.chargingDurationMinutes <= 2147483647)) &&
+    (value.plannedDepartureSocPct == null || (typeof value.plannedDepartureSocPct === "number" && Number.isFinite(value.plannedDepartureSocPct) && value.plannedDepartureSocPct >= 0 && value.plannedDepartureSocPct <= 100)) &&
     (value.targetBatteryPct == null ||
       (typeof value.targetBatteryPct === "number" && Number.isInteger(value.targetBatteryPct) &&
         value.targetBatteryPct >= 0 && value.targetBatteryPct <= 100)) &&

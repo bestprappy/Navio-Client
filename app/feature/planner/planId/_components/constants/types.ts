@@ -104,6 +104,8 @@ export type PlaceItemEvChargerDetails = {
   openingHoursSummary: string | null;
   estimatedChargeMinutes: number | null;
   targetBatteryPct?: number | null;
+  chargingDurationMinutes?: number | null;
+  plannedDepartureSocPct?: number | null;
   operatorName: string | null;
   selectionSource?: "AUTO" | "MANUAL";
   locked?: boolean;

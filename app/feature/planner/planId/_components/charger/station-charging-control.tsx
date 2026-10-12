@@ -38,12 +38,12 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
 
   function updateTarget(value: number) {
     const nextTarget = normalizeStationTargetPct(value);
-    const nextDetails = { ...details, targetBatteryPct: nextTarget };
+    const nextDetails = { ...details, targetBatteryPct: nextTarget, plannedDepartureSocPct: null };
     const nextProjection = car && arrivalPct != null ? projectChargingStop(arrivalPct, nextDetails, car) : null;
     updatePlaceItem({
       blockId,
       itemId,
-      updates: { evCharger: { ...nextDetails, estimatedChargeMinutes: nextProjection?.chargeMinutes ?? details.estimatedChargeMinutes } },
+      updates: { evCharger: { ...nextDetails, chargingDurationMinutes: nextProjection?.chargeMinutes ?? details.chargingDurationMinutes ?? details.estimatedChargeMinutes, estimatedChargeMinutes: nextProjection?.chargeMinutes != null ? Math.round(nextProjection.chargeMinutes) : details.estimatedChargeMinutes } },
     });
   }
 
