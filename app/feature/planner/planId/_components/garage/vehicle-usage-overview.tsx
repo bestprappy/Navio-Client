@@ -12,6 +12,10 @@ import { BatteryGauge } from "./battery-gauge";
 import { arrivalReservePctAtom, startingBatteryPctAtom } from "./garage.atoms";
 
 import { BATTERY_TONES, formatDistanceKm, formatMinutes, getBatteryTone } from "./garage-formatters";
+import { energyAvailabilityLabel, energyBasisLabel } from "./energy-display";
+import { TripEnergyDetails } from "./trip-energy-details";
+import type { TripBlockData } from "../constants/types";
+import type { CanonicalDayProjection } from "./trip-energy-projection";
 
 type VehicleUsageOverviewProps = {
   car: EvCar;
@@ -19,6 +23,10 @@ type VehicleUsageOverviewProps = {
   tripSummary: TripEvSummary | null;
   totalDrivingMinutes: number | null;
   plannedDays: number;
+  initialSocPct?: number;
+  reserveSocPct?: number;
+  blocks?: TripBlockData[];
+  days?: Map<string, CanonicalDayProjection>;
 };
 
 export function VehicleUsageOverview({
@@ -27,11 +35,17 @@ export function VehicleUsageOverview({
   tripSummary,
   totalDrivingMinutes,
   plannedDays,
+  initialSocPct,
+  reserveSocPct,
+  blocks = [],
+  days,
 }: VehicleUsageOverviewProps) {
   const titleId = useId();
-  const reservePct = useAtomValue(arrivalReservePctAtom);
+  const plannerReservePct = useAtomValue(arrivalReservePctAtom);
+  const reservePct = reserveSocPct ?? plannerReservePct;
   const hasEstimate = tripSummary !== null;
-  const startPct = useAtomValue(startingBatteryPctAtom);
+  const plannerStartPct = useAtomValue(startingBatteryPctAtom);
+  const startPct = initialSocPct ?? plannerStartPct;
   const endPct = tripSummary ? tripSummary.finalBatteryPct : startPct;
   const rangeLeftKm = endPct === null ? null : Math.round(calcRangeKmForBatteryPct(endPct, car));
   const distanceKm = tripSummary?.totalDistanceKm ?? null;
@@ -39,6 +53,7 @@ export function VehicleUsageOverview({
   const chargeMinutes = tripSummary?.totalChargeMinutes ?? null;
   const tone = BATTERY_TONES[getBatteryTone(endPct, reservePct)];
   const displayName = vehicle.nickname?.trim() || `${car.make} ${car.model}`;
+  const availability = energyAvailabilityLabel(tripSummary?.reasons ?? []);
 
   return (
     <section
@@ -51,6 +66,8 @@ export function VehicleUsageOverview({
         </h3>
         <p className="min-w-0 truncate text-sm text-muted-foreground">{displayName}</p>
       </header>
+      <p className="px-4 pt-2 text-xs text-muted-foreground">{vehicle.source === "custom" ? "Custom EV" : "Catalogue EV"} · {energyBasisLabel(car)}</p>
+      {availability && <p className="px-4 pt-2 text-xs text-muted-foreground">{availability}</p>}
 
       <div className="px-4 pt-3 pb-4">
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -74,12 +91,12 @@ export function VehicleUsageOverview({
             </p>
           </div>
         </div>
-        <TripBattery startPct={startPct} endPct={endPct} showStart={hasEstimate} />
+        <TripBattery startPct={startPct} endPct={endPct} showStart={hasEstimate} reservePct={reservePct} />
       </div>
 
       <dl className="grid grid-cols-2 gap-px border-t border-border bg-border @min-[30rem]/usage:grid-cols-4">
         <Stat
-          label="Distance"
+          label="Planned distance"
           value={formatDistanceKm(distanceKm)}
           unit="km"
           note={plannedDays > 1 && distanceKm !== null ? `${formatDistanceKm(distanceKm / plannedDays)} km a day` : undefined}
@@ -88,29 +105,29 @@ export function VehicleUsageOverview({
           label="Nominal energy"
           value={energyKwh?.toFixed(1) ?? "Unavailable"}
           unit="kWh"
-          note={car.energyProfile?.modelKind === "RATED_RANGE" ? "Rated-range preview; no derived consumption" : `${car.consumptionKwhPer100km} kWh/100 km`}
+          note="Driving energy; charging is reported separately"
         />
         <Stat label="Driving" value={formatMinutes(totalDrivingMinutes)} />
         <Stat
           label="Charging"
           value={chargeMinutes !== null && chargeMinutes > 0 ? formatMinutes(chargeMinutes) : chargeMinutes === null ? "Unavailable" : "None"}
-          note={chargeMinutes !== null && chargeMinutes > 0 ? undefined : "No stops planned"}
+          note={chargeMinutes === null ? "Charging estimate unavailable" : undefined}
         />
       </dl>
 
-      <DailyBattery values={tripSummary?.batteryByDay ?? []} hasEstimate={hasEstimate} />
+      <DailyBattery values={tripSummary?.batteryByDay ?? []} hasEstimate={hasEstimate} reservePct={reservePct} />
+      {blocks.length > 0 && <TripEnergyDetails blocks={blocks} days={days} />}
     </section>
   );
 }
 
-function TripBattery({ startPct, endPct, showStart }: { startPct: number; endPct: number | null; showStart: boolean }) {
-  const reservePct = useAtomValue(arrivalReservePctAtom);
+function TripBattery({ startPct, endPct, showStart, reservePct }: { startPct: number; endPct: number | null; showStart: boolean; reservePct: number }) {
   return (
     <div className="mt-4">
       {endPct !== null && <BatteryGauge value={endPct} previousValue={showStart ? startPct : undefined} reservePct={reservePct} />}
       <div className="mt-2 flex flex-wrap justify-between gap-x-3 text-xs text-muted-foreground">
         <span>Dashed line: {reservePct}% reserve</span>
-        {showStart && endPct !== null && startPct > endPct && <span>Faded part: {startPct - endPct}% used on the trip</span>}
+        {showStart && <span>Started at {startPct}%</span>}
       </div>
     </div>
   );
@@ -121,7 +138,7 @@ function Stat({ label, value, unit, note }: { label: string; value: string; unit
     <div className="min-w-0 bg-card px-4 py-3">
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="mt-1">
-        <span className="text-lg font-semibold leading-tight tabular-nums text-foreground">{value}</span>
+        <span className="break-words text-lg font-semibold leading-tight tabular-nums text-foreground">{value}</span>
         {unit && <span className="ml-1 text-xs text-muted-foreground">{unit}</span>}
         {note && <span className="mt-0.5 block text-xs text-muted-foreground">{note}</span>}
       </dd>
@@ -129,9 +146,8 @@ function Stat({ label, value, unit, note }: { label: string; value: string; unit
   );
 }
 
-function DailyBattery({ values, hasEstimate }: { values: (number | null)[]; hasEstimate: boolean }) {
+function DailyBattery({ values, hasEstimate, reservePct }: { values: (number | null)[]; hasEstimate: boolean; reservePct: number }) {
   const titleId = useId();
-  const reservePct = useAtomValue(arrivalReservePctAtom);
   const scrolls = values.length > 8;
 
   return (
@@ -159,7 +175,7 @@ function DailyBattery({ values, hasEstimate }: { values: (number | null)[]; hasE
           <div className="relative h-40" style={{ minWidth: `${values.length * 2.5}rem` }}>
             <ol aria-labelledby={titleId} className="relative flex h-full gap-2">
               {values.map((value, index) => (
-                <DayBar key={index} day={index + 1} value={value} shortLabel={values.length > 7} />
+                <DayBar key={index} day={index + 1} value={value} shortLabel={values.length > 7} reservePct={reservePct} />
               ))}
             </ol>
           </div>
@@ -169,8 +185,7 @@ function DailyBattery({ values, hasEstimate }: { values: (number | null)[]; hasE
   );
 }
 
-function DayBar({ day, value, shortLabel }: { day: number; value: number | null; shortLabel: boolean }) {
-  const reservePct = useAtomValue(arrivalReservePctAtom);
+function DayBar({ day, value, shortLabel, reservePct }: { day: number; value: number | null; shortLabel: boolean; reservePct: number }) {
   const tone = BATTERY_TONES[getBatteryTone(value, reservePct)];
 
   return (
@@ -186,7 +201,7 @@ function DayBar({ day, value, shortLabel }: { day: number; value: number | null;
           <div className="relative h-full overflow-hidden rounded-sm bg-muted">
             <span
               className={cn("battery-fill-up absolute inset-x-0 bottom-0", tone.fill)}
-              style={{ height: `${value === null ? 0 : Math.max(value, 1)}%` }}
+              style={{ height: `${value === null ? 0 : Math.max(0, Math.min(100, value))}%` }}
             />
             <span
               className="absolute -inset-x-1 border-t-2 border-dashed border-destructive"

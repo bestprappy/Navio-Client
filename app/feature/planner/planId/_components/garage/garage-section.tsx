@@ -125,6 +125,8 @@ export function GarageSection() {
             tripSummary={tripSummary}
             totalDrivingMinutes={totalDrivingMinutes}
             plannedDays={blocks.length}
+            blocks={blocks}
+            days={routeData ? charging?.days : undefined}
           />
         </div>
       )}
