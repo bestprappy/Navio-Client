@@ -180,7 +180,7 @@ test("the planner can request a larger trending candidate window", async (contex
   assert.equal(url.searchParams.get("size"), "48");
 });
 
-test("the combined plan carousel renders full-width slides and centered overlay arrows", () => {
+test("the combined plan carousel renders full-width slides and compact top-right arrows", () => {
   const CarouselView = exploreSection.PlannerExploreCarousel;
   const html = typeof CarouselView === "function"
     ? renderToStaticMarkup(createElement(CarouselView, {
@@ -195,6 +195,13 @@ test("the combined plan carousel renders full-width slides and centered overlay 
   assert.match(html, /aria-roledescription="carousel"/);
   assert.match(html, /aria-label="Shared plans for Bangkok, Chiang Mai"/);
   assert.equal((html.match(/data-slot="carousel-item"/g) ?? []).length, 2);
-  assert.match(html, /data-slot="carousel-previous"[^>]+top-1\/2[^>]+left-3/);
-  assert.match(html, /data-slot="carousel-next"[^>]+top-1\/2[^>]+right-3/);
+  const previous = html.match(/<button[^>]+data-slot="carousel-previous"[^>]*>/)?.[0] ?? "";
+  const next = html.match(/<button[^>]+data-slot="carousel-next"[^>]*>/)?.[0] ?? "";
+  for (const className of ["top-3", "right-11", "size-7", "left-auto"]) {
+    assert.match(previous, new RegExp(`(?:^|\\s)${className}(?:\\s|\")`));
+  }
+  for (const className of ["top-3", "right-3", "size-7"]) {
+    assert.match(next, new RegExp(`(?:^|\\s)${className}(?:\\s|\")`));
+  }
+  assert.doesNotMatch(html, /data-slot="carousel-(?:previous|next)"[^>]+top-1\/2/);
 });

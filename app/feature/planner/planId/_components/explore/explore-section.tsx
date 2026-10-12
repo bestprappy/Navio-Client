@@ -37,7 +37,7 @@ type PlannerExploreCarouselProps = {
 };
 
 const CAROUSEL_ARROW_CLASS =
-  "z-20 size-10 border-border/70 bg-background/80 text-foreground opacity-80 shadow-lg backdrop-blur-sm transition-[opacity,transform,background-color] duration-200 ease-out hover:bg-background/95 hover:opacity-100 active:scale-95 focus-visible:opacity-100 disabled:opacity-30 motion-reduce:transition-none motion-reduce:hover:translate-x-0 motion-reduce:active:scale-100";
+  "top-3 z-20 size-7 translate-y-0 border-border/70 bg-background/80 text-foreground opacity-80 shadow-md backdrop-blur-sm transition-[opacity,transform,background-color] duration-200 ease-out [&_svg]:size-3.5 hover:bg-background/95 hover:opacity-100 active:scale-95 focus-visible:opacity-100 disabled:opacity-30 motion-reduce:transition-none motion-reduce:active:scale-100";
 
 export function PlannerExploreCarousel({
   destinations,
@@ -92,7 +92,7 @@ export function PlannerExploreCarousel({
       {plans.length > 1 && (
         <>
           <CarouselPrevious
-            className={`${CAROUSEL_ARROW_CLASS} left-3 hover:-translate-x-0.5`}
+            className={`${CAROUSEL_ARROW_CLASS} right-11 left-auto hover:-translate-x-0.5`}
           />
           <CarouselNext
             className={`${CAROUSEL_ARROW_CLASS} right-3 hover:translate-x-0.5`}
