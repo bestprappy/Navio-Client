@@ -285,11 +285,12 @@ type NewGuideInput = {
 
 /** A new guide with an empty section per default category, ready to fill in. */
 export function createGuide({ id, destination, country, now }: NewGuideInput): Guide {
+  const resolvedCountry = country.trim() || (countryCodeFromName(destination.name) ? destination.name.trim() : "");
   return {
     id,
     name: destination.name,
-    country,
-    countryCode: countryCodeFromName(country),
+    country: resolvedCountry,
+    countryCode: countryCodeFromName(resolvedCountry),
     destination,
     description: "",
     coverPlaceId: `${destination.provider}:${destination.providerPlaceId}`,

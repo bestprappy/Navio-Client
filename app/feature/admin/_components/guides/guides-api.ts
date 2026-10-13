@@ -16,7 +16,7 @@ const contentSchema = z.object({
   body: z.string(),
 });
 
-const fieldsSchema = z.object({
+export const fieldsSchema = z.object({
   name: z.string(),
   country: z.string(),
   countryCode: z.string().length(2).nullable(),
@@ -28,7 +28,7 @@ const fieldsSchema = z.object({
 
 const statusSchema = z.enum(["DRAFT", "PUBLISHED"]);
 
-const adminGuideSchema = z.object({
+export const adminGuideSchema = z.object({
   id: z.string(),
   status: statusSchema,
   version: z.number().int().nonnegative(),
@@ -40,7 +40,7 @@ const adminGuideSchema = z.object({
   updatedByName: z.string().nullable(),
 });
 
-const summarySchema = z.object({
+export const summarySchema = z.object({
   id: z.string(),
   name: z.string(),
   country: z.string(),
@@ -59,7 +59,7 @@ const summarySchema = z.object({
 
 const publicGuideSchema = z.object({ id: z.string(), guide: fieldsSchema, publishedAt: z.string().nullable(), updatedAt: z.string() });
 
-const pageOf = <T extends z.ZodType>(item: T) => z.object({ content: z.array(item), totalElements: z.number(), totalPages: z.number(), number: z.number() });
+export const pageOf = <T extends z.ZodType>(item: T) => z.object({ content: z.array(item), totalElements: z.number().int().nonnegative(), totalPages: z.number().int().nonnegative(), number: z.number().int().nonnegative() });
 
 export type GuideSummary = z.infer<typeof summarySchema> & { categories: GuideCategory[] };
 type GuideFields = z.infer<typeof fieldsSchema>;
@@ -86,15 +86,15 @@ function failure(status: number, payload: unknown, fallback: string): GuideApiEr
   const error = errorSchema.safeParse(payload);
   const message = error.success ? error.data.message : fallback;
   if (status === 409) return new GuideApiError(message, status, "conflict");
-  if (status === 404) return new GuideApiError("This guide no longer exists. Another admin may have deleted it.", status, "notFound");
+  if (status === 404) return new GuideApiError("This guide is no longer available, or you do not have access to it.", status, "notFound");
   if (status === 401) return new GuideApiError("Your session ended. Sign in again to keep editing.", status, "session");
-  if (status === 403) return new GuideApiError("Only administrators can manage guides.", status, "forbidden");
+  if (status === 403) return new GuideApiError("You do not have permission to change this guide.", status, "forbidden");
   if (status >= 500) return new GuideApiError("The guide service is unavailable. Your changes are kept here; try again shortly.", status, "unavailable");
   const fields = error.success ? Object.values(error.data.validationErrors ?? {}).join(" ") : "";
   return new GuideApiError(fields || message, status, "invalid");
 }
 
-async function request<T>(url: string, schema: z.ZodType<T> | null, init: RequestInit & { body?: string } = {}): Promise<T> {
+export async function guideRequest<T>(url: string, schema: z.ZodType<T> | null, init: RequestInit & { body?: string } = {}): Promise<T> {
   let response: Response;
   try {
     response = await fetch(url, {
@@ -119,11 +119,13 @@ async function request<T>(url: string, schema: z.ZodType<T> | null, init: Reques
   return parsed.data;
 }
 
+const request = guideRequest;
+
 // ------------------------------------------------------------ mapping
 
 type AdminGuide = z.infer<typeof adminGuideSchema>;
 
-function fromFields(id: string, fields: GuideFields): Omit<Guide, "status" | "version" | "publishedAt" | "updatedByName" | "createdAt" | "updatedAt"> {
+export function fromFields(id: string, fields: GuideFields): Omit<Guide, "status" | "version" | "publishedAt" | "updatedByName" | "createdAt" | "updatedAt"> {
   const { content, ...rest } = fields;
   return { id, ...rest, destination: rest.destination as GuideDestination, ...content };
 }

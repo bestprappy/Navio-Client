@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { UserRound } from "lucide-react";
 
 import { CountryFlag } from "@/components/ui/country-flag";
 import { Logo } from "@/components/logo";
@@ -28,7 +29,7 @@ export function GuideBanner() {
 
 /** The guide's title and description, edited in place as readers will see them. */
 export function GuideHeading() {
-  const { guide, updateGuide } = useGuideEditor("GuideHeading");
+  const { guide, updateGuide, workspace } = useGuideEditor("GuideHeading");
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   return (
@@ -39,8 +40,8 @@ export function GuideHeading() {
           {guide.country || "Country unknown"}
         </p>
         <p className="flex items-center gap-1.5">
-          <Logo className="size-4" />
-          By the {NAVIO_TEAM}
+          {workspace.kind === "user" ? <UserRound aria-hidden="true" className="size-4" /> : <Logo className="size-4" />}
+          {workspace.kind === "user" ? `By ${guide.updatedByName || "you"}` : `By the ${NAVIO_TEAM}`}
         </p>
       </div>
         <textarea
@@ -66,7 +67,7 @@ export function GuideHeading() {
           maxLength={4000}
           value={guide.description}
           rows={2}
-          placeholder="What is this place known for, and how do people get around? Two or three sentences."
+          placeholder={workspace.kind === "user" ? "What makes these places special? Share a little about your guide." : "What is this place known for, and how do people get around? Two or three sentences."}
           onChange={(event) => updateGuide((current) => ({ ...current, description: event.target.value }))}
           className="-mx-2 field-sizing-content min-h-14 w-[calc(100%+1rem)] resize-none rounded-lg bg-transparent px-2 py-1 text-base leading-7 text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground/60 hover:bg-muted/40 focus-visible:bg-muted/60 focus-visible:text-foreground"
         />

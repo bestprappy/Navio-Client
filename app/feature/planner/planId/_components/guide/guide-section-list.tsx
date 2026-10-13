@@ -29,7 +29,7 @@ type GuideSectionHeadingProps = {
 export function GuideSectionHeading({ section, titleId, count }: GuideSectionHeadingProps) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <h2 id={titleId} className="flex items-center gap-2.5 text-xl font-bold text-foreground">
+      <h2 id={titleId} className="flex min-w-0 items-center gap-2.5 text-xl font-bold wrap-anywhere text-foreground">
         <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-lg" style={guideSectionTint(section)}>
           <GuideSectionIcon section={section} className="size-4" />
         </span>

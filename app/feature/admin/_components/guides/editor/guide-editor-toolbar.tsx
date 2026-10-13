@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSetAtom } from "jotai";
 import { formatDistanceToNow, isValid, parseISO } from "date-fns";
-import { Check, CircleAlert, CloudUpload, EyeOff, Globe, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { Check, CircleAlert, CloudUpload, Eye, EyeOff, Globe, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-import { GuideApiError, deleteGuide, guideKeys, setGuidePublished } from "../guides-api";
+import { GuideApiError } from "../guides-api";
 import { acceptSavedGuideAtom } from "../guides.atoms";
 import { useGuideEditor } from "./guide-editor-context";
 import type { GuideSaveStatus } from "./use-guide-autosave";
@@ -50,7 +50,7 @@ type GuideActionsProps = {
 export function GuideActions({ status, flush }: GuideActionsProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { guide } = useGuideEditor("GuideActions");
+  const { guide, workspace } = useGuideEditor("GuideActions");
   const acceptSaved = useSetAtom(acceptSavedGuideAtom);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const cancelRef = useRef<HTMLButtonElement>(null);
@@ -61,12 +61,12 @@ export function GuideActions({ status, flush }: GuideActionsProps) {
     mutationFn: async (publish: boolean) => {
       const latest = await flush();
       if (!latest) throw new GuideApiError("Save the guide before changing whether travelers see it.", 0, "invalid");
-      return setGuidePublished(latest, publish);
+      return workspace.publish(latest, publish);
     },
     onSuccess: (saved) => {
       acceptSaved(saved);
-      void queryClient.invalidateQueries({ queryKey: guideKeys.all });
-      void queryClient.invalidateQueries({ queryKey: guideKeys.published });
+      void queryClient.invalidateQueries({ queryKey: workspace.keys.all });
+      void queryClient.invalidateQueries({ queryKey: workspace.keys.published });
     },
     onError: (error) => console.error("Changing a guide's publication failed.", { component: "GuideActions", guideId: guide.id, error }),
   });
@@ -75,12 +75,12 @@ export function GuideActions({ status, flush }: GuideActionsProps) {
     mutationFn: async () => {
       const latest = await flush();
       if (!latest) throw new GuideApiError("Save or reload the guide before deleting it.", 0, "invalid");
-      return deleteGuide(latest);
+      return workspace.delete(latest);
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: guideKeys.all });
-      void queryClient.invalidateQueries({ queryKey: guideKeys.published });
-      router.push("/admin/guides");
+      void queryClient.invalidateQueries({ queryKey: workspace.keys.all });
+      void queryClient.invalidateQueries({ queryKey: workspace.keys.published });
+      router.push(workspace.home);
     },
     onError: (error) => console.error("Deleting a guide failed.", { component: "GuideActions", guideId: guide.id, error }),
   });
@@ -100,6 +100,7 @@ export function GuideActions({ status, flush }: GuideActionsProps) {
           Publish
         </Button>
       )}
+      {published && workspace.kind === "user" ? <Button aria-label="Read guide" variant="outline" size="sm" onClick={() => router.push(`/explore/guides/${guide.id}`)}><Eye aria-hidden="true" /><span className="hidden sm:inline">Read guide</span></Button> : null}
       <DropdownMenu>
         <DropdownMenuTrigger render={<Button type="button" variant="ghost" size="icon-sm" aria-label="More guide actions" />}>
           <MoreHorizontal aria-hidden="true" />
@@ -130,7 +131,7 @@ export function GuideActions({ status, flush }: GuideActionsProps) {
           <DialogHeader>
             <DialogTitle>Delete the {guide.name || "untitled"} guide?</DialogTitle>
             <DialogDescription>
-              It is removed for every admin{published ? ", and travelers stop seeing it in the planner" : ""}. This can&apos;t be undone.
+              {workspace.kind === "user" ? "It is removed from your library" : "It is removed for every admin"}{published ? ", and travelers stop seeing it" : ""}. This can&apos;t be undone.
             </DialogDescription>
           </DialogHeader>
           {deleteError ? (

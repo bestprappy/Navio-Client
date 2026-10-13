@@ -5,8 +5,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAtomValue, useStore } from "jotai";
 
 import type { Guide } from "../guide-model";
-import { GuideApiError, guideKeys, saveGuide } from "../guides-api";
+import { GuideApiError } from "../guides-api";
 import { acceptSavedGuideAtom, guideDraftsAtom, guideEditCountsAtom, guideSavedCountsAtom } from "../guides.atoms";
+
+import { adminGuideWorkspace, type GuideWorkspace } from "../guide-workspace";
 
 const AUTOSAVE_DELAY_MS = 1200;
 
@@ -28,7 +30,7 @@ type Failure = Extract<GuideSaveStatus, { kind: "error" | "conflict" | "gone" }>
  * overlap; edits made during a save are sent by the next one. A conflict
  * stops saving, so another admin's work is never overwritten.
  */
-export function useGuideAutosave(guideId: string) {
+export function useGuideAutosave(guideId: string, workspace: GuideWorkspace = adminGuideWorkspace) {
   const store = useStore();
   const queryClient = useQueryClient();
   const editCount = useAtomValue(guideEditCountsAtom)[guideId] ?? 0;
@@ -43,7 +45,7 @@ export function useGuideAutosave(guideId: string) {
     blockedRef.current = blocked;
   }, [blocked]);
 
-  const flush = useCallback(async (): Promise<Guide | null> => {
+  const flush = useCallback(async function saveUntilCurrent(): Promise<Guide | null> {
     if (blockedRef.current) return null;
     while (inFlight.current) await inFlight.current;
     if (blockedRef.current) return null;
@@ -53,14 +55,15 @@ export function useGuideAutosave(guideId: string) {
     if (count <= savedCountRef.current) return draft;
 
     setSaving(true);
-    const run = saveGuide(draft)
+    const run = workspace.save(draft)
       .then((saved) => {
         store.set(acceptSavedGuideAtom, saved);
         savedCountRef.current = count;
         setSavedCount(count);
         store.set(guideSavedCountsAtom, { ...store.get(guideSavedCountsAtom), [guideId]: count });
         setFailure(null);
-        void queryClient.invalidateQueries({ queryKey: guideKeys.list });
+        void queryClient.invalidateQueries({ queryKey: workspace.keys.list });
+        if (saved.status === "PUBLISHED") void queryClient.invalidateQueries({ queryKey: workspace.keys.published });
         return store.get(guideDraftsAtom)[guideId] ?? saved;
       })
       .catch((error: unknown) => {
@@ -68,7 +71,7 @@ export function useGuideAutosave(guideId: string) {
         const message = error instanceof GuideApiError ? error.message : "The guide could not be saved. Your changes are kept here.";
         if (error instanceof GuideApiError && error.kind === "conflict") {
           blockedRef.current = true;
-          setFailure({ kind: "conflict", message: "Another admin saved this guide while you were editing. Reload to see their version; your unsaved changes here will be replaced." });
+          setFailure({ kind: "conflict", message: "This guide was saved in another session while you were editing. Reload to see their version; your unsaved changes here will be replaced." });
         } else if (error instanceof GuideApiError && error.kind === "notFound") {
           blockedRef.current = true;
           setFailure({ kind: "gone", message });
@@ -82,8 +85,11 @@ export function useGuideAutosave(guideId: string) {
         setSaving(false);
       });
     inFlight.current = run;
-    return run;
-  }, [guideId, queryClient, store]);
+    const result = await run;
+    // Publication/navigation must include text typed while the previous save was in flight.
+    if (result && (store.get(guideEditCountsAtom)[guideId] ?? 0) > savedCountRef.current) return saveUntilCurrent();
+    return result;
+  }, [guideId, queryClient, store, workspace]);
 
   // Save a moment after the last edit.
   useEffect(() => {

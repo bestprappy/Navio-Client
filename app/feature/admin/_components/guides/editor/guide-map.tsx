@@ -48,7 +48,7 @@ export function GuideMap() {
         <div className="flex max-w-sm flex-col items-center gap-2">
           <MapPinned aria-hidden="true" className="size-6 text-muted-foreground" />
           <p className="font-semibold">Map unavailable</p>
-          <p className="text-sm text-muted-foreground">Add a Google Maps API key to see this guide&apos;s places on a map.</p>
+          <p className="text-sm text-muted-foreground">You can keep writing and search for places in each list.</p>
         </div>
       </div>
     );

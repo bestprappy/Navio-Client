@@ -12,6 +12,8 @@ import { explorePlanSearchText } from "../../../explore/_components/shared-plans
 import { useExplorePlans } from "../../../explore/_components/shared-plans/use-explore-plans";
 import type { TripResponse } from "../planner-api";
 import { TripSummaryCard } from "./trip-summary-card";
+import { YourGuides } from "../../../guides/your-guides";
+import { GuideDiscovery } from "../../../guides/guide-discovery";
 import { getTripStatus, sortTrips } from "./trip-dashboard.utils";
 
 export const PLANNER_SETUP_HREF = "/planner/new";
@@ -119,6 +121,16 @@ function TripDashboardExplore() {
   );
 }
 
+function TripDashboardGuides() {
+  return <>
+    <YourGuides preview />
+    <section aria-labelledby="explore-guides-title" className="space-y-5">
+      <header className="flex flex-wrap items-start justify-between gap-3"><div className="space-y-1"><h2 id="explore-guides-title" className="text-xl font-semibold">Explore guides</h2><p className="text-sm text-muted-foreground">A traveler&apos;s perspective on places worth knowing.</p></div><Link href="/explore?tab=guides" className={buttonVariants({ variant: "ghost", size: "sm" })}>Browse guides<ArrowRight aria-hidden="true" className="size-4" /></Link></header>
+      <GuideDiscovery filter={{ size: 3 }} preview />
+    </section>
+  </>;
+}
+
 function TripDashboardPast() {
   const { pastTrips } = useTripDashboardContext();
   if (!pastTrips.length) return null;
@@ -133,9 +145,10 @@ export const TripDashboard = Object.assign(TripDashboardRoot, {
   Upcoming: TripDashboardUpcoming,
   Explore: TripDashboardExplore,
   Past: TripDashboardPast,
+  Guides: TripDashboardGuides,
 });
 
 export function TripDashboardView({ trips }: { trips: readonly TripResponse[] }) {
-  return <TripDashboard trips={trips}><TripDashboard.Header /><TripDashboard.Upcoming /><TripDashboard.Explore /><TripDashboard.Past /></TripDashboard>;
+  return <TripDashboard trips={trips}><TripDashboard.Header /><TripDashboard.Upcoming /><TripDashboard.Explore /><TripDashboard.Guides /><TripDashboard.Past /></TripDashboard>;
 }
 

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useAtomValue } from "jotai";
 import { ArrowUpRight, Compass, MapPin } from "lucide-react";
 
+import { TripGuides } from "@/app/feature/guides/trip-guides";
+import { PlannerErrorBoundary } from "../../../_components/planner-error-boundary";
 import { SharedPlanCard } from "@/app/feature/explore/_components/shared-plans/shared-plan-card";
 import {
   EXPLORE_MAX_PAGE_SIZE,
@@ -140,6 +142,7 @@ export function ExploreSection({ destinationName, country }: { destinationName: 
               isError={shared.isError}
               onRetry={() => { void shared.refetch(); }}
             />
+            <PlannerErrorBoundary fallbackTitle="Trip guides unavailable" fallbackDescription="Reload the page to try again."><TripGuides initial={destinationName} country={country} blocks={blocks} /></PlannerErrorBoundary>
           </AccordionContent>
         </AccordionItem>
       </Accordion>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 
 import { Logo } from "@/components/logo";
@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 import { tripBlocksAtom } from "../overview/trip-builder.atoms";
-import { usePlaceDetails } from "../place/use-place-details";
+import { GuideReadingHero } from "@/app/feature/guides/guide-reading-hero";
 import type { DestinationGuide, GuideListAction, GuideSectionId } from "./destination-guide";
 import { formatGuideDayLabel, revealGuidePlaceCard } from "./guide-dom";
-import { GuidePlacePhoto, GuideSectionIcon, guideSectionTint } from "./guide-place-photo";
+import { GuideSectionIcon, guideSectionTint } from "./guide-place-photo";
 import { GuideDocument } from "./guide-document";
 import { GuideSectionList, guideSectionElementId } from "./guide-section-list";
 import {
@@ -26,36 +26,19 @@ import {
 } from "./guide.atoms";
 
 function GuideHero({ guide, headingRef }: { guide: DestinationGuide; headingRef: React.RefObject<HTMLHeadingElement | null> }) {
-  const cover = usePlaceDetails(guide.coverPlaceId);
-  const coverSection = guide.sections[0];
   return (
-    <div className="relative isolate h-56 overflow-hidden @md/planner:h-72">
-      {coverSection ? (
-        <GuidePlacePhoto
-          section={coverSection}
-          imageUrl={cover.data?.imageUrl}
-          isLoading={cover.isLoading}
-          sizes="(min-width: 768px) 50vw, 100vw"
-          className="absolute inset-0 -z-10 size-full"
-        />
-      ) : null}
-      <div aria-hidden="true" className="absolute inset-0 -z-10 bg-linear-to-t from-scrim/85 via-scrim/25 to-transparent" />
-      <div className="flex h-full flex-col justify-end gap-1 p-5">
-        <p className="flex items-center gap-1.5 text-sm font-medium text-on-media/85">
-          <MapPin className="size-4" aria-hidden="true" />
-          {guide.country}
-        </p>
-        <h1 id="guide-title" ref={headingRef} tabIndex={-1} className="text-5xl leading-none font-extrabold tracking-tight text-on-media outline-none">
-          {guide.name}
-        </h1>
-        {guide.author ? (
-          <p className="mt-2 flex items-center gap-1.5 text-sm font-medium text-on-media/90">
+    <GuideReadingHero
+      title={guide.name}
+      location={guide.country}
+      coverPlaceId={guide.coverPlaceId}
+      headingRef={headingRef}
+      author={guide.author ? (
+          <span className="flex items-center gap-1.5">
             <Logo className="size-4 text-on-media" />
             By the {guide.author}
-          </p>
-        ) : null}
-      </div>
-    </div>
+          </span>
+      ) : null}
+    />
   );
 }
 
