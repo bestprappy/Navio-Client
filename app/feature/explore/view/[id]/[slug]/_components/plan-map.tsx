@@ -15,6 +15,7 @@ import type { Plan } from "../../../../_components/data";
 import { getPlanCenter } from "../../../../_components/data";
 import { getTripBlockColorById } from "@/app/feature/planner/planId/_components/constants/trip-block-colors";
 import { GoogleMapsExportButton } from "@/app/feature/planner/planId/_components/routes/google-maps-export-button";
+import { TransitDataAttribution } from "@/app/feature/planner/planId/_components/routes/transit-data-attribution";
 import {
   GoogleRoutePolylines,
   GoogleTransitLayer,
@@ -216,6 +217,8 @@ export function PlanMap({ plan }: PlanMapProps) {
         <GoogleMapsExportButton blocks={tripBlocks} />
         <TransitLinesToggle />
       </div>
+
+      <TransitDataAttribution segments={visibleRouteSegments} />
 
       {routeStatusMessage ? (
         <div className="absolute left-4 top-16 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md">

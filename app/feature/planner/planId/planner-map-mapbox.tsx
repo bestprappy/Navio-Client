@@ -62,6 +62,7 @@ import {
 } from "./_components/place/place-api";
 import { TripPlacePreviewPanel } from "./_components/place/trip-place-preview-panel";
 import { GoogleMapsExportButton } from "./_components/routes/google-maps-export-button";
+import { TransitDataAttribution } from "./_components/routes/transit-data-attribution";
 import { useTripRoutes } from "./_components/routes/trip-route-query";
 import { getRouteDrawPieces, type RouteDrawKind } from "./_components/routes/route-draw";
 import {
@@ -653,6 +654,8 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
         blocks={tripBlocks}
         className="absolute left-4 top-4 z-10"
       />
+
+      <TransitDataAttribution segments={visibleRouteSegments} />
 
       {routeStatusMessage ? (
         <div className="absolute left-4 top-16 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md">

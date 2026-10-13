@@ -62,6 +62,7 @@ import { usePlaceDetails } from "./_components/place/use-place-details";
 import { fetchNearbyPlaces, fetchPlaceDetail } from "./_components/place/place-api";
 import { TripPlacePreviewPanel } from "./_components/place/trip-place-preview-panel";
 import { GoogleMapsExportButton } from "./_components/routes/google-maps-export-button";
+import { TransitDataAttribution } from "./_components/routes/transit-data-attribution";
 import {
   GoogleRouteLegCamera,
   GoogleRoutePolylines,
@@ -483,6 +484,8 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
         <GoogleMapsExportButton blocks={tripBlocks} />
         <TransitLinesToggle />
       </div>
+
+      <TransitDataAttribution segments={drawnRouteSegments} />
 
       {routeStatusMessage ? (
         <div className="absolute left-4 top-16 z-10 rounded-sm border border-border bg-card px-3 py-2 text-xs font-medium text-card-foreground shadow-md">

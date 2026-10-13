@@ -21,6 +21,7 @@ const RESPONSE_HEADERS_TO_FORWARD = [
 
 type MobilityProxyOptions = {
   method?: "GET" | "POST";
+  timeoutMs?: number;
 };
 
 export async function proxyMobilityRequest(
@@ -85,7 +86,7 @@ async function forwardMobilityRequest(
       // leaves a consumed stream that NextRequest cannot reconstruct.
       body: options.method === "POST" ? await request.text() : undefined,
       cache: "no-store",
-      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+      signal: AbortSignal.timeout(options.timeoutMs ?? UPSTREAM_TIMEOUT_MS),
     });
     const responseHeaders = createClientHeaders(upstreamResponse.headers);
     const hasNoBody =
