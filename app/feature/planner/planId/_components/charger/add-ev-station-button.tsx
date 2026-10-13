@@ -1,7 +1,7 @@
 "use client";
 
 import { Zap } from "lucide-react";
-import { useAtomValue, useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom, useStore } from "jotai";
 
 import { Button } from "@/components/ui/button";
 
@@ -18,12 +18,14 @@ import {
   activePlannerSidePanelAtom,
   evChargerErrorAtom,
   evChargerLoadingAtom,
+  plannerReadOnlyAtom,
   selectEvChargerAtom,
   setEvChargerResultsAtom,
   tripBlocksAtom,
   type EvChargerMapResult,
 } from "../overview/trip-builder.atoms";
 import { useTripRoutes } from "../routes/trip-route-query";
+import { getItemInsertionIndex } from "../block/item-insertion";
 import {
   DEFAULT_EV_STATION_RADIUS_METERS,
   fetchEvChargersNear,
@@ -41,10 +43,11 @@ export type EvStationSearchAnchor = {
   lng: number;
 };
 
-export function AddEvStationButton({
+export function useEvStationSearch({
   blockId,
   fallbackAnchor,
 }: AddEvStationButtonProps) {
+  const store = useStore();
   const blocks = useAtomValue(tripBlocksAtom);
   const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
@@ -68,18 +71,29 @@ export function AddEvStationButton({
   const searchAnchors = [...placeAnchors, ...fallbackAnchors];
   const canSearch = searchAnchors.length > 0;
 
-  async function openStationList() {
-    if (!canSearch) return;
+  async function openStationList(beforeItemId?: string) {
+    if (!canSearch || !block || store.get(plannerReadOnlyAtom)) return;
+    const index = getItemInsertionIndex(block, beforeItemId);
+    if (index < 0) return;
+    const requestId = crypto.randomUUID();
+    const isCurrentRequest = () => store.get(activePlannerSidePanelAtom)?.requestId === requestId;
+    const nearestPlaces = beforeItemId === undefined ? searchAnchors : [
+      block.items.slice(0, index).findLast((item) => isPlaceItem(item) && !isEvChargerPlaceItem(item)),
+      block.items.slice(index).find((item) => isPlaceItem(item) && !isEvChargerPlaceItem(item)),
+    ].filter((item) => item !== undefined && isPlaceItem(item));
+    const localAnchors = nearestPlaces.length ? nearestPlaces : fallbackAnchors;
 
     setActiveBlockId(blockId);
     setEvChargerResults([]);
     setEvChargerError(null);
     setEvChargerLoading(true);
-    setActivePlannerSidePanel({ type: "ev-stations", blockId });
+    setActivePlannerSidePanel({ type: "ev-stations", blockId, beforeItemId, requestId });
 
     try {
-      const intermediateAnchors = sampleRoutePolyline(routeSegments, blockId, 30);
-      const allAnchors = [...searchAnchors, ...intermediateAnchors];
+      const nextPlace = beforeItemId === undefined ? undefined : block.items.slice(index).find(isPlaceItem);
+      const localSegments = beforeItemId === undefined ? routeSegments : routeSegments.filter((segment) => segment.toItemId === nextPlace?.id);
+      const intermediateAnchors = sampleRoutePolyline(localSegments, blockId, 30);
+      const allAnchors = [...localAnchors, ...intermediateAnchors];
 
       const chargersByAnchor = await Promise.all(
         allAnchors.map(async (anchor) => ({
@@ -92,7 +106,8 @@ export function AddEvStationButton({
         })),
       );
 
-      const results = buildEvChargerResults(chargersByAnchor, blockId).sort(
+      if (!isCurrentRequest()) return;
+      const results = buildEvChargerResults(chargersByAnchor, blockId, beforeItemId).sort(
         (a, b) => {
           const compatibleA = activeEvCar
             ? isCompatible(activeEvCar.connectorTypes, a.charger.connectorTypes)
@@ -118,6 +133,7 @@ export function AddEvStationButton({
         setEvChargerError("No EV stations found near this block yet.");
       }
     } catch (error) {
+      if (!isCurrentRequest()) return;
       console.error("EV station search failed.", {
         component: "AddEvStationButton",
         operation: "openStationList",
@@ -126,10 +142,15 @@ export function AddEvStationButton({
       });
       setEvChargerError("EV stations could not be loaded.");
     } finally {
-      setEvChargerLoading(false);
+      if (isCurrentRequest()) setEvChargerLoading(false);
     }
   }
 
+  return { canSearch, isLoadingEvChargers, openStationList };
+}
+
+export function AddEvStationButton(props: AddEvStationButtonProps) {
+  const { canSearch, isLoadingEvChargers, openStationList } = useEvStationSearch(props);
   return (
     <Button
       type="button"
@@ -142,7 +163,7 @@ export function AddEvStationButton({
           : "Add a place or choose a destination before searching for EV stations"
       }
       className="h-11 min-w-0 w-full rounded-lg border-charging/30 bg-charging/10 text-charging hover:bg-charging/20 hover:text-charging dark:border-charging/30 dark:bg-charging/10 dark:hover:bg-charging/20 disabled:cursor-not-allowed"
-      onClick={openStationList}
+      onClick={() => void openStationList()}
     >
       <Zap className="size-4" aria-hidden="true" />
       <span className="whitespace-normal">
@@ -158,6 +179,7 @@ function buildEvChargerResults(
     chargers: EvCharger[];
   }>,
   blockId: string,
+  beforeItemId?: string,
 ): EvChargerMapResult[] {
   const byChargerId = new Map<string, EvChargerMapResult>();
 
@@ -170,6 +192,7 @@ function buildEvChargerResults(
       const nextResult = {
         charger,
         targetBlockId: blockId,
+        beforeItemId,
         targetPlaceId: place.id,
         distanceKm,
       };

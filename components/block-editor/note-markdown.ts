@@ -15,6 +15,7 @@ import {
   type NoteNode,
   type NoteNodeLike,
 } from "./note-document";
+import { parseEmbed, serializeEmbed, type NoteEmbedCodec } from "./note-embeds";
 
 /**
  * Converts between a note's stored markdown and its block document.
@@ -27,13 +28,18 @@ import {
  *
  * <p>A single newline inside a paragraph is a line break, as it was when notes
  * were plain text, so every existing note keeps its lines.
+ *
+ * <p>An editor that registers embeds passes their codecs; their HTML lines
+ * become embed blocks. Without codecs those lines stay literal text.
  */
 
 const processor = unified().use(remarkParse).use(remarkGfm);
 
+const NO_EMBEDS: readonly NoteEmbedCodec[] = [];
+
 // ---------------------------------------------------------------- parsing
 
-type ParseContext = { source: string };
+type ParseContext = { source: string; embeds: readonly NoteEmbedCodec[] };
 
 const DETAILS_OPEN = /^<details(\s+open(?:="[^"]*")?)?\s*>\s*<summary>([\s\S]*?)<\/summary>([\s\S]*)$/i;
 const DETAILS_CLOSE = /^<\/details>/i;
@@ -57,15 +63,15 @@ const INLINE_TAGS: readonly InlineTag[] = [
   },
 ];
 
-export function parseNoteMarkdown(markdown: string): NoteNode {
+export function parseNoteMarkdown(markdown: string, embeds: readonly NoteEmbedCodec[] = NO_EMBEDS): NoteNode {
   const source = markdown.replace(/\r\n?/g, "\n");
   if (!source.trim()) return emptyNoteDocument();
-  const content = parseBlocks(source);
+  const content = parseBlocks(source, embeds);
   return { type: "doc", content: content.length ? content : [emptyParagraph()] };
 }
 
-function parseBlocks(source: string): NoteNode[] {
-  return convertBlocks(processor.parse(source).children, { source });
+function parseBlocks(source: string, embeds: readonly NoteEmbedCodec[]): NoteNode[] {
+  return convertBlocks(processor.parse(source).children, { source, embeds });
 }
 
 function sourceOf(node: Nodes, context: ParseContext): string {
@@ -110,8 +116,11 @@ function convertBlocks(children: readonly RootContent[], context: ParseContext):
         blocks.push(...convertTable(child, context));
         break;
       case "html": {
-        const details = DETAILS_OPEN.exec(child.value.trim());
-        if (details) {
+        const embed = parseEmbed(child.value, context.embeds);
+        const details = embed ? null : DETAILS_OPEN.exec(child.value.trim());
+        if (embed) {
+          blocks.push(embed);
+        } else if (details) {
           index = convertDetails(details, children, index, context, blocks);
         } else if (BREAK_TAG.test(child.value.trim())) {
           blocks.push(emptyParagraph());
@@ -143,7 +152,7 @@ function convertDetails(
   // Written on one HTML block, as other tools do: <details>…</details> with no blank lines.
   const closeAt = rest.search(/<\/details>\s*$/i);
   if (closeAt !== -1) {
-    blocks.push(detailsNode(open, summary, parseBlocks(rest.slice(0, closeAt))));
+    blocks.push(detailsNode(open, summary, parseBlocks(rest.slice(0, closeAt), context.embeds)));
     return index;
   }
 
@@ -167,9 +176,9 @@ function convertDetails(
     content.push(sibling);
   }
 
-  const leading = rest ? parseBlocks(rest) : [];
+  const leading = rest ? parseBlocks(rest, context.embeds) : [];
   blocks.push(detailsNode(open, summary, [...leading, ...convertBlocks(content, context)]));
-  if (trailing) blocks.push(...parseBlocks(trailing));
+  if (trailing) blocks.push(...parseBlocks(trailing, context.embeds));
   return cursor;
 }
 
@@ -188,7 +197,7 @@ function detailsNode(open: boolean, summary: NoteNode[], content: NoteNode[]): N
 function summaryNodes(summary: string): NoteNode[] {
   const first = processor.parse(summary.trim()).children[0];
   if (!first || first.type !== "paragraph") return summary.trim() ? [{ type: "text", text: summary.trim() }] : [];
-  const inline = convertInline(first.children, [], { source: summary.trim() }).map((node) =>
+  const inline = convertInline(first.children, [], { source: summary.trim(), embeds: NO_EMBEDS }).map((node) =>
     node.type === "hardBreak" ? { type: "text", text: " " } : node,
   );
   return mergeText(inline);
@@ -431,19 +440,19 @@ function normalizeMarks(marks: readonly NoteMark[]): NoteMark[] {
 
 // ---------------------------------------------------------------- serializing
 
-export function serializeNoteMarkdown(doc: NoteNodeLike): string {
+export function serializeNoteMarkdown(doc: NoteNodeLike, embeds: readonly NoteEmbedCodec[] = NO_EMBEDS): string {
   const blocks = [...(doc.content ?? [])];
   // Empty lines at the very start or end of a note are not worth keeping.
   while (blocks.length && isBlankParagraph(blocks[0])) blocks.shift();
   while (blocks.length && isBlankParagraph(blocks[blocks.length - 1])) blocks.pop();
-  return serializeBlocks(blocks, false);
+  return serializeBlocks(blocks, false, embeds);
 }
 
 function isBlankParagraph(node: NoteNodeLike | undefined): boolean {
   return node?.type === "paragraph" && !(node.content ?? []).some((child) => child.type !== "text" || child.text?.trim());
 }
 
-function serializeBlocks(nodes: readonly NoteNodeLike[], inListItem: boolean): string {
+function serializeBlocks(nodes: readonly NoteNodeLike[], inListItem: boolean, embeds: readonly NoteEmbedCodec[]): string {
   let output = "";
   let previousBullet: "-" | "*" | null = null;
   let previousDelimiter: "." | ")" | null = null;
@@ -453,17 +462,17 @@ function serializeBlocks(nodes: readonly NoteNodeLike[], inListItem: boolean): s
     if (node.type === "bulletList" || node.type === "taskList") {
       // Two lists in a row with the same marker would merge into one.
       const bullet = previousBullet === "-" ? "*" : "-";
-      text = serializeList(node, (item) => (node.type === "taskList" ? `${bullet} [${item.attrs?.checked ? "x" : " "}] ` : `${bullet} `), 2);
+      text = serializeList(node, (item) => (node.type === "taskList" ? `${bullet} [${item.attrs?.checked ? "x" : " "}] ` : `${bullet} `), 2, embeds);
       previousBullet = bullet;
       previousDelimiter = null;
     } else if (node.type === "orderedList") {
       const delimiter = previousDelimiter === "." ? ")" : ".";
       const start = typeof node.attrs?.start === "number" ? node.attrs.start : 1;
-      text = serializeOrderedList(node, start, delimiter);
+      text = serializeOrderedList(node, start, delimiter, embeds);
       previousDelimiter = delimiter;
       previousBullet = null;
     } else {
-      text = serializeBlock(node, nodes.length === 1);
+      text = serializeBlock(node, nodes.length === 1, embeds);
       previousBullet = null;
       previousDelimiter = null;
     }
@@ -479,7 +488,10 @@ function serializeBlocks(nodes: readonly NoteNodeLike[], inListItem: boolean): s
   return output;
 }
 
-function serializeBlock(node: NoteNodeLike, isOnlyChild: boolean): string {
+function serializeBlock(node: NoteNodeLike, isOnlyChild: boolean, embeds: readonly NoteEmbedCodec[]): string {
+  const embed = embeds.find((codec) => codec.name === node.type);
+  if (embed) return serializeEmbed(embed, node.attrs ?? {}) ?? "";
+
   switch (node.type) {
     case "paragraph": {
       if (isBlankParagraph(node)) return isOnlyChild ? "" : "<br>";
@@ -499,43 +511,48 @@ function serializeBlock(node: NoteNodeLike, isOnlyChild: boolean): string {
       return code ? `${fence}${language}\n${code}\n${fence}` : `${fence}${language}\n${fence}`;
     }
     case "blockquote": {
-      const body = serializeBlocks(node.content ?? [], false);
+      const body = serializeBlocks(node.content ?? [], false, embeds);
       return body ? quote(body) : ">";
     }
     case "callout": {
       const requestedTone = node.attrs?.tone;
       const tone: CalloutTone = isCalloutTone(requestedTone) ? requestedTone : "note";
-      const body = serializeBlocks(node.content ?? [], false);
+      const body = serializeBlocks(node.content ?? [], false, embeds);
       return `> [!${tone.toUpperCase()}]${body ? `\n>\n${quote(body)}` : ""}`;
     }
     case "details": {
       const summary = node.content?.find((child) => child.type === "detailsSummary");
       const content = node.content?.find((child) => child.type === "detailsContent");
-      const body = serializeBlocks(content?.content ?? [], false);
+      const body = serializeBlocks(content?.content ?? [], false, embeds);
       const open = node.attrs?.open ? " open" : "";
       const summaryText = serializeInline(summary?.content ?? [], "heading");
       return `<details${open}>\n<summary>${summaryText}</summary>\n\n${body ? `${body}\n\n` : ""}</details>`;
     }
     default:
       // Unknown blocks keep their text rather than disappearing.
-      return node.content ? serializeBlocks(node.content, false) : serializeInline([node], "paragraph");
+      return node.content ? serializeBlocks(node.content, false, embeds) : serializeInline([node], "paragraph");
   }
 }
 
-function serializeList(node: NoteNodeLike, marker: (item: NoteNodeLike) => string, indentWidth: number): string {
-  return (node.content ?? []).map((item) => serializeListItem(item, marker(item), indentWidth)).join("\n");
+function serializeList(
+  node: NoteNodeLike,
+  marker: (item: NoteNodeLike) => string,
+  indentWidth: number,
+  embeds: readonly NoteEmbedCodec[],
+): string {
+  return (node.content ?? []).map((item) => serializeListItem(item, marker(item), indentWidth, embeds)).join("\n");
 }
 
-function serializeOrderedList(node: NoteNodeLike, start: number, delimiter: "." | ")"): string {
+function serializeOrderedList(node: NoteNodeLike, start: number, delimiter: "." | ")", embeds: readonly NoteEmbedCodec[]): string {
   const items = node.content ?? [];
   const width = `${start + items.length - 1}${delimiter} `.length;
   return items
-    .map((item, index) => serializeListItem(item, `${start + index}${delimiter} `.padEnd(width, " "), width))
+    .map((item, index) => serializeListItem(item, `${start + index}${delimiter} `.padEnd(width, " "), width, embeds))
     .join("\n");
 }
 
-function serializeListItem(item: NoteNodeLike, marker: string, indentWidth: number): string {
-  const lines = serializeBlocks(item.content ?? [], true).split("\n");
+function serializeListItem(item: NoteNodeLike, marker: string, indentWidth: number, embeds: readonly NoteEmbedCodec[]): string {
+  const lines = serializeBlocks(item.content ?? [], true, embeds).split("\n");
   const indent = " ".repeat(indentWidth);
   const [first = "", ...rest] = lines;
   const head = first === "<br>" && lines.length === 1 ? "" : first;

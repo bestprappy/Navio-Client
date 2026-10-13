@@ -11,17 +11,22 @@ import { useTripCharging } from "../garage/use-trip-charging";
 import { useTripRoutes } from "../routes/trip-route-query";
 import { RouteSegmentInfo } from "../routes/route-segment-info";
 import { DischargeSegmentInfo } from "../routes/charge-segment-info";
+import { FocusRouteLegButton } from "../routes/focus-route-leg-button";
+import { getAnchorStopId } from "../routes/route-focus";
+import { routeStopAttributes } from "./route-stop-tracker";
 
 export function EndAnchorRouteInfo({ blockId, routeColor }: { blockId: string; routeColor: string }) {
   const routes = useTripRoutes();
   const charging = useTripCharging();
-  const segment = routes.data?.segments.find((entry) => entry.blockId === blockId && entry.toItemId === `${blockId}:end`);
+  const endId = getAnchorStopId(blockId, "end");
+  const segment = routes.data?.segments.find((entry) => entry.blockId === blockId && entry.toItemId === endId);
   const states = charging?.days.get(blockId)?.batteryByItemId;
-  return <div className="my-3 grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
+  return <div {...routeStopAttributes(endId)} className="my-3 grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
     <div className="flex justify-center py-1" aria-hidden="true"><span className="h-full min-h-8 w-px bg-border" /></div>
     <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 py-1">
       <RouteSegmentInfo segment={segment ?? null} isLoading={routes.isFetching && !routes.data} isError={routes.isError} routeColor={routeColor} />
-      <DischargeSegmentInfo batteryFrom={segment ? states?.get(segment.fromItemId)?.departurePct : undefined} batteryTo={states?.get(`${blockId}:end`)?.arrivalPct} />
+      <DischargeSegmentInfo batteryFrom={segment ? states?.get(segment.fromItemId)?.departurePct : undefined} batteryTo={states?.get(endId)?.arrivalPct} />
+      {segment ? <FocusRouteLegButton blockId={blockId} stopId={endId} toName={segment.toName} className="ml-auto" /> : null}
     </div>
   </div>;
 }
@@ -33,7 +38,7 @@ export function AnchorStopCard({ anchor, edge, position, colorId, blockId }: { a
   const Icon = edge === "start" ? MapPin : Flag;
   return (
     // Same gutter column as sortable item rows so anchors line up with stops.
-    <div id={blockId ? getTripItemElementId(`${blockId}:${edge}`) : undefined} className="my-3 grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
+    <div id={blockId ? getTripItemElementId(getAnchorStopId(blockId, edge)) : undefined} {...(blockId ? routeStopAttributes(getAnchorStopId(blockId, edge)) : {})} className="my-3 grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
     <div aria-hidden="true" />
     <div className="min-w-0 rounded-xl border border-primary/30 bg-card p-4">
     <button type="button" onClick={() => focus({ ...anchor })}

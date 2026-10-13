@@ -8,6 +8,7 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { useSession } from "next-auth/react";
 import { format, isValid, parseISO } from "date-fns";
 import {
+  BookOpen,
   CalendarDays,
   ClipboardList,
   CarFront,
@@ -351,6 +352,7 @@ export default function SidebarWrapper() {
               collapsed={collapsed}
             />
             {isAdministrator(session?.user?.roles) && <SidebarItem title="Vehicle catalog" href="/admin/vehicles" icon={<CarFront className="size-5" />} isActive={isRouteActive("/admin/vehicles")} onClick={() => setMobileOpen(false)} collapsed={collapsed} />}
+            {isAdministrator(session?.user?.roles) && <SidebarItem title="Guides" href="/admin/guides" icon={<BookOpen className="size-5" />} isActive={isRouteActive("/admin/guides")} onClick={() => setMobileOpen(false)} collapsed={collapsed} />}
             {isAdministrator(session?.user?.roles) && <SidebarItem title="Activity" href="/admin/activity" icon={<ClipboardList className="size-5" />} isActive={isRouteActive("/admin/activity")} onClick={() => setMobileOpen(false)} collapsed={collapsed} />}
           </SidebarMenu>
         ) : null}

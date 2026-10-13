@@ -16,17 +16,25 @@ export type RouteDrawPiece = {
   kind: RouteDrawKind;
   color: string;
   coordinates: RouteCoordinate[];
+  /** Faded context: another leg of the day while one leg is focused. */
+  muted: boolean;
 };
 
-/** Splits route segments into the pieces both map providers draw. */
+/**
+ * Splits route segments into the pieces both map providers draw. With a
+ * focused segment, every other segment is muted and drawn first, so the
+ * focused leg sits on top.
+ */
 export function getRouteDrawPieces(
   segments: RouteSegment[],
   dayColorByBlockId: Map<string, string>,
   defaultColor: string,
+  focusedSegmentId: string | null = null,
 ): RouteDrawPiece[] {
-  return segments.flatMap((segment): RouteDrawPiece[] => {
+  const pieces = segments.flatMap((segment): RouteDrawPiece[] => {
     const dayColor = dayColorByBlockId.get(segment.blockId) ?? defaultColor;
-    const base = { blockId: segment.blockId, color: dayColor };
+    const muted = focusedSegmentId !== null && segment.id !== focusedSegmentId;
+    const base = { blockId: segment.blockId, color: dayColor, muted };
 
     if (segment.status === "fallback") {
       return [{ ...base, id: segment.id, kind: "fallback", coordinates: segment.geometry.coordinates }];
@@ -52,4 +60,8 @@ export function getRouteDrawPieces(
       coordinates: step.geometry.coordinates,
     }));
   });
+
+  return focusedSegmentId === null
+    ? pieces
+    : [...pieces.filter((piece) => piece.muted), ...pieces.filter((piece) => !piece.muted)];
 }

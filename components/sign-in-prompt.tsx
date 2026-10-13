@@ -11,7 +11,6 @@ import { getSignInHref } from "@/lib/auth-navigation";
 // Keep the global prompt shared with isolated planner stores.
 export const authPromptStore = getDefaultStore();
 export const signInPromptAtom = atom<string | null>(null);
-export const guestWelcomeShownAtom = atom(false);
 
 export function SignInPrompt() {
   const [callbackUrl, setCallbackUrl] = useAtom(signInPromptAtom, { store: authPromptStore });
@@ -21,18 +20,15 @@ export function SignInPrompt() {
     <Dialog open={callbackUrl !== null && !signedIn} onOpenChange={(open) => { if (!open) setCallbackUrl(null); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Plan freely. Sign in to save.</DialogTitle>
+          <DialogTitle>Sign in to continue</DialogTitle>
           <DialogDescription>
-            You can explore and build a trip without an account. Sign in or create
-            an account to save plans, like or save Explore posts, and join community discussions.
+            Sign in or create an account to plan trips, save Explore posts,
+            and join community discussions.
           </DialogDescription>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">
-          Guest plans are temporary and will be cleared when you refresh or leave the planner.
-        </p>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setCallbackUrl(null)}>Sign in later</Button>
-          <Link href={getSignInHref(callbackUrl?.startsWith("/planner/guest-") ? "/planner/new" : callbackUrl ?? "/dashboard")} className={buttonVariants()} onClick={() => setCallbackUrl(null)}>
+          <Button variant="outline" onClick={() => setCallbackUrl(null)}>Cancel</Button>
+          <Link href={getSignInHref(callbackUrl ?? "/dashboard")} className={buttonVariants()} onClick={() => setCallbackUrl(null)}>
             Sign in / Sign up
           </Link>
         </DialogFooter>

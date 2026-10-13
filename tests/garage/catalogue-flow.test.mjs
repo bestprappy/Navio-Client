@@ -33,11 +33,11 @@ function elements(node) {
   if (Array.isArray(node)) return node.flatMap(elements);
   return [node, ...elements(node.props?.children)];
 }
-for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" : "guest"} dialog defaults to catalogue and supports both submission paths`, async () => {
+test("signed-in dialog defaults to catalogue and supports both submission paths", async () => {
   const state = hooks(), commands = [];
   const { AddVehicleDialog } = component(`${garage}add-vehicle-dialog.tsx`, {
     react: state.react,
-    "./garage-provider": { useGarage: () => ({ authenticated, libraryVehicles: [{...savedVehicleFixture, catalog:null}], mutation: { mutateAsync: async command => commands.push(command) } }) },
+    "./garage-provider": { useGarage: () => ({ authenticated: true, libraryVehicles: [{...savedVehicleFixture, catalog:null}], mutation: { mutateAsync: async command => commands.push(command) } }) },
     "./custom-vehicle-form": { CustomVehicleForm: "CustomVehicleForm" },
     "./vehicle-catalog-picker": { VehicleCatalogPicker: "VehicleCatalogPicker" },
     "./vehicle-api": { userObservedConsumption: { consumptionSource: "USER_OBSERVED", consumptionMeasurementBasis: "UNKNOWN" } },
@@ -49,7 +49,7 @@ for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" :
   assert.equal(tree.find(node => node.props?.children === "EV Vehicle List").props["aria-pressed"], true);
   tree.find(node => node.type === "VehicleCatalogPicker").props.onSelect(catalogFixture);
   tree = render();
-  assert.ok(tree.find(node => node.props?.children === (authenticated ? "Save to garage" : "Use for this trip")));
+  assert.ok(tree.find(node => node.props?.children === "Save to garage"));
   tree.find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
   await Promise.resolve();
   assert.equal(commands[0].kind, "catalog");
@@ -105,7 +105,7 @@ test("frontend proxy enables anonymous access only for exact catalogue GET", asy
   }
 });
 
-for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" : "guest"} settings use one save action for reset and override`, () => {
+test("signed-in settings use one save action for reset and override", () => {
   const state = hooks(), commands = [];
   const { VehicleSettingsForm } = component(`${garage}vehicle-settings-form.tsx`, {
     react: state.react, "./battery-gauge": { BatteryInput: "BatteryInput" }, "./garage.atoms": { arrivalReservePctAtom: {} },
@@ -113,7 +113,7 @@ for (const authenticated of [false, true]) test(`${authenticated ? "signed-in" :
     "./trip-energy-state": { tripEnergyStateAtom: {} },
     "./energy-selection": energySelection,
     "./vehicle-api": { legacyEnergyProfile, userObservedConsumption },
-    "./garage-provider": { useGarage: () => ({ authenticated, query: {}, mutation: { mutate: command => commands.push(command) } }) },
+    "./garage-provider": { useGarage: () => ({ authenticated: true, query: {}, mutation: { mutate: command => commands.push(command) } }) },
   });
   const render = () => { state.reset(); return elements(VehicleSettingsForm({ vehicle: savedVehicleFixture })); };
   let tree = render();

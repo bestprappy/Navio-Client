@@ -5,6 +5,7 @@ import { liftTarget } from "@tiptap/pm/transform";
 
 import type { BlockTypeId } from "./block-types";
 import { isNoteColor, type NoteColor } from "./note-document";
+import { EMBED_GROUP } from "./note-embeds";
 
 /**
  * Block-level operations shared by the gutter, the slash menu, the selection
@@ -140,6 +141,7 @@ export function moveBlock(editor: Editor, target: BlockTarget, direction: -1 | 1
 }
 
 export function duplicateBlock(editor: Editor, target: BlockTarget): boolean {
+  if (isEmbedBlock(target)) return false;
   const { tr } = editor.state;
   const copyAt = target.pos + target.node.nodeSize;
   tr.insert(copyAt, target.node.copy(target.node.content));
@@ -317,6 +319,30 @@ export function applyBlockTypeAtCaret(editor: Editor, typeId: BlockTypeId, range
   editor.view.dispatch(tr);
   const inserted = findBlockFromSelection(editor.state);
   if (inserted && typeId !== "paragraph") turnBlockInto(editor, inserted, typeId);
+}
+
+/** Whether the block is a host embed, which has no text to convert, colour or copy. */
+export function isEmbedBlock(target: Pick<BlockTarget, "node">): boolean {
+  return target.node.type.spec.group?.split(" ").includes(EMBED_GROUP) ?? false;
+}
+
+/**
+ * Puts an embed where "/" was typed. It replaces an empty line, otherwise it
+ * goes under the line; an empty line follows it so writing can go on.
+ */
+export function insertEmbedAtCaret(
+  editor: Editor,
+  nodeName: string,
+  attrs: Record<string, string>,
+  range: { from: number; to: number },
+): boolean {
+  if (!editor.schema.nodes[nodeName]) return false;
+  return editor
+    .chain()
+    .focus()
+    .deleteRange(range)
+    .insertContent([{ type: nodeName, attrs }, { type: "paragraph" }])
+    .run();
 }
 
 export type ColorKind = "text" | "background";

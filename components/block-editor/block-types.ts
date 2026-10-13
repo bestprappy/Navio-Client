@@ -68,8 +68,26 @@ export function getBlockType(id: BlockTypeId): BlockType {
 
 export const CONVERTIBLE_BLOCK_TYPES = BLOCK_TYPES.filter((type) => type.convertible);
 
-/** Ranks block types for a typed query: label starts first, then keywords, then anything containing it. */
-export function filterBlockTypes(query: string, types: readonly BlockType[] = BLOCK_TYPES): BlockType[] {
+/** A host embed as the slash menu lists it; its id is the embed's node name. */
+export type EmbedMenuItem = {
+  id: string;
+  label: string;
+  icon: LucideIcon;
+  group: "embed";
+  markdown?: undefined;
+  keywords: readonly string[];
+};
+
+export type SlashMenuItem = BlockType | EmbedMenuItem;
+
+export function isEmbedMenuItem(item: SlashMenuItem): item is EmbedMenuItem {
+  return item.group === "embed";
+}
+
+type RankedItem = Pick<BlockType, "label" | "markdown" | "keywords">;
+
+/** Ranks menu items for a typed query: label starts first, then keywords, then anything containing it. */
+export function filterBlockTypes<T extends RankedItem>(query: string, types: readonly T[]): T[] {
   const needle = query.trim().toLowerCase();
   if (!needle) return [...types];
 

@@ -23,6 +23,10 @@ export type RoutePoint = {
   lng: number;
   /** How the leg ending here is travelled; omitted means drive. */
   arrivalMode?: LegTravelMode;
+  /** Client selection metadata, removed before sending to Mobility. */
+  arrivalRouteKey?: string;
+  /** Transit between rail stations must contain rail rides and no bus rides. */
+  railOnly?: boolean;
 };
 
 export type RoutePointGroup = {
@@ -33,6 +37,9 @@ export type RoutePointGroup = {
 export type DirectionsRequest = {
   profile?: RouteProfile;
   groups: RoutePointGroup[];
+  includeTransitAlternatives?: boolean;
+  transitRoutingPreference?: "FEWER_TRANSFERS" | "LESS_WALKING";
+  departureTime?: string;
 };
 
 export type RouteSegmentStatus = "routed" | "fallback";
@@ -57,6 +64,26 @@ export type RouteStep = {
   departureStop?: string | null;
   arrivalStop?: string | null;
   stopCount?: number | null;
+  departureTime?: string | null;
+  arrivalTime?: string | null;
+  headsign?: string | null;
+  departureLocation?: RouteCoordinate | null;
+  arrivalLocation?: RouteCoordinate | null;
+};
+
+export type TransitJourney = {
+  id: string;
+  provider: string;
+  geometry: RouteLineString;
+  distanceMeters?: number | null;
+  durationSeconds?: number | null;
+  walkingSeconds?: number | null;
+  departureTime?: string | null;
+  arrivalTime?: string | null;
+  timeZone?: string | null;
+  fare?: number | null;
+  currency?: string | null;
+  steps: RouteStep[];
 };
 
 export type RouteSegment = {
@@ -76,6 +103,7 @@ export type RouteSegment = {
   /** Absent from older mobility releases, which only drive. */
   travelMode?: LegTravelMode;
   steps?: RouteStep[];
+  journeys?: TransitJourney[];
 };
 
 export type DirectionsResponse = {

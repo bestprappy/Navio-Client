@@ -1,19 +1,21 @@
 "use client";
 
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { format, parseISO } from "date-fns";
-import { CalendarDays, ChevronDown, Landmark, PencilLine } from "lucide-react";
+import { CalendarDays, ChevronDown, PencilLine, Plus } from "lucide-react";
 import { useAtomValue, useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
 
 import { BudgetModalShell } from "../../budget/budget-modal-shell";
+import { ExpenseCategorySelect } from "../../budget/expense-category-select";
+import { getExpenseCategory } from "../../budget/budget.data";
+import type { ExpenseItem } from "../../budget/budget.types";
 import { roundMoney } from "../../budget/budget.utils";
 import {
+  savePlaceExpenseAtom,
   tripCurrencyAtom,
-  tripExpensesAtom,
-  updatePlaceItemAtom,
 } from "../../overview/trip-builder.atoms";
 
 type PlaceCostPopoverProps = {
@@ -21,7 +23,9 @@ type PlaceCostPopoverProps = {
   itemId: string;
   itemName: string;
   blockDate: string;
-  cost?: number;
+  expense?: ExpenseItem;
+  children?: ReactNode;
+  className?: string;
 };
 
 export function PlaceCostPopover({
@@ -29,26 +33,31 @@ export function PlaceCostPopover({
   itemId,
   itemName,
   blockDate,
-  cost,
+  expense,
+  children,
+  className,
 }: PlaceCostPopoverProps) {
-  const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
-  const setExpenses = useSetAtom(tripExpensesAtom);
+  const saveExpense = useSetAtom(savePlaceExpenseAtom);
   const currency = useAtomValue(tripCurrencyAtom);
 
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [draftName, setDraftName] = useState("");
+  const [draftCategoryId, setDraftCategoryId] = useState("sightseeing");
+  const [error, setError] = useState<string | null>(null);
 
-  const expenseId = `place-cost-${itemId}`;
-  const isEdit = cost !== undefined;
+  const isEdit = expense !== undefined;
 
-  const blockDateParsed = useMemo(() => parseISO(blockDate), [blockDate]);
+  const expenseDate = expense?.date ?? blockDate;
+  const blockDateParsed = useMemo(() => parseISO(expenseDate), [expenseDate]);
   const blockDateFormatted = format(blockDateParsed, "MMM d, yyyy");
 
   function handleOpen(event: React.MouseEvent) {
     event.stopPropagation();
-    setDraft(cost !== undefined ? String(cost) : "");
-    setDraftName(itemName);
+    setDraft(expense ? String(expense.amount) : "");
+    setDraftName(expense?.label ?? itemName);
+    setDraftCategoryId(getExpenseCategory(expense?.categoryId ?? "sightseeing").id);
+    setError(null);
     setOpen(true);
   }
 
@@ -63,19 +72,11 @@ export function PlaceCostPopover({
 
     const label = draftName.trim() || itemName;
 
-    updatePlaceItem({ blockId, itemId, updates: { cost: amount } });
-    setExpenses((prev) => {
-      const entry = {
-        id: expenseId,
-        amount,
-        label,
-        categoryId: "sightseeing",
-        date: blockDate,
-      };
-      return prev.some((e) => e.id === expenseId)
-        ? prev.map((e) => (e.id === expenseId ? { ...e, ...entry } : e))
-        : [entry, ...prev];
-    });
+    const saved = saveExpense({ blockId, itemId, expenseId: expense?.id, amount, label, categoryId: draftCategoryId });
+    if (!saved) {
+      setError("This stop or expense has changed. Close this form and try again.");
+      return;
+    }
     handleClose();
   }
 
@@ -83,14 +84,12 @@ export function PlaceCostPopover({
     <>
       <button
         type="button"
-        className={
-          isEdit
-            ? "inline-flex h-8 items-center gap-1.5 rounded-sm border border-border bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted/80"
-            : "inline-flex h-8 items-center gap-1.5 rounded-sm border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
-        }
+        className={className ?? "inline-flex min-h-8 items-center gap-1.5 rounded-sm px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"}
         onClick={handleOpen}
+        aria-label={expense ? `Edit expense: ${expense.label}` : `Add expense to ${itemName}`}
+        data-no-drag
       >
-        {isEdit ? `${currency.symbol} ${cost.toLocaleString()}` : "Add cost"}
+        {children ?? <><Plus className="size-3.5" aria-hidden="true" />Add expense</>}
       </button>
 
       {open
@@ -141,16 +140,10 @@ export function PlaceCostPopover({
                   />
                 </label>
 
-                {/* Category — fixed to Sightseeing for place costs */}
-                <div className="flex h-13 w-full items-center gap-3 rounded-sm border border-border bg-background px-4">
-                  <Landmark
-                    className="size-4 shrink-0 text-foreground"
-                    aria-hidden="true"
-                  />
-                  <span className="text-sm font-medium text-muted-foreground">
-                    Sightseeing
-                  </span>
-                </div>
+                <ExpenseCategorySelect
+                  value={draftCategoryId}
+                  onValueChange={setDraftCategoryId}
+                />
 
                 {/* Date — auto from itinerary block, read-only */}
                 <div className="flex h-13 w-full items-center gap-3 rounded-sm border border-border bg-muted/40 px-4">
@@ -165,6 +158,8 @@ export function PlaceCostPopover({
                     {blockDateFormatted}
                   </span>
                 </div>
+
+                {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
                 <div className="flex justify-center pt-5">
                   <Button type="submit" size="lg" className="rounded-full px-10">

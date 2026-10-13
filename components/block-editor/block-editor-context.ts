@@ -4,6 +4,7 @@ import { createContext, useContext, type RefObject } from "react";
 import type { Editor } from "@tiptap/core";
 import type { ReferenceElement } from "@floating-ui/dom";
 
+import type { NoteEmbed } from "./extensions/embed-node";
 import type { SlashMenuStore } from "./extensions/slash-command";
 
 export type BlockMenuRequest = {
@@ -24,6 +25,7 @@ export type BlockEditorContextValue = {
   viewReady: boolean;
   frameRef: RefObject<HTMLDivElement | null>;
   slashStore: SlashMenuStore;
+  embeds: readonly NoteEmbed[];
   blockMenu: BlockMenuRequest | null;
   openBlockMenu: (pos: number, reference?: ReferenceElement | null) => void;
   /** Closes the block menu; with `refocus`, the caret goes back into the block. */

@@ -35,8 +35,8 @@ export function PlannerSidePanelHost() {
     [selectedTripPlaces],
   );
 
-  function addChargerToTrip(blockId: string, charger: EvCharger) {
-    addEvChargerToBlock({ blockId, charger });
+  function addChargerToTrip(blockId: string, charger: EvCharger, beforeItemId?: string) {
+    addEvChargerToBlock({ blockId, charger, beforeItemId });
   }
 
   if (activePanel?.type !== "ev-stations") {

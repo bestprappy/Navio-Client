@@ -4,9 +4,18 @@ import { getVehicleCar } from "../constants/vehicle.data";
 import { isCompatible } from "../garage/ev-calculator";
 import { getDayPlacePositions, placeItemToAnchor, resolveDayAnchors } from "../itinerary/day-anchors";
 import { createPlaceVisit, getPlaceUsage } from "../itinerary/trip-location-markers";
+import { getItemInsertionIndex, getItemInsertionLabel } from "../block/item-insertion";
 
 import { currencyOptions, getCurrencyOption } from "../budget/budget.data";
 import { roundMoney } from "../budget/budget.utils";
+import {
+  createPlaceExpenseId,
+  getPlaceExpenses,
+  getPlaceExpenseTotal,
+  isExpenseForPlace,
+  legacyPlaceExpenseId,
+  reconcilePlaceExpenseCosts,
+} from "../budget/place-expenses";
 import type {
   CurrencyOption,
   ExpenseItem,
@@ -44,6 +53,7 @@ type AddPremadeListToChecklistPayload = {
 
 type AddItemPayload = {
   blockId: string;
+  beforeItemId?: string;
 };
 
 type RemoveItemPayload = {
@@ -86,7 +96,7 @@ type UpdatePlacePayload = {
   updates: Partial<
     Pick<
       PlaceItem,
-      "isVisited" | "notes" | "time" | "timeEnd" | "cost" | "evCharger" | "observedSocCheckpoint" | "arrivalMode"
+      "isVisited" | "notes" | "time" | "timeEnd" | "cost" | "evCharger" | "observedSocCheckpoint" | "arrivalMode" | "arrivalRouteKey"
     >
   >;
 };
@@ -115,6 +125,7 @@ type ReorderBlockItemsPayload = {
 
 type StartPlaceSearchPayload = {
   blockId: string;
+  beforeItemId?: string;
   result?: PlaceSearchResult;
   results?: PlaceSearchResult[];
   query?: string;
@@ -135,6 +146,7 @@ type SelectTripPlacePayload = {
 
 type AddEvChargerToBlockPayload = {
   blockId: string;
+  beforeItemId?: string;
   charger: EvCharger;
 };
 
@@ -149,6 +161,7 @@ export type TripPlaceAnchor = PlaceItem & {
 export type EvChargerMapResult = {
   charger: EvCharger;
   targetBlockId: string;
+  beforeItemId?: string;
   targetPlaceId: string;
   distanceKm: number;
 };
@@ -156,6 +169,8 @@ export type EvChargerMapResult = {
 export type ActivePlannerSidePanel = {
   type: "ev-stations";
   blockId: string;
+  beforeItemId?: string;
+  requestId?: string;
 };
 
 function createClientId(prefix: string): string {
@@ -395,11 +410,95 @@ export const myListBlocksAtom = atom<TripBlockData[]>((get) =>
 );
 export const tripCurrencyAtom = atom<CurrencyOption>(currencyOptions[0]);
 export const tripExpensesAtom = atom<ExpenseItem[]>([]);
+/** Expense edits from either the card or Budget also update that visit's total. */
+export const updateTripExpensesAtom = atom(
+  null,
+  (get, set, update: ExpenseItem[] | ((previous: ExpenseItem[]) => ExpenseItem[])) => {
+    if (get(plannerReadOnlyAtom)) return;
+    const previous = get(tripExpensesAtom);
+    const next = typeof update === "function" ? update(previous) : update;
+    set(tripExpensesAtom, next);
+    set(tripBlocksAtom, reconcilePlaceExpenseCosts(get(tripBlocksAtom), previous, next, get(tripCurrencyAtom).code));
+  },
+);
+
+export const savePlaceExpenseAtom = atom(
+  null,
+  (get, set, payload: {
+    blockId: string;
+    itemId: string;
+    expenseId?: string;
+    amount: number;
+    label: string;
+    categoryId: string;
+  }): boolean => {
+    if (get(plannerReadOnlyAtom)) return false;
+    const block = get(tripBlocksAtom).find((entry) => entry.id === payload.blockId);
+    const item = block?.items.find((entry) => entry.id === payload.itemId);
+    if (!block || !item || !isPlaceItem(item)) return false;
+    const amount = roundMoney(payload.amount, get(tripCurrencyAtom).code);
+    if (!Number.isFinite(amount) || amount <= 0) return false;
+    const previous = get(tripExpensesAtom);
+    const linked = getPlaceExpenses(previous, item.id);
+    const legacy = !linked.length && item.cost !== undefined && item.cost > 0
+      ? { id: legacyPlaceExpenseId(item.id), amount: item.cost, label: item.name, categoryId: "sightseeing", date: block.date }
+      : undefined;
+    const existing = [...linked, ...(legacy ? [legacy] : [])].find((expense) => expense.id === payload.expenseId);
+    // A deleted expense must not be recreated by an old edit form.
+    if (payload.expenseId && !existing) return false;
+    const entry: ExpenseItem = {
+      id: payload.expenseId ?? createPlaceExpenseId(item.id),
+      amount,
+      label: payload.label.trim() || item.name,
+      categoryId: payload.categoryId,
+      date: existing?.date ?? block.date,
+    };
+    const base = legacy ? [...previous, legacy] : previous;
+    set(updateTripExpensesAtom, payload.expenseId
+      ? base.map((expense) => expense.id === entry.id ? entry : expense)
+      : [...base, entry]);
+    return true;
+  },
+);
+
+export const removePlaceExpenseAtom = atom(
+  null,
+  (get, set, payload: { blockId: string; itemId: string; expenseId: string }) => {
+    if (get(plannerReadOnlyAtom)) return;
+    const block = get(tripBlocksAtom).find((entry) => entry.id === payload.blockId);
+    const item = block?.items.find((entry) => entry.id === payload.itemId);
+    if (!item || !isPlaceItem(item)) return;
+    const expenses = get(tripExpensesAtom);
+    const expense = expenses.find((entry) => entry.id === payload.expenseId);
+    if (expense && isExpenseForPlace(expense, item.id)) {
+      set(updateTripExpensesAtom, expenses.filter((entry) => entry.id !== expense.id));
+    } else if (!expense && payload.expenseId === legacyPlaceExpenseId(item.id) && !getPlaceExpenses(expenses, item.id).length) {
+      set(tripBlocksAtom, updateItem(get(tripBlocksAtom), payload.blockId, item.id, (entry) => ({ ...entry, cost: undefined })));
+    }
+  },
+);
 export const tripBudgetAtom = atom<number>(0);
 export const activeBlockIdAtom = atom<string | null>(null);
-// "day" draws only the active (scrolled-to) day's route; "all" draws every day's route.
-export type RouteLineMode = "day" | "all";
+// "day" draws only the active (scrolled-to) day's route; "all" draws every day's route;
+// "stop" focuses the leg of the stop scrolled to and fades the rest of its day.
+export type RouteLineMode = "day" | "all" | "stop";
 export const routeLineModeAtom = atom<RouteLineMode>("day");
+/** In "stop" mode, the stop whose leg is focused: an item id, or a day anchor id. */
+export const focusedRouteStopIdAtom = atom<string | null>(null);
+/** Switching modes clears the focused stop so scrolling picks it afresh. */
+export const setRouteLineModeAtom = atom(null, (_get, set, mode: RouteLineMode) => {
+  set(routeLineModeAtom, mode);
+  set(focusedRouteStopIdAtom, null);
+});
+/** Focuses one leg directly (from its travel row), switching to "stop" mode. */
+export const focusRouteLegAtom = atom(
+  null,
+  (_get, set, { blockId, stopId }: { blockId: string; stopId: string }) => {
+    set(routeLineModeAtom, "stop");
+    set(activeBlockIdAtom, blockId);
+    set(focusedRouteStopIdAtom, stopId);
+  },
+);
 export const activeSearchAtom = atom<ActiveSearch | null>(null);
 export const activePlannerSidePanelAtom = atom<ActivePlannerSidePanel | null>(
   null,
@@ -450,22 +549,22 @@ export const convertTripCurrencyAtom = atom(
       roundMoney(amount * payload.rate, payload.currency.code);
 
     set(tripBudgetAtom, convert(get(tripBudgetAtom)));
-    set(
-      tripExpensesAtom,
-      get(tripExpensesAtom).map((expense) => ({
-        ...expense,
-        amount: convert(expense.amount),
-      })),
-    );
+    const convertedExpenses = get(tripExpensesAtom).map((expense) => ({
+      ...expense,
+      amount: convert(expense.amount),
+    }));
+    set(tripExpensesAtom, convertedExpenses);
     set(
       tripBlocksAtom,
       get(tripBlocksAtom).map((block) => ({
         ...block,
-        items: block.items.map((item) =>
-          isPlaceItem(item) && item.cost !== undefined
-            ? { ...item, cost: convert(item.cost) }
-            : item,
-        ),
+        items: block.items.map((item) => {
+          if (!isPlaceItem(item) || item.cost === undefined) return item;
+          const linked = getPlaceExpenses(convertedExpenses, item.id);
+          return { ...item, cost: linked.length
+            ? getPlaceExpenseTotal(linked, payload.currency.code)
+            : convert(item.cost) };
+        }),
       })),
     );
     set(tripCurrencyAtom, payload.currency);
@@ -529,6 +628,40 @@ export const selectedSearchPlaceUsageAtom = atom((get) => {
 });
 
 export const selectedSearchPlaceIsAddedAtom = atom((get) => get(selectedSearchPlaceUsageAtom).isAdded);
+
+export const selectedEvChargerInsertionAtom = atom((get) => {
+  const result = get(selectedEvChargerResultAtom);
+  const blocks = get(tripBlocksAtom);
+  const block = blocks.find((entry) => entry.id === result?.targetBlockId);
+  if (!result || !block) return { isValid: false, label: undefined, error: "Choose a day to add this station." };
+  if (getItemInsertionIndex(block, result.beforeItemId) < 0) {
+    return { isValid: false, label: undefined, error: "This spot was removed. Choose another spot." };
+  }
+  return {
+    isValid: true,
+    label: result.beforeItemId === undefined ? undefined : getItemInsertionLabel(
+      block, result.beforeItemId, !!resolveDayAnchors(blocks).get(block.id)?.start,
+    ),
+    error: undefined,
+  };
+});
+
+export const selectedSearchPlaceInsertionAtom = atom((get) => {
+  const search = get(activeSearchAtom);
+  const blocks = get(tripBlocksAtom);
+  const block = blocks.find((entry) => entry.id === search?.blockId);
+  if (!search || !block) return { isValid: false, label: undefined, error: "Choose a day to add this place." };
+  if (getItemInsertionIndex(block, search.beforeItemId) < 0) {
+    return { isValid: false, label: undefined, error: "This spot was removed. Choose another spot." };
+  }
+  return {
+    isValid: true,
+    label: search.beforeItemId === undefined ? undefined : getItemInsertionLabel(
+      block, search.beforeItemId, !!resolveDayAnchors(blocks).get(block.id)?.start,
+    ),
+    error: undefined,
+  };
+});
 
 export const selectedEvChargerResultAtom = atom((get) => {
   const selectedId = get(selectedEvChargerIdAtom);
@@ -778,6 +911,11 @@ export const removeTripBlockAtom = atom(null, (get, set, blockId: string): Remov
   const selectedEvChargerResult = get(selectedEvChargerResultAtom);
 
   set(tripBlocksAtom, nextBlocks);
+  if (removedBlock) {
+    set(tripExpensesAtom, (expenses) => expenses.filter((expense) =>
+      !removedBlock.items.some((item) => isExpenseForPlace(expense, item.id)),
+    ));
+  }
   // Removing a middle day shortens the trip by a day rather than leaving a hole
   // in the date range. The caller persists the returned endDate: without it,
   // ensureItineraryDays rehydrates from the server's old range on the next load
@@ -824,34 +962,48 @@ export const removeTripBlockAtom = atom(null, (get, set, blockId: string): Remov
 export const addNoteToBlockAtom = atom(
   null,
   (get, set, payload: AddItemPayload) => {
+    if (get(plannerReadOnlyAtom)) return;
+    const block = get(tripBlocksAtom).find((entry) => entry.id === payload.blockId);
+    if (!block) return;
+    const index = getItemInsertionIndex(block, payload.beforeItemId);
+    if (index < 0) return;
+    const id = createClientId("note");
     set(
       tripBlocksAtom,
       updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
         ...block,
         items: [
-          ...block.items,
+          ...block.items.slice(0, index),
           {
-            id: createClientId("note"),
+            id,
             type: "note",
             content: "",
           },
+          ...block.items.slice(index),
         ],
       })),
     );
+    return id;
   },
 );
 
 export const addChecklistToBlockAtom = atom(
   null,
   (get, set, payload: AddItemPayload) => {
+    if (get(plannerReadOnlyAtom)) return;
+    const block = get(tripBlocksAtom).find((entry) => entry.id === payload.blockId);
+    if (!block) return;
+    const index = getItemInsertionIndex(block, payload.beforeItemId);
+    if (index < 0) return;
+    const id = createClientId("checklist");
     set(
       tripBlocksAtom,
       updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
         ...block,
         items: [
-          ...block.items,
+          ...block.items.slice(0, index),
           {
-            id: createClientId("checklist"),
+            id,
             type: "checklist",
             title: "Add title",
             items: [
@@ -862,9 +1014,11 @@ export const addChecklistToBlockAtom = atom(
               },
             ],
           },
+          ...block.items.slice(index),
         ],
       })),
     );
+    return id;
   },
 );
 
@@ -948,7 +1102,7 @@ export const removeItemFromBlockAtom = atom(
       })),
     );
     set(tripExpensesAtom, (prev) =>
-      prev.filter((e) => e.id !== `place-cost-${payload.itemId}`),
+      prev.filter((expense) => !isExpenseForPlace(expense, payload.itemId)),
     );
   },
 );
@@ -1141,6 +1295,7 @@ export const startPlaceSearchAtom = atom(
     set(selectedTripPlaceItemIdAtom, null);
     set(activeSearchAtom, {
       blockId: payload.blockId,
+      beforeItemId: payload.beforeItemId,
       query: payload.query ?? payload.result?.name ?? results[0]?.name ?? "",
       results,
       selectedIndex,
@@ -1214,13 +1369,19 @@ export const closeSelectedSearchPlaceAtom = atom(null, (get, set) => {
 
 export const addPlaceVisitToBlockAtom = atom(null, (get, set, payload: {
   blockId: string;
+  beforeItemId?: string;
   place: Parameters<typeof createPlaceVisit>[0];
 }) => {
   if (get(plannerReadOnlyAtom)) return;
-  if (!get(tripBlocksAtom).some((block) => block.id === payload.blockId)) return;
+  const targetBlock = get(tripBlocksAtom).find((block) => block.id === payload.blockId);
+  if (!targetBlock) return;
+  const insertionIndex = getItemInsertionIndex(targetBlock, payload.beforeItemId);
+  if (insertionIndex < 0) return;
   const visit = createPlaceVisit(payload.place, createClientId("place"));
   set(tripBlocksAtom, updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
-    ...block, items: [...block.items, visit],
+    ...block, items: [
+      ...block.items.slice(0, insertionIndex), visit, ...block.items.slice(insertionIndex),
+    ],
   })));
   set(activeBlockIdAtom, payload.blockId);
   set(openBlockIdsAtom, (ids) => ids.includes(payload.blockId) ? ids : [...ids, payload.blockId]);
@@ -1239,6 +1400,7 @@ export const addSelectedPlaceToTripAtom = atom(null, (get, set) => {
 
   return set(addPlaceVisitToBlockAtom, {
     blockId: activeSearch.blockId,
+    beforeItemId: activeSearch.beforeItemId,
     place: { ...selectedPlace, placeId: selectedPlace.id, placeType: selectedPlace.primaryType },
   });
 });
@@ -1246,10 +1408,14 @@ export const addSelectedPlaceToTripAtom = atom(null, (get, set) => {
 export const addEvChargerToBlockAtom = atom(
   null,
   (get, set, payload: AddEvChargerToBlockPayload) => {
+    if (get(plannerReadOnlyAtom)) return;
     const chargerPlaceId = getChargerPlaceId(payload.charger.id);
     const targetBlock = get(tripBlocksAtom).find(
       (block) => block.id === payload.blockId,
     );
+    if (!targetBlock) return;
+    const index = getItemInsertionIndex(targetBlock, payload.beforeItemId);
+    if (index < 0) return;
     const existingPlace = targetBlock?.items.find(
       (item) => isPlaceItem(item) && item.placeId === chargerPlaceId,
     );
@@ -1269,8 +1435,9 @@ export const addEvChargerToBlockAtom = atom(
         return {
           ...block,
           items: [
-            ...block.items,
+            ...block.items.slice(0, index),
             evChargerToPlaceItem(payload.charger, nextPlaceId),
+            ...block.items.slice(index),
           ],
         };
       }),
@@ -1278,6 +1445,7 @@ export const addEvChargerToBlockAtom = atom(
     set(activeSearchAtom, null);
     set(selectedEvChargerIdAtom, null);
     set(selectedTripPlaceItemIdAtom, nextPlaceId);
+    return nextPlaceId;
   },
 );
 
@@ -1288,33 +1456,9 @@ export const addSelectedEvChargerToTripAtom = atom(null, (get, set) => {
     return;
   }
 
-  const { charger, targetBlockId } = selectedResult;
-  const chargerPlaceId = getChargerPlaceId(charger.id);
-  const targetBlock = get(tripBlocksAtom).find(
-    (block) => block.id === targetBlockId,
-  );
-  const existingPlace = targetBlock?.items.find(
-    (item) => isPlaceItem(item) && item.placeId === chargerPlaceId,
-  );
-  const nextPlaceId = existingPlace?.id ?? createClientId("place");
-
-  set(
-    tripBlocksAtom,
-    updateBlock(get(tripBlocksAtom), targetBlockId, (block) => {
-      const isAlreadyAdded = block.items.some(
-        (item) => isPlaceItem(item) && item.placeId === chargerPlaceId,
-      );
-
-      if (isAlreadyAdded) {
-        return block;
-      }
-
-      return {
-        ...block,
-        items: [...block.items, evChargerToPlaceItem(charger, nextPlaceId)],
-      };
-    }),
-  );
-  set(selectedEvChargerIdAtom, null);
-  set(selectedTripPlaceItemIdAtom, nextPlaceId);
+  return set(addEvChargerToBlockAtom, {
+    blockId: selectedResult.targetBlockId,
+    beforeItemId: selectedResult.beforeItemId,
+    charger: selectedResult.charger,
+  });
 });

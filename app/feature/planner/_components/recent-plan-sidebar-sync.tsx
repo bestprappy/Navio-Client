@@ -33,7 +33,7 @@ export function RecentPlanSidebarSync({ planId }: RecentPlanSidebarSyncProps) {
   const ownerId = status === "authenticated" ? session?.user?.id : undefined;
 
   useEffect(() => {
-    // Guest plans are temporary; never offer them as a way back from other pages.
+    // Only offer saved trips owned by the current account.
     if (!ownerId || !isPersistedTripId(planId) || blocks.length === 0) return;
     setRecentPlan({ planId, ownerId, blocks, href: `${pathname}${window.location.search}` });
   }, [blocks, ownerId, pathname, planId, setRecentPlan]);

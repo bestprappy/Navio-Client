@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { PlannerDetail } from "../../feature/planner/planId/planner-detail";
+import { isPersistedTripId } from "@/app/feature/planner/_components/planner-api";
 
 type PlannerDetailPageProps = {
   params: Promise<{
@@ -28,6 +30,7 @@ export default async function PlannerDetailPage({
   searchParams,
 }: PlannerDetailPageProps) {
   const { planId } = await params;
+  if (!isPersistedTripId(planId)) redirect("/planner/new");
   const { destinationId, destinationName, country, from, to, lat, lng, templatePlanId } =
     await searchParams;
 

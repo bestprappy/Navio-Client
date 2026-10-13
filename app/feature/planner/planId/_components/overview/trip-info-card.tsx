@@ -28,7 +28,6 @@ export function TripInfoCard({
 }: TripInfoCardProps) {
   const { isAuthenticated } = useRequireAuth();
   const metadata = useTripMetadata(planId);
-  // Guest plans live only in this browser; there is no saved trip to delete.
   const canManageTrip = isAuthenticated && isPersistedTripId(planId) && Boolean(metadata.data);
 
   return (

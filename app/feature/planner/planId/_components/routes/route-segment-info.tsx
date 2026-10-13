@@ -1,7 +1,12 @@
+"use client";
+
 import type { ReactNode } from "react";
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { CircleHelp, Loader2 } from "lucide-react";
+
+import { Popover, PopoverContent, PopoverDescription, PopoverTitle, PopoverTrigger } from "@/components/ui/popover";
 
 import type { LegTravelMode } from "../constants/types";
+import { isTransitMode } from "./leg-travel-mode";
 import { LEG_TRAVEL_MODE_META } from "./leg-travel-mode-meta";
 import {
   formatRouteDistance,
@@ -10,6 +15,7 @@ import {
   safeLineColor,
 } from "./trip-route.helpers";
 import type { RouteSegment, RouteStep } from "./trip-route.types";
+import { getLineTextColor } from "./travel-options";
 
 type RouteSegmentInfoProps = {
   segment: RouteSegment | null;
@@ -26,6 +32,9 @@ type RouteSegmentInfoProps = {
 const MISSING_ROUTE_LABEL: Record<LegTravelMode, string> = {
   drive: "No road route",
   transit: "No transit route",
+  rail: "No rail route",
+  bus: "No bus route",
+  bike: "No cycling route",
   walk: "No walking route",
 };
 
@@ -38,6 +47,7 @@ export function RouteSegmentInfo({
   modeControl,
 }: RouteSegmentInfoProps) {
   const mode = plannedMode ?? (segment ? getSegmentTravelMode(segment) : "drive");
+  const missingSelection = segment?.fallbackReason === "Your selected transit route is not available";
   const { label, Icon } = LEG_TRAVEL_MODE_META[mode];
   const modeIndicator = modeControl ?? (
     <>
@@ -59,13 +69,24 @@ export function RouteSegmentInfo({
     return (
       // The mode control stays reachable so the traveller can switch to a mode that routes.
       <div className="flex min-h-6 flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-none">
-        {modeControl}
-        <AlertTriangle className="size-4 shrink-0 text-warning" aria-hidden="true" />
-        <span className="font-medium text-warning">{MISSING_ROUTE_LABEL[mode]}</span>
+        {modeIndicator}
+        <Popover>
+          <PopoverTrigger className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-warning hover:bg-warning/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Why is this connection a straight line?">
+            <CircleHelp className="size-4" aria-hidden="true" />
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-72 p-3">
+            <PopoverTitle>Connection unverified</PopoverTitle>
+            <PopoverDescription>The dashed line only connects these places on the map. It is not a confirmed route or a path to follow.</PopoverDescription>
+            <p className="text-xs leading-relaxed text-muted-foreground">{isError ? "Route information could not be loaded. Try again or check Google Maps." : missingSelection ? "Your saved line and station sequence could not be confirmed. Open the route choices to retry or select another journey." : isTransitMode(mode) ? "Transit data may be unavailable here or for this service. This does not mean the train or bus does not exist. Compare travel options or check Google Maps." : "Route information is unavailable. Compare travel options or check Google Maps."}</p>
+          </PopoverContent>
+        </Popover>
+        <span className="font-medium text-warning">
+          {isError ? "Route unavailable" : missingSelection ? "Selected route unverified" : "Connection unverified"}
+        </span>
         <span className="text-muted-foreground">
           {segment?.distanceMeters
-            ? `${formatRouteDistance(segment.distanceMeters)} in a straight line`
-            : "showing a straight line"}
+            ? `${formatRouteDistance(segment.distanceMeters)} direct distance`
+            : missingSelection ? "Choose another route" : mode === "transit" && segment?.fallbackReason === "No rail route was found" ? "Rail route not confirmed" : MISSING_ROUTE_LABEL[mode]}
         </span>
       </div>
     );
@@ -100,7 +121,7 @@ function TransitLineChip({ ride, fallbackColor }: { ride: RouteStep; fallbackCol
   const line = ride.line;
   const name = line?.name ?? line?.shortName ?? "Transit";
   const background = safeLineColor(line?.color) ?? fallbackColor;
-  const foreground = safeLineColor(line?.textColor) ?? "var(--primary-foreground)";
+  const foreground = getLineTextColor(background);
   const stops = ride.stopCount ? `, ${ride.stopCount} ${ride.stopCount === 1 ? "stop" : "stops"}` : "";
   const route = ride.departureStop && ride.arrivalStop ? ` from ${ride.departureStop} to ${ride.arrivalStop}` : "";
 

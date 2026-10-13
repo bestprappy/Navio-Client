@@ -209,7 +209,7 @@ test("directions forwards its JSON after authentication without consuming the bo
   assert.equal(calls, 2);
 });
 
-test("guest planning reads work without credentials; saved trips and account writes remain protected", async () => {
+test("public browsing reads work without credentials; saved trips and account writes remain protected", async () => {
   const { proxyMobilityRequest } = await import("../app/api/_lib/mobility-proxy.ts");
   const { GET, POST, PUT } = await import("../app/api/trips/[[...path]]/route.ts");
   const { proxyAuthenticatedApiRequest } = await import("../app/api/_lib/authenticated-api-proxy.ts");

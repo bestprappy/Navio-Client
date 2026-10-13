@@ -34,6 +34,7 @@ import { BlockGutter } from "./block-gutter";
 import { BubbleToolbar } from "./bubble-toolbar";
 import { createNoteExtensions } from "./extensions";
 import { createBlockEditorController } from "./extensions/block-keymap";
+import type { NoteEmbed } from "./extensions/embed-node";
 import { createSlashMenuStore } from "./extensions/slash-command";
 import { parseNoteMarkdown, serializeNoteMarkdown } from "./note-markdown";
 import { SHORTCUTS, formatShortcut } from "./shortcuts";
@@ -63,9 +64,17 @@ type RootProps = {
   /** Shown while the note is empty. */
   placeholder: string;
   initialFocus?: InitialFocus;
+  /** Host blocks the slash menu can insert. Read once; keep the array stable. */
+  embeds?: readonly NoteEmbed[];
+  /** "reading" sets long-form text at the body size; notes stay compact. */
+  size?: "compact" | "reading";
+  /** Hands the editor to a host that changes the document from outside, such as a map adding a block. */
+  onEditorReady?: (editor: Editor | null) => void;
   className?: string;
   children: ReactNode;
 };
+
+const NO_EMBEDS: readonly NoteEmbed[] = [];
 
 function useViewReady(editor: Editor): boolean {
   const subscribe = useCallback(
@@ -100,16 +109,28 @@ function placeInitialFocus(editor: Editor, focus: Exclude<InitialFocus, null>) {
   else editor.commands.focus("end");
 }
 
-function Root({ value, onChange, label, placeholder, initialFocus = null, className, children }: RootProps) {
+function Root({
+  value,
+  onChange,
+  label,
+  placeholder,
+  initialFocus = null,
+  embeds: embedsProp = NO_EMBEDS,
+  size = "compact",
+  onEditorReady,
+  className,
+  children,
+}: RootProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const toolbarApiRef = useRef<ToolbarApi | null>(null);
   const onChangeRef = useRef(onChange);
   const lastValueRef = useRef(value);
   const descriptionId = useId();
+  const [embeds] = useState(embedsProp);
   const [slashStore] = useState(createSlashMenuStore);
   const [{ controller, setHandlers }] = useState(createBlockEditorController);
-  const [extensions] = useState(() => createNoteExtensions({ placeholder, slashStore, controller }));
-  const [initialContent] = useState(() => parseNoteMarkdown(value));
+  const [extensions] = useState(() => createNoteExtensions({ placeholder, slashStore, controller, embeds }));
+  const [initialContent] = useState(() => parseNoteMarkdown(value, embeds));
   const [initialFocusOnMount] = useState(initialFocus);
   const [blockMenu, setBlockMenu] = useState<BlockMenuRequest | null>(null);
 
@@ -132,7 +153,7 @@ function Root({ value, onChange, label, placeholder, initialFocus = null, classN
       },
     },
     onUpdate: ({ editor: current }) => {
-      const next = serializeNoteMarkdown(current.getJSON());
+      const next = serializeNoteMarkdown(current.getJSON(), embeds);
       if (next === lastValueRef.current) return;
       lastValueRef.current = next;
       onChangeRef.current(next);
@@ -141,12 +162,18 @@ function Root({ value, onChange, label, placeholder, initialFocus = null, classN
 
   const viewReady = useViewReady(editor);
 
+  useEffect(() => {
+    if (!onEditorReady || !viewReady) return;
+    onEditorReady(editor);
+    return () => onEditorReady(null);
+  }, [editor, onEditorReady, viewReady]);
+
   // A change made elsewhere (another tab saving, an undo in the planner) replaces the content.
   useEffect(() => {
     if (!viewReady || value === lastValueRef.current) return;
     lastValueRef.current = value;
-    editor.commands.setContent(parseNoteMarkdown(value), { emitUpdate: false });
-  }, [editor, value, viewReady]);
+    editor.commands.setContent(parseNoteMarkdown(value, embeds), { emitUpdate: false });
+  }, [editor, embeds, value, viewReady]);
 
   useEffect(() => {
     if (!initialFocusOnMount || !viewReady) return;
@@ -191,8 +218,8 @@ function Root({ value, onChange, label, placeholder, initialFocus = null, classN
   }, [setHandlers, openBlockMenu]);
 
   const context = useMemo<BlockEditorContextValue>(
-    () => ({ editor, viewReady, frameRef, slashStore, blockMenu, openBlockMenu, closeBlockMenu, toolbarApiRef }),
-    [editor, viewReady, slashStore, blockMenu, openBlockMenu, closeBlockMenu],
+    () => ({ editor, viewReady, frameRef, slashStore, embeds, blockMenu, openBlockMenu, closeBlockMenu, toolbarApiRef }),
+    [editor, viewReady, slashStore, embeds, blockMenu, openBlockMenu, closeBlockMenu],
   );
 
   // A block dragged inside a note must not also be dropped onto the planner's card list.
@@ -205,6 +232,7 @@ function Root({ value, onChange, label, placeholder, initialFocus = null, classN
       <div
         ref={frameRef}
         data-no-drag=""
+        data-size={size}
         className={cn(styles.frame, className)}
         onDragStart={(event) => {
           setNoteDragActive(true);

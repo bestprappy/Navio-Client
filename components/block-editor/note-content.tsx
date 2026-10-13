@@ -189,16 +189,18 @@ type NoteContentProps = {
   mode: NoteContentMode;
   /** Shown in place of an empty note. */
   emptyText?: string;
+  /** "reading" matches an editor opened with `size="reading"`, for long-form text such as a guide. */
+  size?: "compact" | "reading";
   className?: string;
 };
 
-export const NoteContent = memo(function NoteContent({ content, mode, emptyText, className }: NoteContentProps) {
+export const NoteContent = memo(function NoteContent({ content, mode, emptyText, size = "compact", className }: NoteContentProps) {
   const document = useMemo(() => parseNoteMarkdown(content), [content]);
   const context = useMemo<RenderContext>(() => ({ mode }), [mode]);
   const isEmpty = !content.trim();
 
   return (
-    <div className={cn(styles.content, className)}>
+    <div className={cn(styles.content, className)} data-size={size}>
       {isEmpty ? (
         <p className={styles.emptyNote} data-placeholder={emptyText ?? ""}>
           <br />

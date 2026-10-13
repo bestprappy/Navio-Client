@@ -1,6 +1,7 @@
 import { tripEnergyStateSchema, type TripEnergyState } from "../planId/_components/garage/trip-energy-state";
 import { isTripAnchor } from "../planId/_components/itinerary/day-anchors";
 import { isTripDestination } from "../planId/_components/itinerary/day-destinations";
+import { isTransitRouteKey } from "../planId/_components/routes/transit-route-choice";
 import { isLegTravelMode } from "../planId/_components/routes/leg-travel-mode";
 import type {
   ChecklistItem,
@@ -225,11 +226,23 @@ export async function savePlannerSnapshot(
   const requiresEnergy = energyState !== undefined;
   const requiresObservations = blocks.some(block => block.items.some(item => item.type === "place" && item.observedSocCheckpoint !== undefined));
   const requiresTravelModes = blocks.some(block => block.items.some(item => item.type === "place" && item.arrivalMode !== undefined));
+  const requiresCycling = blocks.some(block => block.items.some(item => item.type === "place" && item.arrivalMode === "bike"));
+  const requiresTransitPreference = blocks.some(block => block.items.some(item => item.type === "place" && (item.arrivalMode === "rail" || item.arrivalMode === "bus")));
+  const requiresRouteChoice = blocks.some(block => block.items.some(item => item.type === "place" && item.arrivalRouteKey != null));
   let syncedEnergy = energyState;
   let syncedBlocks = blocks;
   let localOnlySettings = false;
-  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations || requiresTravelModes || requiresPreciseCharging) {
+  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations || requiresTravelModes || requiresRouteChoice || requiresPreciseCharging) {
     const server = await getPlannerSnapshot(tripId);
+    if (requiresCycling && !server.capabilities?.includes("cycling-legs-v1")) {
+      throw new PlannerApiError("The trip service must be updated before bike journeys can be saved. Your local changes have been kept.", 409);
+    }
+    if (requiresRouteChoice && !server.capabilities?.includes("transit-route-choice-v1")) {
+      throw new PlannerApiError("The trip service must be updated before a specific transit route can be saved. Your local changes have been kept.", 409);
+    }
+    if (requiresTransitPreference && !server.capabilities?.includes("transit-preferences-v1")) {
+      throw new PlannerApiError("The trip service must be updated before rail or bus preferences can be saved. Your local changes have been kept.", 409);
+    }
     if (requiresPreciseCharging && !server.capabilities?.includes("precise-charging-v1")) {
       throw new PlannerApiError("The trip service must be updated before this precise charging plan can be saved. Your local changes have been kept.", 409);
     }
@@ -627,6 +640,7 @@ function isPlaceItem(value: Record<string, unknown>): value is PlaceItem {
     isOptionalString(value.description) &&
     isOptionalString(value.placeType) &&
     (value.arrivalMode == null || isLegTravelMode(value.arrivalMode)) &&
+    (value.arrivalRouteKey == null || isTransitRouteKey(value.arrivalRouteKey)) &&
     isOptionalNumber(value.rating) &&
     isOptionalNumber(value.reviewCount) &&
     isOptionalString(value.imageUrl) &&

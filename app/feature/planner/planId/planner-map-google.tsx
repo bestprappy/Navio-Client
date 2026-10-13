@@ -32,7 +32,6 @@ import {
   closeSelectedEvChargerAtom,
   closeSelectedSearchPlaceAtom,
   closeSelectedTripPlaceAtom,
-  routeLineModeAtom,
   evChargerErrorAtom,
   evChargerLoadingAtom,
   visibleEvChargerResultsAtom,
@@ -41,6 +40,8 @@ import {
   selectedEvChargerResultAtom,
   selectedSearchPlaceAtom,
   selectedSearchPlaceUsageAtom,
+  selectedSearchPlaceInsertionAtom,
+  selectedEvChargerInsertionAtom,
   selectedTripPlaceAtom,
   selectedTripPlacesAtom,
   selectSearchResultAtom,
@@ -49,16 +50,34 @@ import {
   stepSearchResultAtom,
   tripBlocksAtom,
 } from "./_components/overview/trip-builder.atoms";
+import { GuideMapMarkers } from "./_components/guide/guide-map-markers";
+import {
+  addGuidePlaceToDayAtom,
+  guideBrowseAtom,
+  selectedGuidePlaceIdAtom,
+  visibleGuidePlaceIdsAtom,
+} from "./_components/guide/guide.atoms";
 import { PlacePreviewPanel } from "./_components/place/place-preview-panel";
-import { fetchPlaceDetail } from "./_components/place/place-api";
+import { usePlaceDetails } from "./_components/place/use-place-details";
+import { fetchNearbyPlaces, fetchPlaceDetail } from "./_components/place/place-api";
 import { TripPlacePreviewPanel } from "./_components/place/trip-place-preview-panel";
 import { GoogleMapsExportButton } from "./_components/routes/google-maps-export-button";
 import {
+  GoogleRouteLegCamera,
   GoogleRoutePolylines,
   GoogleTransitLayer,
   TransitLinesToggle,
+  transitLinesVisibleAtom,
 } from "./_components/routes/google-route-layers";
+import { isVisitOnSegment } from "./_components/routes/route-focus";
+import {
+  nearestTransitStation,
+  stationHitRadiusMeters,
+} from "./_components/routes/transit-station-click";
 import { useTripRoutes } from "./_components/routes/trip-route-query";
+import { useVisibleRoutes } from "./_components/routes/use-visible-routes";
+import { getTransitStopMarkers } from "./_components/routes/transit-journey.helpers";
+import { TransitStopPin } from "./_components/routes/transit-stop-pin";
 
 // --- Types ---
 
@@ -185,8 +204,9 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
   const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
   const evChargerError = useAtomValue(evChargerErrorAtom);
   const selectedPlaceUsage = useAtomValue(selectedSearchPlaceUsageAtom);
+  const selectedPlaceInsertion = useAtomValue(selectedSearchPlaceInsertionAtom);
+  const selectedChargerInsertion = useAtomValue(selectedEvChargerInsertionAtom);
   const activeBlockId = useAtomValue(activeBlockIdAtom);
-  const routeLineMode = useAtomValue(routeLineModeAtom);
   const selectLocationVisit = useTripLocationSelection();
   const revealPlanCard = useRevealPlanCard();
   const selectSearchResult = useSetAtom(selectSearchResultAtom);
@@ -199,6 +219,13 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
   const closeSelectedTripPlace = useSetAtom(closeSelectedTripPlaceAtom);
   const startPlaceSearch = useSetAtom(startPlaceSearchAtom);
   const readOnly = useAtomValue(plannerReadOnlyAtom);
+  const transitLinesVisible = useAtomValue(transitLinesVisibleAtom);
+  const isBrowsingGuide = useAtomValue(guideBrowseAtom) !== null;
+  const guidePlaceIds = useAtomValue(visibleGuidePlaceIdsAtom);
+  const selectedGuidePlaceId = useAtomValue(selectedGuidePlaceIdAtom);
+  // Guide places carry no photo or rating of their own; the preview loads them live.
+  const guidePlaceDetails = usePlaceDetails(selectedGuidePlaceId ?? "");
+  const addGuidePlaceToDay = useSetAtom(addGuidePlaceToDayAtom);
 
   const selectedTripPlaceIds = useMemo(
     () => new Set(selectedTripPlaces.map((place) => place.placeId)),
@@ -223,19 +250,24 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
     () => tripRoutes.data?.segments ?? [],
     [tripRoutes.data?.segments],
   );
-  // "all" mode draws every day's route. Otherwise only the active day's route is
-  // drawn — the day the itinerary is scrolled to (or was last pressed).
-  const isShowingAllRoutes = routeLineMode === "all";
-  const visibleRouteSegments = useMemo(
-    () =>
-      isShowingAllRoutes
-        ? routeSegments
-        : activeBlockId
-          ? routeSegments.filter((segment) => segment.blockId === activeBlockId)
-          : [],
-    [isShowingAllRoutes, routeSegments, activeBlockId],
-  );
-  const routeStatusMessage = !isShowingAllRoutes && !activeBlockId
+  const visibleRoutes = useVisibleRoutes(routeSegments);
+  const focusedSegment = visibleRoutes.focusedSegment;
+  // The camera stays on a place, charger or search result being inspected.
+  const followsFocusedLeg = !isBrowsingGuide && !selectedTripPlace && !selectedPlace && !selectedEvChargerResult;
+  // While browsing a guide, the plan's routes and pins step back behind the guide's pins.
+  const drawnRouteSegments = isBrowsingGuide ? [] : visibleRoutes.segments;
+  const previewPlace = selectedPlace && selectedGuidePlaceId && guidePlaceDetails.data
+    ? {
+        ...selectedPlace,
+        imageUrl: guidePlaceDetails.data.imageUrl,
+        rating: guidePlaceDetails.data.rating,
+        reviewCount: guidePlaceDetails.data.reviewCount,
+        openingHours: guidePlaceDetails.data.openingHours,
+        phone: guidePlaceDetails.data.phone,
+        website: guidePlaceDetails.data.website,
+      }
+    : selectedPlace;
+  const routeStatusMessage = !visibleRoutes.hasScope
     ? null
     : tripRoutes.isFetching
       ? "Calculating routes..."
@@ -269,19 +301,31 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
 
   const handleMapPoiClick = useCallback(
     async (event: MapMouseEvent) => {
-      const placeId = event.detail.placeId;
-      if (!placeId || readOnly) return;
-      event.stop();
+      if (readOnly) return;
+      const { placeId, latLng } = event.detail;
+      // The transit overlay hides station click targets, so look the station up by position.
+      const stationRadius =
+        !placeId && transitLinesVisible && latLng
+          ? stationHitRadiusMeters(latLng.lat, event.map.getZoom() ?? 0)
+          : null;
+      if (!placeId && stationRadius === null) return;
+      if (placeId) event.stop();
 
       try {
-        const place = await fetchPlaceDetail(placeId, "GOOGLE");
+        const place = placeId
+          ? await fetchPlaceDetail(placeId, "GOOGLE")
+          : latLng && stationRadius !== null
+            ? nearestTransitStation(await fetchNearbyPlaces(latLng.lat, latLng.lng, stationRadius))
+            : null;
+        if (!place) return;
         const blockId = (activeBlockId || tripBlocks[0]?.id) ?? "";
         startPlaceSearch({ blockId, result: place });
-      } catch {
-        // Silently ignore failed POI detail fetches
+      } catch (error) {
+        // A failed lookup leaves the map as it was; there is nothing for the user to retry.
+        console.warn("PlannerMapGoogle: map place click lookup failed", error);
       }
     },
-    [activeBlockId, readOnly, startPlaceSearch, tripBlocks],
+    [activeBlockId, readOnly, startPlaceSearch, transitLinesVisible, tripBlocks],
   );
 
   if (!googleMapsApiKey) {
@@ -313,18 +357,22 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
           <MapResizeHandler sidebarCollapsed={sidebarCollapsed} />
           <GoogleTransitLayer />
           <GoogleRoutePolylines
-            segments={visibleRouteSegments}
+            segments={drawnRouteSegments}
             routeColorByBlockId={routeColorByBlockId}
+            focusedSegmentId={focusedSegment?.id ?? null}
           />
+          <GoogleRouteLegCamera segment={focusedSegment} enabled={followsFocusedLeg} />
 
           {locationMarkers.map(({ key, lat, lng, visits }) => {
             const ordered = orderVisitsForActiveBlock(visits, activeBlockId, selectedTripPlace?.id);
+            const isLegEnd = focusedSegment ? visits.some((visit) => isVisitOnSegment(visit, focusedSegment)) : false;
             return (
-              <MapMarker key={key} position={{ lat, lng }} zIndex={ordered[0]?.blockId === activeBlockId ? 21 : 20}>
-                <TripLocationPin visits={ordered} selectedItemId={selectedTripPlace?.id} onSelect={selectLocationVisit} />
+              <MapMarker key={key} position={{ lat, lng }} zIndex={isLegEnd ? 22 : ordered[0]?.blockId === activeBlockId ? 21 : 20}>
+                <TripLocationPin visits={ordered} selectedItemId={selectedTripPlace?.id} dimmed={isBrowsingGuide || (Boolean(focusedSegment) && !isLegEnd)} onSelect={selectLocationVisit} />
               </MapMarker>
             );
           })}
+          {getTransitStopMarkers(drawnRouteSegments).map((stop) => <MapMarker key={stop.id} position={{ lat: stop.coordinate[1], lng: stop.coordinate[0] }} zIndex={18}><TransitStopPin stop={stop} /></MapMarker>)}
 
           {/* EV charger markers */}
           {evChargerResults.map((result) => {
@@ -389,7 +437,7 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
 
           {/* Search result markers */}
           {activeSearch?.results.map((place, index) => {
-            if (selectedTripPlaceIds.has(place.id)) return null;
+            if (selectedTripPlaceIds.has(place.id) || guidePlaceIds.has(place.id)) return null;
 
             const isSelected = activeSearch.selectedIndex === index;
 
@@ -427,6 +475,7 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
               </MapMarker>
             );
           })}
+          {isBrowsingGuide && <GuideMapMarkers />}
         </Map>
       </APIProvider>
 
@@ -452,18 +501,26 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
         </div>
       ) : null}
 
-      {activeSearch && selectedPlace ? (
+      {activeSearch && previewPlace ? (
         <PlacePreviewPanel
-          place={selectedPlace}
+          place={previewPlace}
+          isLoadingDetails={Boolean(selectedGuidePlaceId) && guidePlaceDetails.isLoading}
           currentIndex={activeSearch.selectedIndex}
           total={activeSearch.results.length}
           isAdded={selectedPlaceUsage.isAdded}
           usageLabel={selectedPlaceUsage.label}
           targetLabel={selectedPlaceUsage.targetLabel}
-          canAddToTrip={canAddToTrip}
+          insertionLabel={selectedPlaceInsertion.label}
+          addUnavailableReason={selectedPlaceInsertion.error}
+          canAddToTrip={canAddToTrip && selectedPlaceInsertion.isValid}
           onPrevious={() => stepSearchResult({ direction: "previous" })}
           onNext={() => stepSearchResult({ direction: "next" })}
           onAddToTrip={() => {
+            // The plan is hidden while browsing, so the guide keeps focus instead of scrolling to the new card.
+            if (selectedGuidePlaceId) {
+              addGuidePlaceToDay({ blockId: activeSearch.blockId, place: previewPlace });
+              return;
+            }
             const itemId = addSelectedPlaceToTrip();
             if (itemId) revealPlanCard(activeSearch.blockId, itemId);
           }}
@@ -472,6 +529,9 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
       ) : selectedEvChargerResult ? (
         <ChargerPreviewPanel
           result={selectedEvChargerResult}
+          insertionLabel={selectedChargerInsertion.label}
+          addUnavailableReason={selectedChargerInsertion.error}
+          canAddToTrip={selectedChargerInsertion.isValid}
           isAdded={selectedEvChargerIsAdded}
           isCompatible={
             activeEvCar

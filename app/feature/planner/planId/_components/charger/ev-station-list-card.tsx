@@ -13,6 +13,7 @@ type EvStationListCardProps = {
   distanceKm?: number;
   isAdded: boolean;
   isCompatible?: boolean;
+  canAdd?: boolean;
   isSelected: boolean;
   onAdd: () => void;
   onSelect: () => void;
@@ -53,11 +54,12 @@ export function EvStationListCard({
   distanceKm,
   isAdded,
   isCompatible = true,
+  canAdd = true,
   isSelected,
   onAdd,
   onSelect,
 }: EvStationListCardProps) {
-  const addDisabled = isAdded || !isCompatible;
+  const addDisabled = isAdded || !isCompatible || !canAdd;
   const address = charger.address ?? charger.location.address;
 
   return (

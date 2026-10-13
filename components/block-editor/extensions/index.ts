@@ -6,8 +6,9 @@ import StarterKit from "@tiptap/starter-kit";
 
 import { isSafeHref } from "../note-document";
 import { BlockKeymap, MarkdownPaste, type BlockEditorController } from "./block-keymap";
+import type { NoteEmbed } from "./embed-node";
 import { Callout, Highlight, NoteDetails, NoteDetailsContent, NoteHeading, TextColor } from "./note-schema";
-import { SlashCommand, type createSlashMenuStore } from "./slash-command";
+import { SlashCommand, type SlashEmbed, type createSlashMenuStore } from "./slash-command";
 
 export const DROP_CURSOR_CLASS = "note-drop-cursor";
 
@@ -15,9 +16,22 @@ type NoteExtensionOptions = {
   placeholder: string;
   slashStore: ReturnType<typeof createSlashMenuStore>;
   controller: BlockEditorController;
+  embeds: readonly NoteEmbed[];
 };
 
-export function createNoteExtensions({ placeholder, slashStore, controller }: NoteExtensionOptions): Extensions {
+function toSlashEmbed(embed: NoteEmbed): SlashEmbed {
+  return {
+    id: embed.name,
+    label: embed.label,
+    icon: embed.icon,
+    group: "embed",
+    keywords: embed.keywords,
+    createAttributes: embed.createAttributes,
+  };
+}
+
+export function createNoteExtensions({ placeholder, slashStore, controller, embeds }: NoteExtensionOptions): Extensions {
+  const placeholdersAfter = new Map(embeds.flatMap((embed) => (embed.placeholderAfter ? [[embed.name, embed.placeholderAfter] as const] : [])));
   return [
     StarterKit.configure({
       heading: false,
@@ -51,13 +65,17 @@ export function createNoteExtensions({ placeholder, slashStore, controller }: No
         if (node.type.name === "detailsSummary") return "Toggle";
         if (node.type.name === "codeBlock") return "";
         if (editor.isEmpty) return placeholder;
-        const parent = editor.state.doc.resolve(pos).parent.type.name;
+        const $pos = editor.state.doc.resolve(pos);
+        const after = $pos.nodeBefore ? placeholdersAfter.get($pos.nodeBefore.type.name) : undefined;
+        if (after && node.type.name === "paragraph") return after;
+        const parent = $pos.parent.type.name;
         if (parent === "listItem" || parent === "taskItem") return "List";
         return "Type / for commands";
       },
     }),
-    SlashCommand.configure({ store: slashStore }),
+    SlashCommand.configure({ store: slashStore, embeds: embeds.filter((embed) => embed.menu !== false).map(toSlashEmbed) }),
     BlockKeymap.configure({ controller }),
     MarkdownPaste,
+    ...embeds.map((embed) => embed.node),
   ];
 }

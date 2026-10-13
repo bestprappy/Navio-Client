@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Image from "next/image";
 import {
   ChevronLeft,
@@ -41,6 +42,8 @@ type PlacePreviewPanelProps = {
   isAdded: boolean;
   usageLabel?: string;
   targetLabel?: string;
+  insertionLabel?: string;
+  addUnavailableReason?: string;
   showAddAction?: boolean;
   savedToTrip?: boolean;
   isLoadingDetails?: boolean;
@@ -49,6 +52,12 @@ type PlacePreviewPanelProps = {
   onNext?: () => void;
   onAddToTrip?: () => void;
   onClose: () => void;
+  /** Replaces the "Saved to trip" / "1 of 3" label, for hosts other than a trip. */
+  statusLabel?: string;
+  /** Replaces the add button's text, for hosts other than a trip. */
+  addLabel?: string;
+  /** Shown above the add button in place of "To …", such as a picker for where the place goes. */
+  addTarget?: ReactNode;
 };
 
 function formatReviewCount(count: number): string {
@@ -74,6 +83,8 @@ export function PlacePreviewPanel({
   isAdded,
   usageLabel,
   targetLabel,
+  insertionLabel,
+  addUnavailableReason,
   showAddAction = true,
   savedToTrip = false,
   isLoadingDetails = false,
@@ -82,6 +93,9 @@ export function PlacePreviewPanel({
   onNext,
   onAddToTrip,
   onClose,
+  statusLabel,
+  addLabel,
+  addTarget,
 }: PlacePreviewPanelProps) {
   return (
     <aside aria-label="Place details" className="absolute bottom-4 left-4 right-4 z-10 max-h-[calc(100%-2rem)] overflow-y-auto rounded-sm border border-border bg-card text-card-foreground shadow-xl">
@@ -101,7 +115,7 @@ export function PlacePreviewPanel({
       <div className="p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <span className="rounded-sm bg-muted px-2 py-1 text-xs font-semibold text-muted-foreground">
-            {savedToTrip ? "Saved to trip" : `${currentIndex + 1} of ${total}`}
+            {statusLabel ?? (savedToTrip ? "Saved to trip" : `${currentIndex + 1} of ${total}`)}
           </span>
           <button
             type="button"
@@ -226,20 +240,21 @@ export function PlacePreviewPanel({
             {usageLabel ? <p role="status" className="flex items-center gap-1.5 text-right text-xs text-muted-foreground">
               <Check className="size-3.5 shrink-0" aria-hidden="true" />{usageLabel}
             </p> : null}
+            {addTarget}
             <Button
               type="button"
               size="sm"
               className="rounded-sm"
               onClick={onAddToTrip}
               disabled={!canAddToTrip || !onAddToTrip}
-              aria-label={targetLabel && onAddToTrip ? `${isAdded ? "Add another visit to" : "Add to"} ${targetLabel}` : undefined}
+              aria-label={targetLabel && onAddToTrip ? `${isAdded ? "Add another visit to" : "Add to"} ${targetLabel}${insertionLabel ? `, ${insertionLabel.toLowerCase()}` : ""}` : undefined}
             >
-              {isAdded ? onAddToTrip ? "Add another visit" : "Added" : "Add to trip"}
+              {addLabel ?? (isAdded ? onAddToTrip ? "Add another visit" : "Added" : "Add to trip")}
             </Button>
-            {targetLabel && canAddToTrip ? <p className="text-xs text-muted-foreground">To {targetLabel}</p> : null}
+            {targetLabel && canAddToTrip ? <p className="text-right text-xs text-muted-foreground">To {targetLabel}{insertionLabel ? <span className="block">{insertionLabel}</span> : null}</p> : null}
             {!canAddToTrip ? (
               <p className="text-xs text-muted-foreground">
-                Add a day to your itinerary first
+                {addUnavailableReason ?? "Add a day to your itinerary first"}
               </p>
             ) : null}
           </div> : null}

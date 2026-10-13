@@ -248,10 +248,10 @@ function TripBlockPlaceActions({
   );
 }
 
-function TripBlockItems({ hasStart = false }: { hasStart?: boolean }) {
+function TripBlockItems({ hasStart = false, placeSearchBias }: { hasStart?: boolean; placeSearchBias?: PlaceSearchBias }) {
   const { block } = useTripBlockContext();
 
-  return <SortableBlockItems block={block} hasStart={hasStart} />;
+  return <SortableBlockItems block={block} hasStart={hasStart} placeSearchBias={placeSearchBias} />;
 }
 
 export const TripBlock = Object.assign(TripBlockRoot, {

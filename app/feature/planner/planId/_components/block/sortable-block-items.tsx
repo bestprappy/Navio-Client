@@ -16,13 +16,19 @@ import {
 } from "../constants/types";
 import { useTripCharging } from "../garage/use-trip-charging";
 import { getDayPlacePositions, getLastDayPlaceId } from "../itinerary/day-anchors";
+import { routeStopAttributes } from "../itinerary/route-stop-tracker";
 import { getTripItemElementId } from "../itinerary/use-reveal-plan-card";
-import { plannerReadOnlyAtom, reorderBlockItemsAtom } from "../overview/trip-builder.atoms";
+import { closeActiveSearchAtom, plannerReadOnlyAtom, reorderBlockItemsAtom, tripBlocksAtom } from "../overview/trip-builder.atoms";
+import { type PlaceSearchBias } from "../place/add-place-input";
+import { InsertItemRow } from "./insert-item-row";
+import { getItemInsertionLabel } from "./item-insertion";
+import { useEvStationSearch } from "../charger/add-ev-station-button";
 import { DischargeSegmentInfo } from "../routes/charge-segment-info";
-import { automaticLegTravelMode, resolveLegTravelMode } from "../routes/leg-travel-mode";
-import { LegTravelModeMenu } from "../routes/leg-travel-mode-menu";
+import { FocusRouteLegButton } from "../routes/focus-route-leg-button";
+import { resolveLegTravelMode } from "../routes/leg-travel-mode";
 import { RouteSegmentInfo } from "../routes/route-segment-info";
-import { getRouteSegmentByToItemId } from "../routes/trip-route.helpers";
+import { RouteJourneyOptions } from "../routes/route-journey-options";
+import { getRouteSegmentByToItemId, getTripRouteGroups } from "../routes/trip-route.helpers";
 import { useTripRoutes } from "../routes/trip-route-query";
 import { TripChecklistItem } from "./items/trip-checklist-item";
 import { TripNoteItem } from "./items/trip-note-item";
@@ -31,6 +37,7 @@ import { TripPlaceCard } from "./items/trip-place-card";
 type SortableBlockItemsProps = {
   block: TripBlockData;
   hasStart?: boolean;
+  placeSearchBias?: PlaceSearchBias;
 };
 
 type DragPayload = {
@@ -78,7 +85,13 @@ function renderBlockItem(
   }
 }
 
-export function SortableBlockItems({ block, hasStart = false }: SortableBlockItemsProps) {
+export function SortableBlockItems({ block, hasStart = false, placeSearchBias }: SortableBlockItemsProps) {
+  const [activeInsertionId, setActiveInsertionId] = useState<string | null>(null);
+  const closeActiveSearch = useSetAtom(closeActiveSearchAtom);
+  const evStationSearch = useEvStationSearch({
+    blockId: block.id,
+    fallbackAnchor: placeSearchBias ? { id: `destination-${block.id}`, lat: placeSearchBias.lat, lng: placeSearchBias.lng } : undefined,
+  });
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [interactiveItemId, setInteractiveItemId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -87,6 +100,8 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
   const readOnly = useAtomValue(plannerReadOnlyAtom);
   const charging = useTripCharging();
   const tripRoutes = useTripRoutes();
+  const tripBlocks = useAtomValue(tripBlocksAtom);
+  const routePoints = useMemo(() => getTripRouteGroups(tripBlocks).find((group) => group.blockId === block.id)?.points ?? [], [block.id, tripBlocks]);
   const routeSegments = useMemo(
     () => tripRoutes.data?.segments ?? [],
     [tripRoutes.data?.segments],
@@ -111,6 +126,25 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
   const blockColor = getTripBlockColorById(block.colorId);
   const placePositions = getDayPlacePositions(block, hasStart);
   const lastDayPlaceId = getLastDayPlaceId(block);
+
+  function insertionControl(controlId: string, beforeItemId?: string, afterItemId?: string) {
+    return (
+      <InsertItemRow
+        blockId={block.id}
+        beforeItemId={beforeItemId}
+        afterItemId={afterItemId}
+        label={getItemInsertionLabel(block, beforeItemId, hasStart) ?? "Add an item"}
+        searchBias={placeSearchBias}
+        canAddEvStation={evStationSearch.canSearch && !evStationSearch.isLoadingEvChargers}
+        onAddEvStation={() => void evStationSearch.openStationList(beforeItemId)}
+        open={activeInsertionId === controlId}
+        onOpenChange={(isOpen) => {
+          if (isOpen) closeActiveSearch();
+          setActiveInsertionId(isOpen ? controlId : null);
+        }}
+      />
+    );
+  }
 
   function reorderByOffset(itemId: string, offset: number) {
     const itemIndex = block.items.findIndex((item) => item.id === itemId);
@@ -185,13 +219,16 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
         // The first stop after the day's start anchor leaves from the anchor, which is never a station.
         const legFrom = previousPlaceByItemId.get(item.id);
         const legMode = isPlaceItem(item) ? resolveLegTravelMode(legFrom, item) : "drive";
-        const automaticMode = isPlaceItem(item) ? automaticLegTravelMode(legFrom, item) : "drive";
+        const pointIndex = routePoints.findIndex((point) => point.id === item.id);
+        const fromPoint = routePoints[pointIndex - 1];
+        const toPoint = routePoints[pointIndex];
 
         return (
           <Fragment key={item.id}>
             {shouldShowRouteInfo ? (
               <div
                 role="listitem"
+                {...routeStopAttributes(item.id)}
                 className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2 rounded-sm"
               >
                 <div
@@ -200,29 +237,25 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
                 >
                   <span className="h-full min-h-8 w-px bg-border" />
                 </div>
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 py-1">
-                  <RouteSegmentInfo
-                    segment={seg ?? null}
-                    isLoading={tripRoutes.isFetching && !tripRoutes.data}
-                    isError={tripRoutes.isError}
-                    routeColor={blockColor.value}
-                    plannedMode={legMode}
-                    modeControl={readOnly ? undefined : (
-                      <LegTravelModeMenu
-                        blockId={block.id}
-                        itemId={item.id}
-                        mode={legMode}
-                        automaticMode={automaticMode}
-                        routeColor={blockColor.value}
-                      />
-                    )}
-                  />
-                  {legMode === "drive" ? (
-                    <DischargeSegmentInfo
-                      batteryFrom={fromState?.departurePct}
-                      batteryTo={toState?.arrivalPct}
+                <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1.5 py-1">
+                  {fromPoint && toPoint ? (
+                    <RouteJourneyOptions
+                      key={`${fromPoint.id}>${toPoint.id}`}
+                      blockId={block.id}
+                      from={fromPoint}
+                      to={toPoint}
+                      segment={seg ?? null}
+                      plannedMode={legMode}
+                      automaticRail={isPlaceItem(item) && !item.arrivalMode && Boolean(toPoint.railOnly)}
+                      routeColor={blockColor.value}
+                      isLoading={tripRoutes.isFetching && !tripRoutes.data}
+                      isError={tripRoutes.isError}
+                      trailing={<>
+                        {legMode === "drive" ? <DischargeSegmentInfo batteryFrom={fromState?.departurePct} batteryTo={toState?.arrivalPct} /> : null}
+                        {seg ? <FocusRouteLegButton blockId={block.id} stopId={item.id} toName={seg.toName} className="ml-auto" /> : null}
+                      </>}
                     />
-                  ) : null}
+                  ) : <RouteSegmentInfo segment={seg ?? null} isLoading={tripRoutes.isFetching && !tripRoutes.data} isError={tripRoutes.isError} routeColor={blockColor.value} plannedMode={legMode} />}
                 </div>
               </div>
             ) : null}
@@ -230,6 +263,7 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
             <div
               id={getTripItemElementId(item.id)}
               role="listitem"
+              {...(shouldShowRouting && isRouteableItem ? routeStopAttributes(item.id) : {})}
               draggable={!readOnly && interactiveItemId !== item.id}
               onPointerDownCapture={(event) => {
                 const target = event.target as HTMLElement;
@@ -289,15 +323,19 @@ export function SortableBlockItems({ block, hasStart = false }: SortableBlockIte
                 </Button>
               </div>}
 
-              {renderBlockItem(
-                block,
-                item,
-                placePosition,
-                shouldShowRouting,
-                item.id === lastDayPlaceId,
-                itemBatteryState?.observedSocPct ?? itemBatteryState?.arrivalPct,
-                itemBatteryState?.departurePct,
-              )}
+              <div className="group/plan-card min-w-0">
+                {!readOnly && index === 0 && insertionControl(`before-${item.id}`, item.id)}
+                {renderBlockItem(
+                  block,
+                  item,
+                  placePosition,
+                  shouldShowRouting,
+                  item.id === lastDayPlaceId,
+                  itemBatteryState?.observedSocPct ?? itemBatteryState?.arrivalPct,
+                  itemBatteryState?.departurePct,
+                )}
+                {!readOnly && insertionControl(`after-${item.id}`, block.items[index + 1]?.id, item.id)}
+              </div>
             </div>
           </Fragment>
         );

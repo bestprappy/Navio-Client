@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTripMetadata, useUpdateTripMetadata } from "../../../_components/use-trip-metadata";
 import { DayDestinationPicker } from "./day-destination-picker";
@@ -12,7 +12,7 @@ import { DayAnchorRail } from "./day-anchor-rail";
 import { EMPTY_DAY_ANCHORS, getDayPlacePositions, resolveDayAnchors } from "./day-anchors";
 import { isPlaceItem, type TripAnchor, type TripBlockData, type TripDestination } from "../constants/types";
 import { useTripDates } from "../overview/use-trip-dates";
-import { CalendarIcon, CalendarPlus, ChevronsDownUp, ChevronsUpDown, Route } from "lucide-react";
+import { CalendarIcon, CalendarPlus, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { addDays, format, isAfter, parseISO } from "date-fns";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 
@@ -33,14 +33,17 @@ import {
   tripBlocksAtom,
   openBlockIdsAtom,
   plannerReadOnlyAtom,
-  routeLineModeAtom,
   toggleBlockOpenAtom,
   type DayAnchorEdge,
 } from "../overview/trip-builder.atoms";
 import { TripBlock } from "../block/trip-block";
 import { DayRouteOverview } from "../garage/day-route-overview";
 import { EmptyItineraryCallout } from "./empty-itinerary-callout";
+import { RouteLineModeSwitch } from "./route-line-mode-switch";
 import { InlineAddDivider } from "../inline-add-divider";
+import { PopularPlaces } from "../guide/popular-places";
+import { ExportItineraryDialog } from "./export/export-itinerary-dialog";
+import type { ItineraryTableAnchors } from "./export/itinerary-table";
 
 function getNextAvailableBlockDate(
   from: Date,
@@ -64,6 +67,8 @@ type ItinerarySectionProps = {
   longitude: number;
   /** Read-only plans show where each day starts and ends here, in place of the anchor editor. */
   renderDayAnchors?: (block: TripBlockData) => ReactNode;
+  /** Day starts and ends for the table export when the blocks do not carry them, as on shared plans. */
+  exportAnchors?: ReadonlyMap<string, ItineraryTableAnchors>;
 };
 
 export function ItinerarySection({
@@ -71,6 +76,7 @@ export function ItinerarySection({
   latitude,
   longitude,
   renderDayAnchors,
+  exportAnchors,
 }: ItinerarySectionProps) {
   const blocks = useAtomValue(itineraryBlocksAtom);
   const readOnly = useAtomValue(plannerReadOnlyAtom);
@@ -80,8 +86,6 @@ export function ItinerarySection({
   const setBlocks = useSetAtom(tripBlocksAtom);
   const [openIds, setOpenIds] = useAtom(openBlockIdsAtom);
   const toggleOpen = useSetAtom(toggleBlockOpenAtom);
-  const [routeLineMode, setRouteLineMode] = useAtom(routeLineModeAtom);
-  const isShowingAllRoutes = routeLineMode === "all";
   const areAllDaysOpen = blocks.length > 0 && blocks.every((block) => openIds.includes(block.id));
   function toggleAllDays() {
     setOpenIds((ids) =>
@@ -98,6 +102,14 @@ export function ItinerarySection({
   };
   const destinations = resolveDayDestinations(blocks, initialDestination);
   const dayAnchors = resolveDayAnchors(blocks);
+  const tableAnchors = useMemo(() => {
+    if (exportAnchors) return exportAnchors;
+    const toTableAnchor = (anchor: TripAnchor | null) => anchor && { name: anchor.name, address: anchor.address };
+    return new Map([...resolveDayAnchors(blocks)].map(([blockId, anchors]) => [
+      blockId,
+      { start: toTableAnchor(anchors.start), end: toTableAnchor(anchors.end) },
+    ]));
+  }, [blocks, exportAnchors]);
   const setDayAnchor = useSetAtom(setDayAnchorAtom);
   const focusAnchor = useSetAtom(focusedAnchorAtom);
   const firstBlockId = [...blocks].sort((a, b) => a.date.localeCompare(b.date))[0]?.id;
@@ -107,7 +119,7 @@ export function ItinerarySection({
   }
   async function changeDestination(blockId: string, destination: TripDestination | null) {
     if (blockId === firstBlockId && destination) {
-      await updateMetadata.mutateAsync({ destinationId: destination.id, destinationName: destination.name, destinationLat: destination.lat, destinationLng: destination.lng });
+      await updateMetadata.mutateAsync({ destinationId: destination.id });
     }
     setBlocks((current) => current.map((block) => block.id === blockId ? { ...block, destination } : block));
   }
@@ -224,20 +236,9 @@ export function ItinerarySection({
                 />
               ) : (
                 <>
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <button
-                      type="button"
-                      aria-pressed={isShowingAllRoutes}
-                      title={isShowingAllRoutes ? "Only draw the route of the day you press" : "Draw every day's route on the map"}
-                      className={cn(
-                        "flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                        isShowingAllRoutes ? "bg-muted text-primary" : "text-muted-foreground",
-                      )}
-                      onClick={() => setRouteLineMode(isShowingAllRoutes ? "day" : "all")}
-                    >
-                      <Route className="size-4" aria-hidden="true" />
-                      {isShowingAllRoutes ? "Show routes by day" : "Show all routes"}
-                    </button>
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <RouteLineModeSwitch />
+                    <ExportItineraryDialog anchors={tableAnchors} fileName={metadata.data?.destinationName ?? destinationName} />
                     <button
                       type="button"
                       aria-expanded={areAllDaysOpen}
@@ -289,6 +290,7 @@ export function ItinerarySection({
                             <DayAnchorRail.Summary />
                           )}
                         </DayAnchorRail.Root>
+                        <PopularPlaces blockId={block.id} destination={destination} />
                         </>}
                         <button type="button" aria-expanded={isOpen} aria-controls={`day-content-${block.id}`} className="flex min-h-10 w-full items-center justify-between rounded-lg px-2 text-sm text-primary hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={() => toggleOpen(block.id)}>
                           <span>{block.items.length} {block.items.length === 1 ? "item" : "items"}</span><span>{isOpen ? "Show less" : "Show more"}</span>
@@ -297,7 +299,7 @@ export function ItinerarySection({
                       <div id={`day-content-${block.id}`} hidden={!isOpen}>
                       {isOpen && <TripBlock.Content>
                         <AnchorStopCard blockId={block.id} edge="start" anchor={anchors.start} position={1} colorId={block.colorId} />
-                        <TripBlock.Items hasStart={!!anchors.start} />
+                        <TripBlock.Items hasStart={!!anchors.start} placeSearchBias={{ label: destination.name, lat: destination.lat, lng: destination.lng }} />
                         {anchors.end && (anchors.start || block.items.some(isPlaceItem)) && <EndAnchorRouteInfo blockId={block.id} routeColor={getTripBlockColorById(block.colorId).value} />}
                         <AnchorStopCard blockId={block.id} edge="end" anchor={anchors.end} position={placeCount + (anchors.start ? 2 : 1)} colorId={block.colorId} />
                         <DayRouteOverview

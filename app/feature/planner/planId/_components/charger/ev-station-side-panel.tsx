@@ -12,6 +12,8 @@ import type { EvCharger } from "../constants/types";
 import {
   compatibleChargersOnlyAtom,
   evChargerLoadingAtom,
+  selectedEvChargerInsertionAtom,
+  tripBlocksAtom,
   type EvChargerMapResult,
 } from "../overview/trip-builder.atoms";
 import {
@@ -31,6 +33,7 @@ import { BatterySlider } from "../garage/battery-slider";
 import { useTripCharging } from "../garage/use-trip-charging";
 
 import { EvStationListCard } from "./ev-station-list-card";
+import { getItemInsertionIndex } from "../block/item-insertion";
 import { EvRouteOptimizationPanel } from "./ev-route-optimization-panel";
 import { filterEvChargers } from "./ev-station-api";
 
@@ -39,7 +42,7 @@ type EvStationSidePanelProps = {
   results: EvChargerMapResult[];
   selectedResult: EvChargerMapResult | null;
   addedChargerIds: Set<string>;
-  onAddCharger: (blockId: string, charger: EvCharger) => void;
+  onAddCharger: (blockId: string, charger: EvCharger, beforeItemId?: string) => void;
   onClose: () => void;
   onSelect: (chargerId: string) => void;
 };
@@ -68,6 +71,8 @@ export function EvStationSidePanel({
   const activeEvCar = useAtomValue(activeEvCarAtom);
   const activeVehicle = useAtomValue(activeVehicleAtom);
   const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
+  const blocks = useAtomValue(tripBlocksAtom);
+  const insertion = useAtomValue(selectedEvChargerInsertionAtom);
   const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
   const chargeStopTargetPct = useAtomValue(chargeStopTargetPctAtom);
   const setChargeStopTargetPct = useSetAtom(setChargeStopTargetPctAtom);
@@ -112,7 +117,7 @@ export function EvStationSidePanel({
   }
 
   function addCharger(result: EvChargerMapResult) {
-    onAddCharger(result.targetBlockId, result.charger);
+    onAddCharger(result.targetBlockId, result.charger, result.beforeItemId);
   }
 
   return (
@@ -132,6 +137,7 @@ export function EvStationSidePanel({
 
       <PlannerSidePanel.Body>
         <div className="border-b border-border bg-card px-4 py-4">
+          {insertion.label || insertion.error && selectedResult ? <p className="mb-3 text-xs text-muted-foreground">{insertion.error ?? insertion.label}</p> : null}
           <div className="relative min-w-0 flex-1">
             <Search
               className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
@@ -219,6 +225,7 @@ export function EvStationSidePanel({
                     charger={charger}
                     distanceKm={result.distanceKm}
                     isAdded={addedChargerIds.has(charger.id)}
+                    canAdd={blocks.some((block) => block.id === result.targetBlockId && getItemInsertionIndex(block, result.beforeItemId) >= 0)}
                     isCompatible={getVehicleCompatibility(charger)}
                     isSelected={isSelected}
                     onAdd={() => addCharger(result)}

@@ -1,0 +1,40 @@
+import {
+  Baby,
+  BedDouble,
+  Camera,
+  Coffee,
+  Heart,
+  Landmark,
+  Mountain,
+  Music,
+  ShoppingBag,
+  Ticket,
+  TrainFront,
+  Trees,
+  UtensilsCrossed,
+  Waves,
+  Wine,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
+
+import type { GuideIconId } from "./guide-model";
+
+export const GUIDE_ICONS: Record<GuideIconId, { label: string; Icon: LucideIcon }> = {
+  landmark: { label: "Landmark", Icon: Landmark },
+  utensils: { label: "Food", Icon: UtensilsCrossed },
+  bed: { label: "Stay", Icon: BedDouble },
+  coffee: { label: "Cafe", Icon: Coffee },
+  wine: { label: "Nightlife", Icon: Wine },
+  shopping: { label: "Shopping", Icon: ShoppingBag },
+  trees: { label: "Nature", Icon: Trees },
+  waves: { label: "Beach", Icon: Waves },
+  mountain: { label: "Outdoors", Icon: Mountain },
+  camera: { label: "Viewpoint", Icon: Camera },
+  ticket: { label: "Activity", Icon: Ticket },
+  music: { label: "Music", Icon: Music },
+  train: { label: "Transport", Icon: TrainFront },
+  charging: { label: "EV charging", Icon: Zap },
+  baby: { label: "Family", Icon: Baby },
+  heart: { label: "Favourite", Icon: Heart },
+};

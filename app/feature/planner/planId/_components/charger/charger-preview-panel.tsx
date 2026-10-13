@@ -12,6 +12,9 @@ type ChargerPreviewPanelProps = {
   result: EvChargerMapResult;
   isAdded: boolean;
   isCompatible?: boolean;
+  canAddToTrip?: boolean;
+  insertionLabel?: string;
+  addUnavailableReason?: string;
   onAddToTrip: () => void;
   onClose: () => void;
 };
@@ -20,6 +23,9 @@ export function ChargerPreviewPanel({
   result,
   isAdded,
   isCompatible = true,
+  canAddToTrip = true,
+  insertionLabel,
+  addUnavailableReason,
   onAddToTrip,
   onClose,
 }: ChargerPreviewPanelProps) {
@@ -31,7 +37,7 @@ export function ChargerPreviewPanel({
       : `${charger.availableConnectors} of ${charger.totalConnectors} available`;
 
   return (
-    <aside className="absolute bottom-4 left-4 right-4 z-10 flex max-h-[calc(100%-2rem)] min-h-0 flex-col overflow-hidden rounded-sm border border-border bg-card p-4 text-card-foreground shadow-xl">
+    <aside aria-label="EV station details" className="absolute bottom-4 left-4 right-4 z-10 flex max-h-[calc(100%-2rem)] min-h-0 flex-col overflow-hidden rounded-sm border border-border bg-card p-4 text-card-foreground shadow-xl">
       <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1 rounded-sm bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
@@ -116,13 +122,14 @@ export function ChargerPreviewPanel({
         </div>
       </div>
 
-      <div className="mt-4 flex shrink-0 items-center justify-end border-t border-border/70 pt-3">
+      <div className="mt-4 flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
+        {insertionLabel || addUnavailableReason ? <p className="text-xs text-muted-foreground">{addUnavailableReason ?? insertionLabel}</p> : null}
         <Button
           type="button"
           size="sm"
           className="rounded-sm"
           onClick={onAddToTrip}
-          disabled={isAdded || !isCompatible}
+          disabled={isAdded || !isCompatible || !canAddToTrip}
         >
           {!isCompatible ? (
             <>

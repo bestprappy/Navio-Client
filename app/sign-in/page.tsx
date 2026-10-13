@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { readAuth as auth } from "@/auth";
-import { AuthCard } from "@/app/feature/auth/auth-card";
+import { AuthRedirect } from "@/app/feature/auth/auth-redirect";
 import { getSafeCallbackUrl } from "@/lib/auth-navigation";
 
 export const metadata: Metadata = {
   title: "Log in - Navio",
-  description: "Log in securely with email or Google to continue to Navio.",
+  description: "Log in to Navio to plan EV trips and pick up your saved journeys.",
 };
 
 type SignInPageProps = {
@@ -34,37 +34,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
   }
 
   return (
-    <AuthCard.Root
-      eyebrow="Welcome back"
-      title="Log in to your account"
-      description="Continue to your saved journeys, planning tools, and community activity."
-    >
-      <AuthCard.Error
-        message={
-          firstValue(params.error)
-            ? "Sign-in could not be started. Please try again."
-            : null
-        }
-      />
-      <AuthCard.Action
-        callbackUrl={callbackUrl}
-        errorRoute="/sign-in"
-        label="Continue with email & password"
-        method="email"
-        tone="primary"
-      />
-      <AuthCard.Divider />
-      <AuthCard.Action
-        callbackUrl={callbackUrl}
-        errorRoute="/sign-in"
-        label="Continue with Google"
-      />
-      <AuthCard.SecurityNote mode="sign-in" />
-      <AuthCard.Footer
-        prompt="Don’t have an account?"
-        href={`/sign-up?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-        linkLabel="Sign up"
-      />
-    </AuthCard.Root>
+    <AuthRedirect
+      callbackUrl={callbackUrl}
+      errorMessage={
+        firstValue(params.error)
+          ? "Navio could not finish logging you in. Try again."
+          : null
+      }
+      mode="sign-in"
+    />
   );
 }

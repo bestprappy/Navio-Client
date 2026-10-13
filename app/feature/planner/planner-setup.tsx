@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { useAtomValue, useSetAtom } from "jotai";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRequireAuth } from "@/hooks/use-require-auth";
-import { createGuestTrip, type GuestTripPayload } from "./_components/guest-planner";
 
 import { PlannerSetupActions } from "./_components/planner-setup.actions";
-import { createTrip } from "./_components/planner-api";
+import { createTrip, type CreateTripPayload } from "./_components/planner-api";
 import {
   canSubmitPlannerAtom,
   destinationValidationErrorAtom,
@@ -22,24 +21,23 @@ import { PlannerSetupHeader } from "./_components/planner-setup.header";
 function PlannerSetupRoot({ children }: { children: ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { isAuthenticated, isAuthenticationLoading } = useRequireAuth();
+  const { isAuthenticated, isAuthenticationLoading, requireAuth } = useRequireAuth();
   const selectedDestination = useAtomValue(selectedDestinationAtom);
   const dateRange = useAtomValue(plannerDateRangeAtom);
   const canSubmit = useAtomValue(canSubmitPlannerAtom);
   const setValidationError = useSetAtom(destinationValidationErrorAtom);
   const setIsCreatingTrip = useSetAtom(isCreatingTripAtom);
   const createTripMutation = useMutation({
-    mutationFn: (payload: GuestTripPayload) => isAuthenticated
-      ? createTrip({ destinationId: payload.destinationId, startDate: payload.startDate, endDate: payload.endDate })
-      : Promise.resolve(createGuestTrip(payload)),
+    mutationFn: (payload: CreateTripPayload) => {
+      if (!isAuthenticated) throw new Error("Sign in to create a trip.");
+      return createTrip(payload);
+    },
     onMutate: () => {
       setValidationError(null);
       setIsCreatingTrip(true);
     },
     onSuccess: (trip) => {
-      if (isAuthenticated) {
-        void queryClient.invalidateQueries({ queryKey: ["planner", "trips"] });
-      }
+      void queryClient.invalidateQueries({ queryKey: ["planner", "trips"] });
       const searchParams = new URLSearchParams({
         destinationId: trip.destinationId,
         destinationName: trip.destinationName,
@@ -75,6 +73,7 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (isAuthenticationLoading || createTripMutation.isPending) return;
+    if (!requireAuth(() => undefined)) return;
 
     if (!canSubmit || !selectedDestination) {
       setValidationError(
@@ -90,9 +89,6 @@ function PlannerSetupRoot({ children }: { children: ReactNode }) {
       startDate: formatDate(startDate),
       endDate: formatDate(endDate),
       destinationId: selectedDestination.id,
-      destinationName: selectedDestination.name,
-      destinationLat: selectedDestination.coordinates?.latitude,
-      destinationLng: selectedDestination.coordinates?.longitude,
     });
   }
 

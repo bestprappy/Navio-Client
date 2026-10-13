@@ -12,9 +12,11 @@ function visitLabel(visit: TripLocationVisit): string {
   return `${visit.blockLabel} · ${role}${visit.time ? ` · ${visit.time}` : ""}`;
 }
 
-export function TripLocationPin({ visits, selectedItemId, onSelect }: {
+export function TripLocationPin({ visits, selectedItemId, dimmed = false, onSelect }: {
   visits: readonly TripLocationVisit[];
   selectedItemId?: string;
+  /** Faded while another leg is focused; it stays clickable and returns to full strength on hover or focus. */
+  dimmed?: boolean;
   onSelect: (visit: TripLocationVisit) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -26,6 +28,10 @@ export function TripLocationPin({ visits, selectedItemId, onSelect }: {
   const accessibleName = multiple
     ? `${primary.name}: ${visits.length} visits. Choose a visit`
     : `Select ${visitLabel(primary)}: ${primary.name}`;
+  const triggerClassName = cn(
+    "relative block cursor-pointer rounded-full transition-opacity motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    dimmed && !selected && "opacity-40 hover:opacity-100 focus-visible:opacity-100",
+  );
   const pin = <>
     <MapPin
       className={cn("transition-all motion-reduce:transition-none [&>circle]:hidden", selected ? "size-12 drop-shadow-lg" : "size-8 drop-shadow-md")}
@@ -40,11 +46,11 @@ export function TripLocationPin({ visits, selectedItemId, onSelect }: {
   </>;
 
   if (!multiple) return <button type="button" aria-label={accessibleName}
-    className="relative block cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    className={triggerClassName}
     onClick={(event) => { event.stopPropagation(); onSelect(primary); }}>{pin}</button>;
 
   return <Popover open={open} onOpenChange={setOpen}>
-    <PopoverTrigger aria-label={accessibleName} className="relative block cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <PopoverTrigger aria-label={accessibleName} className={cn(triggerClassName, open && "opacity-100")}
       onClick={(event) => event.stopPropagation()}>{pin}</PopoverTrigger>
     <PopoverContent side="top" className="w-64 max-w-[calc(100vw-2rem)] gap-1 p-2">
       <PopoverTitle className="px-2 pt-1">{primary.name}</PopoverTitle>

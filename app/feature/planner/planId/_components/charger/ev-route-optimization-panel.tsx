@@ -221,7 +221,7 @@ export function EvRouteOptimizationPanel({
         </p>
       ) : !tripId ? (
         <p className="mt-2 text-xs text-muted-foreground">
-          Charging stops are planned for saved trips. You can still add stations yourself and see battery estimates in a guest plan.
+          Sign in and open a saved trip to plan charging stops.
         </p>
       ) : null}
 

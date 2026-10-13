@@ -34,7 +34,7 @@ export function GarageSection() {
   const savedActiveVehicle = savedVehicles.find((vehicle) => vehicle.id === activeVehicleId);
   const featuredVehicle = vehicles.find((vehicle) => vehicle.id === activeVehicleId) ?? vehicles[0];
   const featuredCar = featuredVehicle ? getVehicleCar(featuredVehicle) : null;
-  const controlsDisabled = mutation.isPending || loadingSession || (authenticated && query.isError);
+  const controlsDisabled = !authenticated || mutation.isPending || loadingSession || query.isError;
 
   const blocks = useAtomValue(itineraryBlocksAtom);
   const { data: routeData } = useTripRoutes();
@@ -53,9 +53,9 @@ export function GarageSection() {
     <section aria-label="Trip vehicles" className="@container/garage min-w-0 px-4 py-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">{authenticated ? "My garage" : "Trip vehicle"}</h2>
+          <h2 className="text-2xl font-bold text-foreground">My garage</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {authenticated ? "Pick the EV you're driving and the planner estimates battery and charging for every day." : "Add your EV specifications to estimate battery usage and charging time for this trip."}
+            Pick the EV you&apos;re driving and the planner estimates battery and charging for every day.
           </p>
         </div>
         <Button
@@ -63,7 +63,7 @@ export function GarageSection() {
           size="lg"
           variant={vehicles.length > 0 ? "outline" : "default"}
           className="gap-2"
-          disabled={loadingSession || (authenticated && (query.isPending || query.isError)) || mutation.isPending || vehicles.length >= 25}
+          disabled={!authenticated || loadingSession || query.isPending || query.isError || mutation.isPending || vehicles.length >= 25}
           onClick={() => { mutation.reset(); setModalOpen(true); }}
         >
           <Plus className="size-4" aria-hidden="true" />
@@ -72,11 +72,10 @@ export function GarageSection() {
       </div>
 
       {(loadingSession || (authenticated && query.isPending)) && <p role="status" className="p-4 text-sm text-muted-foreground">Loading your saved vehicles…</p>}
-      {!loadingSession && !authenticated && <p role="status" className="p-4 text-sm text-muted-foreground">Used only in this guest plan. Sign in to save vehicles to your garage.</p>}
       {authenticated && query.isError && <div role="alert" className="mb-4 rounded-md bg-destructive/10 p-4 text-sm text-destructive"><p>{query.error.message}</p><Button variant="outline" className="mt-2" onClick={() => void query.refetch()}>Reload garage</Button></div>}
       {mutation.isError && !isModalOpen && <p role="alert" className="mb-4 rounded-md bg-destructive/10 p-4 text-sm text-destructive">{mutation.error.message}</p>}
-      {mutation.isPending && <p role="status" className="mb-3 text-sm text-muted-foreground">{authenticated ? "Saving your garage…" : "Updating trip vehicle…"}</p>}
-      {(!authenticated || query.isSuccess) && vehicles.length === 0 ? (
+      {mutation.isPending && <p role="status" className="mb-3 text-sm text-muted-foreground">Saving your garage…</p>}
+      {authenticated && query.isSuccess && vehicles.length === 0 ? (
         <div className="mx-1 flex items-center gap-3 rounded-md border border-dashed border-input p-4">
           <Car className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <div>

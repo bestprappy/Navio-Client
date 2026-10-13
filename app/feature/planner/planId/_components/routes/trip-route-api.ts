@@ -1,4 +1,6 @@
-import { isRouteSegmentsResponse } from "./trip-route.helpers";
+import { applySavedTransitRoutes, getTransitRouteKey } from "./transit-route-choice";
+import { addWalkFinishAlternatives } from "./transit-walk-alternatives";
+import { enforceRailOnlyRoutes, isRouteSegmentsResponse } from "./trip-route.helpers";
 import type { DirectionsRequest, DirectionsResponse, RoutePointGroup } from "./trip-route.types";
 
 // Match the mobility DirectionsRequest / RoutePointGroupRequest validation limits.
@@ -29,7 +31,10 @@ export async function fetchTripRoutes(
     const response = await fetch("/api/routes/directions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...requestBody, groups: batch }),
+      body: JSON.stringify({ ...requestBody,
+        includeTransitAlternatives: requestBody.includeTransitAlternatives || batch.some(group => group.points.some(point => point.arrivalRouteKey)),
+        groups: batch.map(group => ({ ...group, points: group.points.map(point => { const { arrivalRouteKey: selection, ...providerPoint } = point; void selection; return providerPoint; }) })),
+      }),
       signal,
     });
     if (!response.ok) {
@@ -55,7 +60,32 @@ export async function fetchTripRoutes(
     segments.push(...payload.segments);
   }
   signal?.throwIfAborted();
-  return { segments };
+  const guarded = enforceRailOnlyRoutes(requestBody, { segments });
+  // A saved direct ride may belong to the fewer-transfer search, rather than the balanced one.
+  for (const group of requestBody.groups) {
+    for (let index = 1; index < group.points.length; index++) {
+      const to = group.points[index];
+      if (!to.arrivalRouteKey) continue;
+      const segment = guarded.segments.find(item => item.blockId === group.blockId && item.toItemId === to.id);
+      if (!segment || segment.journeys?.some(journey => getTransitRouteKey(journey.steps) === to.arrivalRouteKey)) continue;
+      try {
+        const extra = await fetchTripRoutes({ profile: requestBody.profile, includeTransitAlternatives: true,
+          transitRoutingPreference: "FEWER_TRANSFERS", groups: [{ blockId: group.blockId,
+            points: [group.points[index - 1], to].map(point => { const { arrivalRouteKey: selection, ...providerPoint } = point; void selection; return providerPoint; }) }] }, signal);
+        segment.journeys = [...(segment.journeys ?? []), ...(extra.segments[0]?.journeys ?? [])];
+      } catch { signal?.throwIfAborted(); }
+      if (!segment.journeys?.some(journey => getTransitRouteKey(journey.steps) === to.arrivalRouteKey)) {
+        const expanded = await addWalkFinishAlternatives(segment, to, async (station, destination) => {
+          const walk = await fetchTripRoutes({ profile: "walking", groups: [{ blockId: group.blockId,
+            points: [station, { ...destination, arrivalMode: "walk", arrivalRouteKey: undefined, railOnly: undefined }] }] }, signal);
+          return walk.segments[0] ?? null;
+        }, to.arrivalRouteKey);
+        segment.journeys = expanded.journeys;
+        signal?.throwIfAborted();
+      }
+    }
+  }
+  return applySavedTransitRoutes(requestBody, guarded);
 }
 
 async function getErrorMessage(response: Response): Promise<string> {

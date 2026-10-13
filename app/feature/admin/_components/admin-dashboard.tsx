@@ -124,7 +124,7 @@ function AdminOperations() {
   const activity = useQuery({ queryKey: [...activityKeys.root, "recent"], queryFn: () => listActivity({ action: "", resourceType: "", actorId: "", from: "", to: "", page: 0, size: 5 }), retry: false });
   return <section aria-labelledby="admin-operations-heading" className="grid gap-6 lg:grid-cols-2">
     <div className="rounded-xl border bg-card p-5"><div className="flex items-center justify-between gap-3"><h2 id="admin-operations-heading" className="text-lg font-semibold">Vehicle catalog</h2><Link href="/admin/vehicles" className="text-sm font-medium text-primary underline-offset-4 hover:underline">Manage vehicles</Link></div>
-      <p className="mt-1 text-sm text-muted-foreground">Published specifications are available to drivers and guests.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Published specifications are available to all visitors.</p>
       <div className="mt-5 grid grid-cols-2 gap-4"><div><p className="text-3xl font-semibold tabular-nums">{catalog.data?.totalElements ?? "—"}</p><p className="text-sm text-muted-foreground">Published</p></div><div><p className="text-3xl font-semibold tabular-nums">{drafts.data?.totalElements ?? "—"}</p><p className="text-sm text-muted-foreground">Drafts</p></div></div>
       {(catalog.isError || drafts.isError) && <p className="mt-3 text-sm text-destructive">Catalog counts are unavailable. Open the catalog to retry.</p>}
     </div>

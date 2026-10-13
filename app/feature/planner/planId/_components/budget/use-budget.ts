@@ -13,6 +13,7 @@ import {
   tripBudgetAtom,
   tripCurrencyAtom,
   tripExpensesAtom,
+  updateTripExpensesAtom,
 } from "../overview/trip-builder.atoms";
 import { expenseCategories, getExpenseCategory } from "./budget.data";
 import { createClientId, roundMoney } from "./budget.utils";
@@ -30,7 +31,8 @@ export function useBudget() {
   const convertTripCurrency = useSetAtom(convertTripCurrencyAtom);
   const [budget, setBudget] = useAtom(tripBudgetAtom);
   const [draftBudget, setDraftBudget] = useState(budget.toFixed(2));
-  const [expenses, setExpenses] = useAtom(tripExpensesAtom);
+  const expenses = useAtomValue(tripExpensesAtom);
+  const setExpenses = useSetAtom(updateTripExpensesAtom);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseName, setExpenseName] = useState("");

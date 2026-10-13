@@ -29,7 +29,6 @@ import {
   removeItemFromBlockAtom,
   selectedTripPlaceItemIdReadonlyAtom,
   selectTripPlaceAtom,
-  tripCurrencyAtom,
   updatePlaceItemAtom,
 } from "../../overview/trip-builder.atoms";
 import { StationChargingControl } from "../../charger/station-charging-control";
@@ -37,7 +36,7 @@ import { StationSpecifications } from "../../charger/station-specifications";
 import { ChargeSegmentInfo } from "../../routes/charge-segment-info";
 import { PlaceCardVisual } from "./place-card-visual";
 import { PlaceCardFrame } from "./place-card-frame";
-import { PlaceCostPopover } from "./place-cost-popover";
+import { PlaceExpenseList } from "./place-expense-list";
 import { PlaceTimePopover } from "./place-time-popover";
 import { PlaceOpeningHours } from "../../place/place-opening-hours";
 
@@ -79,7 +78,6 @@ export function TripPlaceCard({
   const selectedTripPlaceItemId = useAtomValue(
     selectedTripPlaceItemIdReadonlyAtom,
   );
-  const currency = useAtomValue(tripCurrencyAtom);
   const readOnly = useAtomValue(plannerReadOnlyAtom);
   const isSelected = selectedTripPlaceItemId === item.id;
   // A shared plan keeps selection (it drives the map) but never opens the editor.
@@ -345,13 +343,6 @@ export function TripPlaceCard({
                     time={item.time}
                     timeEnd={item.timeEnd}
                   />
-                  <PlaceCostPopover
-                    blockId={blockId}
-                    itemId={item.id}
-                    itemName={item.name}
-                    blockDate={blockDate}
-                    cost={item.cost}
-                  />
                   {canMarkAsEnd ? (
                     <Button
                       type="button"
@@ -387,7 +378,6 @@ export function TripPlaceCard({
             <>
               {(item.isVisited ||
                 item.time ||
-                item.cost !== undefined ||
                 item.notes) ? (
                 <div className="space-y-2 border-t border-border/70 px-4 pb-4 pt-3">
                   <div className="flex flex-wrap gap-1.5">
@@ -405,11 +395,6 @@ export function TripPlaceCard({
                           : formatDisplayTime(item.time)}
                       </span>
                     )}
-                    {item.cost !== undefined && (
-                      <span className="inline-flex items-center gap-1 rounded-sm bg-warning/10 px-3 py-2 text-xs font-medium text-warning">
-                        {currency.symbol} {item.cost.toLocaleString()}
-                      </span>
-                    )}
                   </div>
                   {item.notes && (
                     <p className="line-clamp-2 text-xs text-muted-foreground">
@@ -420,6 +405,15 @@ export function TripPlaceCard({
               ) : null}
             </>
           )}
+          <PlaceExpenseList
+            blockId={blockId}
+            itemId={item.id}
+            itemName={item.name}
+            blockDate={blockDate}
+            cost={item.cost}
+            readOnly={readOnly}
+            editable={isEditing}
+          />
         </>
       )}
     </PlaceCardFrame>

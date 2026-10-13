@@ -8,7 +8,7 @@ import type { LegTravelMode } from "../constants/types";
  * automatic: public transit when both ends are stations, otherwise driving.
  */
 
-export const LEG_TRAVEL_MODES: readonly LegTravelMode[] = ["drive", "transit", "walk"];
+export const LEG_TRAVEL_MODES: readonly LegTravelMode[] = ["drive", "transit", "bike", "walk"];
 
 /** Google Places primary types of stops a public transit route can start or end at. */
 const STATION_TYPES = new Set([
@@ -22,6 +22,14 @@ const STATION_TYPES = new Set([
 const STATION_LABEL =
   /\b(subway|metro|mrt|bts|train|railway|rail|light rail|transit)\s+station\b/i;
 
+const RAIL_STATION_TYPES = new Set([
+  "subway_station",
+  "train_station",
+  "light_rail_station",
+]);
+const RAIL_STATION_LABEL =
+  /\b(subway|metro|mrt|bts|train|railway|rail|light rail)\s+station\b/i;
+
 export type LegEndpoint = {
   placeType?: string;
   description?: string;
@@ -29,13 +37,24 @@ export type LegEndpoint = {
 };
 
 export function isLegTravelMode(value: unknown): value is LegTravelMode {
-  return value === "drive" || value === "transit" || value === "walk";
+  return value === "drive" || value === "transit" || value === "rail" || value === "bus" || value === "bike" || value === "walk";
+}
+
+export function isTransitMode(mode: LegTravelMode | undefined): boolean {
+  return mode === "transit" || mode === "rail" || mode === "bus";
 }
 
 export function isTransitStation(point: LegEndpoint | undefined): boolean {
   if (!point) return false;
   if (point.placeType && STATION_TYPES.has(point.placeType.toLowerCase())) return true;
   return Boolean(point.description && STATION_LABEL.test(point.description));
+}
+
+/** Generic transit stations can be bus stops; rail stations must be reached by rail. */
+export function isRailStation(point: LegEndpoint | undefined): boolean {
+  if (!point) return false;
+  if (point.placeType && RAIL_STATION_TYPES.has(point.placeType.toLowerCase())) return true;
+  return Boolean(point.description && RAIL_STATION_LABEL.test(point.description));
 }
 
 /** The mode the leg would take without the traveller's choice. */

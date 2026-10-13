@@ -10,6 +10,7 @@ import Map, {
   NavigationControl,
   Source,
 } from "react-map-gl/mapbox";
+import type { ExpressionSpecification } from "mapbox-gl";
 import { MapPin, Zap } from "lucide-react";
 import { MapboxMapAppearance } from "@/components/map/mapbox-map-appearance";
 
@@ -36,7 +37,6 @@ import {
   closeSelectedEvChargerAtom,
   closeSelectedSearchPlaceAtom,
   closeSelectedTripPlaceAtom,
-  routeLineModeAtom,
   evChargerErrorAtom,
   evChargerLoadingAtom,
   visibleEvChargerResultsAtom,
@@ -45,6 +45,8 @@ import {
   selectedEvChargerResultAtom,
   selectedSearchPlaceAtom,
   selectedSearchPlaceUsageAtom,
+  selectedSearchPlaceInsertionAtom,
+  selectedEvChargerInsertionAtom,
   selectedTripPlaceAtom,
   selectedTripPlacesAtom,
   selectSearchResultAtom,
@@ -62,6 +64,19 @@ import { TripPlacePreviewPanel } from "./_components/place/trip-place-preview-pa
 import { GoogleMapsExportButton } from "./_components/routes/google-maps-export-button";
 import { useTripRoutes } from "./_components/routes/trip-route-query";
 import { getRouteDrawPieces, type RouteDrawKind } from "./_components/routes/route-draw";
+import {
+  isVisitOnSegment,
+  ROUTE_FOCUS_MAX_ZOOM,
+  ROUTE_FOCUS_PADDING_PX,
+} from "./_components/routes/route-focus";
+import {
+  prefersReducedMotion,
+  type RouteLegCamera,
+  useRouteLegCamera,
+} from "./_components/routes/use-route-leg-camera";
+import { useVisibleRoutes } from "./_components/routes/use-visible-routes";
+import { getTransitStopMarkers } from "./_components/routes/transit-journey.helpers";
+import { TransitStopPin } from "./_components/routes/transit-stop-pin";
 import type {
   RouteLineString,
   RouteSegment,
@@ -78,6 +93,7 @@ type RouteFeature = {
     id: string;
     kind: RouteDrawKind;
     routeColor: string;
+    muted: boolean;
   };
   geometry: RouteLineString;
 };
@@ -90,6 +106,18 @@ type RouteFeatureCollection = {
 const VIEWPORT_POI_ZOOM_MIN = 14;
 const VIEWPORT_POI_RADIUS_M = 800;
 const VIEWPORT_POI_REFETCH_DIST_KM = 0.35;
+// Faded legs keep the day's shape readable without competing with the focused leg.
+const MUTED_ROUTE_OPACITY_FACTOR = 0.3;
+
+/** A line opacity, faded for muted legs. */
+function routeOpacity(opacity: number): ExpressionSpecification {
+  return ["case", ["get", "muted"], opacity * MUTED_ROUTE_OPACITY_FACTOR, opacity];
+}
+
+/** A line width, one step thinner for muted legs. */
+function routeWidth(width: number, mutedWidth: number): ExpressionSpecification {
+  return ["case", ["get", "muted"], mutedWidth, width];
+}
 
 export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -112,6 +140,8 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
   const isLoadingEvChargers = useAtomValue(evChargerLoadingAtom);
   const evChargerError = useAtomValue(evChargerErrorAtom);
   const selectedPlaceUsage = useAtomValue(selectedSearchPlaceUsageAtom);
+  const selectedPlaceInsertion = useAtomValue(selectedSearchPlaceInsertionAtom);
+  const selectedChargerInsertion = useAtomValue(selectedEvChargerInsertionAtom);
   const selectSearchResult = useSetAtom(selectSearchResultAtom);
   const selectEvCharger = useSetAtom(selectEvChargerAtom);
   const stepSearchResult = useSetAtom(stepSearchResultAtom);
@@ -121,7 +151,6 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
   const closeSelectedSearchPlace = useSetAtom(closeSelectedSearchPlaceAtom);
   const closeSelectedTripPlace = useSetAtom(closeSelectedTripPlaceAtom);
   const activeBlockId = useAtomValue(activeBlockIdAtom);
-  const routeLineMode = useAtomValue(routeLineModeAtom);
   const selectLocationVisit = useTripLocationSelection();
   const revealPlanCard = useRevealPlanCard();
   const startPlaceSearch = useSetAtom(startPlaceSearchAtom);
@@ -151,23 +180,38 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
     () => tripRoutes.data?.segments ?? [],
     [tripRoutes.data?.segments],
   );
-  // "all" mode draws every day's route. Otherwise only the active day's route is
-  // drawn — the day the itinerary is scrolled to (or was last pressed).
-  const isShowingAllRoutes = routeLineMode === "all";
-  const visibleRouteSegments = useMemo(
-    () =>
-      isShowingAllRoutes
-        ? routeSegments
-        : activeBlockId
-          ? routeSegments.filter((segment) => segment.blockId === activeBlockId)
-          : [],
-    [isShowingAllRoutes, routeSegments, activeBlockId],
-  );
+  const visibleRoutes = useVisibleRoutes(routeSegments);
+  const visibleRouteSegments = visibleRoutes.segments;
+  const focusedSegment = visibleRoutes.focusedSegment;
+  const focusedSegmentId = focusedSegment?.id ?? null;
   const routeGeoJson = useMemo(
-    () => getRouteFeatureCollection(visibleRouteSegments, routeColorByBlockId),
-    [routeColorByBlockId, visibleRouteSegments],
+    () => getRouteFeatureCollection(visibleRouteSegments, routeColorByBlockId, focusedSegmentId),
+    [routeColorByBlockId, visibleRouteSegments, focusedSegmentId],
   );
-  const routeStatusMessage = !isShowingAllRoutes && !activeBlockId
+  // The camera stays on a place, charger or search result being inspected.
+  const followsFocusedLeg = !selectedTripPlace && !selectedPlace && !selectedEvChargerResult;
+  const legCamera = useMemo<RouteLegCamera | null>(
+    () =>
+      isMapReady
+        ? {
+            getViewBounds: () => {
+              const bounds = mapRef.current?.getBounds();
+              return bounds
+                ? { west: bounds.getWest(), south: bounds.getSouth(), east: bounds.getEast(), north: bounds.getNorth() }
+                : null;
+            },
+            fitBounds: ({ west, south, east, north }) =>
+              mapRef.current?.fitBounds([[west, south], [east, north]], {
+                padding: ROUTE_FOCUS_PADDING_PX,
+                maxZoom: ROUTE_FOCUS_MAX_ZOOM,
+                duration: prefersReducedMotion() ? 0 : 700,
+              }),
+          }
+        : null,
+    [isMapReady],
+  );
+  useRouteLegCamera(focusedSegment, followsFocusedLeg, legCamera);
+  const routeStatusMessage = !visibleRoutes.hasScope
     ? null
     : tripRoutes.isFetching
       ? "Calculating routes..."
@@ -378,8 +422,8 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
               }}
               paint={{
                 "line-color": ["get", "routeColor"],
-                "line-width": 5,
-                "line-opacity": 0.9,
+                "line-width": routeWidth(5, 4),
+                "line-opacity": routeOpacity(0.9),
               }}
             />
             {/* A transit ride is drawn in its line colour over a white casing. */}
@@ -394,8 +438,8 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
               }}
               paint={{
                 "line-color": "#ffffff",
-                "line-width": 9,
-                "line-opacity": 0.95,
+                "line-width": routeWidth(9, 7),
+                "line-opacity": routeOpacity(0.95),
               }}
             />
             <Layer
@@ -409,7 +453,8 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
               }}
               paint={{
                 "line-color": ["get", "routeColor"],
-                "line-width": 5,
+                "line-width": routeWidth(5, 4),
+                "line-opacity": routeOpacity(1),
               }}
             />
             <Layer
@@ -424,7 +469,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
               paint={{
                 "line-color": ["get", "routeColor"],
                 "line-width": 4,
-                "line-opacity": 0.9,
+                "line-opacity": routeOpacity(0.9),
                 "line-dasharray": [0, 2],
               }}
             />
@@ -440,7 +485,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
               paint={{
                 "line-color": ["get", "routeColor"],
                 "line-width": 4,
-                "line-opacity": 0.65,
+                "line-opacity": routeOpacity(0.65),
                 "line-dasharray": [2, 2],
               }}
             />
@@ -449,12 +494,14 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
 
         {locationMarkers.map(({ key, lat, lng, visits }) => {
           const ordered = orderVisitsForActiveBlock(visits, activeBlockId, selectedTripPlace?.id);
+          const isLegEnd = focusedSegment ? visits.some((visit) => isVisitOnSegment(visit, focusedSegment)) : false;
           return (
-            <Marker key={key} latitude={lat} longitude={lng} anchor="bottom" style={{ zIndex: ordered[0]?.blockId === activeBlockId ? 21 : 20 }}>
-              <TripLocationPin visits={ordered} selectedItemId={selectedTripPlace?.id} onSelect={selectLocationVisit} />
+            <Marker key={key} latitude={lat} longitude={lng} anchor="bottom" style={{ zIndex: isLegEnd ? 22 : ordered[0]?.blockId === activeBlockId ? 21 : 20 }}>
+              <TripLocationPin visits={ordered} selectedItemId={selectedTripPlace?.id} dimmed={Boolean(focusedSegment) && !isLegEnd} onSelect={selectLocationVisit} />
             </Marker>
           );
         })}
+        {getTransitStopMarkers(visibleRouteSegments).map((stop) => <Marker key={stop.id} latitude={stop.coordinate[1]} longitude={stop.coordinate[0]} anchor="center" style={{ zIndex: 18 }}><TransitStopPin stop={stop} /></Marker>)}
 
         {evChargerResults.map((result) => {
           if (selectedTripPlaceIds.has(`ev-charger:${result.charger.id}`)) {
@@ -632,7 +679,9 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
           isAdded={selectedPlaceUsage.isAdded}
           usageLabel={selectedPlaceUsage.label}
           targetLabel={selectedPlaceUsage.targetLabel}
-          canAddToTrip={canAddToTrip}
+          insertionLabel={selectedPlaceInsertion.label}
+          addUnavailableReason={selectedPlaceInsertion.error}
+          canAddToTrip={canAddToTrip && selectedPlaceInsertion.isValid}
           onPrevious={() => stepSearchResult({ direction: "previous" })}
           onNext={() => stepSearchResult({ direction: "next" })}
           onAddToTrip={() => {
@@ -644,6 +693,9 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
       ) : selectedEvChargerResult ? (
         <ChargerPreviewPanel
           result={selectedEvChargerResult}
+          insertionLabel={selectedChargerInsertion.label}
+          addUnavailableReason={selectedChargerInsertion.error}
+          canAddToTrip={selectedChargerInsertion.isValid}
           isAdded={selectedEvChargerIsAdded}
           isCompatible={
             activeEvCar
@@ -669,12 +721,14 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
 function getRouteFeatureCollection(
   segments: RouteSegment[],
   routeColorByBlockId: globalThis.Map<string, string>,
+  focusedSegmentId: string | null,
 ): RouteFeatureCollection {
   return {
     type: "FeatureCollection",
-    features: getRouteDrawPieces(segments, routeColorByBlockId, defaultRouteMapColor).map((piece) => ({
+    // Muted pieces come first, so within each layer the focused leg draws on top.
+    features: getRouteDrawPieces(segments, routeColorByBlockId, defaultRouteMapColor, focusedSegmentId).map((piece) => ({
       type: "Feature",
-      properties: { id: piece.id, kind: piece.kind, routeColor: piece.color },
+      properties: { id: piece.id, kind: piece.kind, routeColor: piece.color, muted: piece.muted },
       geometry: { type: "LineString", coordinates: piece.coordinates },
     })),
   };

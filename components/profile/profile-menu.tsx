@@ -39,7 +39,7 @@ export function ProfileMenu({ compact = false, onNavigate }: ProfileMenuProps) {
         </Avatar>
         {!compact && <span className="min-w-0">
           <span className="block truncate text-xs font-semibold">{status === "loading" ? "Loading account…" : name}</span>
-          <span className="block truncate text-xs font-normal text-muted-foreground">{status === "authenticated" ? "Travel enthusiast" : "Explore as a guest"}</span>
+          <span className="block truncate text-xs font-normal text-muted-foreground">{status === "authenticated" ? "Travel enthusiast" : "Sign in to plan trips"}</span>
         </span>}
     </Link>
   );

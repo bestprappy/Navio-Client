@@ -235,7 +235,7 @@ export type TripBlockData = {
 export type TripBlockItem = PlaceItem | NoteItem | ChecklistItem;
 
 /** How a leg of the day is travelled. */
-export type LegTravelMode = "drive" | "transit" | "walk";
+export type LegTravelMode = "drive" | "transit" | "rail" | "bus" | "bike" | "walk";
 
 export type PlaceItem = {
   observedSocCheckpoint?: { socPct: number } | null;
@@ -263,6 +263,8 @@ export type PlaceItem = {
    * transit between two stations, otherwise drive.
    */
   arrivalMode?: LegTravelMode | null;
+  /** Chosen transit line/station sequence, independent of departure times. */
+  arrivalRouteKey?: string | null;
 };
 
 export type NoteItem = {
@@ -292,6 +294,7 @@ export type PremadeList = {
 
 export type ActiveSearch = {
   blockId: string;
+  beforeItemId?: string;
   query: string;
   results: PlaceSearchResult[];
   selectedIndex: number;

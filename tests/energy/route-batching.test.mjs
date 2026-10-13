@@ -51,6 +51,57 @@ test("long days preserve each leg exactly once across 25-point boundaries",async
   assert.ok(calls.length>7);
 });
 
+test("rail-only enforcement survives point chunks and multiple request batches", async t => {
+  const request = {
+    groups: Array.from({ length: 11 }, (_, day) => {
+      const routeGroup = group(day, 26);
+      for (const index of [1, 24, 25]) {
+        routeGroup.points[index].arrivalMode = "transit";
+      }
+      for (const index of [24, 25]) routeGroup.points[index].railOnly = true;
+      return routeGroup;
+    }),
+  };
+  const before = structuredClone(request);
+  const calls = mockFetch(t, body => {
+    const data = responseFor(body);
+    for (const segment of data.segments) {
+      if (!["stop-1", "stop-24", "stop-25"].includes(segment.toItemId)) continue;
+      const vehicleType = segment.toItemId === "stop-24" ? "SUBWAY" : "BUS";
+      segment.travelMode = "transit";
+      segment.steps = [{
+        travelMode: "transit", geometry: segment.geometry,
+        distanceMeters: 1000, durationSeconds: 60,
+        departureStop: "Origin", arrivalStop: "Destination", stopCount: 1,
+        line: { name: vehicleType, color: "#9932cc", vehicleType },
+      }];
+    }
+    return Response.json(data);
+  });
+
+  const result = await fetchTripRoutes(request);
+  assert.deepEqual(calls.map(call => call.groups.length), [10, 10, 2]);
+  assert.equal(result.segments.length, 275);
+  assert.deepEqual(request, before);
+  for (const routeGroup of request.groups) {
+    const legs = result.segments.filter(segment => segment.blockId === routeGroup.blockId);
+    assert.equal(legs[0].status, "routed");
+    assert.equal(legs[0].steps[0].line.vehicleType, "BUS");
+    assert.equal(legs[23].status, "routed");
+    assert.equal(legs[23].steps[0].line.vehicleType, "SUBWAY");
+    assert.equal(legs[23].steps[0].line.color, "#9932cc");
+    assert.equal(legs[24].status, "fallback");
+    assert.equal(legs[24].fallbackReason, "No rail route was found");
+    assert.equal(legs[24].durationSeconds, null);
+    assert.equal(legs[24].distanceMeters, null);
+    assert.deepEqual(legs[24].steps, []);
+    assert.deepEqual(legs[24].geometry.coordinates, [
+      [routeGroup.points[24].lng, routeGroup.points[24].lat],
+      [routeGroup.points[25].lng, routeGroup.points[25].lat],
+    ]);
+  }
+});
+
 test("resolved start/end anchors count toward point limits and survive chunking",async t=>{
   mockFetch(t);
   const items=Array.from({length:24},(_,i)=>({...point(i),type:"place",placeId:`place-${i}`}));

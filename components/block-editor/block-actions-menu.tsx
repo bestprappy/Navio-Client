@@ -11,6 +11,7 @@ import {
   focusBlock,
   getBlockColor,
   getBlockTypeId,
+  isEmbedBlock,
   moveBlock,
   setBlockColor,
   turnBlockInto,
@@ -67,7 +68,7 @@ function contextHint(text: string) {
 }
 
 function BlockActionsPanel({ request }: { request: BlockMenuRequest }) {
-  const { editor, closeBlockMenu } = useBlockEditorContext("BlockActionsMenu");
+  const { editor, embeds, closeBlockMenu } = useBlockEditorContext("BlockActionsMenu");
   const inputRef = useRef<HTMLInputElement>(null);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
   const [query, setQuery] = useState("");
@@ -98,6 +99,8 @@ function BlockActionsPanel({ request }: { request: BlockMenuRequest }) {
     };
 
     const currentType = getBlockTypeId(target);
+    // An embed points at content by id: it has no text to convert, and a copy would share that content.
+    const isEmbed = isEmbedBlock(target);
     const hasText = target.node.textContent.trim().length > 0 && target.node.type.name !== "codeBlock";
     const textColor = getBlockColor(target, "text");
     const backgroundColor = getBlockColor(target, "background");
@@ -126,7 +129,7 @@ function BlockActionsPanel({ request }: { request: BlockMenuRequest }) {
       }));
 
     const main: Entry[] = [
-      { id: "turnInto", label: "Turn into", icon: Repeat2, submenu: "turnInto", disabled: currentType === "divider" },
+      { id: "turnInto", label: "Turn into", icon: Repeat2, submenu: "turnInto", disabled: currentType === "divider" || isEmbed },
       { id: "color", label: "Color", icon: Palette, submenu: "color", disabled: !hasText },
       {
         id: "duplicate",
@@ -134,6 +137,7 @@ function BlockActionsPanel({ request }: { request: BlockMenuRequest }) {
         icon: Copy,
         hint: <Kbd>{formatShortcut(SHORTCUTS.duplicate)}</Kbd>,
         separatorBefore: true,
+        disabled: isEmbed,
         run: finish((block) => {
           if (duplicateBlock(editor, block)) refocus();
         }),
@@ -198,7 +202,8 @@ function BlockActionsPanel({ request }: { request: BlockMenuRequest }) {
 
   if (!target) return null;
 
-  const blockLabel = getBlockType(getBlockTypeId(target)).label;
+  const embedLabel = isEmbedBlock(target) ? embeds.find((embed) => embed.name === target.node.type.name)?.label : undefined;
+  const blockLabel = embedLabel ?? getBlockType(getBlockTypeId(target)).label;
   const optionId = (index: number) => `${listboxId}-${index}`;
   const subOptionId = (index: number) => `${submenuId}-${index}`;
   const activeDescendant = submenu?.focused ? subOptionId(submenu.active) : visible.length ? optionId(active) : undefined;

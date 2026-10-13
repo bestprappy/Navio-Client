@@ -13,6 +13,7 @@ import { BudgetSection } from "../../planId/_components/budget/budget-section";
 import type { TripBlockData } from "../../planId/_components/constants/types";
 import { DayNavSidebar } from "../../planId/_components/itinerary/day-nav-sidebar";
 import { ItinerarySection } from "../../planId/_components/itinerary/itinerary-section";
+import { RouteStopTracker } from "../../planId/_components/itinerary/route-stop-tracker";
 import { PlannerWorkspace } from "../../planId/_components/layout/planner-workspace";
 import { TripBuilderErrorBoundary } from "../../planId/_components/overview/trip-builder-error-boundary";
 import {
@@ -86,6 +87,13 @@ function SharedPlannerWorkspace({ shared, token, backLink }: SharedPlannerViewPr
     const day = plan.days?.[index];
     return day ? <SharedDayAnchors startsAt={day.startsAt} endsAt={day.endsAt} /> : null;
   }, [blocks, plan.days]);
+  const exportAnchors = useMemo(() => new Map(blocks.map((block, index) => {
+    const day = plan.days?.[index];
+    return [block.id, {
+      start: day?.startsAt ? { name: day.startsAt.name } : null,
+      end: day?.endsAt ? { name: day.endsAt.name } : null,
+    }];
+  })), [blocks, plan.days]);
 
   return (
     <PlannerWorkspace
@@ -125,6 +133,7 @@ function SharedPlannerWorkspace({ shared, token, backLink }: SharedPlannerViewPr
             latitude={center.lat}
             longitude={center.lng}
             renderDayAnchors={renderDayAnchors}
+            exportAnchors={exportAnchors}
           />
         </TripBuilderErrorBoundary>
         {plan.budget && <BudgetSection />}
@@ -133,6 +142,7 @@ function SharedPlannerWorkspace({ shared, token, backLink }: SharedPlannerViewPr
       details={null}
     >
       <DayNavSidebar />
+      <RouteStopTracker />
     </PlannerWorkspace>
   );
 }

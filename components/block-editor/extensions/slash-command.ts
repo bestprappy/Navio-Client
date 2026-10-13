@@ -2,8 +2,8 @@ import { Extension, type Editor, type Range } from "@tiptap/core";
 import { PluginKey } from "@tiptap/pm/state";
 import Suggestion, { exitSuggestion, type SuggestionKeyDownProps, type SuggestionProps } from "@tiptap/suggestion";
 
-import { applyBlockTypeAtCaret } from "../block-commands";
-import { filterBlockTypes, type BlockType } from "../block-types";
+import { applyBlockTypeAtCaret, insertEmbedAtCaret } from "../block-commands";
+import { BLOCK_TYPES, filterBlockTypes, isEmbedMenuItem, type EmbedMenuItem, type SlashMenuItem } from "../block-types";
 
 /**
  * Typing "/" opens the block menu at the caret. The suggestion plugin finds the
@@ -13,7 +13,7 @@ import { filterBlockTypes, type BlockType } from "../block-types";
 export type SlashMenuState = {
   open: boolean;
   query: string;
-  items: readonly BlockType[];
+  items: readonly SlashMenuItem[];
   activeIndex: number;
   /** Rectangle of the "/" and the typed query, in viewport coordinates. */
   getAnchorRect: (() => DOMRect | null) | null;
@@ -32,12 +32,12 @@ export type SlashMenuStore = {
 };
 
 export function createSlashMenuStore(): SlashMenuStore & {
-  bind: (props: SuggestionProps<BlockType, BlockType>) => void;
+  bind: (props: SuggestionProps<SlashMenuItem, SlashMenuItem>) => void;
   unbind: () => void;
   handleKeyDown: (props: SuggestionKeyDownProps) => boolean;
 } {
   let state = CLOSED;
-  let command: ((item: BlockType) => void) | null = null;
+  let command: ((item: SlashMenuItem) => void) | null = null;
   let editor: Editor | null = null;
   const listeners = new Set<() => void>();
 
@@ -113,27 +113,41 @@ export function createSlashMenuStore(): SlashMenuStore & {
   };
 }
 
-export type SlashCommandOptions = { store: ReturnType<typeof createSlashMenuStore> | null };
+export type SlashCommandOptions = {
+  store: ReturnType<typeof createSlashMenuStore> | null;
+  /** The editor's embeds, listed after the built-in blocks. */
+  embeds: readonly SlashEmbed[];
+};
+
+/** What the slash menu needs to list an embed and insert it. */
+export type SlashEmbed = EmbedMenuItem & { createAttributes: () => Record<string, string> };
 
 export const SlashCommand = Extension.create<SlashCommandOptions>({
   name: "slashCommand",
 
   addOptions() {
-    return { store: null };
+    return { store: null, embeds: [] };
   },
 
   addProseMirrorPlugins() {
-    const { store } = this.options;
+    const { store, embeds } = this.options;
     if (!store) return [];
+    const items: readonly SlashMenuItem[] = [...BLOCK_TYPES, ...embeds];
     return [
-      Suggestion<BlockType, BlockType>({
+      Suggestion<SlashMenuItem, SlashMenuItem>({
         editor: this.editor,
         pluginKey: SLASH_MENU_KEY,
         char: "/",
         allow: ({ state, range }) => state.doc.resolve(range.from).parent.type.name !== "codeBlock",
-        items: ({ query }) => filterBlockTypes(query),
-        command: ({ editor, range, props }: { editor: Editor; range: Range; props: BlockType }) =>
-          applyBlockTypeAtCaret(editor, props.id, range),
+        items: ({ query }) => filterBlockTypes(query, items),
+        command: ({ editor, range, props }: { editor: Editor; range: Range; props: SlashMenuItem }) => {
+          if (!isEmbedMenuItem(props)) {
+            applyBlockTypeAtCaret(editor, props.id, range);
+            return;
+          }
+          const embed = embeds.find((candidate) => candidate.id === props.id);
+          if (embed) insertEmbedAtCaret(editor, embed.id, embed.createAttributes(), range);
+        },
         render: () => ({
           onStart: (props) => store.bind(props),
           onUpdate: (props) => store.bind(props),

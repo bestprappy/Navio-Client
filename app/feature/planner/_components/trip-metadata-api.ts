@@ -7,12 +7,7 @@ import {
   type TripResponse,
 } from "./planner-api";
 
-export type TripMetadataUpdate = Partial<CreateTripPayload> & {
-  // Guest-only: persisted trips resolve these server-side from destinationId.
-  destinationName?: string;
-  destinationLat?: number;
-  destinationLng?: number;
-};
+export type TripMetadataUpdate = Partial<CreateTripPayload>;
 
 export const tripMetadataQueryKey = (tripId: string) =>
   ["planner-trip", tripId] as const;

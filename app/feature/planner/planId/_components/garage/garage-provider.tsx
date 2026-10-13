@@ -5,8 +5,7 @@ import { createContext, useContext, useLayoutEffect, useMemo, useRef, type React
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useAtom, useStore } from "jotai";
-import { applyGuestVehicleCommand, guestVehiclesAtom } from "./guest-vehicles";
-import { getPublishedVehicle, type VehicleCommand } from "./vehicle-api";
+import { type VehicleCommand } from "./vehicle-api";
 
 import { garageActiveIdSnapshotAtom, garageModalOpenAtom, garageVehiclesSnapshotAtom } from "./garage.atoms";
 import { executeVehicleCommand, listVehicles, VehicleApiError, type SavedVehicle } from "./vehicle-api";
@@ -21,7 +20,6 @@ function useGarageState() {
   const queryClient = useQueryClient();
   const store = useStore();
   const tripGeneration = useRef(0);
-  const [guestVehicles, setGuestVehicles] = useAtom(guestVehiclesAtom);
   const [tripEnergy] = useAtom(tripEnergyStateAtom);
   const queryKey = ["garage", userId] as const;
   const query = useQuery({
@@ -33,7 +31,8 @@ function useGarageState() {
     mutationKey: ["garage-write", userId],
     mutationFn: async (command: TripVehicleCommand) => {
       if (status === "loading") throw new Error("Wait for your session to finish loading.");
-      const library = authenticated ? queryClient.getQueryData<SavedVehicle[]>(queryKey) ?? [] : store.get(guestVehiclesAtom);
+      if (!authenticated) throw new Error("Sign in to update your garage.");
+      const library = queryClient.getQueryData<SavedVehicle[]>(queryKey) ?? [];
       const ids = tripGarageIds(store.get(tripEnergyStateAtom));
       const targetId = command.kind === "catalog" ? library.find(vehicle => vehicle.catalog?.id === command.catalogId)?.id
         : command.kind === "custom" ? undefined : command.id;
@@ -46,20 +45,14 @@ function useGarageState() {
         if (!selected) throw new Error("This vehicle is no longer available in your vehicle list.");
         return selected;
       }
-      if (authenticated) {
-        // Reusing a catalogue entry must not create another account record for every trip.
-        const existing = command.kind === "catalog" ? library.find(vehicle => vehicle.catalog?.id === command.catalogId) : undefined;
-        return existing && command.kind === "catalog"
-          ? executeVehicleCommand({ kind: "update", id: existing.id, patch: {
-            energySelection: command.energySelection, consumptionKwhPer100km: command.consumptionKwhPer100km,
-            consumptionProvenance: command.consumptionProvenance,
-          } })
-          : executeVehicleCommand(command);
-      }
-      const guestCommand = command.kind === "catalog" ? { ...command, catalogVehicle: await getPublishedVehicle(command.catalogId) } : command;
-      const next = applyGuestVehicleCommand(store.get(guestVehiclesAtom), guestCommand);
-      setGuestVehicles(next);
-      return command.kind === "update" ? next.find(vehicle => vehicle.id === command.id) ?? null : next[next.length - 1];
+      // Reusing a catalogue entry must not create another account record for every trip.
+      const existing = command.kind === "catalog" ? library.find(vehicle => vehicle.catalog?.id === command.catalogId) : undefined;
+      return existing && command.kind === "catalog"
+        ? executeVehicleCommand({ kind: "update", id: existing.id, patch: {
+          energySelection: command.energySelection, consumptionKwhPer100km: command.consumptionKwhPer100km,
+          consumptionProvenance: command.consumptionProvenance,
+        } })
+        : executeVehicleCommand(command);
     },
     scope: { id: `garage-${userId}` },
     onMutate: async () => {
@@ -92,7 +85,7 @@ function useGarageState() {
     },
     onError: (error) => { console.error("Could not save garage changes.", { component: "GarageProvider", error }); },
   });
-  const libraryVehicles = useMemo(() => authenticated ? query.data ?? [] : guestVehicles, [authenticated, query.data, guestVehicles]);
+  const libraryVehicles = useMemo(() => authenticated ? query.data ?? [] : [], [authenticated, query.data]);
   const vehicles = useMemo(() => {
     const ids = new Set(tripGarageIds(tripEnergy));
     return libraryVehicles.filter(vehicle => ids.has(vehicle.id));

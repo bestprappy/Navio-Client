@@ -33,6 +33,9 @@ import { PlaceSearchDropdown } from "./place-search-dropdown";
 type AddPlaceInputProps = {
   blockId: string;
   searchBias?: PlaceSearchBias;
+  beforeItemId?: string;
+  autoFocus?: boolean;
+  onSearchStarted?: () => void;
 };
 
 export type PlaceSearchBias = {
@@ -41,12 +44,13 @@ export type PlaceSearchBias = {
   lng: number;
 };
 
-export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
+export function AddPlaceInput({ blockId, searchBias, beforeItemId, autoFocus = false, onSearchStarted }: AddPlaceInputProps) {
   const generatedId = useId();
   const inputId = `place-search-${generatedId}`;
   const listboxId = `place-search-listbox-${generatedId}`;
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const mountedRef = useRef(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -64,6 +68,15 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
   const closeActiveSearch = useSetAtom(closeActiveSearchAtom);
   const startPlaceSearch = useSetAtom(startPlaceSearchAtom);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  useEffect(() => {
+    if (autoFocus) inputRef.current?.focus();
+  }, [autoFocus]);
 
   // Debounce the input so the API isn't called on every keystroke
   useEffect(() => {
@@ -133,14 +146,17 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
       });
     },
     onSuccess: (result) => {
-      startPlaceSearch({ blockId, result });
+      if (!mountedRef.current) return;
+      startPlaceSearch({ blockId, beforeItemId, result });
       setQuery("");
       setDebouncedQuery("");
       setSessionToken(createPlaceSearchSessionToken());
       setActiveIndex(0);
       setIsDropdownOpen(false);
+      onSearchStarted?.();
     },
     onError: (error, suggestion) => {
+      if (!mountedRef.current) return;
       console.error("Failed to fetch place detail.", {
         component: "AddPlaceInput",
         operation: "fetchPlaceDetail",
@@ -252,6 +268,8 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
           lng: searchBias?.lng,
         }));
 
+      if (!mountedRef.current) return;
+
       if (!results.length) {
         setMapSearchError("No matching places found on the map.");
         return;
@@ -259,11 +277,14 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
 
       startPlaceSearch({
         blockId,
+        beforeItemId,
         query: trimmedQuery,
         results: sortResultsByDistance(results, searchBias),
       });
       setIsDropdownOpen(false);
+      onSearchStarted?.();
     } catch (error) {
+      if (!mountedRef.current) return;
       console.error("Failed to show place search results on map.", {
         component: "AddPlaceInput",
         operation: "showResultsOnMap",
@@ -272,7 +293,7 @@ export function AddPlaceInput({ blockId, searchBias }: AddPlaceInputProps) {
       });
       setMapSearchError("Could not show results on the map. Try again.");
     } finally {
-      setIsSubmittingMapSearch(false);
+      if (mountedRef.current) setIsSubmittingMapSearch(false);
     }
   }
 
