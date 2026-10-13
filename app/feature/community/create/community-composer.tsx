@@ -5,34 +5,21 @@ import {
   useMemo,
   useRef,
   useState,
-  type ElementType,
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
 import { useAtom } from "jotai";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { CommunityIcon, communityHandle } from "../_components/community-identity";
+import { CommunityPictureInput } from "../_components/community-picture-input";
 import {
-  Bold,
-  Italic,
-  Strikethrough,
-  Superscript,
-  Heading1,
-  Link2,
-  Image as ImageIcon,
-  Smile,
-  List,
-  ListOrdered,
-  Highlighter,
-  Quote,
-  Code,
-  Braces,
-  Table2,
-  MoreHorizontal,
   Check,
   ChevronDown,
+  Image as ImageIcon,
+  Link2,
   Search,
-  Upload,
   Tag,
+  Type,
   X,
   MapPinned,
 } from "lucide-react";
@@ -63,7 +50,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-type PostTab = "text" | "media" | "link" | "poll";
+type PostTab = "text" | "media" | "link";
 
 type PostFieldErrors = Partial<Record<keyof PostFormValues, string>>;
 
@@ -73,15 +60,11 @@ type CommunityComposerProps = {
   initialPlanId?: string | null;
 };
 
-const TABS: { id: PostTab; label: string }[] = [
-  { id: "text", label: "Text" },
-  { id: "media", label: "Images & Video" },
-  { id: "link", label: "Link" },
-  { id: "poll", label: "Poll" },
-];
-
-const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg"];
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const TABS = [
+  { id: "text", label: "Text", icon: Type },
+  { id: "media", label: "Image", icon: ImageIcon },
+  { id: "link", label: "Link", icon: Link2 },
+] as const satisfies readonly { id: PostTab; label: string; icon: typeof Type }[];
 
 function getSuggestedDiscussionGroup(
   trip: SharedTrip,
@@ -115,16 +98,6 @@ function getSuggestedDiscussionGroup(
   );
 }
 
-function validateImageFile(file: File): string {
-  if (!ACCEPTED_IMAGE_TYPES.includes(file.type) || file.size === 0) {
-    return "Choose a PNG or JPEG picture.";
-  }
-  if (file.size > MAX_IMAGE_BYTES) {
-    return "Pictures must be 5 MiB or smaller.";
-  }
-  return "";
-}
-
 export function CommunityComposer({
   groups,
   initialGroupId = null,
@@ -140,9 +113,7 @@ export function CommunityComposer({
   const [communitySearch, setCommunitySearch] = useState("");
   const [flairDialogOpen, setFlairDialogOpen] = useState(false);
   const [selectedFlairId, setSelectedFlairId] = useState<string | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [fileError, setFileError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<PostFieldErrors>({});
   const [draftSaved, setDraftSaved] = useState(false);
 
@@ -152,20 +123,10 @@ export function CommunityComposer({
     file: File | null;
     id: string;
   } | null>(null);
-  const previewRef = useRef<HTMLImageElement>(null);
-  const fileInputId = "post-media-upload";
 
   const selectableTrips = useMemo(() => explorePlanSharedTrips, []);
   const selectedGroup = groups.find((group) => group.id === postDraft.groupId);
   const canModerateArchive = selectedGroup?.status === "archived";
-
-  // Keep the media tab preview pointed at the currently chosen file.
-  useEffect(() => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    if (previewRef.current) previewRef.current.src = url;
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
 
   // Apply ?groupId / ?planId prefill exactly once per incoming query pair.
   useEffect(() => {
@@ -307,17 +268,6 @@ export function CommunityComposer({
     }));
   }
 
-  function handleSelectFile(selected: File | null) {
-    if (!selected) return;
-    const message = validateImageFile(selected);
-    if (message) {
-      setFileError(message);
-      return;
-    }
-    setFileError("");
-    setFile(selected);
-  }
-
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setDraftSaved(false);
@@ -363,7 +313,7 @@ export function CommunityComposer({
             <button
               type="button"
               className={cn(
-                "flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium transition hover:border-foreground/30 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "flex h-11 w-fit items-center gap-2 rounded-full bg-muted px-3 text-sm font-medium transition hover:bg-secondary focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 communityOpen && "border-foreground/40",
               )}
             />
@@ -371,32 +321,19 @@ export function CommunityComposer({
         >
           {selectedGroup ? (
             <>
-              <span className="flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted">
-                {selectedGroup.avatarUrl ? (
-                  // Group avatars come from arbitrary remote hosts; the optimizer is not configured for them.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={selectedGroup.avatarUrl}
-                    alt=""
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <span className="text-[10px] font-bold">
-                    {selectedGroup.name.slice(0, 1).toUpperCase()}
-                  </span>
-                )}
-              </span>
-              <span className="max-w-[160px] truncate">
-                {selectedGroup.name}
+              <CommunityIcon
+                name={selectedGroup.name}
+                seed={selectedGroup.slug ?? selectedGroup.id}
+                src={selectedGroup.avatarUrl}
+                size="sm"
+              />
+              <span className="max-w-[14rem] truncate font-semibold">
+                {communityHandle(selectedGroup.slug, selectedGroup.name)}
               </span>
             </>
           ) : (
             <>
-              <span className="flex size-5 shrink-0 items-center justify-center rounded-full border-2 border-muted-foreground/50">
-                <span className="text-[9px] font-extrabold text-muted-foreground">
-                  N
-                </span>
-              </span>
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-muted-foreground/50" />
               <span className="text-muted-foreground">Select a community</span>
             </>
           )}
@@ -453,23 +390,15 @@ export function CommunityComposer({
                       isSelected && "bg-muted/50",
                     )}
                   >
-                    <span className="flex size-8 shrink-0 overflow-hidden rounded-full bg-muted">
-                      {group.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={group.avatarUrl}
-                          alt=""
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        <span className="flex size-full items-center justify-center text-xs font-bold">
-                          {group.name.slice(0, 1).toUpperCase()}
-                        </span>
-                      )}
-                    </span>
+                    <CommunityIcon
+                      name={group.name}
+                      seed={group.slug ?? group.id}
+                      src={group.avatarUrl}
+                      size="md"
+                    />
                     <span className="min-w-0">
-                      <span className="block truncate font-medium">
-                        {group.name}
+                      <span className="block truncate font-semibold">
+                        {communityHandle(group.slug, group.name)}
                       </span>
                       <span className="block text-xs text-muted-foreground">
                         {group.memberCount.toLocaleString()} members
@@ -500,8 +429,10 @@ export function CommunityComposer({
       ) : null}
 
       {/* Tab bar */}
-      <div className="flex border-b border-border" role="tablist" aria-label="Post type">
+      <div className="flex gap-1 border-b border-border" role="tablist" aria-label="Post type">
         {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const selected = activeTab === tab.id;
           const hasContent =
             (tab.id === "text" && postDraft.body.trim().length > 0) ||
             (tab.id === "media" && Boolean(file)) ||
@@ -511,26 +442,30 @@ export function CommunityComposer({
               key={tab.id}
               type="button"
               role="tab"
-              aria-selected={activeTab === tab.id}
+              id={`post-tab-${tab.id}`}
+              aria-selected={selected}
+              aria-controls={`post-panel-${tab.id}`}
+              tabIndex={selected ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
-              disabled={tab.id === "poll"}
-              title={
-                tab.id === "poll" ? "Polls are not available yet" : undefined
-              }
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+                event.preventDefault();
+                const index = TABS.findIndex((item) => item.id === activeTab);
+                const next = TABS[(index + (event.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length];
+                setActiveTab(next.id);
+                document.getElementById(`post-tab-${next.id}`)?.focus();
+              }}
               className={cn(
-                "relative px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                activeTab === tab.id
-                  ? "text-foreground after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:bg-primary"
-                  : "text-muted-foreground hover:text-foreground",
-                tab.id === "poll" && "cursor-not-allowed opacity-40",
+                "relative inline-flex items-center gap-1.5 rounded-t-lg px-4 py-2.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                selected
+                  ? "text-foreground after:absolute after:inset-x-2 after:bottom-0 after:h-0.5 after:rounded-full after:bg-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
+              <Icon className={cn("size-4", selected && "text-primary")} aria-hidden="true" />
               {tab.label}
               {hasContent ? (
-                <span
-                  aria-label="has content"
-                  className="ml-1.5 inline-block size-1.5 rounded-full bg-primary align-middle"
-                />
+                <span className="inline-block size-1.5 rounded-full bg-primary" aria-label="has content" />
               ) : null}
             </button>
           );
@@ -541,7 +476,7 @@ export function CommunityComposer({
       <div>
         <div
           className={cn(
-            "relative rounded-lg border border-border bg-card",
+            "relative rounded-xl border border-border bg-card",
             fieldErrors.title && "border-destructive",
           )}
         >
@@ -564,7 +499,7 @@ export function CommunityComposer({
             disabled={mutation.isPending}
             aria-invalid={Boolean(fieldErrors.title)}
             aria-describedby={fieldErrors.title ? "post-title-error" : undefined}
-            className="w-full rounded-lg bg-transparent px-4 py-3 pb-6 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="w-full rounded-xl bg-transparent px-4 py-3.5 pb-7 text-base font-semibold outline-none placeholder:font-normal placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
           />
           <span className="absolute bottom-2 right-3 text-xs text-muted-foreground">
             {postDraft.title.length}/300
@@ -590,7 +525,7 @@ export function CommunityComposer({
           className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground transition hover:border-foreground/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Tag className="size-3" aria-hidden="true" />
-          Add flair and tags
+          Add flair
         </button>
 
         {selectedFlairId && selectedGroup
@@ -626,34 +561,7 @@ export function CommunityComposer({
 
       {/* Content area */}
       {activeTab === "text" ? (
-        <div className="rounded-lg border border-border bg-card">
-          <div
-            role="toolbar"
-            aria-label="Text formatting"
-            className="flex flex-wrap items-center gap-0.5 border-b border-border px-2 py-1.5"
-          >
-            <ToolbarButton icon={Bold} label="Bold" />
-            <ToolbarButton icon={Italic} label="Italic" />
-            <ToolbarButton icon={Strikethrough} label="Strikethrough" />
-            <ToolbarButton icon={Superscript} label="Superscript" />
-            <ToolbarButton icon={Heading1} label="Heading" />
-            <ToolbarDivider />
-            <ToolbarButton icon={Link2} label="Link" />
-            <ToolbarButton icon={ImageIcon} label="Insert image" />
-            <ToolbarButton icon={Smile} label="Emoji" />
-            <ToolbarDivider />
-            <ToolbarButton icon={List} label="Bullet list" />
-            <ToolbarButton icon={ListOrdered} label="Numbered list" />
-            <ToolbarDivider />
-            <ToolbarButton icon={Highlighter} label="Highlight" />
-            <ToolbarButton icon={Quote} label="Blockquote" />
-            <ToolbarButton icon={Code} label="Inline code" />
-            <ToolbarButton icon={Braces} label="Code block" />
-            <ToolbarButton icon={Table2} label="Table" />
-            <div className="ml-auto">
-              <ToolbarButton icon={MoreHorizontal} label="More options" />
-            </div>
-          </div>
+        <div id="post-panel-text" role="tabpanel" aria-labelledby="post-tab-text" className="rounded-xl border border-border bg-card focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/20">
           <label htmlFor="post-body" className="sr-only">
             Post body
           </label>
@@ -672,7 +580,7 @@ export function CommunityComposer({
             disabled={mutation.isPending}
             aria-invalid={Boolean(fieldErrors.body)}
             aria-describedby={fieldErrors.body ? "post-body-error" : undefined}
-            className="w-full resize-y rounded-b-lg bg-transparent px-4 py-3 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="w-full resize-y rounded-xl bg-transparent px-4 py-3 text-sm leading-6 outline-none placeholder:text-muted-foreground"
           />
           {fieldErrors.body ? (
             <p
@@ -687,111 +595,23 @@ export function CommunityComposer({
       ) : null}
 
       {activeTab === "media" ? (
-        <div className="space-y-3">
-          <div
-            role="button"
-            tabIndex={0}
-            aria-label="Upload a post picture"
-            aria-describedby="post-media-help"
-            className={cn(
-              "flex min-h-40 cursor-pointer flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed border-border bg-card transition hover:border-foreground/30 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-              isDragging && "border-primary bg-primary/5",
-              fileError && "border-destructive",
-            )}
-            onDragOver={(event) => {
-              event.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={(event) => {
-              event.preventDefault();
-              setIsDragging(false);
-              handleSelectFile(event.dataTransfer.files?.[0] ?? null);
-            }}
-            onClick={() => document.getElementById(fileInputId)?.click()}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                document.getElementById(fileInputId)?.click();
-              }
-            }}
-          >
-            <span className="flex size-10 items-center justify-center rounded-full border border-border bg-card shadow-xs">
-              <Upload
-                className="size-4 text-muted-foreground"
-                aria-hidden="true"
-              />
-            </span>
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-primary">Drag and Drop</span> or
-              upload a picture
-            </p>
-            <input
-              id={fileInputId}
-              type="file"
-              accept="image/png,image/jpeg"
-              className="sr-only"
-              // The drop zone above is the keyboard-reachable control.
-              tabIndex={-1}
-              aria-label="Post picture file"
-              // The drop zone forwards its click here; stop the bubble so it
-              // does not re-open the picker in a loop.
-              onClick={(event) => event.stopPropagation()}
-              onChange={(event) => {
-                const selected = event.target.files?.[0] ?? null;
-                event.target.value = "";
-                handleSelectFile(selected);
-              }}
-            />
-          </div>
-
-          <p id="post-media-help" className="text-xs text-muted-foreground">
-            PNG or JPEG, up to 5 MiB. Video uploads are not available yet.
-          </p>
-
-          {fileError ? (
-            <p role="alert" className="text-xs text-destructive">
-              {fileError}
-            </p>
-          ) : null}
-
-          {file ? (
-            <div className="space-y-2 rounded-lg border border-border bg-card p-3">
-              {/* Local blob preview; the server image optimizer cannot read this URL. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                ref={previewRef}
-                alt="Post picture preview"
-                className="max-h-64 w-full rounded-md object-contain"
-              />
-              <div className="flex items-center justify-between gap-2">
-                <span className="min-w-0 break-all text-sm text-muted-foreground">
-                  {file.name}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={mutation.isPending}
-                  onClick={() => {
-                    setFile(null);
-                    setFileError("");
-                  }}
-                >
-                  <X aria-hidden="true" />
-                  Remove
-                </Button>
-              </div>
-            </div>
-          ) : null}
+        <div id="post-panel-media" role="tabpanel" aria-labelledby="post-tab-media">
+          <CommunityPictureInput
+            label="Picture"
+            hint="PNG or JPEG, up to 5 MB"
+            shape="post"
+            file={file}
+            disabled={mutation.isPending}
+            onFileChange={setFile}
+          />
         </div>
       ) : null}
 
       {activeTab === "link" ? (
-        <div>
+        <div id="post-panel-link" role="tabpanel" aria-labelledby="post-tab-link">
           <div
             className={cn(
-              "rounded-lg border border-border bg-card",
+              "rounded-xl border border-border bg-card",
               fieldErrors.linkUrl && "border-destructive",
             )}
           >
@@ -861,15 +681,15 @@ export function CommunityComposer({
       <div className="flex justify-end gap-2">
         <Button
           type="button"
-          variant="outline"
-          size="sm"
+          variant="ghost"
+          className="h-10 rounded-full px-4"
           disabled={mutation.isPending}
           onClick={() => setDraftSaved(true)}
         >
-          Save Draft
+          Keep draft
         </Button>
-        <Button type="submit" size="sm" disabled={publishDisabled}>
-          {mutation.isPending ? "Publishing…" : "Post"}
+        <Button type="submit" className="h-10 rounded-full px-6 font-bold" disabled={publishDisabled}>
+          {mutation.isPending ? "Posting…" : "Post"}
         </Button>
       </div>
     </form>
@@ -1031,22 +851,4 @@ function PlanAttachmentSelector({
       ) : null}
     </section>
   );
-}
-
-function ToolbarButton({ icon: Icon, label }: { icon: ElementType; label: string }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={`${label} is not available yet`}
-      disabled
-      className="flex size-7 items-center justify-center rounded text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-50"
-    >
-      <Icon className="size-3.5" aria-hidden="true" />
-    </button>
-  );
-}
-
-function ToolbarDivider() {
-  return <div className="mx-1 h-4 w-px bg-border" aria-hidden="true" />;
 }

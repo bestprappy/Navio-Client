@@ -20,14 +20,15 @@ export function CommunityDiscussionPage({ groupName, discussionTitle }: { groupN
       <CommunityWorkspace.Content>
         {detail.isPending || query.isPending ? <CommunityGroupLoading /> : null}
         <CommunityQueryError error={detail.error ?? query.error} onRetry={() => { void detail.refetch(); void query.refetch(); }} />
-        {group && post && post.groupId !== group.id ? <p role="alert">This post does not belong to this community.</p> : null}
+        {group && post && post.groupId !== group.id ? <p role="alert" className="rounded-2xl bg-destructive/8 px-4 py-3 text-sm">This post belongs to a different community. Check the link and try again.</p> : null}
         {group && post && post.groupId === group.id ? <>
           <CommunityPostDetailCard post={post} group={group} />
+          <hr className="border-border" />
           <CommunityCommentThread post={post} group={group} />
         </> : null}
       </CommunityWorkspace.Content>
       <CommunityWorkspace.Aside>
-        {group?.profile ? <CommunityGroupSidebar group={group} profile={group.profile} /> : null}
+        {group?.profile ? <CommunityGroupSidebar group={group} profile={group.profile} createdAt={detail.data?.createdAt} /> : null}
       </CommunityWorkspace.Aside>
     </CommunityWorkspace>
   </CommunityErrorBoundary>;

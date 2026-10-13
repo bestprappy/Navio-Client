@@ -1,154 +1,150 @@
 "use client";
 
-import { SearchX, Sparkles } from "lucide-react";
-import { useAtom } from "jotai";
+import type { ReactNode } from "react";
+import { Clock, Rocket, TrendingUp, X } from "lucide-react";
 
-import { communityFeedSortAtom } from "../_components/community-atoms";
 import { CommunityPostCard } from "../_components/community-post-card";
-import type {
-  CommunityFeedSort,
-  CommunityGroup,
-  CommunityPost,
-} from "../_components/data";
-import {
-  getGroupById,
-} from "../_components/data";
-import { Badge } from "@/components/ui/badge";
+import type { CommunityFeedSort, CommunityGroup, CommunityPost } from "../_components/data";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { CommunityQueryError } from "../_components/community-query-state";
+
+const SORT_OPTIONS = [
+  { value: "best", label: "Best", icon: Rocket },
+  { value: "new", label: "New", icon: Clock },
+  { value: "top", label: "Top", icon: TrendingUp },
+] as const satisfies readonly { value: CommunityFeedSort; label: string; icon: typeof Rocket }[];
 
 type CommunityFeedProps = {
   posts: CommunityPost[];
   groups: CommunityGroup[];
-  searchQuery: string;
+  sort: CommunityFeedSort;
+  onSortChange: (sort: CommunityFeedSort) => void;
+  searchQuery?: string;
+  onClearSearch?: () => void;
   isLoading: boolean;
-  isError: boolean;
+  error: Error | null;
+  onRetry: () => void;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
+  onLoadMore?: () => void;
+  /** Shown when there are no posts and no search. */
+  emptyState: ReactNode;
+  metaVariant?: "group" | "author";
+  label: string;
 };
-
-const SORT_OPTIONS: { value: CommunityFeedSort; label: string }[] = [
-  { value: "best", label: "For you" },
-  { value: "new", label: "Latest" },
-  { value: "top", label: "Top rated" },
-];
 
 export function CommunityFeed({
   posts,
   groups,
-  searchQuery,
+  sort,
+  onSortChange,
+  searchQuery = "",
+  onClearSearch,
   isLoading,
-  isError,
+  error,
+  onRetry,
+  hasNextPage = false,
+  isFetchingNextPage = false,
+  onLoadMore,
+  emptyState,
+  metaVariant = "group",
+  label,
 }: CommunityFeedProps) {
-  const [sort, setSort] = useAtom(communityFeedSortAtom);
+  const groupsById = new Map(groups.map((group) => [group.id, group]));
+  const searching = searchQuery.trim().length > 0;
 
   return (
-    <section className="flex min-w-0 flex-col gap-4" aria-label="Community feed">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-extrabold leading-tight text-foreground">
-              Trip discussions
-            </h1>
-            {searchQuery ? (
-              <Badge variant="secondary">Search: {searchQuery}</Badge>
+    <section className="flex min-w-0 flex-col gap-2" aria-label={label}>
+      <div className="flex flex-wrap items-center gap-2 px-1">
+        <div role="group" aria-label="Sort posts" className="flex items-center gap-1">
+          {SORT_OPTIONS.map(({ value, label: optionLabel, icon: Icon }) => {
+            const active = sort === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onSortChange(value)}
+                className={cn(
+                  "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  active ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon className={cn("size-4", active && "text-primary")} aria-hidden="true" />
+                {optionLabel}
+              </button>
+            );
+          })}
+        </div>
+        {searching ? (
+          <span className="ml-auto inline-flex max-w-full items-center gap-1 rounded-full bg-primary/10 py-1 pl-3 pr-1 text-xs font-semibold text-primary">
+            <span className="truncate">Results for “{searchQuery.trim()}”</span>
+            {onClearSearch ? (
+              <button
+                type="button"
+                onClick={onClearSearch}
+                aria-label="Clear search"
+                className="inline-flex size-5 items-center justify-center rounded-full hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="size-3.5" aria-hidden="true" />
+              </button>
             ) : null}
-          </div>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            Share routes, ask questions, and learn from other travelers.
-          </p>
-        </div>
-        <div
-          className="inline-flex rounded-full border border-border bg-card p-1 shadow-xs"
-          role="group"
-          aria-label="Sort community feed"
-        >
-          {SORT_OPTIONS.map((option) => (
-            <Button
-              key={option.value}
-              type="button"
-              size="sm"
-              variant={sort === option.value ? "secondary" : "ghost"}
-              aria-pressed={sort === option.value}
-              onClick={() => setSort(option.value)}
-              className={cn(sort === option.value && "shadow-xs")}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
+          </span>
+        ) : null}
       </div>
 
-      {isError ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Feed unavailable</CardTitle>
-            <CardDescription>
-              We couldn’t load the discussions. Please refresh the page
-              to try again.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      ) : null}
+      <CommunityQueryError error={error} onRetry={onRetry} />
 
       {isLoading ? (
-        <div className="flex flex-col gap-4" aria-label="Loading posts">
-          {["one", "two", "three"].map((item) => (
-            <Card key={item}>
-              <CardContent className="space-y-4 p-5">
-                <div className="h-4 w-40 rounded-full bg-muted" />
-                <div className="h-6 w-3/4 rounded-full bg-muted" />
-                <div className="h-20 rounded-xl bg-muted" />
-              </CardContent>
-            </Card>
+        <div role="status" className="flex flex-col divide-y divide-border">
+          <span className="sr-only">Loading posts</span>
+          {[0, 1, 2].map((item) => (
+            <div key={item} className="flex flex-col gap-2.5 px-4 py-4">
+              <Skeleton className="h-4 w-48 rounded-full" />
+              <Skeleton className="h-6 w-4/5 rounded-full" />
+              <Skeleton className="h-40 w-full rounded-xl" />
+              <Skeleton className="h-8 w-56 rounded-full" />
+            </div>
           ))}
         </div>
       ) : null}
 
-      {!isLoading && !isError && posts.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-            <SearchX
-              className="size-8 text-muted-foreground"
-              aria-hidden="true"
-            />
-            <div>
-              <h2 className="font-semibold text-foreground">
-                No discussions yet
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Join a community and publish the first discussion.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      {!isLoading && !error && posts.length === 0 ? (
+        searching ? (
+          <div className="rounded-2xl border border-dashed border-border px-6 py-10 text-center">
+            <p className="font-semibold text-foreground">No posts match “{searchQuery.trim()}”</p>
+            <p className="mt-1 text-sm text-muted-foreground">Try a place name, a route, or fewer words.</p>
+          </div>
+        ) : (
+          emptyState
+        )
       ) : null}
 
-      {!isLoading && !isError && posts.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Sparkles className="size-3.5" aria-hidden="true" />
-            {posts.length} discussion{posts.length === 1 ? "" : "s"} found
-          </div>
-          <div className="rounded-lg border border-border/50 bg-card p-1 shadow-sm">
-            {posts.map((post) => {
-              const group = getGroupById(post.groupId, groups);
+      {!isLoading && posts.length > 0 ? (
+        <ol className="flex flex-col divide-y divide-border">
+          {posts.map((post) => (
+            <li key={post.id} className="py-1">
+              <CommunityPostCard
+                post={post}
+                group={groupsById.get(post.groupId) ?? null}
+                metaVariant={metaVariant}
+              />
+            </li>
+          ))}
+        </ol>
+      ) : null}
 
-              return (
-                <CommunityPostCard
-                  key={post.id}
-                  post={post}
-                  group={group}
-                />
-              );
-            })}
-          </div>
-        </div>
+      {hasNextPage && onLoadMore ? (
+        <Button
+          variant="outline"
+          className="mx-auto mt-2 rounded-full"
+          disabled={isFetchingNextPage}
+          onClick={onLoadMore}
+        >
+          {isFetchingNextPage ? "Loading…" : "Show more posts"}
+        </Button>
       ) : null}
     </section>
   );

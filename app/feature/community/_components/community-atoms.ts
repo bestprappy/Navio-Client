@@ -11,6 +11,8 @@ import { defaultCreatePostDraft, mockSharedTrips } from "./data";
 
 export const communitySearchQueryAtom = atom("");
 export const communityFeedSortAtom = atom<CommunityFeedSort>("best");
+export const popularFeedSortAtom = atom<CommunityFeedSort>("top");
+export const groupFeedSortAtom = atom<CommunityFeedSort>("best");
 export const communityCommentSortAtom = atom<CommunityCommentSort>("best");
 export const communityCommentSearchAtom = atom("");
 export const communityDiscoveryCategoryAtom = atom("all");
@@ -55,3 +57,6 @@ export const copiedTripsAtom = atom((get) => {
 export const totalCopiedTripsAtom = atom(
   (get) => get(copiedTripIdsAtom).length,
 );
+
+/** One create-community wizard is mounted in the layout; any "Create a community" button opens it. */
+export const createCommunityOpenAtom = atom(false);

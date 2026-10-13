@@ -12,6 +12,11 @@ export const flairToneSchema = z.enum([
   "ev",
 ]);
 const roleSchema = z.enum(["member", "moderator", "admin"]).nullable();
+const optionalMediaId = z
+  .string()
+  .uuid()
+  .nullish()
+  .transform((value) => value ?? null);
 export const ruleInputSchema = z.object({
   title: z.string().trim().min(1).max(120),
   description: z.string().trim().min(1),
@@ -43,13 +48,15 @@ const groupSchema = z.object({
   joined: z.boolean(),
   muted: z.boolean(),
   role: roleSchema,
+  // Optional so responses from a service without community pictures still parse.
+  iconMediaId: optionalMediaId,
+  bannerMediaId: optionalMediaId,
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 export const groupDetailSchema = groupSchema.extend({
   createdById: z.string().uuid(),
   bannerUrl: z.string().nullable(),
-  bannerMediaId: z.string().uuid().nullable(),
   summary: z.string().nullable(),
   weeklyVisitorCount: z.number().int().nonnegative(),
   weeklyContributionCount: z.number().int().nonnegative(),
@@ -113,19 +120,28 @@ export const createGroupSchema = z.object({
     .refine(
       (name) =>
         !["mine", "search", "create", "discovery", "popular"].includes(
-          name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, ""),
+          communitySlugPreview(name),
         ),
       "Choose another name; this address is reserved.",
     ),
-  description: z.string().trim().min(1, "Describe your community."),
+  description: z
+    .string()
+    .trim()
+    .min(1, "Describe your community.")
+    .max(500, "Keep the description under 500 characters."),
   country: z.string().trim().max(120),
   places: z.string(),
   tags: z.string(),
 });
 export type CreateGroupValues = z.infer<typeof createGroupSchema>;
+
+/** The address the service will derive from a name (GroupValues.slug). */
+export function communitySlugPreview(name: string) {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 export type GroupDetail = z.infer<typeof groupDetailSchema>;
 export type GroupListItem = z.infer<typeof groupSchema>;
 export type GroupPage = z.infer<
@@ -200,16 +216,50 @@ export async function communityRequest<T>(
   }
 }
 
+export type CommunityPictureSlot = "icon" | "banner";
+
+/**
+ * Same-origin URL for a stored community picture. The media id busts the
+ * browser cache whenever a moderator replaces the picture.
+ */
+export function communityPictureUrl(
+  slug: string,
+  slot: CommunityPictureSlot,
+  mediaId: string | null | undefined,
+): string {
+  return mediaId
+    ? `/api/groups/${encodeURIComponent(slug)}/${slot}?v=${mediaId}`
+    : "";
+}
+
+export function uploadCommunityPicture(
+  slug: string,
+  slot: CommunityPictureSlot,
+  file: File,
+) {
+  const body = new FormData();
+  body.append("file", file);
+  return communityRequest(
+    `/${encodeURIComponent(slug)}/${slot}`,
+    groupDetailSchema,
+    { method: "POST", body },
+  );
+}
+
 export function toCommunityGroup(
   group: GroupListItem | GroupDetail,
 ): CommunityGroup {
   const detail = "rules" in group ? group : undefined;
+  const bannerUrl = group.bannerMediaId
+    ? communityPictureUrl(group.slug, "banner", group.bannerMediaId)
+    : (detail?.bannerUrl ?? "");
   return {
     ...group,
     country: group.country ?? "",
     places: group.places ?? [],
     tags: group.tags ?? [],
-    avatarUrl: "",
+    avatarUrl: communityPictureUrl(group.slug, "icon", group.iconMediaId),
+    bannerUrl,
     createdById: detail?.createdById ?? "",
     rules: detail?.rules ?? [],
     postFlairs: detail?.postFlairs ?? [],
@@ -218,9 +268,7 @@ export function toCommunityGroup(
     profile: detail
       ? {
           groupId: group.id,
-          bannerUrl: detail.bannerMediaId
-            ? `/api/groups/${encodeURIComponent(group.slug)}/banner?v=${detail.bannerMediaId}`
-            : detail.bannerUrl ?? "",
+          bannerUrl,
           summary: detail.summary ?? group.description,
           weeklyVisitorCount: detail.weeklyVisitorCount,
           weeklyContributionCount: detail.weeklyContributionCount,

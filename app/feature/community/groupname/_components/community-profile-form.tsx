@@ -1,6 +1,5 @@
 "use client";
 
-import { CommunityBannerUpload } from "./community-banner-upload";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -84,7 +83,6 @@ export function CommunityProfileForm({ group }: { group: GroupDetail }) {
         label="Tags (comma separated)"
         disabled={mutation.isPending}
       />
-      <CommunityBannerUpload group={group} />
       <CommunityQueryError error={mutation.error} />
       {mutation.isSuccess && !form.formState.isDirty ? (
         <p role="status" className="text-sm text-success">

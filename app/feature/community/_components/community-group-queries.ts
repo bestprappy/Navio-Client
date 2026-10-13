@@ -10,8 +10,11 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
+import { z } from "zod";
+
 import {
   CommunityApiError,
+  type CommunityPictureSlot,
   communityRequest,
   createGroupSchema,
   groupDetailSchema,
@@ -19,6 +22,7 @@ import {
   membershipSchema,
   splitCommunityTerms,
   toCommunityGroup,
+  uploadCommunityPicture,
   type CreateGroupValues,
   type GroupDetail,
 } from "./community-api";
@@ -202,6 +206,27 @@ export function useUpdateCommunityGroup(slug: string) {
       ),
     onSuccess: async (group) => {
       client.setQueryData(["community", identity, "group", slug], group);
+      await client.invalidateQueries({ queryKey: ["community", identity] });
+    },
+  });
+}
+
+/**
+ * Uploads or removes one community picture (icon or banner). Shares the
+ * settings mutation scope so picture and profile saves never interleave.
+ */
+export function useCommunityPicture(slug: string, slot: CommunityPictureSlot) {
+  const client = useQueryClient();
+  const { identity } = useCommunityIdentity();
+  return useMutation({
+    mutationKey: ["community", "settings", slug],
+    scope: { id: `community-settings-${slug}` },
+    mutationFn: (file: File | null) =>
+      file
+        ? uploadCommunityPicture(slug, slot, file)
+        : communityRequest(`/${encodeURIComponent(slug)}/${slot}`, z.null(), { method: "DELETE" }),
+    onSuccess: async (group) => {
+      if (group) client.setQueryData(["community", identity, "group", slug], group);
       await client.invalidateQueries({ queryKey: ["community", identity] });
     },
   });

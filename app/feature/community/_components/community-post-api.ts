@@ -1,24 +1,33 @@
 import { z } from "zod";
-import { communityRequest, pageSchema } from "./community-api";
+import { communityPictureUrl, communityRequest, pageSchema } from "./community-api";
 import type { CommunityPost, CommunityComment } from "./data";
 
 const optionalText = z.string().nullable().transform((value) => value ?? undefined);
 export const postSchema = z.object({
   id: z.string().uuid(), groupId: z.string().uuid(), groupSlug: z.string().min(1),
-  groupName: z.string(), authorId: z.string().uuid(), title: z.string(), body: z.string(),
+  groupName: z.string(), groupIconMediaId: z.string().uuid().nullish(), authorId: z.string().uuid(), title: z.string(), body: z.string(),
   createdAt: z.string().datetime(), updatedAt: z.string().datetime(), upvotes: z.number().int(),
   commentCount: z.number().int().nonnegative(), viewerVote: z.number().int().min(-1).max(1),
   flairId: z.string().uuid().nullable().transform((value) => value ?? undefined),
   sharedTripId: optionalText,
   linkUrl: z.string().regex(/^https?:\/\/[^\s]+$/).nullable().transform((value) => value ?? undefined),
   imageUrl: z.string().regex(/^\/v1\/posts\/[0-9a-f-]+\/image$/).nullable().transform((value) => value?.replace(/^\/v1\//, "/api/") ?? undefined),
-}).transform((post): CommunityPost => ({ ...post, tags: [], place: "", country: "" }));
+}).transform(({ groupIconMediaId, ...post }): CommunityPost => ({
+  ...post, tags: [], place: "", country: "",
+  groupIconUrl: communityPictureUrl(post.groupSlug, "icon", groupIconMediaId),
+}));
+
+export const COMMUNITY_REACTIONS = ["helpful", "love", "funny", "thanks", "want_to_go"] as const;
+const reactionSchema = z.object({ reaction: z.enum(COMMUNITY_REACTIONS), count: z.number().int().positive(), reacted: z.boolean() });
 
 export const commentSchema = z.object({
   id: z.string().uuid(), postId: z.string().uuid(), authorId: z.string().uuid(),
   parentCommentId: z.string().uuid().nullable().transform((value) => value ?? undefined),
   body: z.string(), deleted: z.boolean(), edited: z.boolean(), createdAt: z.string().datetime(),
   upvotes: z.number().int(), viewerVote: z.number().int().min(-1).max(1),
+  // Unknown future reactions are dropped rather than failing the whole thread.
+  reactions: z.array(z.unknown()).nullish().transform((items) =>
+    (items ?? []).flatMap((item) => { const parsed = reactionSchema.safeParse(item); return parsed.success ? [parsed.data] : []; })),
 }).transform((comment): CommunityComment => comment);
 
 export const postFormSchema = z.object({
@@ -43,9 +52,10 @@ export function isDeletedPostQuery(queryKey: readonly unknown[], deletedPostId: 
   return deletedPostId !== null && (queryKey[2] === "post" || queryKey[2] === "comments") && queryKey[3] === deletedPostId;
 }
 
-export function listPosts(query: string, sort: string, page: number, group?: string, signal?: AbortSignal) {
+export function listPosts(query: string, sort: string, page: number, group?: string, signal?: AbortSignal, joined = false) {
   const params = new URLSearchParams({ q: query.trim().slice(0, 200), sort, page: String(page), size: "20" });
   if (group) params.set("group", group);
+  else if (joined) params.set("joined", "true");
   return postRequest(`?${params}`, pageSchema(postSchema), undefined, signal);
 }
 

@@ -5,34 +5,17 @@ import { useMutation } from "@tanstack/react-query";
 import {
   ArrowBigUp,
   ArrowBigDown,
-  ArrowBigUpDash,
-  ArrowBigDownDash,
   Share2,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import { usePostMutation } from "./community-queries";
-import { CommunityQueryError } from "./community-query-state";
 import { formatCount } from "./data";
 import { cn } from "@/lib/utils";
 
-export function CommunityVoteButtons({ path, score, vote, disabled = false }: {
-  path: string; score: number; vote: number; disabled?: boolean;
-}) {
-  const mutation = usePostMutation();
-  const { requireAuth } = useRequireAuth();
-  return <div className="space-y-2">
-    <div className="flex items-center gap-1" role="group" aria-label="Vote">
-      <Button variant={vote === 1 ? "secondary" : "ghost"} size="icon-sm" aria-label="Upvote" aria-pressed={vote === 1}
-        disabled={disabled || mutation.isPending} onClick={() => requireAuth(() => mutation.mutate({ path, method: "PUT", body: { value: vote === 1 ? 0 : 1 } }))}><ArrowBigUp /></Button>
-      <span aria-live="polite" className="text-sm font-semibold">{score}</span>
-      <Button variant={vote === -1 ? "secondary" : "ghost"} size="icon-sm" aria-label="Downvote" aria-pressed={vote === -1}
-        disabled={disabled || mutation.isPending} onClick={() => requireAuth(() => mutation.mutate({ path, method: "PUT", body: { value: vote === -1 ? 0 : -1 } }))}><ArrowBigDown /></Button>
-    </div>
-    <CommunityQueryError error={mutation.error} />
-  </div>;
-}
+/** Shared look for the quiet action pills (comments, share, overflow) in a post's action row. */
+export const COMMUNITY_PILL_CLASS =
+  "inline-flex h-8 items-center gap-1.5 rounded-full bg-muted px-3 text-xs font-semibold text-foreground transition-colors hover:bg-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50";
 
 /**
  * Pill-shaped vote control used by the post cards. Score and pressed state come
@@ -56,7 +39,10 @@ export function CommunityVotePill({ path, score, vote, disabled = false }: {
       <div
         role="group"
         aria-label="Vote"
-        className="flex items-center overflow-hidden rounded-full bg-muted"
+        className={cn(
+          "flex h-8 items-center rounded-full transition-colors",
+          upvoted ? "bg-vote-up text-white" : downvoted ? "bg-vote-down text-white" : "bg-muted",
+        )}
       >
         <button
           type="button"
@@ -65,17 +51,17 @@ export function CommunityVotePill({ path, score, vote, disabled = false }: {
           disabled={busy}
           onClick={() => castVote(upvoted ? 0 : 1)}
           className={cn(
-            "flex items-center gap-1 px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
-            upvoted ? "text-primary" : "text-muted-foreground hover:text-foreground",
+            "flex h-8 items-center rounded-full px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60",
+            upvoted ? "hover:bg-black/10" : "text-muted-foreground hover:bg-vote-up/12 hover:text-vote-up",
           )}
         >
-          <ArrowBigUpDash className="size-3.5" fill={upvoted ? "currentColor" : "none"} aria-hidden="true" />
+          <ArrowBigUp className="size-5" fill={upvoted ? "currentColor" : "none"} aria-hidden="true" />
         </button>
         <span
           aria-live="polite"
           className={cn(
-            "min-w-[2ch] text-center text-xs font-bold",
-            upvoted ? "text-primary" : downvoted ? "text-destructive" : "text-foreground",
+            "min-w-[2ch] text-center text-xs font-bold tabular-nums",
+            !upvoted && !downvoted && "text-foreground",
           )}
         >
           {formatCount(score)}
@@ -87,11 +73,11 @@ export function CommunityVotePill({ path, score, vote, disabled = false }: {
           disabled={busy}
           onClick={() => castVote(downvoted ? 0 : -1)}
           className={cn(
-            "flex items-center gap-1 px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
-            downvoted ? "text-destructive" : "text-muted-foreground hover:text-foreground",
+            "flex h-8 items-center rounded-full px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-60",
+            downvoted ? "hover:bg-black/10" : "text-muted-foreground hover:bg-vote-down/12 hover:text-vote-down",
           )}
         >
-          <ArrowBigDownDash className="size-3.5" fill={downvoted ? "currentColor" : "none"} aria-hidden="true" />
+          <ArrowBigDown className="size-5" fill={downvoted ? "currentColor" : "none"} aria-hidden="true" />
         </button>
       </div>
       {mutation.error ? (
@@ -125,15 +111,6 @@ export function useShareLink(href: string) {
   return { ...mutation, fallback };
 }
 
-export function CommunityShareButton({ href }: { href: string }) {
-  const { mutate, isPending, isSuccess, error, fallback } = useShareLink(href);
-  return <div className="space-y-2">
-    <Button variant="ghost" size="sm" disabled={isPending} onClick={() => mutate()}><Share2 />{isSuccess ? "Link copied" : "Share"}</Button>
-    <CommunityQueryError error={error} />
-    {fallback ? <Input aria-label="Post link" readOnly value={fallback} onFocus={(event) => event.target.select()} /> : null}
-  </div>;
-}
-
 /**
  * Pill-shaped share control used by the post cards, where it sits in a row
  * alongside the vote and comment pills.
@@ -146,7 +123,7 @@ export function CommunitySharePill({ href }: { href: string }) {
         type="button"
         disabled={isPending}
         onClick={() => mutate()}
-        className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50"
+        className={COMMUNITY_PILL_CLASS}
       >
         <Share2 className="size-3.5" aria-hidden="true" />
         {isSuccess ? "Link copied" : "Share"}

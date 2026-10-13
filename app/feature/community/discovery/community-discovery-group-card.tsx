@@ -1,86 +1,56 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Users } from "lucide-react";
 
-import type { CommunityGroup } from "../_components/data";
-import {
-  formatCount,
-  getInitials,
-  slugifyCommunityValue,
-} from "../_components/data";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { CommunityBanner, CommunityIcon, communityHandle } from "../_components/community-identity";
 import { CommunityMembershipButton } from "../_components/community-membership-button";
-import { Card, CardContent } from "@/components/ui/card";
+import type { CommunityGroup } from "../_components/data";
+import { formatCount } from "../_components/data";
 
-type CommunityDiscoveryGroupCardProps = {
-  group: CommunityGroup;
-};
-
-export function CommunityDiscoveryGroupCard({
-  group,
-}: CommunityDiscoveryGroupCardProps) {
-  const groupHref = `/community/${group.slug ?? slugifyCommunityValue(group.name)}`;
+/** Explore card: a banner strip, the icon, and enough description to decide whether to join. */
+export function CommunityDiscoveryGroupCard({ group }: { group: CommunityGroup }) {
+  const seed = group.slug ?? group.id;
+  const href = `/community/${group.slug}`;
 
   return (
-    <Card
-      size="sm"
-      className="min-h-28 rounded-lg transition-colors hover:bg-muted/40"
-    >
-      <CardContent className="flex h-full flex-col gap-3 p-3">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <Link
-            href={groupHref}
-            className="flex min-w-0 flex-1 items-start gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-          >
-            <Avatar className="size-10 shrink-0">
-              <AvatarImage src={group.avatarUrl} alt={group.name} />
-              <AvatarFallback className="text-xs font-semibold">
-                {getInitials(group.name)}
-              </AvatarFallback>
-            </Avatar>
-
-            <div className="min-w-0 flex-1">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <h2 className="truncate text-sm font-extrabold leading-tight text-foreground">
-                  {group.name}
-                </h2>
-                {group.isOfficial ? (
-                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
-                    Official
-                  </Badge>
-                ) : null}
-              </div>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                {formatCount(group.postCount)} posts
-              </p>
-            </div>
-          </Link>
-
-          <CommunityMembershipButton group={group} />
+    <article className="group/card relative flex flex-col overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/70 transition-shadow hover:shadow-md">
+      <CommunityBanner seed={seed} src={group.bannerUrl} alt="" className="h-16" />
+      <div className="flex flex-1 flex-col gap-2 px-4 pb-4">
+        <div className="flex items-end justify-between gap-3">
+          <CommunityIcon
+            name={group.name}
+            seed={seed}
+            src={group.avatarUrl}
+            size="lg"
+            className="-mt-5 size-12 text-lg ring-4 ring-card"
+          />
+          <CommunityMembershipButton group={group} compact className="relative z-10" />
         </div>
-
-        <Link
-          href={groupHref}
-          className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-        >
-          <p className="line-clamp-2 min-h-10 text-xs leading-relaxed text-muted-foreground">
-            {group.description}
+        <div className="min-w-0">
+          <h3 className="truncate text-base font-extrabold text-foreground">
+            <Link
+              href={href}
+              className="rounded-md after:absolute after:inset-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {communityHandle(group.slug, group.name)}
+            </Link>
+          </h3>
+          <p className="truncate text-xs text-muted-foreground">
+            {group.name !== group.slug ? `${group.name} · ` : ""}
+            {formatCount(group.memberCount)} {group.memberCount === 1 ? "member" : "members"}
           </p>
-        </Link>
-
-        <div className="mt-auto flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Users className="size-3" aria-hidden="true" />
-            {formatCount(group.memberCount)} members
-          </span>
-          <span className="flex items-center gap-1">
-            <MapPin className="size-3" aria-hidden="true" />
-            {group.country}
-          </span>
         </div>
-      </CardContent>
-    </Card>
+        <p className="line-clamp-2 text-sm leading-5 text-muted-foreground">{group.description}</p>
+        {group.tags.length ? (
+          <ul className="mt-auto flex flex-wrap gap-1.5 pt-1">
+            {group.tags.slice(0, 3).map((tag) => (
+              <li key={tag} className="rounded-full bg-secondary px-2 py-0.5 text-[0.6875rem] font-semibold text-secondary-foreground">
+                {tag}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </article>
   );
 }

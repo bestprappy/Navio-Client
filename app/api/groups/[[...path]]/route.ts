@@ -23,7 +23,7 @@ async function proxyGroupRequest(
   const allowAnonymous =
     request.method === "GET" &&
     (path.length === 0 || (path.length === 1 && path[0] !== "mine") ||
-      (path.length === 2 && path[1] === "banner"));
+      (path.length === 2 && (path[1] === "banner" || path[1] === "icon")));
   const suffix = path.length
     ? `/${path.map(encodeURIComponent).join("/")}`
     : "";

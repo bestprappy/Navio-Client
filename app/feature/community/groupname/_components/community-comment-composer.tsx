@@ -1,7 +1,6 @@
 "use client";
 
 import type { FormEvent } from "react";
-import { ImageIcon, Type } from "lucide-react";
 
 import { CommunityQueryError } from "../../_components/community-query-state";
 import { Button } from "@/components/ui/button";
@@ -48,7 +47,7 @@ export function CommunityCommentComposer({
 
   return (
     <form
-      className="rounded-2xl border border-border bg-card p-3 shadow-xs"
+      className="rounded-2xl border border-border bg-card p-2.5 shadow-xs transition-shadow focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/20"
       onSubmit={handleSubmit}
     >
       <label htmlFor={id} className="sr-only">
@@ -61,6 +60,12 @@ export function CommunityCommentComposer({
         placeholder={placeholder}
         autoFocus={autoFocus}
         onFocus={onFocus}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
+            event.currentTarget.form?.requestSubmit();
+          }
+        }}
         disabled={pending}
         maxLength={10000}
         className="min-h-16 resize-y border-0 bg-transparent px-1.5 py-2 leading-6 shadow-none focus-visible:ring-0"
@@ -72,53 +77,23 @@ export function CommunityCommentComposer({
         </div>
       ) : null}
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1 text-muted-foreground">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Attach image"
-            title="Image attachments are not available yet"
-            disabled
-          >
-            <ImageIcon className="size-4" aria-hidden="true" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-label="Add GIF"
-            title="GIF attachments are not available yet"
-            disabled
-            className="px-2 text-[11px] font-semibold uppercase"
-          >
-            GIF
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Format text"
-            title="Rich text formatting is not available yet"
-            disabled
-          >
-            <Type className="size-4" aria-hidden="true" />
-          </Button>
-        </div>
-
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+        <span className="hidden text-xs text-muted-foreground sm:inline">
+          {value.trim() ? "Ctrl + Enter to send" : ""}
+        </span>
         <div className="flex items-center gap-2">
           {onCancel ? (
             <Button
               type="button"
-              variant="secondary"
+              variant="ghost"
+              className="rounded-full"
               disabled={pending}
               onClick={onCancel}
             >
               Cancel
             </Button>
           ) : null}
-          <Button type="submit" disabled={!value.trim() || pending}>
+          <Button type="submit" disabled={!value.trim() || pending} className="rounded-full px-4 font-bold">
             {pending ? pendingLabel : submitLabel}
           </Button>
         </div>

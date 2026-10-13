@@ -2,51 +2,46 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, Plus, Search, X } from "lucide-react";
-import { useAtom } from "jotai";
+import { Plus, Search, X } from "lucide-react";
+import { useAtom, useSetAtom } from "jotai";
 
-import { communitySearchQueryAtom } from "./community-atoms";
+import { communitySearchQueryAtom, createCommunityOpenAtom } from "./community-atoms";
+import { COMMUNITY_NAV, isCommunityNavActive } from "../community-sidebar";
 import { AuthActions } from "@/components/auth-actions";
 import { Logo } from "@/components/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useRequireAuth } from "@/hooks/use-require-auth";
 import { cn } from "@/lib/utils";
-
-const MOBILE_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/community", label: "Feed" },
-  { href: "/community/discovery", label: "Discover groups" },
-] as const;
 
 export function CommunityNavbar() {
   const [searchQuery, setSearchQuery] = useAtom(communitySearchQueryAtom);
+  const openCreate = useSetAtom(createCommunityOpenAtom);
+  const { requireAuth } = useRequireAuth();
   const pathname = usePathname();
 
   return (
-    <header className="z-10 shrink-0 border-b border-border bg-card/95">
-      <div className="flex min-h-18 flex-wrap items-center gap-3 px-4 py-3 lg:px-6">
+    <header className="z-10 shrink-0 border-b border-border bg-card">
+      <div className="flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 lg:px-6">
         <Link
           href="/community"
-          className="flex min-w-0 flex-1 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 md:flex-none"
-          aria-label="Navio Communities home"
+          className="flex shrink-0 items-center gap-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Navio Community home"
         >
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-primary/10 ring-1 ring-primary/20">
-            <Logo className="size-4" />
-          </div>
-
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="text-lg font-bold leading-none tracking-tight sm:text-xl">
+          <span className="flex size-9 items-center justify-center rounded-full bg-primary/12 ring-1 ring-primary/25">
+            <Logo className="size-4.5" />
+          </span>
+          <span className="hidden items-baseline gap-1.5 sm:flex">
+            <span className="text-lg font-extrabold leading-none tracking-tight">
               <span className="text-primary">N</span>avio
             </span>
-            <span className="hidden text-sm font-medium text-muted-foreground lg:inline">
-              Community
-            </span>
-          </div>
+            <span className="text-sm font-semibold text-muted-foreground">community</span>
+          </span>
         </Link>
 
-        <div className="order-last flex min-w-0 basis-full items-center justify-center md:order-none md:flex-1 md:basis-auto md:px-4">
-          <div className="relative w-full max-w-2xl">
+        <div className="order-last flex min-w-0 basis-full justify-center sm:order-none sm:flex-1 sm:basis-auto">
+          <div className="relative w-full max-w-xl">
             <Search
               className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden="true"
@@ -55,63 +50,68 @@ export function CommunityNavbar() {
               type="search"
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Search posts and communities"
-              className="h-11 rounded-xl border-input bg-background pl-10 pr-10 focus-visible:bg-background"
-              aria-label="Search communities"
+              placeholder="Search Navio community"
+              className="h-10 rounded-full border-transparent bg-muted pl-10 pr-10 focus-visible:border-ring focus-visible:bg-background"
+              aria-label="Search posts and communities"
             />
             {searchQuery ? (
               <Button
                 type="button"
-                aria-label="Clear community search"
+                aria-label="Clear search"
                 variant="ghost"
                 size="icon-sm"
                 onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full"
               >
-                <X className="size-4" aria-hidden="true" />
+                <X aria-hidden="true" />
               </Button>
             ) : null}
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            nativeButton={false}
-            render={<Link href="/community/discovery" />}
-            aria-label="Discover communities"
-          >
-            <Compass className="size-4" aria-hidden="true" />
-          </Button>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:ml-0">
           <Button
             nativeButton={false}
             render={<Link href="/community/create" />}
-            variant="outline"
+            variant="ghost"
+            className="h-10 rounded-full px-3 font-semibold"
             aria-label="Create post"
           >
-            <Plus className="size-4" aria-hidden="true" />
+            <Plus className="size-5" aria-hidden="true" />
             <span className="hidden sm:inline">Create</span>
           </Button>
-
           <ThemeToggle />
           <AuthActions compact />
         </div>
       </div>
-      <nav aria-label="Community navigation" className="flex gap-1 px-4 pb-2 md:hidden">
-        {MOBILE_LINKS.map(({ href, label }) => (
-          <Link
-            key={href}
-            href={href}
-            aria-current={pathname === href ? "page" : undefined}
-            className={cn(
-              "rounded-lg px-3 py-2 text-xs font-medium transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-              pathname === href ? "bg-primary/10 text-primary" : "text-muted-foreground",
-            )}
-          >
-            {label}
-          </Link>
-        ))}
+
+      <nav aria-label="Community sections" className="flex gap-1 overflow-x-auto px-3 pb-2 md:hidden">
+        {COMMUNITY_NAV.map(({ href, title, icon: Icon }) => {
+          const active = isCommunityNavActive(pathname, href);
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                active ? "bg-primary/12 text-primary" : "text-muted-foreground hover:bg-muted",
+              )}
+            >
+              <Icon className="size-3.5" aria-hidden="true" />
+              {title}
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => requireAuth(() => openCreate(true))}
+          aria-label="Create a community"
+          className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <Plus className="size-3.5" aria-hidden="true" />
+          Community
+        </button>
       </nav>
     </header>
   );

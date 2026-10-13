@@ -1,76 +1,110 @@
 "use client";
 
-import { useAtomValue } from "jotai";
+import Link from "next/link";
+import { useAtom } from "jotai";
+import { Compass, Flame } from "lucide-react";
 
 import {
   communityFeedSortAtom,
   communitySearchQueryAtom,
+  popularFeedSortAtom,
 } from "./_components/community-atoms";
 import { CommunityContextSidebar } from "./feed/community-context-sidebar";
 import { CommunityErrorBoundary } from "./_components/community-error-boundary";
 import { CommunityWorkspace } from "./_components/community-workspace";
 import { CommunityFeed } from "./feed/community-feed";
-import {
-  useCommunityFeed,
-  useCommunityGroups,
-} from "./_components/community-queries";
-import Link from "next/link";
+import { useCommunityFeed, useCommunityGroups } from "./_components/community-queries";
+import { useCommunityIdentity } from "./_components/community-group-queries";
 import { Button } from "@/components/ui/button";
-import { CommunityGroupDialog } from "./create/community-group-dialog";
-import { CommunityQueryError } from "./_components/community-query-state";
+import { EmptyFeed } from "./_components/community-empty-state";
 
-export function CommunityPage() {
-  const searchQuery = useAtomValue(communitySearchQueryAtom);
-  const sort = useAtomValue(communityFeedSortAtom);
+/**
+ * Home shows posts from the viewer's communities; Popular shows every
+ * community. Signed-out visitors have no communities, so Home shows everything.
+ */
+export function CommunityPage({ variant = "home" }: { variant?: "home" | "popular" }) {
+  const [searchQuery, setSearchQuery] = useAtom(communitySearchQueryAtom);
+  const [homeSort, setHomeSort] = useAtom(communityFeedSortAtom);
+  const [popularSort, setPopularSort] = useAtom(popularFeedSortAtom);
+  const { authenticated } = useCommunityIdentity();
+  const home = variant === "home";
+  const sort = home ? homeSort : popularSort;
+  const scope = home && authenticated ? "joined" : "all";
 
-  const groupsQuery = useCommunityGroups(searchQuery);
-  const groups = groupsQuery.data;
-  const feedQuery = useCommunityFeed(searchQuery, sort);
+  const groupsQuery = useCommunityGroups("");
+  const feed = useCommunityFeed(searchQuery, sort, undefined, scope);
+
+  const emptyState =
+    scope === "joined" ? (
+      <EmptyFeed
+        title="Your home feed is waiting"
+        body="Join a few communities and their newest posts will collect here."
+        actions={
+          <>
+            <Button nativeButton={false} render={<Link href="/community/discovery" />} className="rounded-full font-bold">
+              <Compass aria-hidden="true" />
+              Explore communities
+            </Button>
+            <Button nativeButton={false} variant="outline" render={<Link href="/community/popular" />} className="rounded-full">
+              <Flame aria-hidden="true" />
+              See popular posts
+            </Button>
+          </>
+        }
+      />
+    ) : (
+      <EmptyFeed
+        title="No posts yet"
+        body="Communities are just getting started. Join one and write the first post."
+        actions={
+          <Button nativeButton={false} render={<Link href="/community/discovery" />} className="rounded-full font-bold">
+            <Compass aria-hidden="true" />
+            Explore communities
+          </Button>
+        }
+      />
+    );
 
   return (
     <CommunityErrorBoundary>
       <CommunityWorkspace>
         <CommunityWorkspace.Content>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Button
-              variant="outline"
-              nativeButton={false}
-              render={<Link href="/community/discovery" />}
-            >
-              Discover communities
-            </Button>
-            <CommunityGroupDialog />
-          </div>
-          <CommunityQueryError
-            error={groupsQuery.error}
-            onRetry={() => void groupsQuery.refetch()}
-          />
+          {!home ? (
+            <header className="flex items-center gap-3 px-1">
+              <span className="flex size-10 items-center justify-center rounded-full bg-vote-up/12 text-vote-up">
+                <Flame className="size-5" aria-hidden="true" />
+              </span>
+              <div>
+                <h1 className="text-xl font-extrabold tracking-tight text-foreground">Popular</h1>
+                <p className="text-sm text-muted-foreground">The most upvoted posts across every community.</p>
+              </div>
+            </header>
+          ) : (
+            <h1 className="sr-only">Home</h1>
+          )}
           <CommunityFeed
-            posts={feedQuery.data ?? []}
-            groups={groups}
+            label={home ? "Home feed" : "Popular posts"}
+            posts={feed.data}
+            groups={groupsQuery.data}
+            sort={sort}
+            onSortChange={home ? setHomeSort : setPopularSort}
             searchQuery={searchQuery}
-            isLoading={feedQuery.isLoading}
-            isError={feedQuery.isError}
+            onClearSearch={() => setSearchQuery("")}
+            isLoading={feed.isLoading}
+            error={feed.error}
+            onRetry={() => void feed.refetch()}
+            hasNextPage={feed.hasNextPage}
+            isFetchingNextPage={feed.isFetchingNextPage}
+            onLoadMore={() => void feed.fetchNextPage()}
+            emptyState={emptyState}
           />
-          {feedQuery.hasNextPage ? <Button variant="outline" disabled={feedQuery.isFetchingNextPage} onClick={() => void feedQuery.fetchNextPage()}>Load more posts</Button> : null}
-          {groupsQuery.hasNextPage ? (
-            <Button
-              variant="outline"
-              disabled={groupsQuery.isFetchingNextPage}
-              onClick={() => void groupsQuery.fetchNextPage()}
-            >
-              Load more communities
-            </Button>
-          ) : null}
         </CommunityWorkspace.Content>
         <CommunityWorkspace.Aside>
           <CommunityContextSidebar
-            groups={groups}
-            joinedGroupIds={groups
-              .filter((group) => group.joined)
-              .map((group) => group.id)}
-            groupsLoading={groupsQuery.isLoading}
-            groupsError={groupsQuery.isError}
+            groups={groupsQuery.data}
+            isLoading={groupsQuery.isLoading}
+            isError={groupsQuery.isError}
+            onRetry={() => void groupsQuery.refetch()}
           />
         </CommunityWorkspace.Aside>
       </CommunityWorkspace>

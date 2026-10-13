@@ -74,6 +74,21 @@
   --color-premade: var(--premade);
   --color-tag: var(--tag);
 
+  /* Community: vote direction, comment reactions and community identity hues */
+  --color-vote-up: var(--vote-up);
+  --color-vote-down: var(--vote-down);
+  --color-react-helpful: var(--react-helpful);
+  --color-react-love: var(--react-love);
+  --color-react-funny: var(--react-funny);
+  --color-react-thanks: var(--react-thanks);
+  --color-react-want-to-go: var(--react-want-to-go);
+  --color-trail-1: var(--trail-1);
+  --color-trail-2: var(--trail-2);
+  --color-trail-3: var(--trail-3);
+  --color-trail-4: var(--trail-4);
+  --color-trail-5: var(--trail-5);
+  --color-trail-6: var(--trail-6);
+
   /* Place-category palette: also available as text-place-tag-* utilities. */
   --color-place-tag-rail: var(--place-tag-rail);
   --color-place-tag-bus: var(--place-tag-bus);
@@ -233,6 +248,23 @@
   --premade: oklch(0.5 0.19 300);
   --tag: oklch(0.48 0.16 275);
 
+  /* Community. Vote inks follow the common up = warm, down = cool convention.
+     Reaction inks read as text on white (>=4.5:1); tint surfaces with opacity.
+     Trail hues fill community icons/banners behind white text, so they stay mid-dark. */
+  --vote-up: oklch(0.58 0.2 38);
+  --vote-down: oklch(0.5 0.19 285);
+  --react-helpful: oklch(0.55 0.12 78);
+  --react-love: oklch(0.54 0.2 12);
+  --react-funny: oklch(0.53 0.19 330);
+  --react-thanks: oklch(0.5 0.1 170);
+  --react-want-to-go: oklch(0.5 0.12 220);
+  --trail-1: oklch(0.52 0.13 240);
+  --trail-2: oklch(0.5 0.1 180);
+  --trail-3: oklch(0.52 0.13 140);
+  --trail-4: oklch(0.56 0.13 65);
+  --trail-5: oklch(0.54 0.17 30);
+  --trail-6: oklch(0.5 0.16 300);
+
   /* Google place tags: edit each family here and in .dark below.
      One ink color supplies the text and the softly tinted background. */
   --place-tag-tint: 12%;
@@ -391,6 +423,21 @@
   --charging: oklch(0.82 0.12 150);
   --premade: oklch(0.83 0.1 300);
   --tag: oklch(0.8 0.1 275);
+
+  /* Community inks brightened for dark cards; trail fills stay mid-tone */
+  --vote-up: oklch(0.74 0.17 42);
+  --vote-down: oklch(0.74 0.13 285);
+  --react-helpful: oklch(0.84 0.12 85);
+  --react-love: oklch(0.76 0.15 12);
+  --react-funny: oklch(0.78 0.14 330);
+  --react-thanks: oklch(0.8 0.1 170);
+  --react-want-to-go: oklch(0.8 0.1 220);
+  --trail-1: oklch(0.55 0.12 240);
+  --trail-2: oklch(0.53 0.09 180);
+  --trail-3: oklch(0.55 0.12 140);
+  --trail-4: oklch(0.58 0.12 65);
+  --trail-5: oklch(0.56 0.15 30);
+  --trail-6: oklch(0.53 0.14 300);
 
   /* Place tags: brighter inks for dark cards. */
   --place-tag-tint: 16%;

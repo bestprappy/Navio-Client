@@ -50,7 +50,10 @@ export type CommunityGroup = {
   id: string;
   name: string;
   description: string;
+  /** Uploaded community icon, or "" for the generated initial. */
   avatarUrl: string;
+  /** Uploaded banner, or "" for the generated contour banner. */
+  bannerUrl?: string;
   country: string;
   places: string[];
   tags: string[];
@@ -107,6 +110,7 @@ export type CommunityGroupProfile = {
 export type CommunityPost = {
   groupSlug?: string;
   groupName?: string;
+  groupIconUrl?: string;
   viewerVote?: number;
   linkUrl?: string;
   id: string;
@@ -137,6 +141,20 @@ export type CommunityComment = {
   createdAt: string;
   upvotes: number;
   sharedTripId?: string;
+  reactions?: CommunityReactionSummary[];
+};
+
+export type CommunityReaction =
+  | "helpful"
+  | "love"
+  | "funny"
+  | "thanks"
+  | "want_to_go";
+
+export type CommunityReactionSummary = {
+  reaction: CommunityReaction;
+  count: number;
+  reacted: boolean;
 };
 
 export type CreateGroupDraft = {
@@ -1490,12 +1508,13 @@ export const defaultCreatePostDraft: CreatePostDraft = {
   title: "",
   body: "",
   linkUrl: "",
-  groupId: "group-thailand-restaurants",
-  place: "Bangkok",
-  country: "Thailand",
+  // Nothing is attached or preselected unless the writer chooses it (or arrives via ?groupId / ?planId).
+  groupId: "",
+  place: "",
+  country: "",
   tags: "",
-  attachTrip: true,
-  sharedTripId: BANGKOK_RICH_PLAN_ID,
+  attachTrip: false,
+  sharedTripId: null,
 };
 
 export function getUserById(userId: string): CommunityUser {
@@ -1700,3 +1719,22 @@ export function slugifyCommunityValue(value: string): string {
     .trim()
     .replace(/\s+/g, "-");
 }
+
+/** Suggested topics in the create-community flow; members can also type their own. */
+export const communityTopicSuggestions = [
+  "Road trips",
+  "EV charging",
+  "Food & night markets",
+  "City breaks",
+  "Beaches & islands",
+  "Hiking & nature",
+  "Public transit",
+  "Budget travel",
+  "Family travel",
+  "Solo travel",
+  "Photography",
+  "Where to stay",
+  "Visas & documents",
+] as const;
+
+export const MAX_COMMUNITY_TOPICS = 5;

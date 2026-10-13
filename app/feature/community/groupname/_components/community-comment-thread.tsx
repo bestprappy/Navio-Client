@@ -2,9 +2,10 @@
 
 import { createContext, useContext, useMemo, useState } from "react";
 import {
-  ArrowBigDownDash,
-  ArrowBigUpDash,
+  ArrowBigDown,
+  ArrowBigUp,
   MessageCircle,
+  MoreHorizontal,
   Minus,
   Pencil,
   Plus,
@@ -39,6 +40,7 @@ import { useCommunityUserProfile } from "../../_components/community-user-label"
 import { CommunityMembershipButton } from "../../_components/community-membership-button";
 import { CommunityQueryError } from "../../_components/community-query-state";
 import { CommunityCommentComposer } from "./community-comment-composer";
+import { CommentReactions } from "../../_components/community-reactions";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,8 +50,13 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRequireAuth } from "@/hooks/use-require-auth";
@@ -215,7 +222,7 @@ function CommentVoteButton({
   disabled: boolean;
   onClick: () => void;
 }) {
-  const Icon = direction === "up" ? ArrowBigUpDash : ArrowBigDownDash;
+  const Icon = direction === "up" ? ArrowBigUp : ArrowBigDown;
 
   return (
     <button
@@ -226,7 +233,8 @@ function CommentVoteButton({
       onClick={onClick}
       className={cn(
         "inline-flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50",
-        pressed && (direction === "up" ? "text-primary" : "text-destructive"),
+        direction === "up" ? "hover:text-vote-up" : "hover:text-vote-down",
+        pressed && (direction === "up" ? "text-vote-up" : "text-vote-down"),
       )}
     >
       <Icon
@@ -238,32 +246,26 @@ function CommentVoteButton({
   );
 }
 
-function CommentDeleteDialog({ comment }: { comment: CommunityComment }) {
+function CommentDeleteDialog({
+  comment,
+  open,
+  onOpenChange,
+}: {
+  comment: CommunityComment;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const mutation = usePostMutation();
-  const [open, setOpen] = useState(false);
 
   return (
     <Dialog
       open={open}
       onOpenChange={(value) => {
         if (mutation.isPending) return;
-        setOpen(value);
+        onOpenChange(value);
         mutation.reset();
       }}
     >
-      <DialogTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-          />
-        }
-      >
-        <Trash2 className="size-3.5" aria-hidden="true" />
-        Delete
-      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete comment?</DialogTitle>
@@ -278,7 +280,7 @@ function CommentDeleteDialog({ comment }: { comment: CommunityComment }) {
             type="button"
             variant="outline"
             disabled={mutation.isPending}
-            onClick={() => setOpen(false)}
+            onClick={() => onOpenChange(false)}
           >
             Cancel
           </Button>
@@ -292,7 +294,7 @@ function CommentDeleteDialog({ comment }: { comment: CommunityComment }) {
                   path: `/${comment.postId}/comments/${comment.id}`,
                   method: "DELETE",
                 },
-                { onSuccess: () => setOpen(false) },
+                { onSuccess: () => onOpenChange(false) },
               )
             }
           >
@@ -313,7 +315,9 @@ function CommentToolbar({ comment }: { comment: CommunityCommentNode }) {
   const vote = comment.viewerVote ?? 0;
   const upvoted = vote === 1;
   const downvoted = vote === -1;
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const isAuthor = viewerId === comment.authorId;
+  const editable = canInteract && isAuthor;
   const removable =
     canInteract &&
     (isAuthor ||
@@ -344,7 +348,7 @@ function CommentToolbar({ comment }: { comment: CommunityCommentNode }) {
           aria-live="polite"
           className={cn(
             "min-w-5 text-center font-semibold",
-            upvoted ? "text-primary" : downvoted ? "text-destructive" : "",
+            upvoted ? "text-vote-up" : downvoted ? "text-vote-down" : "text-foreground",
           )}
         >
           {formatCount(comment.upvotes)}
@@ -363,27 +367,54 @@ function CommentToolbar({ comment }: { comment: CommunityCommentNode }) {
           size="sm"
           disabled={!canInteract}
           onClick={() => onReplyStart(comment.id)}
-          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+          className="h-7 rounded-full px-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
         >
           <Reply className="size-3.5" aria-hidden="true" />
           Reply
         </Button>
 
-        {canInteract && isAuthor ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onEditStart(comment.id)}
-            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <Pencil className="size-3.5" aria-hidden="true" />
-            Edit
-          </Button>
-        ) : null}
+        <CommentReactions
+          postId={comment.postId}
+          commentId={comment.id}
+          reactions={comment.reactions ?? []}
+          canReact={canInteract}
+        />
 
-        {removable ? <CommentDeleteDialog comment={comment} /> : null}
+        {editable || removable ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="size-7 rounded-full text-muted-foreground"
+                  aria-label="More comment actions"
+                />
+              }
+            >
+              <MoreHorizontal aria-hidden="true" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-40">
+              {editable ? (
+                <DropdownMenuItem onClick={() => onEditStart(comment.id)}>
+                  <Pencil aria-hidden="true" />
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
+              {removable ? (
+                <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+                  <Trash2 aria-hidden="true" />
+                  Delete
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
       </div>
+      {removable ? (
+        <CommentDeleteDialog comment={comment} open={deleteOpen} onOpenChange={setDeleteOpen} />
+      ) : null}
 
       <CommunityQueryError error={voteMutation.error} />
     </div>
@@ -891,36 +922,32 @@ export function CommunityCommentThread({
           onSubmit={submitRootComment}
         />
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
-          <p className="text-sm text-muted-foreground">
-            Join this community to comment and reply.
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary/8 p-4 ring-1 ring-primary/20">
+          <p className="text-sm text-foreground">
+            Join this community to comment, reply and react.
           </p>
           <CommunityMembershipButton group={group} />
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Sort by:</span>
-          <div
-            className="inline-flex rounded-lg border border-border bg-card p-1"
-            role="tablist"
-            aria-label="Sort comments"
-          >
-            {COMMENT_SORT_OPTIONS.map((option) => (
-              <Button
-                key={option.value}
-                type="button"
-                size="xs"
-                variant={commentSort === option.value ? "secondary" : "ghost"}
-                role="tab"
-                aria-selected={commentSort === option.value}
-                onClick={() => setCommentSort(option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
+        <div role="group" aria-label="Sort comments" className="flex items-center gap-1">
+          {COMMENT_SORT_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={commentSort === option.value}
+              onClick={() => setCommentSort(option.value)}
+              className={cn(
+                "inline-flex h-8 items-center rounded-full px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                commentSort === option.value
+                  ? "bg-secondary text-secondary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
 
         <div className="relative w-full min-w-0 sm:w-auto sm:max-w-xs sm:flex-1">
@@ -935,8 +962,8 @@ export function CommunityCommentThread({
             id={`comment-search-${post.id}`}
             value={commentSearch}
             onChange={(event) => setCommentSearch(event.target.value)}
-            placeholder="Search loaded comments"
-            className="rounded-full bg-card pl-9"
+            placeholder="Search comments"
+            className="h-9 rounded-full border-transparent bg-muted pl-9 focus-visible:border-ring focus-visible:bg-background"
           />
         </div>
       </div>
@@ -956,7 +983,7 @@ export function CommunityCommentThread({
 
       {!query.isPending && !query.isError && comments.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground">
-          No comments yet. Add the first route note.
+          No comments yet. Share a tip, a question, or a route note.
         </div>
       ) : null}
 

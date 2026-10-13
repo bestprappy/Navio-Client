@@ -1,250 +1,88 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowBigUpDash, MessageCircle } from "lucide-react";
-import { useAtom } from "jotai";
 
-import {
-  recentPostsClearedAtom,
-} from "../_components/community-atoms";
-import type { CommunityGroup, CommunityPost } from "../_components/data";
-import {
-  getCommunityPostHref,
-  formatCount,
-  formatRelativeTime,
-  getInitials,
-  slugifyCommunityValue,
-} from "../_components/data";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CommunityIcon, communityHandle } from "../_components/community-identity";
 import { CommunityMembershipButton } from "../_components/community-membership-button";
-import { useCommunityFeed } from "../_components/community-queries";
-import { CommunityQueryError } from "../_components/community-query-state";
-import { CommunityMyGroups } from "../_components/community-my-groups";
+import type { CommunityGroup } from "../_components/data";
+import { formatCount } from "../_components/data";
+import { CommunityGroupDialog } from "../create/community-group-dialog";
 
 type CommunityContextSidebarProps = {
   groups: CommunityGroup[];
-  joinedGroupIds: string[];
-  groupsLoading: boolean;
-  groupsError: boolean;
+  isLoading: boolean;
+  isError: boolean;
+  onRetry: () => void;
 };
 
-function CommunityJoinItem({ group }: { group: CommunityGroup }) {
-  const groupHref = `/community/${group.slug ?? slugifyCommunityValue(group.name)}`;
+const SHOWN = 6;
+
+/** Right rail of the feeds: the most-joined communities, then an invitation to start one. */
+export function CommunityContextSidebar({ groups, isLoading, isError, onRetry }: CommunityContextSidebarProps) {
+  const popular = groups.slice(0, SHOWN);
 
   return (
-    <div className="my-2 flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-muted/70">
-      <Link
-        href={groupHref}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-      >
-        <Avatar className="size-8 shrink-0">
-          <AvatarImage src={group.avatarUrl} alt={group.name} />
-          <AvatarFallback className="text-[11px] font-semibold">
-            {getInitials(group.name)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-foreground">
-            {group.name}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {formatCount(group.memberCount)} members
-          </p>
-        </div>
-      </Link>
-      <CommunityMembershipButton group={group} />
-    </div>
-  );
-}
-
-function RecentPostItem({
-  group,
-  post,
-}: {
-  group: CommunityGroup;
-  post: CommunityPost;
-}) {
-  const groupHref = `/community/${group.slug ?? slugifyCommunityValue(group.name)}`;
-
-  return (
-    <div className="flex gap-3 rounded-lg px-2 py-2.5 transition-colors hover:bg-muted/60">
-      <Link
-        href={groupHref}
-        className="mt-0.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-        aria-label={`Open ${group.name}`}
-      >
-        <Avatar className="size-6 shrink-0">
-          <AvatarImage src={group.avatarUrl} alt={group.name} />
-          <AvatarFallback className="text-[10px]">
-            {getInitials(group.name)}
-          </AvatarFallback>
-        </Avatar>
-      </Link>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground">
-          <Link
-            href={groupHref}
-            className="rounded-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-          >
-            {group.name}
-          </Link>
-          {" / "}
-          {formatRelativeTime(post.createdAt)}
-        </p>
-        <p className="mt-0.5 line-clamp-2 text-sm font-medium leading-snug text-foreground">
-          <Link href={getCommunityPostHref(group, post)} className="hover:underline">{post.title}</Link>
-        </p>
-        <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <ArrowBigUpDash className="size-3" aria-hidden="true" />
-            {formatCount(post.upvotes)}
-          </span>
-          <span className="flex items-center gap-1">
-            <MessageCircle className="size-3" aria-hidden="true" />
-            {formatCount(post.commentCount)}
-          </span>
-        </div>
-      </div>
-      {post.imageUrl ? (
-        <Image
-          src={post.imageUrl}
-          unoptimized
-          alt=""
-          aria-hidden="true"
-          width={64}
-          height={64}
-          className="size-16 shrink-0 rounded-lg object-cover"
-        />
-      ) : null}
-    </div>
-  );
-}
-
-export function CommunityContextSidebar({
-  groups,
-  joinedGroupIds,
-  groupsLoading,
-  groupsError,
-}: CommunityContextSidebarProps) {
-  const [cleared, setCleared] = useAtom(recentPostsClearedAtom);
-  const recent = useCommunityFeed("", "new");
-  const allPosts = recent.data;
-  const joinedGroups = groups.filter((g) => joinedGroupIds.includes(g.id));
-  const unjoinedGroups = groups.filter((g) => !joinedGroupIds.includes(g.id));
-
-  const recentPostsByGroup = joinedGroups
-    .map((group) => ({
-      group,
-      posts: allPosts
-        .filter((p) => p.groupId === group.id)
-        .sort(
-          (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-        )
-        .slice(0, 3),
-    }))
-    .filter(({ posts }) => posts.length > 0);
-
-  const hasRecentPosts = recentPostsByGroup.length > 0;
-
-  return (
-    <aside
-      aria-label="Community sidebar"
-      className="flex min-w-0 flex-col gap-4"
-    >
-      <CommunityMyGroups />
-      {/* Recent Posts */}
-      {joinedGroups.length > 0 ? (
-        <section
-          aria-label="Recent posts from joined communities"
-          className="rounded-lg border border-border/50 bg-card px-4 py-3 shadow-sm"
-        >
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <h2 className="text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-              Recent Posts
-            </h2>
-            {!cleared ? (
-              <button
-                type="button"
-                onClick={() => setCleared(true)}
-                className="text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-              >
-                Clear
-              </button>
-            ) : null}
+    <aside aria-label="Communities" className="flex flex-col gap-4">
+      <section className="overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/70">
+        <h2 className="px-4 pb-2 pt-4 text-sm font-bold text-foreground">Popular communities</h2>
+        {isLoading ? (
+          <div role="status" className="flex flex-col gap-3 px-4 pb-4">
+            <span className="sr-only">Loading communities</span>
+            {[0, 1, 2, 3].map((item) => (
+              <Skeleton key={item} className="h-9 w-full rounded-full" />
+            ))}
           </div>
+        ) : null}
+        {isError ? (
+          <p className="px-4 pb-4 text-sm text-muted-foreground">
+            Communities could not load.{" "}
+            <button type="button" onClick={onRetry} className="font-semibold text-primary underline">
+              Try again
+            </button>
+          </p>
+        ) : null}
+        {!isLoading && !isError && popular.length === 0 ? (
+          <p className="px-4 pb-4 text-sm text-muted-foreground">No communities yet. Be the first to start one.</p>
+        ) : null}
+        <ul className="flex flex-col pb-2">
+          {popular.map((group) => (
+            <li key={group.id} className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-muted/60">
+              <Link
+                href={`/community/${group.slug}`}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <CommunityIcon name={group.name} seed={group.slug ?? group.id} src={group.avatarUrl} size="md" />
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-semibold text-foreground">
+                    {communityHandle(group.slug, group.name)}
+                  </span>
+                  <span className="block text-xs text-muted-foreground">
+                    {formatCount(group.memberCount)} {group.memberCount === 1 ? "member" : "members"}
+                  </span>
+                </span>
+              </Link>
+              {!group.joined ? <CommunityMembershipButton group={group} compact /> : null}
+            </li>
+          ))}
+        </ul>
+        {groups.length > 0 ? (
+          <Link
+            href="/community/discovery"
+            className="block border-t border-border px-4 py-3 text-sm font-semibold text-primary hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+          >
+            See all communities
+          </Link>
+        ) : null}
+      </section>
 
-          <CommunityQueryError error={recent.error} onRetry={() => void recent.refetch()} />
-          {!cleared && hasRecentPosts ? (
-            <div className="">
-              {recentPostsByGroup.map(({ group, posts }) =>
-                posts.map((post) => (
-                  <RecentPostItem key={post.id} group={group} post={post} />
-                )),
-              )}
-            </div>
-          ) : null}
-
-          {cleared || !hasRecentPosts ? (
-            <p className="py-2 text-sm text-muted-foreground">
-              {cleared
-                ? "No recent posts."
-                : "No recent posts to show."}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
-
-      {/* Popular Communities */}
-      {unjoinedGroups.length > 0 || groupsLoading || groupsError ? (
-        <section
-          aria-label="Popular communities"
-          className="rounded-lg border border-border/50 bg-card px-4 py-3 shadow-sm"
-        >
-          <h2 className="mb-1 text-[11px] font-semibold uppercase tracking-normal text-muted-foreground">
-            Popular Communities
-          </h2>
-
-          {groupsLoading ? (
-            <div className="space-y-3 py-2">
-              {[0, 1, 2].map((i) => (
-                <div key={i} className="flex items-center gap-3">
-                  <div className="size-8 rounded-full bg-muted" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-3 w-28 rounded bg-muted" />
-                    <div className="h-2.5 w-20 rounded bg-muted" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {groupsError ? (
-            <p className="py-2 text-sm text-muted-foreground">
-              Could not load communities.
-            </p>
-          ) : null}
-
-          {!groupsLoading && !groupsError ? (
-            <div className="">
-              {unjoinedGroups.map((group) => (
-                <CommunityJoinItem key={group.id} group={group} />
-              ))}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      {/* All joined, nothing unjoined */}
-      {!groupsLoading &&
-      !groupsError &&
-      unjoinedGroups.length === 0 &&
-      joinedGroups.length > 0 ? (
-        <p className="px-1 text-xs text-muted-foreground">
-          You have joined all available communities.
+      <section className="relative overflow-hidden rounded-2xl bg-primary/8 p-4 ring-1 ring-primary/20">
+        <h2 className="text-sm font-bold text-foreground">Know a place well?</h2>
+        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+          Start a community for a country, a city, or a kind of trip, and gather the people who travel it.
         </p>
-      ) : null}
+        <CommunityGroupDialog className="mt-3 w-full" />
+      </section>
     </aside>
   );
 }

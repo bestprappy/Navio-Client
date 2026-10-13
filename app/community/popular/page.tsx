@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { CommunityDiscoveryPage } from "@/app/feature/community/discovery/community-discovery-page";
+
+import { CommunityPage } from "@/app/feature/community/community-page";
 
 export const metadata: Metadata = {
-  title: "Popular Communities - Navio",
-  description: "Find active travel planning communities on Navio.",
+  title: "Popular - Navio Community",
+  description: "The most upvoted travel discussions across Navio communities.",
 };
 
 export default function CommunityPopularRoute() {
-  return <CommunityDiscoveryPage variant="popular" />;
+  return <CommunityPage variant="popular" />;
 }
