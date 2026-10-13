@@ -18,6 +18,7 @@ import {
   formatTripDateRange,
   getTripDayCount,
   getTripStatus,
+  getTripSceneryPlaceId,
 } from "./trip-dashboard.utils";
 
 type TripSummaryCardProps = {
@@ -43,7 +44,7 @@ export function TripSummaryCard({ trip, className }: TripSummaryCardProps) {
         className,
       )}
     >
-      <div className="absolute inset-x-0 top-0 -z-10 h-32"><TripScenery destinations={destinations} /></div>
+      <div className="absolute inset-x-0 top-0 -z-10 h-32"><TripScenery placeId={stats.isPending ? "" : getTripSceneryPlaceId(trip, stats.data?.destinationPlaces)} /></div>
       <div className="flex items-start justify-between gap-3">
         <TripStatusBadge status={status} />
         <TripActionsMenu tripId={trip.id} tripTitle={trip.title ?? "Untitled trip"} className="-mt-1 -mr-2" />

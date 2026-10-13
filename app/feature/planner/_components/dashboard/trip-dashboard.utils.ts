@@ -1,4 +1,5 @@
 import type { TripResponse } from "../planner-api";
+import type { TripDestination } from "../../planId/_components/constants/types";
 
 export type TripStatus = "ongoing" | "upcoming" | "past";
 
@@ -142,6 +143,19 @@ export function getTripLocationLabel(trip: TripResponse): string {
   return [trip.destinationName, trip.destinationCountry]
     .filter((part): part is string => Boolean(part))
     .join(", ");
+}
+
+/** Use the first city shown on the card, or the original country for a country-only trip. */
+export function getTripSceneryPlaceId(
+  trip: TripResponse,
+  destinations: readonly TripDestination[] = [],
+): string {
+  const country = trip.destinationCountry?.trim().toLocaleLowerCase();
+  if (trip.destinationCity?.trim() || trip.destinationName.trim().toLocaleLowerCase() !== country) {
+    return trip.destinationId;
+  }
+  return destinations.find((destination) => destination.name.trim().toLocaleLowerCase() !== country)?.id
+    ?? trip.destinationId;
 }
 
 function byStartDateAsc(left: TripResponse, right: TripResponse): number {

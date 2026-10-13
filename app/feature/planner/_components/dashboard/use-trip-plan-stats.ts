@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import type { TripBlockData } from "../../planId/_components/constants/types";
+import type { TripBlockData, TripDestination } from "../../planId/_components/constants/types";
 import { isEvChargerPlaceItem, isPlaceItem } from "../../planId/_components/constants/types";
 import { getPlannerSnapshot } from "../planner-api";
 import { readPlannerDraft } from "../planner-draft";
@@ -14,6 +14,7 @@ export type TripPlanStats = {
   checklistDoneCount: number;
   checklistTotalCount: number;
   destinations: string[];
+  destinationPlaces: TripDestination[];
 };
 
 export const EMPTY_TRIP_PLAN_STATS: TripPlanStats = {
@@ -23,6 +24,7 @@ export const EMPTY_TRIP_PLAN_STATS: TripPlanStats = {
   checklistDoneCount: 0,
   checklistTotalCount: 0,
   destinations: [],
+  destinationPlaces: [],
 };
 
 export function tripPlanStatsQueryKey(tripId: string) {
@@ -63,7 +65,9 @@ function summarizeBlocks(blocks: readonly TripBlockData[]): TripPlanStats {
   return blocks.reduce<TripPlanStats>((stats, block) => {
     const next = { ...stats, blockCount: stats.blockCount + (block.kind === "itinerary" ? 1 : 0),
       destinations: block.destination && !stats.destinations.includes(block.destination.name)
-        ? [...stats.destinations, block.destination.name] : stats.destinations };
+        ? [...stats.destinations, block.destination.name] : stats.destinations,
+      destinationPlaces: block.destination && !stats.destinations.includes(block.destination.name)
+        ? [...stats.destinationPlaces, block.destination] : stats.destinationPlaces };
 
     for (const item of block.items) {
       if (isPlaceItem(item)) {
