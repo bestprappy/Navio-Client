@@ -72,6 +72,15 @@ npm ci
 npm run dev
 ```
 
+Run these commands from `client/`. After pulling changes that update
+`package.json` or `package-lock.json`, stop the development server and run
+`npm ci` again before restarting it. Git does not install dependencies.
+
+If the build reports `Can't resolve '@tiptap/core'` (or another editor
+package), use the same `npm ci` command in `client/`. The editor dependencies
+are already declared in `package.json` and pinned in `package-lock.json`;
+`npm ci` replaces an outdated installation with the committed versions.
+
 Open [http://localhost:3000](http://localhost:3000).
 
 Available scripts are defined in `package.json`. Keep the gateway base URL and authentication settings in environment configuration; do not embed service addresses, Config Server/Eureka endpoints, secrets, or hosted-AI API keys in browser code.
