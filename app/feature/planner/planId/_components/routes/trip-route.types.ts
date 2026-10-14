@@ -104,6 +104,8 @@ export type RouteSegment = {
   travelMode?: LegTravelMode;
   steps?: RouteStep[];
   journeys?: TransitJourney[];
+  /** Client-only: the saved line sequence was not offered, so the closest current journey is shown. */
+  savedRouteUnavailable?: boolean;
 };
 
 export type DirectionsResponse = {

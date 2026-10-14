@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { PlaceNotesPreview } from "../block/items/place-notes";
 import { StationOpeningHours } from "../charger/station-opening-hours";
 
 import type { PlaceSearchResult } from "./place-api";
@@ -201,9 +202,9 @@ export function PlacePreviewPanel({
             ) : null}
 
             {place.notes ? (
-              <p className="rounded-sm bg-muted/60 p-3 text-sm leading-6 text-muted-foreground">
-                {place.notes}
-              </p>
+              <div className="rounded-sm bg-muted/60 p-3">
+                <PlaceNotesPreview value={place.notes} interactive clamped={false} />
+              </div>
             ) : null}
           </div>
         </div>

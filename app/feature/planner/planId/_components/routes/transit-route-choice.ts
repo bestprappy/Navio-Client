@@ -1,4 +1,4 @@
-import type { DirectionsRequest, DirectionsResponse, RouteStep, TransitJourney } from "./trip-route.types";
+import type { DirectionsRequest, DirectionsResponse, RouteSegment, RouteStep, TransitJourney } from "./trip-route.types";
 
 /** Stable across timetable changes: choose a line/station sequence, not a departure ID. */
 export function getTransitRouteKey(steps: RouteStep[]): string | null {
@@ -49,16 +49,45 @@ export function rankTransitJourneys(journeys: TransitJourney[]): TransitJourney[
   return [...unique.values()].sort((a, b) => getTransitJourneyScore(a) - getTransitJourneyScore(b));
 }
 
-/** Never silently replace a saved choice with a different train or bus sequence. */
+/** Some providers omit the confirmed primary route from their alternatives list. */
+export function getConfirmedTransitJourneys(segment: RouteSegment): TransitJourney[] {
+  const journeys = segment.journeys ?? [];
+  const key = segment.status === "routed" ? getTransitRouteKey(segment.steps ?? []) : null;
+  if (!key || journeys.some(journey => getTransitRouteKey(journey.steps) === key)) return journeys;
+  return [...journeys, { id: `${segment.id}:primary`, provider: "unknown", geometry: segment.geometry,
+    distanceMeters: segment.distanceMeters, durationSeconds: segment.durationSeconds, steps: segment.steps! }];
+}
+
+function getLineId(vehicleType: string | null, name: string | null, shortName: string | null): string {
+  return JSON.stringify([vehicleType, name, shortName]);
+}
+
+/** Prefer journeys on the same lines (e.g. another boarding stop), then the best balanced one. */
+function getClosestTransitJourney(journeys: TransitJourney[], key: string): TransitJourney | undefined {
+  const saved = new Set((JSON.parse(key.slice(3)) as (string | null)[][]).map(([type, name, shortName]) => getLineId(type, name, shortName)));
+  const shared = (journey: TransitJourney) => journey.steps.filter(step => step.travelMode === "transit"
+    && saved.has(getLineId(step.line?.vehicleType?.toUpperCase() ?? null, step.line?.name ?? null, step.line?.shortName ?? null))).length;
+  return rankTransitJourneys(journeys).reduce<TransitJourney | undefined>((best, journey) =>
+    !best || shared(journey) > shared(best) ? journey : best, undefined);
+}
+
+/**
+ * Transit searches use the current departure, so a saved line/station sequence can drop out
+ * of the provider's alternatives. Show the closest current journey, flagged, rather than
+ * hiding every confirmed route; never swap it in silently.
+ */
 export function applySavedTransitRoutes(request: DirectionsRequest, response: DirectionsResponse): DirectionsResponse {
   const choices = new Map(request.groups.flatMap(group => group.points.slice(1).filter(point => point.arrivalRouteKey)
     .map(point => [JSON.stringify([group.blockId, point.id]), point.arrivalRouteKey] as const)));
   return { segments: response.segments.map(segment => {
     const key = choices.get(JSON.stringify([segment.blockId, segment.toItemId]));
     if (!key) return segment;
-    const journey = segment.journeys?.find(item => getTransitRouteKey(item.steps) === key);
+    const journeys = getConfirmedTransitJourneys(segment);
+    const exact = journeys.find(item => getTransitRouteKey(item.steps) === key);
+    const journey = exact ?? (isTransitRouteKey(key) ? getClosestTransitJourney(journeys, key) : undefined);
     if (journey) return { ...segment, status: "routed", geometry: journey.geometry,
-      distanceMeters: journey.distanceMeters, durationSeconds: journey.durationSeconds, steps: journey.steps, fallbackReason: null };
+      distanceMeters: journey.distanceMeters, durationSeconds: journey.durationSeconds, steps: journey.steps, fallbackReason: null,
+      ...(exact ? {} : { savedRouteUnavailable: true }) };
     return { ...segment, status: "fallback", durationSeconds: null, distanceMeters: null, steps: [],
       geometry: { type: "LineString", coordinates: [segment.geometry.coordinates[0], segment.geometry.coordinates.at(-1)!] },
       fallbackReason: "Your selected transit route is not available" };

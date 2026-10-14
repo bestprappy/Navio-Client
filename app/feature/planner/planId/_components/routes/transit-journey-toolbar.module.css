@@ -1,0 +1,68 @@
+.chip {
+  --transit-chip-color: var(--primary);
+
+  color: color-mix(in oklab, var(--transit-chip-color) 85%, var(--foreground));
+  background-color: color-mix(in oklab, var(--transit-chip-color) 7%, var(--card));
+  border-color: color-mix(in oklab, var(--transit-chip-color) 24%, var(--card));
+}
+
+.chip[data-vehicle-kind="Metro"] {
+  --transit-chip-color: var(--note);
+}
+
+.chip[data-vehicle-kind="Train"] {
+  --transit-chip-color: var(--premade);
+}
+
+.chip[data-vehicle-kind="Monorail"] {
+  --transit-chip-color: var(--place-tag-bar);
+}
+
+.chip[data-vehicle-kind="Tram"] {
+  --transit-chip-color: var(--place-tag-nature);
+}
+
+.chip[data-vehicle-kind="Bus"] {
+  --transit-chip-color: var(--place-tag-bus);
+}
+
+.chip[data-vehicle-kind="Ferry"] {
+  --transit-chip-color: var(--place-tag-ferry);
+}
+
+.chip[data-vehicle-kind="Other"] {
+  --transit-chip-color: var(--muted-foreground);
+}
+
+/* Day accents can be dark; lift the All label without changing its hue. */
+:global(.dark) .chip[data-vehicle-kind="All"] {
+  color: color-mix(in oklab, var(--transit-chip-color) 60%, var(--foreground));
+}
+
+.chip:hover {
+  background-color: color-mix(in oklab, var(--transit-chip-color) 13%, var(--card));
+  border-color: color-mix(in oklab, var(--transit-chip-color) 45%, var(--card));
+}
+
+.chip[aria-pressed="true"] {
+  background-color: color-mix(in oklab, var(--transit-chip-color) 15%, var(--card));
+  border-color: color-mix(in oklab, var(--transit-chip-color) 65%, var(--card));
+  box-shadow: inset 0 0 0 0.5px var(--transit-chip-color);
+}
+
+.chip[aria-pressed="true"]:hover {
+  background-color: color-mix(in oklab, var(--transit-chip-color) 20%, var(--card));
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--transit-chip-color);
+  outline-offset: 3px;
+}
+
+.count {
+  background-color: color-mix(in oklab, var(--transit-chip-color) 12%, var(--card));
+}
+
+.chip[aria-pressed="true"] .count {
+  background-color: color-mix(in oklab, var(--transit-chip-color) 24%, var(--card));
+}

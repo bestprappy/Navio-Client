@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchPlaceDetail } from "./place-api";
 import type { PlaceProvider } from "../constants/types";
 
-function getPlaceReference(placeId: string) {
+export function getPlaceReference(placeId: string) {
   const match = /^(GOOGLE|MAPBOX):(.+)$/.exec(placeId);
   if (match) {
     return { provider: match[1] as PlaceProvider, providerPlaceId: match[2] };

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { TRANSIT_JOURNEY_SORTS, type TransitJourneySort, type TransitVehicleKind } from "./transit-journey-filters";
 import { TRANSIT_VEHICLE_ICON } from "./transit-vehicle-icon";
+import styles from "./transit-journey-toolbar.module.css";
 
 export function TransitJourneyToolbar({ kinds, totalCount, visibleCount, activeKind, onKindChange, sort, onSortChange, fareSortable }: {
   kinds: { kind: TransitVehicleKind; count: number }[]; totalCount: number; visibleCount: number;
@@ -37,13 +38,13 @@ export function TransitJourneyToolbar({ kinds, totalCount, visibleCount, activeK
 }
 
 function KindChip({ label, count, active, onClick, Icon }: {
-  label: string; count: number; active: boolean; onClick: () => void; Icon?: LucideIcon;
+  label: "All" | TransitVehicleKind; count: number; active: boolean; onClick: () => void; Icon?: LucideIcon;
 }) {
   return (
-    <Button type="button" variant="outline" size="sm" aria-pressed={active} aria-label={`${label}, ${count} ${count === 1 ? "route" : "routes"}`} onClick={onClick}
-      className={cn("gap-1.5 rounded-full text-xs", active ? "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary" : "text-muted-foreground")}>
+    <Button type="button" variant="outline" size="sm" data-vehicle-kind={label} aria-pressed={active} aria-label={`${label}, ${count} ${count === 1 ? "route" : "routes"}`} onClick={onClick}
+      className={cn(styles.chip, "h-8 gap-1.5 rounded-full pl-3 pr-1.5 text-xs transition-colors motion-reduce:transition-none")}>
       {Icon ? <Icon className="size-3.5" aria-hidden="true" /> : null}{label}
-      <span className={cn("tabular-nums", active ? "text-primary/80" : "text-muted-foreground/80")}>{count}</span>
+      <span className={cn(styles.count, "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums")}>{count}</span>
     </Button>
   );
 }

@@ -15,7 +15,7 @@ const context = await browser.newContext({ viewport: { width: 1440, height: 1000
 context.setDefaultTimeout(20000);
 const page = await context.newPage();
 const errors = [], requests = [], writes = [];
-let railMissing = false, cyclingMissing = false;
+let railMissing = false, cyclingMissing = false, savedRouteFromGeneralOnly = false;
 const stamp = new Date().toISOString();
 let snapshot = { version: 1, savedAt: stamp, blocks: [journeyDay], budget: { currency: "THB", amount: 0, expenses: [] }, capabilities: ["leg-travel-mode-v1", "cycling-legs-v1", "transit-preferences-v1", "transit-route-choice-v1", "trip-energy-v1", "trip-garage-v1", "observed-soc-v1", "day-destinations", "day-anchors", "charge-targets", "precise-charging-v1"] };
 const trip = { id: planId, displayName: "Bangkok transit test", title: "Bangkok transit test", destinationId: "bangkok", destinationName: "Bangkok", destinationCountry: "Thailand", destinationLat: 13.75, destinationLng: 100.53, startDate: "2026-10-13", endDate: "2026-10-13", visibility: "PRIVATE", createdAt: stamp, updatedAt: stamp };
@@ -54,7 +54,9 @@ await context.route(`${base}/api/**`, async (route) => {
         status: fallback ? "fallback" : "routed", durationSeconds: fallback ? null : mode === "walk" ? 2400 : mode === "bike" ? 1080 : mode === "drive" ? 1200 : 900,
         fallbackReason: fallback ? "No rail route was found" : null,
         steps,
-        journeys: body.includeTransitAlternatives && transit && !fallback ? rail ? scheduledJourneys : [{ ...scheduledJourneys[0], steps }] : [],
+        journeys: body.includeTransitAlternatives && transit && !fallback ? rail
+          ? savedRouteFromGeneralOnly ? [scheduledJourneys[0]] : scheduledJourneys
+          : [...(savedRouteFromGeneralOnly ? scheduledJourneys : []), { ...scheduledJourneys[0], steps }] : [],
       };
     }));
     return route.fulfill({ json: { segments } });
@@ -111,10 +113,21 @@ try {
   assert.equal(await page.getByRole("button", { name: "Board at Victory Monument", exact: true }).count(), 0);
   await disclosure.getByRole("button", { name: "Use this route", exact: true }).click();
   await waitForDraft(value => value.blocks[0].items[1].arrivalRouteKey?.includes("MRT Blue Line"));
+  // Rail-only searches can omit a rail journey confirmed by the general transit search.
+  savedRouteFromGeneralOnly = true;
   await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: /Travel mode: MRT & rail/ }).waitFor();
+  await page.getByRole("list", { name: "Transit lines" }).first().waitFor();
+  assert.equal(await page.getByText("Selected route unverified", { exact: true }).count(), 0);
   await trigger.click();
   await alternate.getByRole("radio").waitFor();
   assert.equal(await alternate.getByRole("radio").isChecked(), true);
+  await disclosure.getByRole("button", { name: "In plan", exact: true }).waitFor();
+  await trigger.click();
+  assert.equal(await page.getByText("Selected route unverified", { exact: true }).count(), 0);
+  await page.getByRole("button", { name: "Board at Alternative station", exact: true }).waitFor();
+  await page.screenshot({ path: `${output}/saved-route-collapsed.png` });
+  await trigger.click();
   await primary.locator('[data-slot="accordion-trigger"]').click();
   assert.equal(await disclosure.getByLabel("Transit departure time", { exact: true }).count(), 0);
   assert.ok(requests.some(request => request.groups[0]?.points[1]?.arrivalMode === "rail"));

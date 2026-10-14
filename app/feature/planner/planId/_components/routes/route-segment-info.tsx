@@ -113,6 +113,21 @@ export function RouteSegmentInfo({
           ))}
         </ol>
       ) : null}
+      {segment.savedRouteUnavailable ? (
+        <span className="inline-flex items-center gap-1">
+          <Popover>
+            <PopoverTrigger className="inline-flex size-6 shrink-0 items-center justify-center rounded-full text-warning hover:bg-warning/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Why is a different route shown?">
+              <CircleHelp className="size-4" aria-hidden="true" />
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-72 p-3">
+              <PopoverTitle>Saved route not offered now</PopoverTitle>
+              <PopoverDescription>Transit routes are searched for the next departures, and your saved line and station sequence is not among them right now.</PopoverDescription>
+              <p className="text-xs leading-relaxed text-muted-foreground">The closest confirmed route is shown instead. Open the route choices to keep it or select another journey.</p>
+            </PopoverContent>
+          </Popover>
+          <span className="font-medium text-warning">Saved route not offered now</span>
+        </span>
+      ) : null}
     </div>
   );
 }

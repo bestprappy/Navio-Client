@@ -1,6 +1,8 @@
-import { applySavedTransitRoutes, getTransitRouteKey } from "./transit-route-choice";
+import { applySavedTransitRoutes, getConfirmedTransitJourneys, getTransitRouteKey } from "./transit-route-choice";
 import { addWalkFinishAlternatives } from "./transit-walk-alternatives";
 import { enforceRailOnlyRoutes, isRouteSegmentsResponse } from "./trip-route.helpers";
+import { isTransitMode } from "./leg-travel-mode";
+import { getTravelOptionRequests, matchesTransitPreference } from "./travel-options";
 import type { DirectionsRequest, DirectionsResponse, RoutePointGroup } from "./trip-route.types";
 
 // Match the mobility DirectionsRequest / RoutePointGroupRequest validation limits.
@@ -61,20 +63,45 @@ export async function fetchTripRoutes(
   }
   signal?.throwIfAborted();
   const guarded = enforceRailOnlyRoutes(requestBody, { segments });
-  // A saved direct ride may belong to the fewer-transfer search, rather than the balanced one.
+  // Restore from the same transit searches used by the chooser; a rail-only search
+  // can omit a rail journey found by the general transit search (and vice versa).
   for (const group of requestBody.groups) {
     for (let index = 1; index < group.points.length; index++) {
       const to = group.points[index];
       if (!to.arrivalRouteKey) continue;
       const segment = guarded.segments.find(item => item.blockId === group.blockId && item.toItemId === to.id);
-      if (!segment || segment.journeys?.some(journey => getTransitRouteKey(journey.steps) === to.arrivalRouteKey)) continue;
-      try {
-        const extra = await fetchTripRoutes({ profile: requestBody.profile, includeTransitAlternatives: true,
-          transitRoutingPreference: "FEWER_TRANSFERS", groups: [{ blockId: group.blockId,
-            points: [group.points[index - 1], to].map(point => { const { arrivalRouteKey: selection, ...providerPoint } = point; void selection; return providerPoint; }) }] }, signal);
-        segment.journeys = [...(segment.journeys ?? []), ...(extra.segments[0]?.journeys ?? [])];
-      } catch { signal?.throwIfAborted(); }
-      if (!segment.journeys?.some(journey => getTransitRouteKey(journey.steps) === to.arrivalRouteKey)) {
+      if (!segment) continue;
+      const hasSelection = () => getConfirmedTransitJourneys(segment).some(journey => getTransitRouteKey(journey.steps) === to.arrivalRouteKey);
+      if (hasSelection()) continue;
+      const from = group.points[index - 1];
+      const preference = to.arrivalMode === "bus" ? "bus"
+        : to.arrivalMode === "rail" || (to.arrivalMode === "transit" && to.railOnly) ? "rail" : null;
+      const withoutSelection = (point: typeof to) => {
+        const { arrivalRouteKey: selection, ...providerPoint } = point;
+        void selection;
+        return providerPoint;
+      };
+      const searches: DirectionsRequest[] = [
+        { transitRoutingPreference: "FEWER_TRANSFERS", groups: [{ blockId: group.blockId,
+          points: [from, to].map(withoutSelection) }] },
+        ...getTravelOptionRequests(group.blockId, from, to)
+          .filter(search => isTransitMode(search.key) && search.key !== to.arrivalMode)
+          .map(search => search.request),
+      ];
+      for (const search of searches) {
+        signal?.throwIfAborted();
+        try {
+          const extra = await fetchTripRoutes({ ...search, profile: requestBody.profile,
+            departureTime: requestBody.departureTime, includeTransitAlternatives: true }, signal);
+          const candidate = extra.segments[0];
+          // Check each alternative: a general search's mixed primary must not
+          // discard its confirmed rail-only (or bus-only) alternatives.
+          if (candidate) segment.journeys = [...getConfirmedTransitJourneys(segment),
+            ...getConfirmedTransitJourneys(candidate).filter(journey => !preference || matchesTransitPreference(journey.steps, preference))];
+        } catch { signal?.throwIfAborted(); }
+        if (hasSelection()) break;
+      }
+      if (!hasSelection()) {
         const expanded = await addWalkFinishAlternatives(segment, to, async (station, destination) => {
           const walk = await fetchTripRoutes({ profile: "walking", groups: [{ blockId: group.blockId,
             points: [station, { ...destination, arrivalMode: "walk", arrivalRouteKey: undefined, railOnly: undefined }] }] }, signal);
