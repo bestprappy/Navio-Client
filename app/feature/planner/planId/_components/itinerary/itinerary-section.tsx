@@ -1,10 +1,11 @@
 "use client";
 
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useState } from "react";
 import { useParams } from "next/navigation";
 import { useTripMetadata, useUpdateTripMetadata } from "../../../_components/use-trip-metadata";
 import { DayDestinationPicker } from "./day-destination-picker";
 import { resolveDayDestinations } from "./day-destinations";
+import { AutoPlanUndoNotice } from "../auto-plan/auto-plan-undo-notice";
 import { focusedAnchorAtom } from "./anchor-map.atoms";
 import { AnchorStopCard, EndAnchorRouteInfo } from "./anchor-stop-card";
 import { getTripBlockColorById } from "../constants/trip-block-colors";
@@ -39,11 +40,10 @@ import {
 import { TripBlock } from "../block/trip-block";
 import { DayRouteOverview } from "../garage/day-route-overview";
 import { EmptyItineraryCallout } from "./empty-itinerary-callout";
-import { RouteLineModeSwitch } from "./route-line-mode-switch";
+import { ItineraryOptionsPopover } from "./itinerary-options-popover";
 import { InlineAddDivider } from "../inline-add-divider";
 import { PopularPlaces } from "../guide/popular-places";
-import { ExportItineraryDialog } from "./export/export-itinerary-dialog";
-import type { ItineraryTableAnchors } from "./export/itinerary-table";
+import { ItineraryViewSwitch } from "./table/itinerary-view-switch";
 
 function getNextAvailableBlockDate(
   from: Date,
@@ -67,8 +67,6 @@ type ItinerarySectionProps = {
   longitude: number;
   /** Read-only plans show where each day starts and ends here, in place of the anchor editor. */
   renderDayAnchors?: (block: TripBlockData) => ReactNode;
-  /** Day starts and ends for the table export when the blocks do not carry them, as on shared plans. */
-  exportAnchors?: ReadonlyMap<string, ItineraryTableAnchors>;
 };
 
 export function ItinerarySection({
@@ -76,13 +74,12 @@ export function ItinerarySection({
   latitude,
   longitude,
   renderDayAnchors,
-  exportAnchors,
 }: ItinerarySectionProps) {
   const blocks = useAtomValue(itineraryBlocksAtom);
   const readOnly = useAtomValue(plannerReadOnlyAtom);
   const params = useParams<{ planId?: string }>();
-  const metadata = useTripMetadata(params.planId);
-  const updateMetadata = useUpdateTripMetadata(params.planId);
+  const metadata = useTripMetadata(readOnly ? undefined : params.planId);
+  const updateMetadata = useUpdateTripMetadata(readOnly ? undefined : params.planId);
   const setBlocks = useSetAtom(tripBlocksAtom);
   const [openIds, setOpenIds] = useAtom(openBlockIdsAtom);
   const toggleOpen = useSetAtom(toggleBlockOpenAtom);
@@ -102,14 +99,6 @@ export function ItinerarySection({
   };
   const destinations = resolveDayDestinations(blocks, initialDestination);
   const dayAnchors = resolveDayAnchors(blocks);
-  const tableAnchors = useMemo(() => {
-    if (exportAnchors) return exportAnchors;
-    const toTableAnchor = (anchor: TripAnchor | null) => anchor && { name: anchor.name, address: anchor.address };
-    return new Map([...resolveDayAnchors(blocks)].map(([blockId, anchors]) => [
-      blockId,
-      { start: toTableAnchor(anchors.start), end: toTableAnchor(anchors.end) },
-    ]));
-  }, [blocks, exportAnchors]);
   const setDayAnchor = useSetAtom(setDayAnchorAtom);
   const focusAnchor = useSetAtom(focusedAnchorAtom);
   const firstBlockId = [...blocks].sort((a, b) => a.date.localeCompare(b.date))[0]?.id;
@@ -236,9 +225,8 @@ export function ItinerarySection({
                 />
               ) : (
                 <>
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <RouteLineModeSwitch />
-                    <ExportItineraryDialog anchors={tableAnchors} fileName={metadata.data?.destinationName ?? destinationName} />
+                  <div className="flex flex-wrap items-center gap-1">
+                    <ItineraryViewSwitch className="mr-auto" />
                     <button
                       type="button"
                       aria-expanded={areAllDaysOpen}
@@ -252,6 +240,7 @@ export function ItinerarySection({
                       )}
                       {areAllDaysOpen ? "Collapse all days" : "Expand all days"}
                     </button>
+                    <ItineraryOptionsPopover />
                   </div>
                   {blocks.map((block, index) => {
                     const destination = destinations.get(block.id) ?? initialDestination;
@@ -266,6 +255,7 @@ export function ItinerarySection({
                     >
                       <TripBlock.Header>
                         <TripBlock.Title />
+                        {readOnly ? null : <AutoPlanUndoNotice blockId={block.id} />}
                         {readOnly ? renderDayAnchors?.(block) : <>
                         <DayDestinationPicker destination={destination} isFirstDay={block.id === firstBlockId} isOverride={!!block.destination} onChange={(next) => changeDestination(block.id, next)} />
                         <DayAnchorRail.Root

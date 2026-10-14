@@ -160,3 +160,71 @@ test("column letters and day tints are computed exactly", () => {
   assert.equal(tintHex("#00AE84"), "D6F2EB");
   assert.equal(tintHex("#000000", 1), "000000");
 });
+
+test("stops are numbered like the map pins: start first, places in order, charging stops unnumbered, end last", () => {
+  const [first, second] = build().days;
+  assert.deepEqual(first.rows.map((row) => [row.name, row.position]), [
+    ["Suvarnabhumi Airport", 1],
+    ["Wat Arun", 2],
+    ["Jay Fai", 3],
+    ["PTT EV Station", null],
+    ["Riva Hotel", 4],
+  ]);
+  assert.deepEqual(second.rows.map((row) => row.position), [1, 2]);
+});
+
+test("anchor rows use the route point ID, so the leg arriving at the day's end can be found", () => {
+  const [first] = build().days;
+  assert.equal(first.rows[0].id, "day-one:start");
+  assert.equal(first.rows.at(-1).id, "day-one:end");
+});
+
+test("a day spans from its first timed stop to the last one's end, and is null without times", () => {
+  const [first, second] = build().days;
+  assert.equal(first.timeSpan, "9:00 AM – 12:00 PM");
+  assert.equal(second.timeSpan, null);
+});
+
+test("a named day keeps its name and a day titled with its date has none", () => {
+  const named = { ...dayTwo, title: "Weekend market" };
+  const dated = { ...dayOne, title: dayOne.date };
+  const days = build({ blocks: [named, dated] }).days;
+  assert.deepEqual(days.map((day) => day.title), ["", "Weekend market"]);
+});
+
+test("the times inside a stop are sorted and formatted, and blank rows are dropped", () => {
+  const withMoments = {
+    ...dayTwo,
+    items: [{
+      ...dayTwo.items[0],
+      schedule: [
+        { id: "m2", time: "10:30", label: "Lunch at the food court " },
+        { id: "m1", time: "09:00", timeEnd: "09:10", label: "Meet at gate 1" },
+        { id: "blank", time: "", label: "  " },
+      ],
+    }],
+  };
+  const [day] = build({ blocks: [withMoments] }).days;
+  assert.deepEqual(day.rows[1].moments, [
+    { id: "m1", time: "9:00 AM – 9:10 AM", label: "Meet at gate 1" },
+    { id: "m2", time: "10:30 AM", label: "Lunch at the food court" },
+  ]);
+});
+
+test("only times filled by Calculate times are marked calculated", () => {
+  const calculated = { ...dayTwo, items: [{ ...dayTwo.items[0], time: "14:00", timeSource: "calculated" }] };
+  const untimed = { ...dayTwo, items: [{ ...dayTwo.items[0], timeSource: "calculated" }] };
+  assert.equal(build({ blocks: [calculated] }).days[0].rows[1].timeIsCalculated, true);
+  assert.equal(build({ blocks: [untimed] }).days[0].rows[1].timeIsCalculated, false);
+  assert.equal(build().days[0].rows[1].timeIsCalculated, false);
+});
+
+test("rows carry clock minutes for stays and a place's type for its tag", () => {
+  const [first] = build().days;
+  const watArun = first.rows.find((row) => row.id === "wat-arun");
+  assert.deepEqual([watArun.startMinute, watArun.endMinute], [540, 630]);
+  assert.deepEqual([first.rows[0].startMinute, first.rows[0].category], [null, null]);
+  const typed = { ...dayTwo, items: [{ ...dayTwo.items[0], description: " Market ", placeType: "market" }] };
+  const market = build({ blocks: [typed] }).days[0].rows[1];
+  assert.deepEqual([market.category, market.placeType], ["Market", "market"]);
+});

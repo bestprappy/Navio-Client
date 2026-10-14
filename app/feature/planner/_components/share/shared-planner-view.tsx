@@ -13,6 +13,7 @@ import { BudgetSection } from "../../planId/_components/budget/budget-section";
 import type { TripBlockData } from "../../planId/_components/constants/types";
 import { DayNavSidebar } from "../../planId/_components/itinerary/day-nav-sidebar";
 import { ItinerarySection } from "../../planId/_components/itinerary/itinerary-section";
+import { ItineraryTableViewLazy } from "../../planId/_components/itinerary/table/itinerary-table-view-lazy";
 import { RouteStopTracker } from "../../planId/_components/itinerary/route-stop-tracker";
 import { PlannerWorkspace } from "../../planId/_components/layout/planner-workspace";
 import { TripBuilderErrorBoundary } from "../../planId/_components/overview/trip-builder-error-boundary";
@@ -36,7 +37,7 @@ import { getSharedPlanCenter, isLocatedStop, toSharedPlanBlocks, toSharedPlanBud
 
 type SharedPlannerViewProps = {
   shared: SharedPlan;
-  token: string;
+  token?: string;
   /** Shown above the plan when it was opened from a listing, such as Explore. */
   backLink?: { href: string; label: string };
 };
@@ -87,6 +88,7 @@ function SharedPlannerWorkspace({ shared, token, backLink }: SharedPlannerViewPr
     const day = plan.days?.[index];
     return day ? <SharedDayAnchors startsAt={day.startsAt} endsAt={day.endsAt} /> : null;
   }, [blocks, plan.days]);
+  // Published days name where they start and end but carry no anchor blocks.
   const exportAnchors = useMemo(() => new Map(blocks.map((block, index) => {
     const day = plan.days?.[index];
     return [block.id, {
@@ -97,6 +99,7 @@ function SharedPlannerWorkspace({ shared, token, backLink }: SharedPlannerViewPr
 
   return (
     <PlannerWorkspace
+      scrollPanelId={token ? "planner-scroll-panel" : "shared-preview-scroll-panel"}
       itinerary={<>
         <TripHero destinationName={destination || title} coverImageUrl={cover} readOnly />
         <TripInfoCardShell>
@@ -124,7 +127,7 @@ function SharedPlannerWorkspace({ shared, token, backLink }: SharedPlannerViewPr
             </p>
           )}
           {hasChargerStops(plan) && <EvPlanDisclaimer />}
-          <CopySharedPlanButton token={token} hasUnlocatedStops={hasUnlocatedStops} />
+          {token && <CopySharedPlanButton token={token} hasUnlocatedStops={hasUnlocatedStops} />}
         </TripInfoCardShell>
 
         <TripBuilderErrorBoundary>
@@ -133,13 +136,15 @@ function SharedPlannerWorkspace({ shared, token, backLink }: SharedPlannerViewPr
             latitude={center.lat}
             longitude={center.lng}
             renderDayAnchors={renderDayAnchors}
-            exportAnchors={exportAnchors}
           />
         </TripBuilderErrorBoundary>
         {plan.budget && <BudgetSection />}
       </>}
       map={<TripBuilderErrorBoundary><PlannerMap latitude={center.lat} longitude={center.lng} /></TripBuilderErrorBoundary>}
       details={null}
+      table={<TripBuilderErrorBoundary>
+        <ItineraryTableViewLazy title={title} destinationName={destination || title} anchors={exportAnchors} />
+      </TripBuilderErrorBoundary>}
     >
       <DayNavSidebar />
       <RouteStopTracker />
