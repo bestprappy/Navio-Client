@@ -40,7 +40,9 @@ import {
 } from "./publication-api";
 import { ShareOptionRow } from "./share-option-row";
 import { SharedLinkField } from "./shared-link-field";
-import { SharedPlanContent } from "./shared-plan-content";
+import { SharedPlannerView } from "./shared-planner-view";
+import type { PublicPlanSnapshot } from "./publication-api";
+import styles from "./publish-plan-dialog.module.css";
 import {
   usePublication,
   usePublicationPreview,
@@ -92,6 +94,8 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
   const [draftListInExplore, setDraftListInExplore] = useState(false);
   const [publicTitle, setPublicTitle] = useState(tripTitle);
   const [hasEditedTitle, setHasEditedTitle] = useState(false);
+  const [showAuthor, setShowAuthor] = useState(true);
+  const [hasEditedAuthor, setHasEditedAuthor] = useState(false);
 
   const publication = publicationQuery.data;
   const isPublished = publication?.published === true;
@@ -99,11 +103,11 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
     publication?.published === true ? publication.listedInExplore : draftListInExplore;
 
   const ownerName = useOwnerDisplayName(open);
-  // What recipients see now: the frozen byline once published, else the name
-  // this publish would use.
-  const byline =
-    (publication?.published === true ? publication.authorDisplayName : ownerName) ??
-    "a Navio traveler";
+  const byline = showAuthor ? ownerName ?? "a Navio traveler" : "a Navio traveler";
+  useEffect(() => {
+    if (hasEditedAuthor || !publication) return;
+    setShowAuthor(publication.published ? Boolean(publication.authorDisplayName) : true);
+  }, [publication, hasEditedAuthor]);
 
   // Adopt the saved settings once, when they arrive. Re-syncing on every fetch
   // would discard a checkbox the owner ticked while the query was revalidating.
@@ -125,6 +129,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
     setHasEditedOptions(false);
     setDraftListInExplore(false);
     setHasEditedTitle(false);
+    setHasEditedAuthor(false);
     publishMutation.reset();
     stopSharingMutation.reset();
     listingMutation.reset();
@@ -143,7 +148,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
     publishMutation.isPending || stopSharingMutation.isPending || listingMutation.isPending;
   const needsUpdate =
     publication?.published === true &&
-    (publication.hasUnpublishedChanges || publication.staleSanitizer || optionsChanged || publicTitle.trim() !== (publication.title ?? tripTitle));
+    (publication.hasUnpublishedChanges || publication.staleSanitizer || hasEditedAuthor || optionsChanged || publicTitle.trim() !== (publication.title ?? tripTitle));
 
   function updateOption(key: keyof PublicationOptions, checked: boolean) {
     setHasEditedOptions(true);
@@ -156,20 +161,19 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
         options,
         expectedRevision: publication?.published ? publication.revision : null,
         listInExplore: listedInExplore,
-        authorDisplayName: ownerName,
+        authorDisplayName: showAuthor ? ownerName : null,
         title: publicTitle.trim(),
       },
-      { onSuccess: () => setHasEditedOptions(false) },
+      { onSuccess: () => { setHasEditedOptions(false); setHasEditedAuthor(false); } },
     );
   }
 
   function handleExploreChange(checked: boolean) {
     if (publication?.published) {
-      // Listing refreshes the byline to the owner's current name; unlisting
-      // leaves it as published.
+      // Audience changes preserve the published byline until the owner republishes.
       listingMutation.mutate({
         listedInExplore: checked,
-        authorDisplayName: checked ? ownerName : null,
+        authorDisplayName: publication.authorDisplayName,
       });
     } else {
       setDraftListInExplore(checked);
@@ -189,8 +193,8 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
       {/* grid-rows keeps the header and footer fixed while only the body scrolls;
           the primitive's own p-4 stays, because DialogFooter's negative margins
           are measured against it. */}
-      <DialogContent className="grid max-h-[90dvh] grid-rows-[auto_1fr_auto] sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className={`${styles.dialog} ${view === "preview" ? styles.previewDialog : ""}`}>
+        <DialogHeader className="pr-8">
           <DialogTitle className="flex items-center gap-2">
             {view === "preview" ? (
               <>
@@ -200,23 +204,24 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
             ) : (
               <>
                 <Globe className="size-4" aria-hidden="true" />
-                Publish plan as a link
+                Share your plan
               </>
             )}
           </DialogTitle>
           <DialogDescription>
             {view === "preview"
-              ? `This is exactly what people will see of ${tripTitle}.`
-              : "Anyone with the link can view this published version. They cannot change your original plan."}
+              ? "Review the itinerary and map before publishing."
+              : "Choose what goes into your read-only plan, then publish a link."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 overflow-y-auto">
+        <div className="min-h-0 overflow-y-auto overscroll-contain">
           {view === "preview" ? (
             <PreviewBody
               isLoading={previewQuery.isPending}
               isError={previewQuery.isError}
               onRetry={() => void previewQuery.refetch()}
+              authorName={byline}
               plan={previewQuery.data ? { ...previewQuery.data, title: publicTitle.trim() || previewQuery.data.title } : undefined}
             />
           ) : publicationQuery.isPending ? (
@@ -236,12 +241,13 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
               </Button>
             </div>
           ) : (
-            <div className="space-y-6">
-              <label className="flex flex-col gap-2 text-sm font-medium">Shared plan name
+            <div className={styles.settings}>
+              <label className={`${styles.name} flex flex-col gap-2 text-sm font-medium`}>Shared plan name
                 <Input value={publicTitle} maxLength={120} disabled={isBusy} onChange={(event) => { setHasEditedTitle(true); setPublicTitle(event.target.value); }} placeholder="Top 10 things to do in Japan" />
                 <span className="text-xs font-normal text-muted-foreground">This name appears on the shared page and Explore. Your private trip keeps its own name.</span>
               </label>
-              <section aria-label="Who can see this plan" className="space-y-2">
+              <section aria-label="Who can see this plan" className={`${styles.audience} space-y-3`}>
+                <h3 className="text-sm font-semibold">Who can view it</h3>
                 <AccessRow
                   icon={<UserRound className="size-4" aria-hidden="true" />}
                   who="You"
@@ -260,6 +266,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
                   />
                 )}
                 <p className="text-sm text-muted-foreground">People can forward this link.</p>
+                <ShareOptionRow label="Show my name" description="Turn off to share as a Navio traveler." checked={showAuthor} disabled={isBusy} onCheckedChange={(checked) => { setHasEditedAuthor(true); setShowAuthor(checked); }} />
                 <p className="text-sm text-muted-foreground">
                   Shown as <span className="font-medium text-foreground">{byline}</span>.{" "}
                   <Link
@@ -271,16 +278,20 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
                 </p>
               </section>
 
-              <section aria-labelledby="share-content-heading" className="space-y-3">
+              <section aria-labelledby="share-content-heading" className={`${styles.content} space-y-4`}>
                 <div>
                   <h3 id="share-content-heading" className="text-sm font-semibold text-foreground">
-                    Shared: itinerary, places and charging stops
+                    What to include
                   </h3>
                   <p className="text-sm text-muted-foreground">
-                    Private saved locations are always hidden.
+                    Places and charging stops are included. Private saved locations stay hidden.
                   </p>
                 </div>
 
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Content presets">
+                  <Button type="button" size="sm" variant="outline" disabled={isBusy} onClick={() => { setHasEditedOptions(true); setOptions(NO_PUBLICATION_OPTIONS); }}>Itinerary only</Button>
+                  <Button type="button" size="sm" variant="outline" disabled={isBusy} onClick={() => { setHasEditedOptions(true); setOptions({ includeDates: true, includeNotes: true, includeBudget: true }); }}>All trip details</Button>
+                </div>
                 <ShareOptionRow
                   label="Include travel dates"
                   description="Shows real dates instead of Day 1, Day 2."
@@ -304,7 +315,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
                 />
               </section>
 
-              <section aria-labelledby="share-explore-heading" className="space-y-3">
+              <section aria-labelledby="share-explore-heading" className={`${styles.explore} space-y-3`}>
                 <h3 id="share-explore-heading" className="text-sm font-semibold text-foreground">
                   Explore
                 </h3>
@@ -312,7 +323,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
                   label="List on Explore"
                   description={
                     isPublished
-                      ? `Anyone browsing Navio can find and read this plan, shared by ${ownerName ?? "a Navio traveler"}. This changes right away.`
+                      ? `Anyone browsing Navio can find and read this plan, shared by ${publication?.published ? publication.authorDisplayName ?? "a Navio traveler" : byline}. This changes right away.`
                       : `Anyone browsing Navio can find and read this plan, shared by ${byline}.`
                   }
                   checked={listedInExplore}
@@ -345,6 +356,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
                     variant="link"
                     size="sm"
                     className="h-auto px-0"
+                    nativeButton={false} role="link"
                     render={<Link href={explorePlanPath(publication.token)} />}
                   >
                     <Compass className="size-4" aria-hidden="true" />
@@ -354,7 +366,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
               </section>
 
               {isPublished && publication.published && (
-                <section aria-label="Published link" className="space-y-3 border-t border-border pt-5">
+                <section aria-label="Published link" className={`${styles.published} space-y-3 border-t border-border pt-5`}>
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h3 className="text-sm font-semibold text-foreground">Link published</h3>
                     {publication.publishedAt && (
@@ -366,7 +378,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
 
                   <SharedLinkField url={sharedPlanUrl(publication.token)} />
 
-                  <Button type="button" variant="outline" size="sm" render={
+                  <Button nativeButton={false} role="link" variant="outline" size="sm" render={
                     <a href={sharedPlanPath(publication.token)} target="_blank" rel="noopener noreferrer" />
                   }>
                     <ExternalLink className="size-4" aria-hidden="true" />
@@ -495,6 +507,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
                   isBusy ||
                   publicationQuery.isPending ||
                   publicationQuery.isError ||
+                  !publicTitle.trim() ||
                   (isPublished && !needsUpdate)
                 }
                 onClick={handlePublish}
@@ -536,7 +549,7 @@ function useOwnerDisplayName(enabled: boolean): string | null {
 
 function AccessRow({ icon, who, what }: { icon: React.ReactNode; who: string; what: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b border-border/60 py-2">
       <span className="flex items-center gap-2 text-sm font-medium text-foreground">
         {icon}
         {who}
@@ -552,11 +565,13 @@ function PreviewBody({
   isError,
   onRetry,
   plan,
+  authorName,
 }: {
   isLoading: boolean;
   isError: boolean;
   onRetry: () => void;
-  plan: Parameters<typeof SharedPlanContent>[0]["plan"] | undefined;
+  plan: PublicPlanSnapshot | undefined;
+  authorName: string;
 }) {
   if (isLoading) {
     return (
@@ -583,12 +598,8 @@ function PreviewBody({
   }
 
   return (
-    <div className="space-y-4">
-      <p className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-        Names, descriptions and map pins you typed yourself are shown as you wrote them. Private
-        saved locations appear only as &ldquo;Private start location&rdquo;.
-      </p>
-      <SharedPlanContent plan={plan} />
+    <div className={styles.preview}>
+      <SharedPlannerView key={JSON.stringify(plan)} shared={{ plan, authorName, publishedAt: "", listedInExplore: false }} />
     </div>
   );
 }

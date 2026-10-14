@@ -1,3 +1,5 @@
+"use client";
+
 import { Clock, ClipboardList, MapPin, StickyNote, Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
