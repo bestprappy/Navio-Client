@@ -12,12 +12,9 @@ import {
   CalendarDays,
   ClipboardList,
   CarFront,
-  Compass,
   Gauge,
-  LayoutDashboard,
   ListChecks,
   Map,
-  MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -48,7 +45,7 @@ import { canUseAdminConsole, isAdministrator } from "@/lib/navio-roles";
 import { cn } from "@/lib/utils";
 
 import SidebarItem from "./sidebar.item";
-import SidebarMenu from "./sidebar.menu";
+import SidebarMenu, { PlannerDiscoverMenu } from "./sidebar.menu";
 import { SidebarAccountActions } from "./sidebar-account-actions";
 
 const PLANNER_SCROLL_PANEL_ID = "planner-scroll-panel";
@@ -268,16 +265,13 @@ export default function SidebarWrapper() {
           className={cn(buttonVariants({ size: "lg" }), "w-full rounded-full", collapsed && "px-0")}>
           <Plus className="size-4" aria-hidden="true" />{!collapsed && "New Trip"}
         </Link>
+        <PlannerDiscoverMenu
+          collapsed={collapsed}
+          pathName={pathName}
+          onNavigate={() => setMobileOpen(false)}
+        />
         <SidebarTrips collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
         <SidebarMenu title="Travel" collapsed={collapsed}>
-          <SidebarItem
-            title="Dashboard"
-            href="/dashboard"
-            icon={<LayoutDashboard className="size-5" />}
-            isActive={isRouteActive("/dashboard")}
-            onClick={() => setMobileOpen(false)}
-            collapsed={collapsed}
-          />
           <SidebarItem
             title="Planner"
             href={isPlannerDetail ? pathName : visibleRecentPlan?.href ?? "/planner/new"}
@@ -314,24 +308,6 @@ export default function SidebarWrapper() {
               />
             </>
           ) : null}
-        </SidebarMenu>
-        <SidebarMenu title="Discover" collapsed={collapsed}>
-          <SidebarItem
-            title="Explore"
-            href="/explore"
-            icon={<Compass className="size-5" />}
-            isActive={isRouteActive("/explore")}
-            onClick={() => setMobileOpen(false)}
-            collapsed={collapsed}
-          />
-          <SidebarItem
-            title="Community"
-            href="/community"
-            icon={<MessageCircle className="size-5" />}
-            isActive={isRouteActive("/community")}
-            onClick={() => setMobileOpen(false)}
-            collapsed={collapsed}
-          />
         </SidebarMenu>
         {canUseAdminConsole(session?.user?.roles) ? (
           <SidebarMenu title="Admin" collapsed={collapsed}>

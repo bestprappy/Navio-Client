@@ -29,27 +29,28 @@ export default function SidebarItem({
   return (
     <Link
       href={href}
+      data-active={isActive ? "true" : "false"}
       aria-label={collapsed ? title : undefined}
       onClick={onClick}
       aria-current={isActive ? "page" : undefined}
       title={collapsed ? title : undefined}
       className={cn(
-        "group flex min-h-11 w-full items-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring/30",
-        collapsed ? "justify-center px-0" : "gap-3 px-3",
+        "group relative isolate flex min-h-11 w-full items-center overflow-hidden rounded-xl text-sm font-medium transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 focus-visible:ring-offset-1 focus-visible:ring-offset-card",
+        collapsed ? "justify-center px-1" : "gap-2.5 px-3",
         isActive
-          ? "bg-sidebar-accent text-sidebar-accent-foreground"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          ? "bg-sidebar-accent/90 font-semibold text-sidebar-accent-foreground"
+          : "text-muted-foreground hover:bg-sidebar-accent/55 hover:text-foreground",
       )}
     >
       {icon ? (
         <span
           className={cn(
-            "flex size-5 shrink-0 items-center justify-center transition-colors",
+            "flex size-8 shrink-0 items-center justify-center rounded-lg transition-[background-color,color]",
             iconClassName
               ? iconClassName
               : isActive
-                ? "text-primary"
-                : "text-muted-foreground group-hover:text-foreground",
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground group-hover:bg-background/70 group-hover:text-foreground",
           )}
         >
           {icon}

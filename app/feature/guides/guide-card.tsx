@@ -7,19 +7,38 @@ import { GuideCoverPhoto } from "../admin/_components/guides/guide-cover-photo";
 import type { GuideSummary } from "../admin/_components/guides/guides-api";
 import type { PublishedGuideSummary } from "./user-guides-api";
 import { GuideAuthor } from "./guide-author";
+import { cn } from "@/lib/utils";
 
-export function TravelerGuideCard({ guide }: { guide: PublishedGuideSummary }) {
+export function TravelerGuideCard({
+  guide,
+  layout = "default",
+}: {
+  guide: PublishedGuideSummary;
+  layout?: "default" | "planner";
+}) {
+  const isPlanner = layout === "planner";
+
   return (
     <Link
       href={`/explore/guides/${guide.id}`}
-      className="group flex h-full min-w-0 flex-col gap-3 rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      className={cn(
+        "group flex h-full min-w-0 flex-col outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        isPlanner
+          ? "overflow-hidden rounded-2xl border border-border/60 bg-background/90 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:border-accent/30 hover:shadow-lg motion-reduce:transition-none @min-[30rem]:flex-row"
+          : "gap-3 rounded-xl",
+      )}
     >
       <GuideCoverPhoto
         placeId={guide.coverPlaceId}
         sizes="(min-width: 1024px) 24rem, (min-width: 640px) 45vw, 90vw"
-        className="aspect-3/2 w-full rounded-xl"
+        className={cn(
+          "w-full",
+          isPlanner
+            ? "aspect-[16/7] rounded-none bg-muted/70 @min-[30rem]:aspect-auto @min-[30rem]:min-h-36 @min-[30rem]:w-[42%] @min-[30rem]:shrink-0"
+            : "aspect-3/2 rounded-xl",
+        )}
       />
-      <div className="space-y-2 px-1 pb-1">
+      <div className={cn("space-y-2", isPlanner ? "flex min-w-0 flex-1 flex-col p-3.5" : "px-1 pb-1")}>
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <MapPin aria-hidden="true" className="size-3.5 shrink-0" />
           <span className="truncate">
@@ -31,15 +50,15 @@ export function TravelerGuideCard({ guide }: { guide: PublishedGuideSummary }) {
               : ""}
           </span>
         </p>
-        <h3 className="line-clamp-2 text-lg leading-snug font-semibold tracking-tight group-hover:text-primary">
+        <h3 className={cn("line-clamp-2 leading-snug font-semibold tracking-tight group-hover:text-primary", isPlanner ? "text-base" : "text-lg")}>
           {guide.name}
         </h3>
         {guide.description ? (
-          <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+          <p className={cn("text-sm leading-relaxed text-muted-foreground", isPlanner ? "line-clamp-1" : "line-clamp-2")}>
             {guide.description}
           </p>
         ) : null}
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <div className={cn("flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground", isPlanner && "mt-auto pt-1")}>
           <GuideAuthor author={guide.author} />
           <span className="flex shrink-0 items-center gap-1.5">
             <BookOpen aria-hidden="true" className="size-3.5" />

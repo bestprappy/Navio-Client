@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 
-import SidebarMenu from "@/components/sidebar/sidebar.menu";
+import { SidebarTripsMenu } from "@/components/sidebar/sidebar.menu";
 import { Button } from "@/components/ui/button";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,11 @@ export function SidebarTrips({ collapsed, onNavigate }: { collapsed: boolean; on
   const items = trips.data?.content.slice(0, 4) ?? [];
 
   return (
-    <SidebarMenu title="Trips" collapsed={collapsed}>
+    <SidebarTripsMenu
+      collapsed={collapsed}
+      dashboardActive={pathname === "/dashboard"}
+      onNavigate={onNavigate}
+    >
       {status === "loading" || (status === "authenticated" && trips.isPending) ? (
         <div role="status" aria-label="Loading trips" className="h-20 animate-pulse rounded-xl bg-muted" />
       ) : trips.isError && status === "authenticated" ? (
@@ -59,6 +63,6 @@ export function SidebarTrips({ collapsed, onNavigate }: { collapsed: boolean; on
           {!collapsed && (trips.data?.totalElements ?? 0) > 4 && <Link href="/dashboard" onClick={onNavigate} className="rounded-lg px-2 py-2 text-xs font-medium text-primary hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">View all trips</Link>}
         </div>
       )}
-    </SidebarMenu>
+    </SidebarTripsMenu>
   );
 }
