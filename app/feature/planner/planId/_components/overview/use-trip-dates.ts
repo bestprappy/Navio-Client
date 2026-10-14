@@ -2,16 +2,17 @@
 
 import { useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
-import { atom, useAtom } from "jotai";
+import { atom, useAtom, useAtomValue } from "jotai";
 import { format, parseISO } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { useTripMetadata, useUpdateTripMetadata } from "../../../_components/use-trip-metadata";
-import { tripDateRangeAtom } from "./trip-builder.atoms";
+import { plannerReadOnlyAtom, tripDateRangeAtom } from "./trip-builder.atoms";
 
 export function useTripDates(initialFrom?: string, initialTo?: string) {
   const { planId } = useParams<{ planId?: string }>();
-  const metadata = useTripMetadata(planId);
-  const mutation = useUpdateTripMetadata(planId);
+  const readOnly = useAtomValue(plannerReadOnlyAtom);
+  const metadata = useTripMetadata(readOnly ? undefined : planId);
+  const mutation = useUpdateTripMetadata(readOnly ? undefined : planId);
   const [storedRange, setStoredRange] = useAtom(tripDateRangeAtom);
   const draftAtom = useMemo(() => {
     const value = atom<DateRange | null>(null);
@@ -31,7 +32,7 @@ export function useTripDates(initialFrom?: string, initialTo?: string) {
   const pickerValue = draft ?? (from ? { from: parseISO(from), to: to ? parseISO(to) : undefined } : undefined);
 
   function changeRange(range: DateRange | undefined, onSaved: () => void) {
-    if (mutation.isPending) return;
+    if (readOnly || mutation.isPending) return;
     mutation.reset();
     setDraft(range ?? null);
     if (!range?.from || !range.to) return;

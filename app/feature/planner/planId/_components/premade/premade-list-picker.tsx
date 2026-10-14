@@ -74,8 +74,8 @@ export function PremadeListPicker({ blockId, itemId }: PremadeListPickerProps) {
         size={itemId ? "sm" : "lg"}
         className={
           itemId
-            ? "rounded-sm border-premade/30 bg-premade/10 text-premade hover:border-premade/50 hover:bg-premade/20 hover:text-premade"
-            : "w-full rounded-sm border-premade/30 bg-premade/10 py-6 text-premade hover:border-premade/50 hover:bg-premade/20 hover:text-premade"
+            ? "rounded-sm border-primary/30 bg-primary/10 text-primary hover:border-primary/50 hover:bg-primary/20 hover:text-primary"
+            : "w-full rounded-sm border-primary/30 bg-primary/10 py-6 text-primary hover:border-primary/50 hover:bg-primary/20 hover:text-primary"
         }
         aria-expanded={isOpen}
         aria-haspopup="menu"

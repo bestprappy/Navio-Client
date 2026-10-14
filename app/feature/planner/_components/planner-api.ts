@@ -3,6 +3,7 @@ import { isTripAnchor } from "../planId/_components/itinerary/day-anchors";
 import { isTripDestination } from "../planId/_components/itinerary/day-destinations";
 import { isTransitRouteKey } from "../planId/_components/routes/transit-route-choice";
 import { isLegTravelMode } from "../planId/_components/routes/leg-travel-mode";
+import { isScheduleEntry } from "../planId/_components/itinerary/stop-schedule";
 import type {
   ChecklistItem,
   EvCharger,
@@ -229,10 +230,12 @@ export async function savePlannerSnapshot(
   const requiresCycling = blocks.some(block => block.items.some(item => item.type === "place" && item.arrivalMode === "bike"));
   const requiresTransitPreference = blocks.some(block => block.items.some(item => item.type === "place" && (item.arrivalMode === "rail" || item.arrivalMode === "bus")));
   const requiresRouteChoice = blocks.some(block => block.items.some(item => item.type === "place" && item.arrivalRouteKey != null));
+  const requiresTimeSources = blocks.some(block => block.items.some(item => item.type === "place" && item.timeSource != null));
+  const requiresSchedules = blocks.some(block => block.items.some(item => item.type === "place" && item.schedule !== undefined));
   let syncedEnergy = energyState;
   let syncedBlocks = blocks;
   let localOnlySettings = false;
-  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations || requiresTravelModes || requiresRouteChoice || requiresPreciseCharging) {
+  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations || requiresTravelModes || requiresRouteChoice || requiresPreciseCharging || requiresTimeSources || requiresSchedules) {
     const server = await getPlannerSnapshot(tripId);
     if (requiresCycling && !server.capabilities?.includes("cycling-legs-v1")) {
       throw new PlannerApiError("The trip service must be updated before bike journeys can be saved. Your local changes have been kept.", 409);
@@ -268,6 +271,16 @@ export async function savePlannerSnapshot(
     }));
     if (!observationsSupported) syncedBlocks = syncedBlocks.map(block => ({ ...block, items: block.items.map(item => item.type === "place" ? { ...item, observedSocCheckpoint: undefined } : item) }));
     if (!travelModesSupported) syncedBlocks = syncedBlocks.map(block => ({ ...block, items: block.items.map(item => item.type === "place" ? { ...item, arrivalMode: undefined } : item) }));
+    // An older trip service would store calculated times as if they were typed; keep the source in the draft.
+    if (requiresTimeSources && !server.capabilities?.includes("time-source-v1")) {
+      localOnlySettings = true;
+      syncedBlocks = syncedBlocks.map(block => ({ ...block, items: block.items.map(item => item.type === "place" ? { ...item, timeSource: undefined } : item) }));
+    }
+    // An older trip service drops a stop's schedule; keep it in the draft rather than lose it.
+    if (requiresSchedules && !server.capabilities?.includes("item-schedule-v1")) {
+      localOnlySettings = true;
+      syncedBlocks = syncedBlocks.map(block => ({ ...block, items: block.items.map(item => item.type === "place" ? { ...item, schedule: undefined } : item) }));
+    }
   }
   const value = await requestJson(
     `/api/trips/${encodeURIComponent(tripId)}/planner`,
@@ -648,6 +661,8 @@ function isPlaceItem(value: Record<string, unknown>): value is PlaceItem {
     isOptionalBoolean(value.isVisited) &&
     isOptionalString(value.time) &&
     isOptionalString(value.timeEnd) &&
+    (value.timeSource == null || value.timeSource === "fixed" || value.timeSource === "calculated") &&
+    (value.schedule == null || (Array.isArray(value.schedule) && value.schedule.every(isScheduleEntry))) &&
     isOptionalNumber(value.cost) &&
     (value.evCharger === undefined || isEvCharger(value.evCharger))
   );

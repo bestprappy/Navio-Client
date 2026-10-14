@@ -39,6 +39,7 @@ import {
   type TripBlockColorId,
   type TripBlockItem,
 } from "../constants/types";
+import { shiftSchedule } from "../itinerary/stop-schedule";
 
 type AddPremadeListPayload = {
   blockId: string;
@@ -96,7 +97,7 @@ type UpdatePlacePayload = {
   updates: Partial<
     Pick<
       PlaceItem,
-      "isVisited" | "notes" | "time" | "timeEnd" | "cost" | "evCharger" | "observedSocCheckpoint" | "arrivalMode" | "arrivalRouteKey"
+      "isVisited" | "notes" | "schedule" | "time" | "timeEnd" | "timeSource" | "cost" | "evCharger" | "observedSocCheckpoint" | "arrivalMode" | "arrivalRouteKey"
     >
   >;
 };
@@ -1151,8 +1152,13 @@ export const updatePlaceItemAtom = atom(
         get(tripBlocksAtom),
         payload.blockId,
         payload.itemId,
-        (item) =>
-          item.type === "place" ? { ...item, ...payload.updates } : item,
+        (item) => {
+          if (item.type !== "place") return item;
+          const updated = { ...item, ...payload.updates };
+          // A new start time carries the stop's own schedule with it, unless the schedule is being set too.
+          if (!("time" in payload.updates) || "schedule" in payload.updates || !item.schedule?.length) return updated;
+          return { ...updated, schedule: [...shiftSchedule(item.schedule, item.time, payload.updates.time)] };
+        },
       ),
     );
   },
@@ -1377,7 +1383,8 @@ export const addPlaceVisitToBlockAtom = atom(null, (get, set, payload: {
   if (!targetBlock) return;
   const insertionIndex = getItemInsertionIndex(targetBlock, payload.beforeItemId);
   if (insertionIndex < 0) return;
-  const visit = createPlaceVisit(payload.place, createClientId("place"));
+  // No time yet, but calculated: the day fills in a suggested time once its travel is known.
+  const visit: PlaceItem = { ...createPlaceVisit(payload.place, createClientId("place")), timeSource: "calculated" };
   set(tripBlocksAtom, updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
     ...block, items: [
       ...block.items.slice(0, insertionIndex), visit, ...block.items.slice(insertionIndex),
