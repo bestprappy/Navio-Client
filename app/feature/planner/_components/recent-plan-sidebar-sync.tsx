@@ -15,6 +15,7 @@ import {
   pendingPlannerBlockIdAtom,
   recentPlanSidebarAtom,
   recentPlanSidebarStore,
+  lastWorkedPlanAtom,
 } from "./recent-plan-sidebar";
 
 type RecentPlanSidebarSyncProps = {
@@ -36,6 +37,7 @@ export function RecentPlanSidebarSync({ planId }: RecentPlanSidebarSyncProps) {
     // Only offer saved trips owned by the current account.
     if (!ownerId || !isPersistedTripId(planId) || blocks.length === 0) return;
     setRecentPlan({ planId, ownerId, blocks, href: `${pathname}${window.location.search}` });
+    recentPlanSidebarStore.set(lastWorkedPlanAtom, { planId, ownerId });
   }, [blocks, ownerId, pathname, planId, setRecentPlan]);
 
   useEffect(() => {

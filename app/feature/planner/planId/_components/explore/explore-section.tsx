@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import Link from "next/link";
+import { PlannerExploreLink } from "@/app/feature/explore/places/planner-explore-link";
 import { useAtomValue } from "jotai";
-import { ArrowUpRight, BookOpen, Compass, MapPin, Route } from "lucide-react";
+import { BookOpen, Compass, MapPin, Route } from "lucide-react";
 
 import { TripGuides } from "@/app/feature/guides/trip-guides";
 import { PlannerErrorBoundary } from "../../../_components/planner-error-boundary";
@@ -234,13 +234,7 @@ export function ExploreSection({ destinationName, country }: { destinationName: 
                 Explore
               </AccordionTrigger>
             </div>
-            <Link
-              href="/explore"
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border/70 bg-background/80 px-3.5 text-sm font-medium text-foreground shadow-sm transition-[border-color,background-color,box-shadow] hover:border-primary/30 hover:bg-primary/5 hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Explore all
-              <ArrowUpRight className="size-3.5 text-primary" aria-hidden="true" />
-            </Link>
+            <PlannerExploreLink destination={destinations[0] || destinationName} />
           </div>
           <p className="mt-2 flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
             <Compass className="size-4 shrink-0 text-primary" aria-hidden="true" />

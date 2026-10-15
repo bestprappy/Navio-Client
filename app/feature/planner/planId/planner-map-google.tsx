@@ -506,6 +506,7 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
 
       {activeSearch && previewPlace ? (
         <PlacePreviewPanel
+          compact
           place={previewPlace}
           isLoadingDetails={Boolean(selectedGuidePlaceId) && guidePlaceDetails.isLoading}
           currentIndex={activeSearch.selectedIndex}

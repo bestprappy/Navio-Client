@@ -27,8 +27,10 @@ export function useExplorePlans(
   initialPage: ExplorePlansPage | null,
   sort: ExploreSort = "recent",
   pageSize: number = EXPLORE_PAGE_SIZE,
+  enabled = true,
 ) {
   const query = useInfiniteQuery({
+    enabled,
     queryKey: [...EXPLORE_SHARED_PLANS_QUERY_KEY, sort, pageSize],
     initialPageParam: 0,
     queryFn: ({ pageParam, signal }) => fetchExplorePlansPage(pageParam, signal, sort, pageSize),

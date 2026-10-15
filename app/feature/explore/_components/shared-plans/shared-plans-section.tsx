@@ -99,7 +99,7 @@ export function SharedPlansSection({
           <p className="mt-1 text-sm text-muted-foreground">
             Open a saved trip&apos;s menu, choose Publish plan as a link, and tick List on Explore.
           </p>
-          <Button render={<Link href="/dashboard" />} variant="outline" size="sm" className="mt-3">
+          <Button nativeButton={false} render={<Link href="/dashboard" />} variant="outline" size="sm" className="mt-3">
             Go to my trips
           </Button>
         </div>

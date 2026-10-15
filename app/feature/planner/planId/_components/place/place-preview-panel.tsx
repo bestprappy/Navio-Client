@@ -37,6 +37,8 @@ type PlacePreviewDetails = Pick<
 > & { notes?: string };
 
 type PlacePreviewPanelProps = {
+  /** Keep the map visible when this panel is hosted inside the planner. */
+  compact?: boolean;
   place: PlacePreviewDetails;
   currentIndex?: number;
   total?: number;
@@ -78,6 +80,7 @@ function isGooglePlacePhoto(imageUrl?: string): boolean {
 }
 
 export function PlacePreviewPanel({
+  compact = false,
   place,
   currentIndex = 0,
   total = 1,
@@ -99,7 +102,7 @@ export function PlacePreviewPanel({
   addTarget,
 }: PlacePreviewPanelProps) {
   return (
-    <aside aria-label="Place details" className="absolute bottom-4 left-4 right-4 z-10 max-h-[calc(100%-2rem)] overflow-y-auto rounded-sm border border-border bg-card text-card-foreground shadow-xl">
+    <aside aria-label="Place details" className={`absolute bottom-4 left-4 right-4 z-10 ${compact ? "max-h-[65%]" : "max-h-[calc(100%-2rem)]"} overflow-y-auto rounded-sm border border-border bg-card text-card-foreground shadow-xl`}>
       {place.imageUrl ? (
         <div className="relative h-32 w-full bg-muted sm:h-36">
           <Image

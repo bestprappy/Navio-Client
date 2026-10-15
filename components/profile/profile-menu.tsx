@@ -13,33 +13,34 @@ type ProfileMenuProps = { compact?: boolean; onNavigate?: () => void };
 
 export function ProfileMenu({ compact = false, onNavigate }: ProfileMenuProps) {
   const { data: session, status } = useSession();
+  const isAuthenticated = status === "authenticated" && !!session?.user && !session.error;
   const profile = useQuery({
     queryKey: currentUserProfileQueryKey(session?.user?.id),
     queryFn: getMyProfile,
-    enabled: status === "authenticated",
+    enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
   const name = profile.data?.displayName || session?.user?.name || "Traveller";
-  const picture = profile.data?.avatarMediaId
+  const picture = !isAuthenticated ? undefined : profile.data?.avatarMediaId
     ? `/api/users/me/picture?v=${profile.data.avatarMediaId}`
     : session?.user?.image;
   const initials = name.trim().split(/\s+/).map((word) => word[0]).slice(0, 2).join("").toUpperCase();
 
   return (
     <Link
-      href={status === "authenticated" ? "/settings/profile" : "/sign-in"}
+      href={isAuthenticated ? "/settings/profile" : "/sign-in"}
       onClick={onNavigate}
-      aria-label={status === "authenticated" ? "Open profile" : "Sign in"}
+      aria-label={isAuthenticated ? "Open profile" : "Sign in"}
       className={cn("flex h-auto min-w-0 items-center gap-2 rounded-md p-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring", !compact && "flex-1 justify-start text-left")}
     >
         <Avatar size="lg">
           {picture && <AvatarImage src={picture} alt="" />}
-          <AvatarFallback>{status === "authenticated" ? initials : <UserRound className="size-4" />}</AvatarFallback>
+          <AvatarFallback>{isAuthenticated ? initials : <UserRound className="size-4" />}</AvatarFallback>
         </Avatar>
         {!compact && <span className="min-w-0">
-          <span className="block truncate text-xs font-semibold">{status === "loading" ? "Loading account…" : name}</span>
-          <span className="block truncate text-xs font-normal text-muted-foreground">{status === "authenticated" ? "Travel enthusiast" : "Sign in to plan trips"}</span>
+          <span className="block truncate text-xs font-semibold">{status === "loading" ? "Loading account…" : isAuthenticated ? name : "Sign in"}</span>
+          <span className="block truncate text-xs font-normal text-muted-foreground">{isAuthenticated ? "Travel enthusiast" : "Sign in to plan trips"}</span>
         </span>}
     </Link>
   );

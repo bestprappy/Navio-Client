@@ -27,6 +27,7 @@ export function TripPlacePreviewPanel({ place, onClose }: TripPlacePreviewPanelP
 
   return (
     <PlacePreviewPanel
+      compact
       place={{
         ...place,
         ...details.data,

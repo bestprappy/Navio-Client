@@ -539,7 +539,7 @@ function useOwnerDisplayName(enabled: boolean): string | null {
   const profile = useQuery({
     queryKey: currentUserProfileQueryKey(session?.user?.id),
     queryFn: getMyProfile,
-    enabled: enabled && status === "authenticated",
+    enabled: enabled && status === "authenticated" && !!session?.user && !session.error,
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
