@@ -12,6 +12,8 @@ register(new URL("../support/typescript-loader.mjs", import.meta.url));
 // My List imports route widgets whose CSS modules are handled by Next in the app.
 register("data:text/javascript," + encodeURIComponent(`export async function load(url, context, next) {
   if (url.endsWith('.css')) return { format: 'module', shortCircuit: true, source: 'export default {}' };
+  if (url.endsWith('/next/image.js')) return { format: 'module', shortCircuit: true,
+    source: 'import { createElement } from "react"; export default function Image({ unoptimized, ...props }) { return createElement("img", props); }' };
   return next(url, context);
 }`), import.meta.url);
 const { SavedPlacesSection, DaySavedPlacesPicker } = await import(
@@ -25,6 +27,9 @@ const { AddPlaceToPlan } = await import(
 );
 const { MyListSection } = await import(
   "../../app/feature/planner/planId/_components/list/my-list-section.tsx"
+);
+const { TripPlaceCard } = await import(
+  "../../app/feature/planner/planId/_components/block/items/trip-place-card.tsx"
 );
 const blocks = [
   {
@@ -46,6 +51,52 @@ const blocks = [
   },
   { id: "day", kind: "itinerary", date: "2026-10-15", items: [] },
 ];
+
+test("an Explore-saved stop renders the same complete card as a map-added stop", () => {
+  const store = createStore();
+  store.set(plannerReadOnlyAtom, true);
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const place = {
+    id: "visit", type: "place", placeId: "GOOGLE:ChITestTemple",
+    name: "Temple", address: "10 Temple Road", lat: 13.7, lng: 100.5,
+    imageUrl: "https://maps.googleapis.com/test-temple-photo.jpg", rating: 4.7,
+    reviewCount: 1200, description: "Buddhist temple", placeType: "hindu_temple",
+  };
+  queryClient.setQueryData(["place-details", "GOOGLE", "ChITestTemple"], {
+    ...place, id: place.placeId, provider: "GOOGLE", providerPlaceId: "ChITestTemple",
+    primaryType: place.placeType, openingHours: "Open 24 hours",
+  });
+  const render = (item) => renderToStaticMarkup(React.createElement(QueryClientProvider, { client: queryClient },
+    React.createElement(Provider, { store }, React.createElement(TripPlaceCard, {
+      blockId: "day", blockDate: "2026-10-16", blockColorId: "teal", position: 2, item,
+    }))));
+  const saved = { id: place.id, type: "place", placeId: place.placeId, name: place.name, address: "", lat: place.lat, lng: place.lng };
+  const before = structuredClone(saved);
+  assert.equal(render(saved), render(place));
+  assert.deepEqual(saved, before, "provider display fallback must not mutate saved trip data");
+  queryClient.clear();
+});
+
+test("provider details never replace the card's existing saved name or visual fields", () => {
+  const store = createStore();
+  store.set(plannerReadOnlyAtom, true);
+  const queryClient = new QueryClient();
+  queryClient.setQueryData(["place-details", "GOOGLE", "ChITestTemple"], {
+    id: "GOOGLE:ChITestTemple", name: "Provider name", address: "Provider address",
+    description: "Provider category", rating: 4.9, reviewCount: 999,
+  });
+  const html = renderToStaticMarkup(React.createElement(QueryClientProvider, { client: queryClient },
+    React.createElement(Provider, { store }, React.createElement(TripPlaceCard, {
+      blockId: "day", blockDate: "2026-10-16", blockColorId: "teal", position: 2,
+      item: { id: "visit", type: "place", placeId: "GOOGLE:ChITestTemple", name: "My saved name",
+        address: "Saved address", description: "Saved category", rating: 3.5, reviewCount: 123, lat: 1, lng: 2 },
+    }))));
+  assert.match(html, /My saved name/);
+  assert.match(html, /Saved address/);
+  assert.match(html, /3\.5/);
+  assert.doesNotMatch(html, /Provider address|Provider name|Provider category/);
+  queryClient.clear();
+});
 
 test("Places is an accessible expandable subsection and day shortcut is hidden when read-only", () => {
   const store = createStore();

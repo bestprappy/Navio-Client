@@ -25,7 +25,7 @@ function resolveModule(basePath) {
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
-    if (["next/link", "next/image"].includes(specifier)) {
+    if (["next/link", "next/image", "next/navigation"].includes(specifier)) {
       return nextResolve(`${specifier}.js`, context);
     }
     if (specifier.startsWith("@/")) {
@@ -197,10 +197,10 @@ test("the combined plan carousel renders full-width slides and compact top-right
   assert.equal((html.match(/data-slot="carousel-item"/g) ?? []).length, 2);
   const previous = html.match(/<button[^>]+data-slot="carousel-previous"[^>]*>/)?.[0] ?? "";
   const next = html.match(/<button[^>]+data-slot="carousel-next"[^>]*>/)?.[0] ?? "";
-  for (const className of ["top-3", "right-11", "size-7", "left-auto"]) {
+  for (const className of ["top-3.5", "right-12", "size-8", "left-auto"]) {
     assert.match(previous, new RegExp(`(?:^|\\s)${className}(?:\\s|\")`));
   }
-  for (const className of ["top-3", "right-3", "size-7"]) {
+  for (const className of ["top-3.5", "right-3.5", "size-8"]) {
     assert.match(next, new RegExp(`(?:^|\\s)${className}(?:\\s|\")`));
   }
   assert.doesNotMatch(html, /data-slot="carousel-(?:previous|next)"[^>]+top-1\/2/);

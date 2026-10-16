@@ -1,0 +1,86 @@
+import assert from "node:assert/strict";
+import { register } from "node:module";
+import { test } from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createStore, Provider } from "jotai";
+
+register(new URL("../support/typescript-loader.mjs", import.meta.url));
+
+const { dayViewBlocks } = await import("./itinerary-day-view/data.ts");
+const { tripBlocksAtom, activeBlockIdAtom, openBlockIdsAtom } = await import("../../app/feature/planner/planId/_components/overview/trip-builder.atoms.ts");
+const { itineraryDayViewAtom, selectedItineraryDayAtom, selectItineraryDayAtom, visibleItineraryDaysAtom } = await import("../../app/feature/planner/planId/_components/itinerary/itinerary-day-view.atoms.ts");
+const { ItineraryDayControls } = await import("../../app/feature/planner/planId/_components/itinerary/itinerary-day-controls.tsx");
+
+function plannerStore() {
+  const store = createStore();
+  store.set(tripBlocksAtom, structuredClone(dayViewBlocks));
+  store.set(activeBlockIdAtom, "day-2");
+  store.set(openBlockIdsAtom, ["saved-list", "day-1"]);
+  return store;
+}
+
+test("defaults to all days; entering one day starts with the active itinerary day", () => {
+  const store = plannerStore();
+  assert.equal(store.get(itineraryDayViewAtom), "all");
+  assert.deepEqual(store.get(visibleItineraryDaysAtom).map(({ block }) => block.id), ["day-1", "day-2", "day-3"]);
+  store.set(itineraryDayViewAtom, "single");
+  assert.equal(store.get(selectedItineraryDayAtom)?.id, "day-2");
+  assert.deepEqual(store.get(visibleItineraryDaysAtom).map(({ block, index }) => [block.id, index]), [["day-2", 1]]);
+});
+
+test("switching days and modes preserves full trip data and all-days expansion state", () => {
+  const store = plannerStore();
+  const originalBlocks = store.get(tripBlocksAtom);
+  const originalOpenIds = store.get(openBlockIdsAtom);
+  store.set(itineraryDayViewAtom, "single");
+  store.set(selectItineraryDayAtom, "day-3");
+  assert.equal(store.get(selectedItineraryDayAtom)?.id, "day-3");
+  assert.deepEqual(store.get(visibleItineraryDaysAtom).map(({ block, index }) => [block.id, index]), [["day-3", 2]]);
+  assert.equal(store.get(activeBlockIdAtom), "day-3");
+  store.set(itineraryDayViewAtom, "all");
+  assert.equal(store.get(tripBlocksAtom), originalBlocks);
+  assert.equal(store.get(openBlockIdsAtom), originalOpenIds);
+});
+
+test("scrolling to a list or another block does not replace the single-day selection", () => {
+  const store = plannerStore();
+  store.set(itineraryDayViewAtom, "single");
+  store.set(activeBlockIdAtom, "saved-list");
+  assert.equal(store.get(selectedItineraryDayAtom)?.id, "day-2");
+  store.set(activeBlockIdAtom, "day-1");
+  assert.equal(store.get(selectedItineraryDayAtom)?.id, "day-2");
+});
+
+test("list and stale IDs cannot be selected as itinerary days", () => {
+  const store = plannerStore();
+  store.set(itineraryDayViewAtom, "single");
+  for (const id of ["saved-list", "deleted-day"]) store.set(selectItineraryDayAtom, id);
+  assert.equal(store.get(selectedItineraryDayAtom)?.id, "day-2");
+  assert.equal(store.get(activeBlockIdAtom), "day-2");
+});
+
+test("removing the selected day or loading another trip falls back to a valid day", () => {
+  const store = plannerStore();
+  store.set(itineraryDayViewAtom, "single");
+  store.set(tripBlocksAtom, dayViewBlocks.filter((block) => block.id !== "day-2"));
+  assert.equal(store.get(selectedItineraryDayAtom)?.id, "day-1");
+  store.set(tripBlocksAtom, [{ ...dayViewBlocks[3], id: "other-trip-day" }]);
+  assert.equal(store.get(selectedItineraryDayAtom)?.id, "other-trip-day");
+  store.set(tripBlocksAtom, []);
+  assert.equal(store.get(selectedItineraryDayAtom), null);
+});
+
+test("mobile day selector keeps original day numbering and dates", () => {
+  const store = plannerStore();
+  store.set(itineraryDayViewAtom, "single");
+  store.set(selectItineraryDayAtom, "day-3");
+  const html = renderToStaticMarkup(createElement(Provider, { store }, createElement(ItineraryDayControls)));
+  assert.match(html, /aria-label="Days displayed"/);
+  assert.match(html, /Show:/);
+  assert.match(html, /aria-pressed="true"[^>]*>By date</);
+  assert.match(html, /aria-label="Choose itinerary day"/);
+  assert.match(html, /Day 3/);
+  assert.match(html, /Oct 23/);
+  assert.doesNotMatch(html, /My places/);
+});

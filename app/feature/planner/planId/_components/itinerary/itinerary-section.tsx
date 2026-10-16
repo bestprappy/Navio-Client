@@ -15,7 +15,7 @@ import { isPlaceItem, type TripAnchor, type TripBlockData, type TripDestination 
 import { useTripDates } from "../overview/use-trip-dates";
 import { CalendarIcon, CalendarPlus, ChevronsDownUp, ChevronsUpDown } from "lucide-react";
 import { addDays, format, isAfter, parseISO } from "date-fns";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
 
 import {
   Accordion,
@@ -44,6 +44,8 @@ import { ItineraryOptionsPopover } from "./itinerary-options-popover";
 import { InlineAddDivider } from "../inline-add-divider";
 import { PopularPlaces } from "../guide/popular-places";
 import { ItineraryViewSwitch } from "./table/itinerary-view-switch";
+import { ItineraryDayControls } from "./itinerary-day-controls";
+import { itineraryDayViewAtom, visibleItineraryDaysAtom, selectItineraryDayAtom } from "./itinerary-day-view.atoms";
 
 function getNextAvailableBlockDate(
   from: Date,
@@ -76,6 +78,10 @@ export function ItinerarySection({
   renderDayAnchors,
 }: ItinerarySectionProps) {
   const blocks = useAtomValue(itineraryBlocksAtom);
+  const dayView = useAtomValue(itineraryDayViewAtom);
+  const visibleDays = useAtomValue(visibleItineraryDaysAtom);
+  const selectDay = useSetAtom(selectItineraryDayAtom);
+  const store = useStore();
   const readOnly = useAtomValue(plannerReadOnlyAtom);
   const params = useParams<{ planId?: string }>();
   const metadata = useTripMetadata(readOnly ? undefined : params.planId);
@@ -126,6 +132,10 @@ export function ItinerarySection({
   function handleAddBlock() {
     if (!nextBlockDate) return;
     addBlocksForDates([nextBlockDate]);
+    if (dayView === "single") {
+      const newDay = store.get(itineraryBlocksAtom).find((day) => day.date === nextBlockDate);
+      if (newDay) selectDay(newDay.id);
+    }
   }
 
   const tripDateLabel =
@@ -225,12 +235,16 @@ export function ItinerarySection({
                 />
               ) : (
                 <>
-                  <div className="flex flex-wrap items-center gap-1">
-                    <ItineraryViewSwitch className="mr-auto" />
-                    <button
+                  <div className="space-y-3 border-b border-border/60 pb-4">
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                    <ItineraryViewSwitch />
+                    <div className="flex shrink-0 items-center gap-1">
+                    {dayView === "all" && <button
                       type="button"
                       aria-expanded={areAllDaysOpen}
-                      className="flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm text-primary transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                      aria-label={areAllDaysOpen ? "Collapse all days" : "Expand all days"}
+                      title={areAllDaysOpen ? "Collapse all days" : "Expand all days"}
+                      className="flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm text-primary transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                       onClick={toggleAllDays}
                     >
                       {areAllDaysOpen ? (
@@ -238,15 +252,18 @@ export function ItinerarySection({
                       ) : (
                         <ChevronsUpDown className="size-4" aria-hidden="true" />
                       )}
-                      {areAllDaysOpen ? "Collapse all days" : "Expand all days"}
-                    </button>
+                      <span className="hidden @sm/planner:inline">{areAllDaysOpen ? "Collapse all" : "Expand all"}</span>
+                    </button>}
                     <ItineraryOptionsPopover />
+                    </div>
+                    </div>
+                    <ItineraryDayControls />
                   </div>
-                  {blocks.map((block, index) => {
+                  {visibleDays.map(({ block, index }) => {
                     const destination = destinations.get(block.id) ?? initialDestination;
                     const anchors = dayAnchors.get(block.id) ?? EMPTY_DAY_ANCHORS;
                     const placeCount = getDayPlacePositions(block, !!anchors.start).size;
-                    const isOpen = openIds.includes(block.id);
+                    const isOpen = dayView === "single" || openIds.includes(block.id);
                     return <TripBlock.Root
                       key={block.id}
                       block={block}
@@ -282,9 +299,9 @@ export function ItinerarySection({
                         </DayAnchorRail.Root>
                         <PopularPlaces blockId={block.id} destination={destination} />
                         </>}
-                        <button type="button" aria-expanded={isOpen} aria-controls={`day-content-${block.id}`} className="flex min-h-10 w-full items-center justify-between rounded-lg px-2 text-sm text-primary hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={() => toggleOpen(block.id)}>
+                        {dayView === "all" && <button type="button" aria-expanded={isOpen} aria-controls={`day-content-${block.id}`} className="flex min-h-10 w-full items-center justify-between rounded-lg px-2 text-sm text-primary hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring" onClick={() => toggleOpen(block.id)}>
                           <span>{block.items.length} {block.items.length === 1 ? "item" : "items"}</span><span>{isOpen ? "Show less" : "Show more"}</span>
-                        </button>
+                        </button>}
                       </TripBlock.Header>
                       <div id={`day-content-${block.id}`} hidden={!isOpen}>
                       {isOpen && <TripBlock.Content>

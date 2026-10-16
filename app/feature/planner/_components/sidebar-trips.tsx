@@ -54,8 +54,8 @@ export function SidebarTrips({ collapsed, onNavigate }: { collapsed: boolean; on
                 className={cn("flex min-h-11 min-w-0 items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", collapsed && "justify-center", active && "bg-secondary text-secondary-foreground")}>
                 <CountryFlag code={trip.destinationCountryCode} />
                 {!collapsed && <span className="min-w-0">
-                  <span className="block truncate text-xs font-semibold">{title}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{days} {days === 1 ? "day" : "days"}{start ? `, ${format(start, "d MMM yyyy")}` : " · Dates not set"}</span>
+                  <span className="block break-words text-xs font-semibold">{title}</span>
+                  <span className="block text-xs text-muted-foreground">{days} {days === 1 ? "day" : "days"}{start ? `, ${format(start, "d MMM yyyy")}` : " · Dates not set"}</span>
                 </span>}
               </Link>
             );

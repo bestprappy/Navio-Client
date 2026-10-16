@@ -35,7 +35,7 @@ export default function SidebarItem({
       aria-current={isActive ? "page" : undefined}
       title={collapsed ? title : undefined}
       className={cn(
-        "group relative isolate flex min-h-11 w-full items-center overflow-hidden rounded-xl text-sm font-medium transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 focus-visible:ring-offset-1 focus-visible:ring-offset-card",
+        "group relative isolate flex min-h-11 w-full items-center overflow-hidden rounded-xl text-sm font-medium transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/45",
         collapsed ? "justify-center px-1" : "gap-2.5 px-3",
         isActive
           ? "bg-sidebar-accent/90 font-semibold text-sidebar-accent-foreground"
@@ -58,7 +58,7 @@ export default function SidebarItem({
       ) : null}
 
       {!collapsed && (
-        <span className="min-w-0 flex-1 truncate text-left">{title}</span>
+        <span className="min-w-0 flex-1 break-words text-left">{title}</span>
       )}
 
       {!collapsed && alert !== undefined ? (

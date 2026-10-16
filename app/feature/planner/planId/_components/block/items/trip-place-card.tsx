@@ -43,6 +43,7 @@ import { PlaceNotesEditor, PlaceNotesPreview } from "./place-notes";
 import { StopScheduleEditor } from "./stop-schedule/stop-schedule-editor";
 import { StopScheduleList } from "./stop-schedule/stop-schedule-list";
 import { PlaceOpeningHours } from "../../place/place-opening-hours";
+import { usePlaceDetails } from "../../place/use-place-details";
 import { describeTimingIssue, isFixedTime } from "../../itinerary/day-timing";
 
 type TripPlaceCardProps = {
@@ -101,6 +102,9 @@ export function TripPlaceCard({
   // A shared plan keeps selection (it drives the map) but never opens the editor.
   const isEditing = isSelected && !readOnly;
   const isEvCharger = isEvChargerPlaceItem(item);
+  // Explore saves a minimal place reference. Reuse the same query as opening
+  // hours to complete its visual fields without rewriting saved trip data.
+  const placeDetails = usePlaceDetails(isEvCharger ? "" : item.placeId);
   const blockColor = getTripBlockColorById(blockColorId);
   const markerStyle: CSSProperties = {
     backgroundColor: blockColor.value,
@@ -287,12 +291,12 @@ export function TripPlaceCard({
         <>
           <PlaceCardVisual
             name={item.name}
-            imageUrl={item.imageUrl}
-            rating={item.rating}
-            reviewCount={item.reviewCount}
-            address={item.address}
-            description={item.description}
-            placeType={item.placeType}
+            imageUrl={item.imageUrl || placeDetails.data?.imageUrl}
+            rating={item.rating ?? placeDetails.data?.rating}
+            reviewCount={item.reviewCount ?? placeDetails.data?.reviewCount}
+            address={item.address?.trim() ? item.address : placeDetails.data?.address}
+            description={item.description || placeDetails.data?.description || placeDetails.data?.category}
+            placeType={item.placeType || placeDetails.data?.primaryType}
             position={position}
             colorId={blockColorId}
           />

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { test } from "node:test";
@@ -8,6 +9,8 @@ import { getSignInHref } from "../lib/auth-navigation.ts";
 import { isPublicPlannerRequest } from "../app/api/_lib/public-planner-request.ts";
 
 const require = createRequire(import.meta.url);
+// Next normally supplies this global when booting its server; standalone tests do not.
+globalThis.AsyncLocalStorage ??= AsyncLocalStorage;
 const { unstable_doesMiddlewareMatch } = require("next/experimental/testing/server.js");
 const tripId = "11111111-1111-4111-8111-111111111111";
 
