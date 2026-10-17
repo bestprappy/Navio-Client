@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, MessageCircle } from "lucide-react";
 
-import { CommunityTripAttachment } from "../../_components/community-trip-attachment";
 import { CommunityFlairBadge } from "../../_components/community-flair-badge";
+import { CommunityPlanAttachment } from "../../_components/community-plan-attachment";
 import {
   COMMUNITY_PILL_CLASS,
   CommunitySharePill,
@@ -21,7 +21,6 @@ import {
   formatCount,
   formatRelativeTime,
   getCommunityPostHref,
-  getTripById,
 } from "../../_components/data";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -33,7 +32,6 @@ type CommunityPostDetailCardProps = {
 export function CommunityPostDetailCard({ post, group }: CommunityPostDetailCardProps) {
   const { identity } = useCommunityIdentity();
   const author = useCommunityUserProfile(post.authorId);
-  const trip = post.sharedTripId ? getTripById(post.sharedTripId) : null;
   const flair = post.flairId
     ? (group.postFlairs.find((item) => item.id === post.flairId) ?? null)
     : null;
@@ -114,7 +112,7 @@ export function CommunityPostDetailCard({ post, group }: CommunityPostDetailCard
         </a>
       ) : null}
 
-      {trip ? <CommunityTripAttachment trip={trip} /> : null}
+      <CommunityPlanAttachment token={post.sharedTripId} />
 
       <div className="flex flex-wrap items-center gap-2">
         <CommunityVotePill path={`/${post.id}/vote`} score={post.upvotes} vote={post.viewerVote ?? 0} disabled={archived} />

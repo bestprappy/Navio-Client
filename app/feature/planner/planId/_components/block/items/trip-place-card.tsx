@@ -3,12 +3,13 @@ import { ObservedSocControl } from "./observed-soc-control";
 
 import type { CSSProperties } from "react";
 import {
+  AlertTriangle,
   CheckCircle2,
-  Clock,
   Flag,
   LockKeyhole,
   LockKeyholeOpen,
   MapPin,
+  Route,
   Trash2,
   Zap,
 } from "lucide-react";
@@ -38,7 +39,12 @@ import { PlaceCardVisual } from "./place-card-visual";
 import { PlaceCardFrame } from "./place-card-frame";
 import { PlaceExpenseList } from "./place-expense-list";
 import { PlaceTimePopover } from "./place-time-popover";
+import { PlaceNotesEditor, PlaceNotesPreview } from "./place-notes";
+import { StopScheduleEditor } from "./stop-schedule/stop-schedule-editor";
+import { StopScheduleList } from "./stop-schedule/stop-schedule-list";
 import { PlaceOpeningHours } from "../../place/place-opening-hours";
+import { usePlaceDetails } from "../../place/use-place-details";
+import { describeTimingIssue, isFixedTime } from "../../itinerary/day-timing";
 
 type TripPlaceCardProps = {
   blockId: string;
@@ -51,7 +57,19 @@ type TripPlaceCardProps = {
   showEvChargeDetails?: boolean;
   /** Only the day's last stop can become where the day ends. */
   canMarkAsEnd?: boolean;
+  /** Minutes short of reaching this stop's fixed time, after the day's times are calculated. */
+  lateMinutes?: number | null;
 };
+
+function LateWarning({ name, minutes }: { name: string; minutes: number }) {
+  return (
+    // A div: the itinerary accordion adds a bottom margin to every paragraph that is not last.
+    <div className="flex items-start gap-1.5 rounded-sm bg-warning/10 px-2.5 py-1.5 text-xs text-foreground">
+      <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" aria-hidden="true" />
+      <span>{describeTimingIssue({ kind: "late", itemId: "", name, minutes })}</span>
+    </div>
+  );
+}
 
 function formatDisplayTime(time: string): string {
   const [hourStr, minuteStr = "00"] = time.split(":");
@@ -70,6 +88,7 @@ export function TripPlaceCard({
   chargeBatteryFrom,
   chargeBatteryTo,
   canMarkAsEnd = false,
+  lateMinutes,
 }: TripPlaceCardProps) {
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const removeItemFromBlock = useSetAtom(removeItemFromBlockAtom);
@@ -83,6 +102,9 @@ export function TripPlaceCard({
   // A shared plan keeps selection (it drives the map) but never opens the editor.
   const isEditing = isSelected && !readOnly;
   const isEvCharger = isEvChargerPlaceItem(item);
+  // Explore saves a minimal place reference. Reuse the same query as opening
+  // hours to complete its visual fields without rewriting saved trip data.
+  const placeDetails = usePlaceDetails(isEvCharger ? "" : item.placeId);
   const blockColor = getTripBlockColorById(blockColorId);
   const markerStyle: CSSProperties = {
     backgroundColor: blockColor.value,
@@ -153,20 +175,12 @@ export function TripPlaceCard({
 
           {isEditing ? (
             <>
-              <textarea
+              <PlaceNotesEditor
+                blockId={blockId}
+                itemId={item.id}
+                itemName={item.name}
                 value={item.notes ?? ""}
-                onClick={(event) => event.stopPropagation()}
-                onChange={(event) =>
-                  updatePlaceItem({
-                    blockId,
-                    itemId: item.id,
-                    updates: { notes: event.target.value },
-                  })
-                }
-                placeholder="Add charging notes, bay number, receipt, etc."
-                aria-label={`Notes for ${item.name}`}
-                rows={3}
-                className="min-h-20 w-full resize-y rounded-sm border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
+                placeholder="Add charging notes, bay number, receipt, or type / for blocks"
               />
               {/* The charging control above already shows arrival and target. */}
               {!chargerDetails && (
@@ -268,11 +282,7 @@ export function TripPlaceCard({
                   Charging completed
                 </span>
               )}
-              {item.notes && (
-                <p className="line-clamp-2 text-xs text-muted-foreground">
-                  {item.notes}
-                </p>
-              )}
+              {item.notes ? <PlaceNotesPreview value={item.notes} interactive={readOnly} /> : null}
             </>
           )}
         </div>
@@ -281,12 +291,12 @@ export function TripPlaceCard({
         <>
           <PlaceCardVisual
             name={item.name}
-            imageUrl={item.imageUrl}
-            rating={item.rating}
-            reviewCount={item.reviewCount}
-            address={item.address}
-            description={item.description}
-            placeType={item.placeType}
+            imageUrl={item.imageUrl || placeDetails.data?.imageUrl}
+            rating={item.rating ?? placeDetails.data?.rating}
+            reviewCount={item.reviewCount ?? placeDetails.data?.reviewCount}
+            address={item.address?.trim() ? item.address : placeDetails.data?.address}
+            description={item.description || placeDetails.data?.description || placeDetails.data?.category}
+            placeType={item.placeType || placeDetails.data?.primaryType}
             position={position}
             colorId={blockColorId}
           />
@@ -296,23 +306,27 @@ export function TripPlaceCard({
           {!readOnly && <ObservedSocControl blockId={blockId} itemId={item.id} value={item.observedSocCheckpoint?.socPct} />}
 
           {isEditing ? (
-            <div className="space-y-3 border-t border-border/70 px-4 pb-4 pt-3">
-              <textarea
+            <div className="space-y-4 border-t border-border/70 px-4 pb-4 pt-3">
+              {/* The stop's time heads its own timetable, so both are set in one place. */}
+              <div className="space-y-2">
+                <PlaceTimePopover
+                  blockId={blockId}
+                  itemId={item.id}
+                  time={item.time}
+                  timeEnd={item.timeEnd}
+                  timeSource={item.timeSource}
+                />
+                <StopScheduleEditor blockId={blockId} item={item} />
+              </div>
+              {lateMinutes ? <LateWarning name={item.name} minutes={lateMinutes} /> : null}
+              <PlaceNotesEditor
+                blockId={blockId}
+                itemId={item.id}
+                itemName={item.name}
                 value={item.notes ?? ""}
-                onClick={(event) => event.stopPropagation()}
-                onChange={(event) =>
-                  updatePlaceItem({
-                    blockId,
-                    itemId: item.id,
-                    updates: { notes: event.target.value },
-                  })
-                }
-                placeholder="Add notes, links, etc. here"
-                aria-label={`Notes for ${item.name}`}
-                rows={3}
-                className="min-h-20 w-full resize-y rounded-sm border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/30"
+                placeholder="Add notes, links, or type / for lists and to-dos"
               />
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-3">
                 <div className="flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
@@ -337,12 +351,6 @@ export function TripPlaceCard({
                       "Mark as visited"
                     )}
                   </Button>
-                  <PlaceTimePopover
-                    blockId={blockId}
-                    itemId={item.id}
-                    time={item.time}
-                    timeEnd={item.timeEnd}
-                  />
                   {canMarkAsEnd ? (
                     <Button
                       type="button"
@@ -378,8 +386,11 @@ export function TripPlaceCard({
             <>
               {(item.isVisited ||
                 item.time ||
-                item.notes) ? (
-                <div className="space-y-2 border-t border-border/70 px-4 pb-4 pt-3">
+                item.notes?.trim() ||
+                item.schedule?.length ||
+                lateMinutes) ? (
+                <div className="space-y-3 border-t border-border/70 px-4 pb-4 pt-3">
+                  {item.isVisited || item.time ? (
                   <div className="flex flex-wrap gap-1.5">
                     {item.isVisited && (
                       <span className="inline-flex items-center gap-1 rounded-sm bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
@@ -388,19 +399,28 @@ export function TripPlaceCard({
                       </span>
                     )}
                     {item.time && (
-                      <span className="inline-flex items-center gap-1 rounded-sm bg-info/10 px-3 py-2 text-xs font-medium text-info">
-                        <Clock className="size-3" aria-hidden="true" />
+                      // Times follow the block colour; fixed times are filled and calculated ones are dashed.
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-sm px-3 py-2 text-xs tabular-nums",
+                          isFixedTime(item)
+                            ? "border border-primary/20 bg-primary/10 font-medium text-primary"
+                            : "border border-dashed border-primary/35 font-medium text-primary",
+                        )}
+                        title={isFixedTime(item) ? "Fixed time" : "Calculated time"}
+                      >
+                        {isFixedTime(item) ? null : <Route className="size-3" aria-hidden="true" />}
+                        <span className="sr-only">{isFixedTime(item) ? "Fixed time: " : "Calculated time: "}</span>
                         {item.timeEnd
                           ? `${formatDisplayTime(item.time)} – ${formatDisplayTime(item.timeEnd)}`
                           : formatDisplayTime(item.time)}
                       </span>
                     )}
                   </div>
-                  {item.notes && (
-                    <p className="line-clamp-2 text-xs text-muted-foreground">
-                      {item.notes}
-                    </p>
-                  )}
+                  ) : null}
+                  <StopScheduleList item={item} />
+                  {lateMinutes ? <LateWarning name={item.name} minutes={lateMinutes} /> : null}
+                  {item.notes ? <PlaceNotesPreview value={item.notes} interactive={readOnly} /> : null}
                 </div>
               ) : null}
             </>

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
-import Link from "next/link";
+import { useMemo, type ReactNode } from "react";
+import { PlannerExploreLink } from "@/app/feature/explore/places/planner-explore-link";
 import { useAtomValue } from "jotai";
-import { ArrowUpRight, Compass, MapPin } from "lucide-react";
+import { BookOpen, Compass, MapPin, Route } from "lucide-react";
 
 import { TripGuides } from "@/app/feature/guides/trip-guides";
 import { PlannerErrorBoundary } from "../../../_components/planner-error-boundary";
@@ -38,8 +38,17 @@ type PlannerExploreCarouselProps = {
   onRetry: () => void;
 };
 
+export const PLANNER_EXPLORE_CAROUSEL_OPTIONS = {
+  align: "start",
+  containScroll: "trimSnaps",
+  dragFree: false,
+  duration: 18,
+  loop: false,
+  skipSnaps: false,
+} as const;
+
 const CAROUSEL_ARROW_CLASS =
-  "top-3 z-20 size-7 translate-y-0 border-border/70 bg-background/80 text-foreground opacity-80 shadow-md backdrop-blur-sm transition-[opacity,transform,background-color] duration-200 ease-out [&_svg]:size-3.5 hover:bg-background/95 hover:opacity-100 active:scale-95 focus-visible:opacity-100 disabled:opacity-30 motion-reduce:transition-none motion-reduce:active:scale-100";
+  "top-3.5 z-20 size-8 translate-y-0 border-border/60 bg-background/90 text-foreground opacity-90 shadow-sm backdrop-blur-md transition-[border-color,box-shadow,transform,opacity] duration-150 ease-out [&_svg]:size-4 hover:border-primary/30 hover:bg-background hover:opacity-100 hover:shadow-md active:scale-95 focus-visible:opacity-100 disabled:opacity-35 motion-reduce:transition-none motion-reduce:active:scale-100";
 
 export function PlannerExploreCarousel({
   destinations,
@@ -53,7 +62,7 @@ export function PlannerExploreCarousel({
   if (isLoading) {
     return (
       <div className="space-y-3" role="status" aria-label="Loading shared plans">
-        <Skeleton className="aspect-video w-full rounded-lg" />
+        <Skeleton className="h-52 w-full rounded-xl @min-[34rem]:h-44" />
         <div className="space-y-2 px-1">
           <Skeleton className="h-5 w-2/3" />
           <Skeleton className="h-4 w-1/2" />
@@ -81,27 +90,124 @@ export function PlannerExploreCarousel({
 
   return (
     <Carousel
-      opts={{ align: "start", loop: plans.length > 1 }}
+      opts={PLANNER_EXPLORE_CAROUSEL_OPTIONS}
       aria-label={`Shared plans for ${destinationLabel}`}
+      className="min-w-0"
     >
-      <CarouselContent className="ml-0">
+      <CarouselContent className="-ml-3 py-1">
         {plans.map((plan) => (
-          <CarouselItem key={plan.token} className="basis-full pl-0">
-            <SharedPlanCard plan={plan} />
+          <CarouselItem key={plan.token} className="basis-full pl-3">
+            <div className="h-full min-w-0">
+              <SharedPlanCard plan={plan} layout="planner" />
+            </div>
           </CarouselItem>
         ))}
       </CarouselContent>
       {plans.length > 1 && (
         <>
           <CarouselPrevious
-            className={`${CAROUSEL_ARROW_CLASS} right-11 left-auto hover:-translate-x-0.5`}
+            className={`${CAROUSEL_ARROW_CLASS} right-12 left-auto hover:-translate-x-0.5`}
           />
           <CarouselNext
-            className={`${CAROUSEL_ARROW_CLASS} right-3 hover:translate-x-0.5`}
+            className={`${CAROUSEL_ARROW_CLASS} right-3.5 hover:translate-x-0.5`}
           />
         </>
       )}
     </Carousel>
+  );
+}
+
+type PlannerExploreContentProps = {
+  countryLabel: string;
+  destinationLabel: string;
+  sharedPlans: ReactNode;
+  travelGuides: ReactNode;
+};
+
+export function PlannerExploreContent({
+  countryLabel,
+  destinationLabel,
+  sharedPlans,
+  travelGuides,
+}: PlannerExploreContentProps) {
+  return (
+    <div className="@container min-w-0">
+      <div
+        data-slot="planner-explore-frame"
+        className="relative min-w-0 overflow-clip rounded-[1.5rem] border border-border/60 bg-card shadow-md shadow-foreground/[0.04]"
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-primary/[0.055] to-transparent"
+        />
+        <section
+          data-slot="planner-shared-plans-module"
+          aria-labelledby="planner-shared-plans-title"
+          className="relative min-w-0 p-4 @min-[34rem]:p-5"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary shadow-sm shadow-primary/5">
+              <Route className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="flex min-w-0 items-center gap-1.5 text-[0.6875rem] font-semibold tracking-[0.16em] text-primary uppercase">
+                <span className="shrink-0">Plan inspiration</span>
+                <span aria-hidden="true">·</span>
+                <span className="truncate tracking-normal normal-case" title={countryLabel}>
+                  {countryLabel}
+                </span>
+              </p>
+              <h3
+                id="planner-shared-plans-title"
+                className="text-base font-semibold tracking-tight @min-[34rem]:text-lg"
+              >
+                Shared plans
+              </h3>
+              <p className="mt-0.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                Popular itineraries for your stops in {countryLabel}.
+              </p>
+            </div>
+          </div>
+          <div className="my-3.5 flex min-w-0 items-center gap-2 rounded-xl border border-border/50 bg-background/75 px-3 py-2 text-sm text-foreground shadow-xs">
+            <MapPin className="size-4 shrink-0 text-accent" aria-hidden="true" />
+            <span className="shrink-0 text-xs font-medium text-muted-foreground">
+              Destinations
+            </span>
+            <span className="min-w-0 truncate font-medium" title={destinationLabel}>
+              {destinationLabel}
+            </span>
+          </div>
+          <div className="min-w-0 overflow-hidden rounded-2xl">{sharedPlans}</div>
+        </section>
+
+        <section
+          data-slot="planner-travel-guides-module"
+          aria-labelledby="planner-travel-guides-title"
+          className="relative min-w-0 border-t border-border/60 bg-muted/20 p-4 @min-[34rem]:p-5"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-accent/15 bg-accent/10 text-accent shadow-sm shadow-accent/5">
+              <BookOpen className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.6875rem] font-semibold tracking-[0.16em] text-accent uppercase">
+                Local knowledge
+              </p>
+              <h3
+                id="planner-travel-guides-title"
+                className="mt-0.5 text-base font-semibold tracking-tight @min-[34rem]:text-lg"
+              >
+                Travel guides
+              </h3>
+              <p className="mt-0.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground">
+                Local places and practical advice selected by travelers.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 min-w-0">{travelGuides}</div>
+        </section>
+      </div>
+    </div>
   );
 }
 
@@ -123,26 +229,38 @@ export function ExploreSection({ destinationName, country }: { destinationName: 
       <Accordion defaultValue={["explore"]}>
         <AccordionItem value="explore" className="border-none">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <AccordionTrigger iconSide="left" className="py-0 text-2xl font-bold hover:no-underline">Explore</AccordionTrigger>
-            <Link href="/explore" className="inline-flex min-h-10 items-center gap-2 rounded-full border border-primary/35 bg-primary/10 px-4 text-sm font-medium text-primary hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-ring">See more <ArrowUpRight className="size-4" aria-hidden="true" /></Link>
+            <div className="flex min-w-0 items-center gap-2.5">
+              <AccordionTrigger iconSide="left" className="py-0 text-2xl font-bold tracking-tight hover:no-underline">
+                Explore
+              </AccordionTrigger>
+            </div>
+            <PlannerExploreLink destination={destinations[0] || destinationName} />
           </div>
+          <p className="mt-2 flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+            <Compass className="size-4 shrink-0 text-primary" aria-hidden="true" />
+            <span className="truncate">
+              Plans and guides for {country === "Your trip" ? destinationName : country}
+            </span>
+          </p>
           <AccordionContent className="pt-4 [&_a]:no-underline">
-            <p className="mb-4 flex items-center gap-2 text-sm text-muted-foreground"><Compass className="size-4 text-primary" aria-hidden="true" />Explore {country === "Your trip" ? destinationName : country}</p>
-            <h3
-              className="mb-3 flex min-w-0 items-start gap-2 text-sm font-semibold"
-              title={destinationLabel}
-            >
-              <MapPin className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden="true" />
-              <span className="line-clamp-2 min-w-0 break-words">{destinationLabel}</span>
-            </h3>
-            <PlannerExploreCarousel
-              destinations={destinations}
-              plans={plans}
-              isLoading={shared.isLoading}
-              isError={shared.isError}
-              onRetry={() => { void shared.refetch(); }}
+            <PlannerExploreContent
+              countryLabel={country === "Your trip" ? destinationName : country}
+              destinationLabel={destinationLabel}
+              sharedPlans={(
+                <PlannerExploreCarousel
+                  destinations={destinations}
+                  plans={plans}
+                  isLoading={shared.isLoading}
+                  isError={shared.isError}
+                  onRetry={() => { void shared.refetch(); }}
+                />
+              )}
+              travelGuides={(
+                <PlannerErrorBoundary fallbackTitle="Trip guides unavailable" fallbackDescription="Reload the page to try again.">
+                  <TripGuides initial={destinationName} country={country} blocks={blocks} />
+                </PlannerErrorBoundary>
+              )}
             />
-            <PlannerErrorBoundary fallbackTitle="Trip guides unavailable" fallbackDescription="Reload the page to try again."><TripGuides initial={destinationName} country={country} blocks={blocks} /></PlannerErrorBoundary>
           </AccordionContent>
         </AccordionItem>
       </Accordion>

@@ -11,6 +11,7 @@ import { GuideDrawerSwitch } from "./_components/guide/guide-drawer-switch";
 import { PublishedGuides } from "./_components/guide/published-guides";
 import { DayNavSidebar } from "./_components/itinerary/day-nav-sidebar";
 import { ItinerarySection } from "./_components/itinerary/itinerary-section";
+import { ItineraryTableViewLazy } from "./_components/itinerary/table/itinerary-table-view-lazy";
 import { RouteStopTracker } from "./_components/itinerary/route-stop-tracker";
 import { MyListSection } from "./_components/list/my-list-section";
 import { BudgetSection } from "./_components/budget/budget-section";
@@ -49,6 +50,7 @@ export function PlannerDetail({
   const tripDestinationName = metadata.data?.destinationName ?? destinationName;
   const tripLatitude = metadata.data?.destinationLat ?? latitude;
   const tripLongitude = metadata.data?.destinationLng ?? longitude;
+  const tripTitle = metadata.data?.title?.trim() || tripDestinationName;
   return (
     <GarageProvider key={planId}>
     <PlannerWorkspace itinerary={<GuideDrawerSwitch>
@@ -86,7 +88,7 @@ export function PlannerDetail({
           </TripBuilderErrorBoundary>
           <BudgetSection />
 
-</GuideDrawerSwitch>} map={<TripBuilderErrorBoundary><PlannerMap latitude={tripLatitude} longitude={tripLongitude} /></TripBuilderErrorBoundary>} details={<PlannerSidePanelHost />}>
+</GuideDrawerSwitch>} map={<TripBuilderErrorBoundary><PlannerMap latitude={tripLatitude} longitude={tripLongitude} /></TripBuilderErrorBoundary>} details={<PlannerSidePanelHost />} table={<TripBuilderErrorBoundary><ItineraryTableViewLazy title={tripTitle} destinationName={tripDestinationName} /></TripBuilderErrorBoundary>}>
       <PlannerTemplateHydrator
         planId={planId}
         templatePlanId={templatePlanId}

@@ -40,12 +40,13 @@ export function AuthActions({
   onNavigate,
 }: AuthActionsProps) {
   const { data: session, status } = useSession();
+  const isAuthenticated = status === "authenticated" && !!session?.user && !session.error;
   // Same key and fetcher as the profile settings page, so saving a new display
   // name there updates the name shown here without another request.
   const profileQuery = useQuery({
     queryKey: currentUserProfileQueryKey(session?.user?.id),
     queryFn: getMyProfile,
-    enabled: status === "authenticated",
+    enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
@@ -67,7 +68,7 @@ export function AuthActions({
     );
   }
 
-  if (status === "unauthenticated") {
+  if (!isAuthenticated) {
     return (
       <div
         className={cn(

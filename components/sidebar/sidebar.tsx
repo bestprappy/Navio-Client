@@ -13,12 +13,9 @@ import {
   ClipboardList,
   CarFront,
   Palette,
-  Compass,
   Gauge,
-  LayoutDashboard,
   ListChecks,
   Map,
-  MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -47,9 +44,10 @@ import {
 } from "@/app/feature/planner/_components/recent-plan-sidebar";
 import { canUseAdminConsole, isAdministrator } from "@/lib/navio-roles";
 import { cn } from "@/lib/utils";
+import { selectItineraryDayAtom } from "@/app/feature/planner/planId/_components/itinerary/itinerary-day-view.atoms";
 
 import SidebarItem from "./sidebar.item";
-import SidebarMenu from "./sidebar.menu";
+import SidebarMenu, { PlannerDiscoverMenu } from "./sidebar.menu";
 import { SidebarAccountActions } from "./sidebar-account-actions";
 
 const PLANNER_SCROLL_PANEL_ID = "planner-scroll-panel";
@@ -148,7 +146,7 @@ function PlannerBlockSidebarGroup({
             aria-current={isActive ? "true" : undefined}
             onClick={() => onSelectBlock(block.id)}
             className={cn(
-              "group flex min-h-9 items-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring/30",
+              "group flex min-h-9 items-center rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-ring/30",
               collapsed ? "w-9 justify-center px-0" : "w-full gap-2 px-2",
               isActive
                 ? "bg-sidebar-accent text-sidebar-accent-foreground"
@@ -165,7 +163,7 @@ function PlannerBlockSidebarGroup({
             />
             {!collapsed && (
               <>
-                <span className="min-w-0 flex-1 truncate text-left">
+                <span className="min-w-0 flex-1 break-words text-left">
                   {primaryLabel}
                 </span>
                 {secondaryLabel ? (
@@ -208,6 +206,7 @@ export default function SidebarWrapper() {
   const planActiveBlockId = useAtomValue(activeBlockIdAtom);
   const activeBlockId = isPlannerDetail ? planActiveBlockId : null;
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
+  const selectItineraryDay = useSetAtom(selectItineraryDayAtom);
   const [mobileOpen, setMobileOpen] = useState(false);
   const setOpenBlocks = useSetAtom(openBlockIdsAtom);
 
@@ -238,8 +237,12 @@ export default function SidebarWrapper() {
       return;
     }
 
-    setActiveBlockId(blockId);
-    setOpenBlocks((ids) => ids.includes(blockId) ? ids : [...ids, blockId]);
+    if (itineraryBlocks.some((block) => block.id === blockId)) {
+      selectItineraryDay(blockId);
+    } else {
+      setActiveBlockId(blockId);
+      setOpenBlocks((ids) => ids.includes(blockId) ? ids : [...ids, blockId]);
+    }
     setMobileOpen(false);
     requestAnimationFrame(() => scrollToTripBlock(blockId));
   }
@@ -252,11 +255,11 @@ export default function SidebarWrapper() {
     </header>
     <aside
       className={`absolute bottom-0 left-0 top-14 z-30 shrink-0 flex-col overflow-hidden border-r border-border bg-card shadow-sm md:static md:flex md:h-full ${mobileOpen ? "flex" : "hidden"} ${
-        collapsed ? "w-24 px-2 py-3" : "w-72 px-4 py-3"
+        collapsed ? "w-24 px-2 py-3" : "w-54 px-3 py-3"
       }`}
     >
       <div className="flex shrink-0 items-center justify-between gap-1 border-b border-border/50 pb-3">
-        <ProfileMenu compact={collapsed} onNavigate={() => setMobileOpen(false)} />
+        <ProfileMenu compact={collapsed} wrapName onNavigate={() => setMobileOpen(false)} />
         <Button variant="ghost" size="icon" onClick={() => setCollapsed((previous) => !previous)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="shrink-0 text-muted-foreground">{collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}</Button>
       </div>
 
@@ -269,16 +272,13 @@ export default function SidebarWrapper() {
           className={cn(buttonVariants({ size: "lg" }), "w-full rounded-full", collapsed && "px-0")}>
           <Plus className="size-4" aria-hidden="true" />{!collapsed && "New Trip"}
         </Link>
+        <PlannerDiscoverMenu
+          collapsed={collapsed}
+          pathName={pathName}
+          onNavigate={() => setMobileOpen(false)}
+        />
         <SidebarTrips collapsed={collapsed} onNavigate={() => setMobileOpen(false)} />
         <SidebarMenu title="Travel" collapsed={collapsed}>
-          <SidebarItem
-            title="Dashboard"
-            href="/dashboard"
-            icon={<LayoutDashboard className="size-5" />}
-            isActive={isRouteActive("/dashboard")}
-            onClick={() => setMobileOpen(false)}
-            collapsed={collapsed}
-          />
           <SidebarItem
             title="Planner"
             href={isPlannerDetail ? pathName : visibleRecentPlan?.href ?? "/planner/new"}
@@ -315,24 +315,6 @@ export default function SidebarWrapper() {
               />
             </>
           ) : null}
-        </SidebarMenu>
-        <SidebarMenu title="Discover" collapsed={collapsed}>
-          <SidebarItem
-            title="Explore"
-            href="/explore"
-            icon={<Compass className="size-5" />}
-            isActive={isRouteActive("/explore")}
-            onClick={() => setMobileOpen(false)}
-            collapsed={collapsed}
-          />
-          <SidebarItem
-            title="Community"
-            href="/community"
-            icon={<MessageCircle className="size-5" />}
-            isActive={isRouteActive("/community")}
-            onClick={() => setMobileOpen(false)}
-            collapsed={collapsed}
-          />
         </SidebarMenu>
         {canUseAdminConsole(session?.user?.roles) ? (
           <SidebarMenu title="Admin" collapsed={collapsed}>

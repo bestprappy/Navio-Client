@@ -1,6 +1,6 @@
 import type { LegTravelMode } from "../constants/types";
 import { isTransitMode } from "./leg-travel-mode";
-import { getTransitJourneyScore, rankTransitJourneys } from "./transit-route-choice";
+import { getConfirmedTransitJourneys, getTransitJourneyScore, rankTransitJourneys } from "./transit-route-choice";
 import { journeyAsSegment } from "./transit-journey.helpers";
 import type { DirectionsRequest, RoutePoint, RouteSegment, RouteStep, TransitJourney } from "./trip-route.types";
 
@@ -68,9 +68,7 @@ export function combineTransitOptions(options: TravelOption[]): TravelOption[] {
   const unique = new Map<string, TransitJourney>();
   for (const option of confirmed) {
     const segment = option.segment!;
-    const journeys = segment.journeys?.length ? segment.journeys : [{ id: `${option.key}:primary`, provider: "unknown",
-      geometry: segment.geometry, distanceMeters: segment.distanceMeters, durationSeconds: segment.durationSeconds,
-      steps: segment.steps ?? [] }];
+    const journeys = getConfirmedTransitJourneys(segment);
     for (const journey of journeys) {
       if ((option.key === "rail" || option.key === "bus") && !matchesTransitPreference(journey.steps, option.key)) continue;
       const rides = journey.steps.filter(step => step.travelMode === "transit");

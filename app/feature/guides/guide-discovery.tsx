@@ -50,7 +50,7 @@ export function GuideDiscovery({
             key={index}
             className={
               carouselTitle
-                ? "aspect-3/2 w-[88%] max-w-sm shrink-0 rounded-xl"
+                ? "aspect-3/2 w-full shrink-0 rounded-xl"
                 : "aspect-3/2 rounded-xl"
             }
           />
@@ -101,17 +101,15 @@ export function GuideDiscovery({
     content = (
       <div className="space-y-5">
         {carouselTitle ? (
-          <CarouselContent className="py-1">
+          <CarouselContent className="-ml-3 py-1">
             {guides.map((guide, index) => (
               <CarouselItem
                 key={guide.id}
                 aria-label={`${index + 1} of ${guides.length}`}
-                className={
-                  guides.length > 1 ? "basis-[88%] max-w-sm" : "basis-full"
-                }
+                className="basis-full pl-3"
               >
-                <div className="h-full px-1">
-                  <TravelerGuideCard guide={guide} />
+                <div className="h-full">
+                  <TravelerGuideCard guide={guide} layout="planner" />
                 </div>
               </CarouselItem>
             ))}

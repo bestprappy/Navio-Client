@@ -1,0 +1,29 @@
+.dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  max-height: 92dvh;
+  width: calc(100% - 2rem);
+  max-width: 800px;
+}
+.settings {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 24px 28px;
+  padding: 4px 2px 12px;
+}
+.name { grid-column: 1 / -1; }
+.content { grid-column: 1; grid-row: 2 / 4; }
+.audience { grid-column: 2; grid-row: 2; }
+.explore { grid-column: 2; grid-row: 3; }
+.published { grid-column: 1 / -1; }
+.previewDialog { max-width: 1280px; }
+.preview { height: 68dvh; min-height: 320px; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; }
+@media (max-width: 640px) {
+  .settings { display: flex; flex-direction: column; gap: 24px; }
+  .name { order: 0; }
+  .content { order: 1; }
+  .audience { order: 2; }
+  .explore { order: 3; }
+  .published { order: 4; }
+  .preview { height: 62dvh; }
+}

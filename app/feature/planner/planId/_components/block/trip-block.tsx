@@ -36,6 +36,7 @@ import {
 import { BlockDatePicker } from "./block-date-picker";
 import { BlockOptionsPopover } from "./block-options-popover";
 import { SortableBlockItems } from "./sortable-block-items";
+import { DaySavedPlacesPicker } from "../list/saved-places-section";
 
 type TripBlockContextValue = {
   block: TripBlockData;
@@ -176,6 +177,7 @@ function TripBlockTitle() {
           />
         )}
       </div>
+      {!isListBlock && <DaySavedPlacesPicker dayId={block.id} />}
       <span
         className="size-3 shrink-0 rounded-full"
         style={{ backgroundColor: blockColor.value }}

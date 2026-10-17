@@ -147,6 +147,8 @@ export type PlaceSearchResult = {
   website?: string;
   imageUrl?: string;
   openingHours?: string;
+  /** Weekly provider descriptions, kept separately for date-aware planning. */
+  weekdayOpeningHours?: readonly string[];
   description?: string;
   rating?: number;
   reviewCount?: number;
@@ -241,6 +243,16 @@ export type TripBlockData = {
 
 export type TripBlockItem = PlaceItem | NoteItem | ChecklistItem;
 
+export type PlaceTimeSource = "fixed" | "calculated";
+
+/** One moment inside a stop's visit, such as 09:00-09:10 Check in. Times are HH:mm. */
+export type PlaceScheduleEntry = {
+  id: string;
+  time: string;
+  timeEnd?: string;
+  label: string;
+};
+
 /** How a leg of the day is travelled. */
 export type LegTravelMode = "drive" | "transit" | "rail" | "bus" | "bike" | "walk";
 
@@ -261,6 +273,13 @@ export type PlaceItem = {
   isVisited?: boolean;
   time?: string;
   timeEnd?: string;
+  /**
+   * `fixed` when the traveller set the time, `calculated` when Calculate times did.
+   * Absent on older times, which were all typed by someone and so count as fixed.
+   */
+  timeSource?: PlaceTimeSource | null;
+  /** The traveller's own timetable inside this stop; it moves with the stop's start time. */
+  schedule?: PlaceScheduleEntry[];
   cost?: number;
   evCharger?: PlaceItemEvChargerDetails;
   /** Provider machine type, e.g. "subway_station", used to recognise stations. */

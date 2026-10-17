@@ -13,5 +13,7 @@ export type RecentPlanSidebar = {
 // Planner pages run inside an isolated Jotai Provider; these atoms must live in the default store.
 export const recentPlanSidebarStore = getDefaultStore();
 export const recentPlanSidebarAtom = atom<RecentPlanSidebar | null>(null);
+/** Recent work includes saving an Explore place; it must not replace the sidebar's full snapshot. */
+export const lastWorkedPlanAtom = atom<{ planId: string; ownerId: string } | null>(null);
 /** Block to reveal once the recent plan opens, set when a day is picked from outside the planner. */
 export const pendingPlannerBlockIdAtom = atom<string | null>(null);

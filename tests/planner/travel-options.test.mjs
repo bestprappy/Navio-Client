@@ -222,17 +222,35 @@ test("balanced ranking compares a short connection with a long final walk", () =
   assert.notEqual(getTransitRouteKey(ximen.steps), getTransitRouteKey(direct.steps));
 });
 
-test("a saved route restores the chosen geometry and does not silently switch when unavailable", () => {
+test("a saved route restores the chosen geometry and flags the closest journey when it is not offered", () => {
   const chosen = scheduledJourneys[1];
   const key = getTransitRouteKey(chosen.steps);
   const request = { groups: [{ blockId: railRoute.blockId, points: [origin, { ...destination, arrivalMode: "rail", arrivalRouteKey: key }] }] };
   const response = applySavedTransitRoutes(request, { segments: [{ ...railRoute, travelMode: "rail", journeys: scheduledJourneys }] });
   assert.deepEqual(response.segments[0].geometry, chosen.geometry);
   assert.equal(response.segments[0].travelMode, "rail");
-  const missing = applySavedTransitRoutes(request, { segments: [{ ...railRoute, journeys: [scheduledJourneys[0]] }] }).segments[0];
+  assert.equal(response.segments[0].savedRouteUnavailable, undefined);
+  const substituted = applySavedTransitRoutes(request, { segments: [{ ...railRoute, steps: [], journeys: [scheduledJourneys[0]] }] }).segments[0];
+  assert.equal(substituted.status, "routed");
+  assert.equal(substituted.savedRouteUnavailable, true);
+  assert.deepEqual(substituted.steps, scheduledJourneys[0].steps);
+  const missing = applySavedTransitRoutes(request, { segments: [{ ...railRoute, status: "fallback", steps: [], journeys: [] }] }).segments[0];
   assert.equal(missing.status, "fallback");
   assert.equal(missing.durationSeconds, null);
   assert.equal(missing.fallbackReason, "Your selected transit route is not available");
+});
+
+test("an unavailable saved route prefers a current journey on the same lines over a faster one", () => {
+  const chosen = scheduledJourneys[1];
+  const request = { groups: [{ blockId: railRoute.blockId, points: [origin, { ...destination, arrivalMode: "transit",
+    arrivalRouteKey: getTransitRouteKey(chosen.steps) }] }] };
+  const sameLines = { ...chosen, id: "same-lines", durationSeconds: (chosen.durationSeconds ?? 0) + 3600,
+    steps: chosen.steps.map(step => step.travelMode === "transit" ? { ...step, departureStop: `${step.departureStop} (another exit)` } : step) };
+  const fastest = { ...scheduledJourneys[0], id: "fastest", durationSeconds: 60,
+    steps: scheduledJourneys[0].steps.map(step => step.travelMode === "transit" ? { ...step, line: { ...step.line, name: "Other line", shortName: "X" } } : step) };
+  const restored = applySavedTransitRoutes(request, { segments: [{ ...railRoute, steps: [], journeys: [fastest, sameLines] }] }).segments[0];
+  assert.equal(restored.savedRouteUnavailable, true);
+  assert.deepEqual(restored.steps, sameLines.steps);
 });
 
 test("specific route saves require the capability and restore the selected line sequence", async () => {

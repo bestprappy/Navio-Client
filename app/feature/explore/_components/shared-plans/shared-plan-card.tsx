@@ -15,7 +15,7 @@ import { RouteStrip } from "./route-strip";
 type SharedPlanCardProps = {
   plan: ExplorePlan;
   /** "row" matches Explore's one-per-line view; "tile" its grid views. */
-  layout?: "tile" | "row";
+  layout?: "tile" | "row" | "planner";
 };
 
 /** Fixed locale and UTC so the server render and the browser agree on hydration. */
@@ -102,23 +102,32 @@ export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "til
   const highlights = joinHighlights(plan.highlights);
   const listed = formatListedDate(plan.listedAt);
   const isRow = layout === "row";
+  const isPlanner = layout === "planner";
 
   return (
     <article
       className={cn(
-        "group relative flex min-w-0 overflow-hidden rounded-lg border border-border bg-card shadow-sm transition-shadow hover:shadow-md focus-within:ring-2 focus-within:ring-ring/50",
-        isRow ? "flex-col sm:flex-row" : "flex-col",
+        "group relative flex h-full min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-background/90 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:border-primary/25 hover:shadow-lg focus-within:ring-2 focus-within:ring-ring/50 motion-reduce:transition-none",
+        isRow
+          ? "flex-col sm:flex-row"
+          : isPlanner
+            ? "flex-col @min-[30rem]:flex-row"
+            : "flex-col",
       )}
     >
       <PlanCover
         plan={plan}
         className={
-          isRow ? "aspect-video sm:aspect-auto sm:min-h-48 sm:w-72 sm:shrink-0" : "aspect-video"
+          isRow
+            ? "aspect-video sm:aspect-auto sm:min-h-48 sm:w-72 sm:shrink-0"
+            : isPlanner
+              ? "aspect-[16/7] bg-muted/70 @min-[30rem]:aspect-auto @min-[30rem]:min-h-40 @min-[30rem]:w-[42%] @min-[30rem]:shrink-0"
+              : "aspect-video"
         }
       />
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3 p-4">
-        <div className="min-w-0 space-y-1">
+      <div className={cn("flex min-w-0 flex-1 flex-col p-4", isPlanner ? "gap-2.5" : "gap-3")}>
+        <div className={cn("min-w-0 space-y-1", isPlanner && "@min-[30rem]:pr-16")}>
           <h3 className="line-clamp-2 text-base font-semibold text-foreground">
             {/* Stretched link: the whole card is one target for pointer and keyboard. */}
             <Link
@@ -144,7 +153,12 @@ export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "til
           </p>
         )}
 
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1 text-xs text-muted-foreground">
+        <div
+          className={cn(
+            "mt-auto flex items-center justify-between gap-x-3 gap-y-1 pt-1 text-xs text-muted-foreground",
+            isPlanner ? "flex-nowrap" : "flex-wrap",
+          )}
+        >
           <PlanAuthor name={plan.authorName} />
           {listed && <span className="shrink-0">Listed {listed}</span>}
         </div>

@@ -7,7 +7,8 @@ import { fetchExplorePlansFromGateway } from "@/app/feature/explore/_components/
  *
  * <p>GET on the collection only. Individual shared plans are deliberately not
  * proxied here: their pages fetch server-side, so no route on this origin
- * serves a token-addressed read.
+ * serves a token-addressed read of a plan. The one token route is a listed
+ * plan's card (`[token]/summary`), which the feed already exposes.
  */
 export async function GET(request: NextRequest): Promise<Response> {
   const page = Number(request.nextUrl.searchParams.get("page") ?? "0");

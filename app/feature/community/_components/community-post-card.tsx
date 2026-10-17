@@ -6,7 +6,6 @@ import { ExternalLink, MessageCircle } from "lucide-react";
 
 import { CommunityMembershipButton } from "./community-membership-button";
 import { CommunityFlairBadge } from "./community-flair-badge";
-import { CommunityTripAttachment } from "./community-trip-attachment";
 import {
   COMMUNITY_PILL_CLASS,
   CommunityVotePill,
@@ -14,6 +13,7 @@ import {
 } from "./community-post-actions";
 import { CommunityPostEditor } from "./community-post-editor";
 import { CommunityPostImage } from "./community-post-image";
+import { CommunityPlanAttachment } from "./community-plan-attachment";
 import { CommunityIcon, communityHandle } from "./community-identity";
 import { useCommunityIdentity } from "./community-group-queries";
 import { useCommunityUserProfile } from "./community-user-label";
@@ -22,7 +22,6 @@ import {
   formatCount,
   formatRelativeTime,
   getCommunityPostHref,
-  getTripById,
 } from "./data";
 
 type CommunityPostCardProps = {
@@ -57,7 +56,6 @@ export function CommunityPostCard({
   const postHref = groupSlug
     ? getCommunityPostHref({ name: groupName, slug: groupSlug }, post)
     : null;
-  const trip = post.sharedTripId ? getTripById(post.sharedTripId) : null;
   const flair = post.flairId
     ? (group?.postFlairs.find((item) => item.id === post.flairId) ?? null)
     : null;
@@ -175,9 +173,9 @@ export function CommunityPostCard({
         </a>
       ) : null}
 
-      {trip ? (
+      {post.sharedTripId ? (
         <div className="relative z-10 mt-2.5" onClick={(event) => event.stopPropagation()}>
-          <CommunityTripAttachment trip={trip} />
+          <CommunityPlanAttachment token={post.sharedTripId} />
         </div>
       ) : null}
 

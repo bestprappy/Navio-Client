@@ -1,5 +1,7 @@
 "use client";
 
+import { usePlannerScrollPanelId } from "../layout/planner-scroll-panel-context";
+
 import { useCallback } from "react";
 import { useSetAtom } from "jotai";
 
@@ -8,7 +10,6 @@ import {
   openBlockIdsAtom,
 } from "../overview/trip-builder.atoms";
 
-const SCROLL_PANEL_ID = "planner-scroll-panel";
 // Keeps the card off the panel's top edge; small enough that the day's own top
 // stays above the scroll-detection threshold, so the active day does not flip.
 const SCROLL_OFFSET_PX = 16;
@@ -39,6 +40,7 @@ function scrollPanelTo(element: HTMLElement, panel: HTMLElement) {
  * scrolls once the opened content has painted.
  */
 export function useRevealPlanCard() {
+  const scrollPanelId = usePlannerScrollPanelId();
   const setOpenBlockIds = useSetAtom(openBlockIdsAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
 
@@ -50,7 +52,7 @@ export function useRevealPlanCard() {
       // Two frames: one for React to commit the opened day, one for layout.
       window.requestAnimationFrame(() => {
         window.requestAnimationFrame(() => {
-          const panel = document.getElementById(SCROLL_PANEL_ID);
+          const panel = document.getElementById(scrollPanelId);
           const target =
             (itemId && document.getElementById(getTripItemElementId(itemId))) ||
             document.getElementById(`trip-block-${blockId}`);
@@ -70,6 +72,6 @@ export function useRevealPlanCard() {
         });
       });
     },
-    [setActiveBlockId, setOpenBlockIds],
+    [setActiveBlockId, setOpenBlockIds, scrollPanelId],
   );
 }

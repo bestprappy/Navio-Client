@@ -1,5 +1,7 @@
 "use client";
 
+import { usePlannerScrollPanelId } from "../layout/planner-scroll-panel-context";
+
 import { useEffect } from "react";
 import { useAtomValue, useSetAtom, useStore } from "jotai";
 
@@ -8,7 +10,6 @@ import {
   routeLineModeAtom,
 } from "../overview/trip-builder.atoms";
 
-const SCROLL_PANEL_ID = "planner-scroll-panel";
 // Same line the day tracker uses: a stop is in focus once its top edge crosses
 // the upper 30% of the panel.
 const FOCUS_LINE_RATIO = 0.3;
@@ -23,13 +24,14 @@ export function routeStopAttributes(stopId: string) {
 
 /** Keeps the focused leg in sync with the itinerary scroll while in "stop" mode. Headless. */
 export function RouteStopTracker() {
+  const scrollPanelId = usePlannerScrollPanelId();
   const mode = useAtomValue(routeLineModeAtom);
   const setFocusedStopId = useSetAtom(focusedRouteStopIdAtom);
   const store = useStore();
 
   useEffect(() => {
     if (mode !== "stop") return;
-    const panel = document.getElementById(SCROLL_PANEL_ID);
+    const panel = document.getElementById(scrollPanelId);
     if (!panel) return;
     const scrollPanel = panel;
     let frame: number | null = null;
@@ -71,7 +73,7 @@ export function RouteStopTracker() {
       scrollPanel.removeEventListener("scroll", scheduleUpdate);
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
-  }, [mode, setFocusedStopId, store]);
+  }, [mode, setFocusedStopId, store, scrollPanelId]);
 
   return null;
 }

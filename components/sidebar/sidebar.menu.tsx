@@ -1,6 +1,15 @@
 "use client";
 
 import type { ReactNode } from "react";
+import {
+  CircleHelp,
+  Compass,
+  House,
+  LayoutDashboard,
+  MessageCircle,
+} from "lucide-react";
+
+import SidebarItem from "./sidebar.item";
 
 type SidebarMenuProps = {
   title: string;
@@ -22,5 +31,85 @@ export default function SidebarMenu({
       )}
       {children}
     </div>
+  );
+}
+
+type PlannerDiscoverMenuProps = {
+  collapsed: boolean;
+  pathName: string;
+  onNavigate: () => void;
+};
+
+export function PlannerDiscoverMenu({
+  collapsed,
+  pathName,
+  onNavigate,
+}: PlannerDiscoverMenuProps) {
+  const isRouteActive = (route: string) =>
+    pathName === route || (route !== "/" && pathName.startsWith(`${route}/`));
+
+  return (
+    <SidebarMenu title="Discover" collapsed={collapsed}>
+      <SidebarItem
+        title="Home"
+        href="/"
+        icon={<House className="size-5" />}
+        isActive={pathName === "/"}
+        onClick={onNavigate}
+        collapsed={collapsed}
+      />
+      <SidebarItem
+        title="Explore"
+        href="/explore"
+        icon={<Compass className="size-5" />}
+        isActive={isRouteActive("/explore")}
+        onClick={onNavigate}
+        collapsed={collapsed}
+      />
+      <SidebarItem
+        title="Community"
+        href="/community"
+        icon={<MessageCircle className="size-5" />}
+        isActive={isRouteActive("/community")}
+        onClick={onNavigate}
+        collapsed={collapsed}
+      />
+      <SidebarItem
+        title="Help"
+        href="/help"
+        icon={<CircleHelp className="size-5" />}
+        isActive={isRouteActive("/help")}
+        onClick={onNavigate}
+        collapsed={collapsed}
+      />
+    </SidebarMenu>
+  );
+}
+
+type SidebarTripsMenuProps = {
+  children: ReactNode;
+  collapsed: boolean;
+  dashboardActive: boolean;
+  onNavigate: () => void;
+};
+
+export function SidebarTripsMenu({
+  children,
+  collapsed,
+  dashboardActive,
+  onNavigate,
+}: SidebarTripsMenuProps) {
+  return (
+    <SidebarMenu title="Trips" collapsed={collapsed}>
+      <SidebarItem
+        title="Dashboard"
+        href="/dashboard"
+        icon={<LayoutDashboard className="size-5" />}
+        isActive={dashboardActive}
+        onClick={onNavigate}
+        collapsed={collapsed}
+      />
+      {children}
+    </SidebarMenu>
   );
 }

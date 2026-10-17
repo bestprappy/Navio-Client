@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import SidebarWrapper from "@/components/sidebar/sidebar";
 import { Button } from "@/components/ui/button";
-import { SharedPlanContent } from "@/app/feature/planner/_components/share/shared-plan-content";
-import { SharedPlanHeader } from "@/app/feature/planner/_components/share/shared-plan-header";
+import { SharedPlannerView } from "@/app/feature/planner/_components/share/shared-planner-view";
+import { SharedPlanRetry } from "@/app/feature/planner/_components/share/shared-plan-retry";
 import { fetchSharedPlan } from "@/app/feature/planner/_components/share/shared-plan-request";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ function UnavailablePage({ message }: { message: string }) {
     <main className="mx-auto flex min-h-dvh max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
       <h1 className="text-xl font-semibold text-foreground">This shared plan is no longer available</h1>
       <p className="text-sm text-muted-foreground">{message}</p>
-      <Button render={<Link href="/" />} variant="outline">
+      <Button nativeButton={false} role="link" render={<Link href="/" />} variant="outline">
         Go to Navio
       </Button>
     </main>
@@ -50,28 +51,15 @@ export default async function SharedPlanPage({
   }
 
   if (result.status === "error") {
-    return <UnavailablePage message="Navio could not load this plan just now. Please try again shortly." />;
+    return <SharedPlanRetry />;
   }
 
-  const { plan, publishedAt, authorName } = result.plan;
-
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:py-12">
-      <SharedPlanHeader plan={plan} publishedAt={publishedAt} authorName={authorName} />
-
-      <div className="py-6">
-        <SharedPlanContent plan={plan} />
-      </div>
-
-      <footer className="border-t border-border pt-6">
-        <p className="text-sm text-muted-foreground">
-          This is a read-only copy. Changes the owner makes later stay private until they update
-          this published version.
-        </p>
-        <Button render={<Link href="/" />} variant="outline" size="sm" className="mt-3">
-          Plan your own trip with Navio
-        </Button>
-      </footer>
+    <div className="flex h-dvh flex-col overflow-hidden md:flex-row">
+      <SidebarWrapper />
+    <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
+      <SharedPlannerView shared={result.plan} token={token} backLink={{ href: "/", label: "Navio" }} />
     </main>
+    </div>
   );
 }

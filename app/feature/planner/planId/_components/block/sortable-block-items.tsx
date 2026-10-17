@@ -17,6 +17,7 @@ import {
 import { useTripCharging } from "../garage/use-trip-charging";
 import { getDayPlacePositions, getLastDayPlaceId } from "../itinerary/day-anchors";
 import { routeStopAttributes } from "../itinerary/route-stop-tracker";
+import { useDaySchedule } from "../itinerary/use-day-schedule";
 import { getTripItemElementId } from "../itinerary/use-reveal-plan-card";
 import { closeActiveSearchAtom, plannerReadOnlyAtom, reorderBlockItemsAtom, tripBlocksAtom } from "../overview/trip-builder.atoms";
 import { type PlaceSearchBias } from "../place/add-place-input";
@@ -33,6 +34,7 @@ import { useTripRoutes } from "../routes/trip-route-query";
 import { TripChecklistItem } from "./items/trip-checklist-item";
 import { TripNoteItem } from "./items/trip-note-item";
 import { TripPlaceCard } from "./items/trip-place-card";
+import styles from "./item-insertion.module.css";
 
 type SortableBlockItemsProps = {
   block: TripBlockData;
@@ -62,6 +64,7 @@ function renderBlockItem(
   canMarkAsEnd: boolean,
   chargeBatteryFrom?: number | null,
   chargeBatteryTo?: number | null,
+  lateMinutes?: number | null,
 ) {
   switch (item.type) {
     case "place":
@@ -76,6 +79,7 @@ function renderBlockItem(
           chargeBatteryTo={chargeBatteryTo}
           showEvChargeDetails={showEvChargeDetails}
           canMarkAsEnd={canMarkAsEnd}
+          lateMinutes={lateMinutes}
         />
       );
     case "note":
@@ -122,6 +126,7 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
     [block.items],
   );
   const batteryStateByItemId = charging?.days.get(block.id)?.batteryByItemId ?? new Map<string, BatteryState>();
+  const daySchedule = useDaySchedule(block, hasStart);
 
   const blockColor = getTripBlockColorById(block.colorId);
   const placePositions = getDayPlacePositions(block, hasStart);
@@ -129,6 +134,8 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
 
   function insertionControl(controlId: string, beforeItemId?: string, afterItemId?: string) {
     return (
+      <div className={styles.gap} data-insertion-gap="true">
+      <div className="pl-8">
       <InsertItemRow
         blockId={block.id}
         beforeItemId={beforeItemId}
@@ -143,6 +150,8 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
           setActiveInsertionId(isOpen ? controlId : null);
         }}
       />
+      </div>
+      </div>
     );
   }
 
@@ -193,7 +202,7 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
   }
 
   return (
-    <div role="list" className="space-y-3" aria-label={`${block.title} items`}>
+    <div role="list" className={styles.list} data-read-only={readOnly ? "true" : undefined} data-dragging={draggedItemId ? "true" : undefined} aria-label={`${block.title} items`}>
       {block.items.map((item, index) => {
         const placePosition = placePositions.get(item.id) ?? null;
         const isDragging = draggedItemId === item.id;
@@ -225,6 +234,8 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
 
         return (
           <Fragment key={item.id}>
+            {!readOnly && index === 0 && insertionControl(`before-${item.id}`, item.id)}
+            <div className={styles.item}>
             {shouldShowRouteInfo ? (
               <div
                 role="listitem"
@@ -324,7 +335,6 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
               </div>}
 
               <div className="group/plan-card min-w-0">
-                {!readOnly && index === 0 && insertionControl(`before-${item.id}`, item.id)}
                 {renderBlockItem(
                   block,
                   item,
@@ -333,10 +343,12 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
                   item.id === lastDayPlaceId,
                   itemBatteryState?.observedSocPct ?? itemBatteryState?.arrivalPct,
                   itemBatteryState?.departurePct,
+                  shouldShowRouting ? daySchedule.lateByItemId.get(item.id)?.minutes : null,
                 )}
-                {!readOnly && insertionControl(`after-${item.id}`, block.items[index + 1]?.id, item.id)}
               </div>
             </div>
+            </div>
+            {!readOnly && insertionControl(`after-${item.id}`, block.items[index + 1]?.id, item.id)}
           </Fragment>
         );
       })}

@@ -2,7 +2,6 @@
 
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -21,7 +20,6 @@ import {
   Tag,
   Type,
   X,
-  MapPinned,
 } from "lucide-react";
 
 import { createPostDraftAtom } from "../_components/community-atoms";
@@ -33,16 +31,15 @@ import {
 import { CommunityQueryError } from "../_components/community-query-state";
 import { CommunityMembershipButton } from "../_components/community-membership-button";
 import { useCommunityIdentity } from "../_components/community-group-queries";
-import type { CommunityGroup, SharedTrip } from "../_components/data";
+import type { CommunityGroup } from "../_components/data";
 import {
   defaultCreatePostDraft,
-  explorePlanSharedTrips,
   getCommunityPostHref,
-  getTripById,
 } from "../_components/data";
 import { CommunityFlairDialog } from "./community-flair-dialog";
+import { CommunityPlanPicker } from "./community-plan-picker";
+import { isShareToken } from "@/app/feature/explore/_components/shared-plans/explore-plans-api";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -57,7 +54,7 @@ type PostFieldErrors = Partial<Record<keyof PostFormValues, string>>;
 type CommunityComposerProps = {
   groups: CommunityGroup[];
   initialGroupId?: string | null;
-  initialPlanId?: string | null;
+  initialPlanToken?: string | null;
 };
 
 const TABS = [
@@ -66,42 +63,10 @@ const TABS = [
   { id: "link", label: "Link", icon: Link2 },
 ] as const satisfies readonly { id: PostTab; label: string; icon: typeof Type }[];
 
-function getSuggestedDiscussionGroup(
-  trip: SharedTrip,
-  groups: CommunityGroup[],
-): CommunityGroup | null {
-  const location = trip.location.toLowerCase();
-  const tripTags = new Set(trip.tags.map((tag) => tag.toLowerCase()));
-  const hasTagOverlap = (group: CommunityGroup) =>
-    group.tags.some((tag) => tripTags.has(tag.toLowerCase()));
-  const hasPlaceMatch = (group: CommunityGroup) =>
-    group.places.some((place) => location.includes(place.toLowerCase()));
-  const placeMatches = groups.filter(hasPlaceMatch);
-
-  return (
-    placeMatches.find(
-      (group) =>
-        group.name.toLowerCase().includes(location) && hasTagOverlap(group),
-    ) ??
-    placeMatches.find(hasTagOverlap) ??
-    placeMatches.at(0) ??
-    groups.find(
-      (group) =>
-        group.country.toLowerCase() === trip.country.toLowerCase() &&
-        hasTagOverlap(group),
-    ) ??
-    groups.find(
-      (group) => group.country.toLowerCase() === trip.country.toLowerCase(),
-    ) ??
-    groups.at(0) ??
-    null
-  );
-}
-
 export function CommunityComposer({
   groups,
   initialGroupId = null,
-  initialPlanId = null,
+  initialPlanToken = null,
 }: CommunityComposerProps) {
   const router = useRouter();
   const cache = useQueryClient();
@@ -124,58 +89,41 @@ export function CommunityComposer({
     id: string;
   } | null>(null);
 
-  const selectableTrips = useMemo(() => explorePlanSharedTrips, []);
   const selectedGroup = groups.find((group) => group.id === postDraft.groupId);
   const canModerateArchive = selectedGroup?.status === "archived";
 
-  // Apply ?groupId / ?planId prefill exactly once per incoming query pair.
+  // Apply the ?groupId prefill exactly once per incoming id.
   useEffect(() => {
-    const prefillKey = `${initialGroupId ?? ""}:${initialPlanId ?? ""}`;
-
     if (
-      appliedPrefillKeyRef.current === prefillKey ||
-      (!initialGroupId && !initialPlanId) ||
+      !initialGroupId ||
+      appliedPrefillKeyRef.current === initialGroupId ||
       groups.length === 0
     ) {
       return;
     }
 
-    const queryTrip = initialPlanId
-      ? (selectableTrips.find(
-          (trip) =>
-            trip.id === initialPlanId || trip.sourcePlanId === initialPlanId,
-        ) ?? getTripById(initialPlanId))
-      : null;
-    const explicitGroup = initialGroupId
-      ? groups.find((group) => group.id === initialGroupId)
-      : null;
-    const suggestedGroup = queryTrip
-      ? getSuggestedDiscussionGroup(queryTrip, groups)
-      : null;
-    const nextGroup = explicitGroup ?? suggestedGroup;
+    const explicitGroup = groups.find((group) => group.id === initialGroupId);
 
-    setPostDraft((previous) => ({
-      ...previous,
-      groupId: nextGroup?.id ?? previous.groupId,
-      place: queryTrip?.location ?? nextGroup?.places[0] ?? previous.place,
-      country: queryTrip?.country ?? nextGroup?.country ?? previous.country,
-      tags:
-        queryTrip && !previous.tags.trim()
-          ? queryTrip.tags.slice(0, 5).join(", ")
-          : previous.tags,
-      title:
-        queryTrip && !previous.title.trim()
-          ? `Plan review: ${queryTrip.title}`.slice(0, 300)
-          : previous.title,
-      body:
-        queryTrip && !previous.body.trim()
-          ? "Looking for community feedback on pacing, stop order, charging timing, and local swaps for this Explore plan."
-          : previous.body,
-      attachTrip: queryTrip ? true : previous.attachTrip,
-      sharedTripId: queryTrip ? queryTrip.id : previous.sharedTripId,
-    }));
-    appliedPrefillKeyRef.current = prefillKey;
-  }, [groups, initialGroupId, initialPlanId, selectableTrips, setPostDraft]);
+    if (explicitGroup) {
+      setPostDraft((previous) => ({
+        ...previous,
+        groupId: explicitGroup.id,
+        place: explicitGroup.places[0] ?? previous.place,
+        country: explicitGroup.country,
+      }));
+    }
+    appliedPrefillKeyRef.current = initialGroupId;
+  }, [groups, initialGroupId, setPostDraft]);
+
+  // Arriving from an Explore plan's "Discuss" link attaches that plan once.
+  const appliedPlanTokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isShareToken(initialPlanToken) || appliedPlanTokenRef.current === initialPlanToken) {
+      return;
+    }
+    setPostDraft((previous) => ({ ...previous, planToken: initialPlanToken }));
+    appliedPlanTokenRef.current = initialPlanToken;
+  }, [initialPlanToken, setPostDraft]);
 
   const filteredGroups = communitySearch
     ? groups.filter((group) =>
@@ -188,15 +136,12 @@ export function CommunityComposer({
       if (!selectedGroup?.slug || !selectedGroup.joined) {
         throw new Error("Join a community before posting.");
       }
-      const attachedTripId = postDraft.attachTrip
-        ? (postDraft.sharedTripId ?? null)
-        : null;
       const signature = JSON.stringify({
         identity,
         group: selectedGroup.slug,
         values,
         selectedFlairId,
-        attachedTripId,
+        planToken: postDraft.planToken,
       });
       // Reuse one request id per unchanged attempt so a retry cannot double-post.
       if (
@@ -210,7 +155,7 @@ export function CommunityComposer({
         selectedGroup.slug,
         values,
         selectedFlairId,
-        attachedTripId,
+        postDraft.planToken,
         file,
         publishAttempt.current.id,
       );
@@ -239,33 +184,6 @@ export function CommunityComposer({
     setSelectedFlairId(null);
     setCommunityOpen(false);
     setCommunitySearch("");
-  }
-
-  function handleAttachTripChange(checked: boolean) {
-    const nextTripId = postDraft.sharedTripId ?? selectableTrips[0]?.id ?? null;
-    const nextTrip = nextTripId
-      ? selectableTrips.find((trip) => trip.id === nextTripId)
-      : null;
-
-    setPostDraft((previous) => ({
-      ...previous,
-      attachTrip: checked,
-      sharedTripId: checked ? nextTripId : null,
-      place: checked && nextTrip ? nextTrip.location : previous.place,
-      country: checked && nextTrip ? nextTrip.country : previous.country,
-    }));
-  }
-
-  function handleSelectTrip(tripId: string) {
-    const trip = selectableTrips.find((item) => item.id === tripId);
-
-    setPostDraft((previous) => ({
-      ...previous,
-      sharedTripId: tripId,
-      place: trip?.location ?? previous.place,
-      country: trip?.country ?? previous.country,
-      tags: previous.tags || trip?.tags.slice(0, 5).join(", ") || previous.tags,
-    }));
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -654,13 +572,12 @@ export function CommunityComposer({
         </div>
       ) : null}
 
-      <PlanAttachmentSelector
-        trips={selectableTrips}
-        attachTrip={postDraft.attachTrip}
-        selectedTripId={postDraft.sharedTripId}
+      <CommunityPlanPicker
+        selectedToken={postDraft.planToken}
         disabled={mutation.isPending}
-        onAttachChange={handleAttachTripChange}
-        onSelectTrip={handleSelectTrip}
+        onChange={(planToken) =>
+          setPostDraft((previous) => ({ ...previous, planToken }))
+        }
       />
 
       <CommunityQueryError error={mutation.error} />
@@ -693,162 +610,5 @@ export function CommunityComposer({
         </Button>
       </div>
     </form>
-  );
-}
-
-function PlanAttachmentSelector({
-  trips,
-  attachTrip,
-  selectedTripId,
-  disabled,
-  onAttachChange,
-  onSelectTrip,
-}: {
-  trips: SharedTrip[];
-  attachTrip: boolean;
-  selectedTripId: string | null;
-  disabled: boolean;
-  onAttachChange: (checked: boolean) => void;
-  onSelectTrip: (tripId: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const selectedTrip =
-    trips.find((trip) => trip.id === selectedTripId) ?? trips[0] ?? null;
-
-  return (
-    <section
-      aria-label="Plan attachment"
-      className="rounded-lg border border-border bg-card p-3"
-    >
-      <label className="flex cursor-pointer items-start gap-3 text-sm font-medium text-foreground">
-        <Checkbox
-          checked={attachTrip}
-          disabled={disabled}
-          onCheckedChange={(checked) => onAttachChange(checked === true)}
-          aria-label="Attach an Explore plan"
-          className="mt-0.5"
-        />
-        <span className="min-w-0">
-          <span className="block">Discuss an Explore plan</span>
-          {attachTrip && selectedTrip ? (
-            <span className="mt-0.5 block truncate text-xs font-normal text-muted-foreground">
-              {selectedTrip.title}
-            </span>
-          ) : null}
-        </span>
-      </label>
-
-      {attachTrip ? (
-        <div className="mt-3 grid gap-3">
-          {trips.length > 0 ? (
-            <>
-              <Popover open={open} onOpenChange={setOpen}>
-                <PopoverTrigger
-                  render={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      disabled={disabled}
-                      className="h-auto min-h-10 w-full justify-between gap-2 rounded-md px-3 py-2 text-left"
-                      aria-label="Select Explore plan"
-                    />
-                  }
-                >
-                  <MapPinned
-                    className="size-4 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                    {selectedTrip?.title ?? "Select an Explore plan"}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      "size-4 text-muted-foreground transition-transform",
-                      open && "rotate-180",
-                    )}
-                    aria-hidden="true"
-                  />
-                </PopoverTrigger>
-                <PopoverContent
-                  align="start"
-                  sideOffset={6}
-                  className="w-(--anchor-width) max-w-[calc(100vw-2rem)] gap-1 p-1"
-                >
-                  <div
-                    role="listbox"
-                    aria-label="Explore plans"
-                    className="max-h-72 overflow-y-auto"
-                  >
-                    {trips.map((trip) => {
-                      const isSelected = trip.id === selectedTrip?.id;
-
-                      return (
-                        <button
-                          key={trip.id}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          className={cn(
-                            "grid w-full grid-cols-[1.25rem_1fr] gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none",
-                            isSelected && "bg-muted text-foreground",
-                          )}
-                          onClick={() => {
-                            onSelectTrip(trip.id);
-                            setOpen(false);
-                          }}
-                        >
-                          <span className="mt-0.5 flex size-5 items-center justify-center rounded-full border border-border text-primary">
-                            {isSelected ? (
-                              <Check className="size-3" aria-hidden="true" />
-                            ) : null}
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block truncate font-medium text-foreground">
-                              {trip.title}
-                            </span>
-                            <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                              {trip.durationDays} days in {trip.location}
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              {selectedTrip ? (
-                <div className="grid gap-3 rounded-md border border-border bg-muted/30 p-3 sm:grid-cols-[5.5rem_1fr]">
-                  <div
-                    role="img"
-                    aria-label={selectedTrip.title}
-                    className="h-20 rounded-md bg-cover bg-center"
-                    style={{
-                      backgroundImage: `url(${selectedTrip.coverImageUrl})`,
-                    }}
-                  />
-                  <div className="min-w-0">
-                    <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
-                      {selectedTrip.title}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {selectedTrip.durationDays} days in{" "}
-                      {selectedTrip.location}
-                    </p>
-                    <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                      {selectedTrip.summary}
-                    </p>
-                  </div>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            <p className="rounded-md border border-dashed border-border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
-              No Explore plans available.
-            </p>
-          )}
-        </div>
-      ) : null}
-    </section>
   );
 }

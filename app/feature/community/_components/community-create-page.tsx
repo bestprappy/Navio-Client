@@ -24,13 +24,13 @@ import { CommunityRulesSidebar } from "../create/community-rules-sidebar";
 type CommunityCreatePageProps = {
   initialGroupId?: string | null;
   initialGroupSlug?: string | null;
-  initialPlanId?: string | null;
+  initialPlanToken?: string | null;
 };
 
 export function CommunityCreatePage({
   initialGroupId = null,
   initialGroupSlug = null,
-  initialPlanId = null,
+  initialPlanToken = null,
 }: CommunityCreatePageProps) {
   const groupsQuery = useCommunityGroups();
   const postDraft = useAtomValue(createPostDraftAtom);
@@ -86,7 +86,7 @@ export function CommunityCreatePage({
           <CommunityComposer
             groups={groups}
             initialGroupId={initialGroupId ?? detail.data?.id}
-            initialPlanId={initialPlanId}
+            initialPlanToken={initialPlanToken}
           />
           {selectedGroup && <CommunityRulesSidebar group={selectedGroup} />}
         </div>

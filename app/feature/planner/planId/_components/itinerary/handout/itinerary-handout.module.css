@@ -1,0 +1,468 @@
+/* The printed itinerary handout. Paper is always light, whatever the app theme,
+   so the sheet carries its own small palette; day colours use each day's fixed
+   map colour. Sizes are in print units because the sheet is an A4 page. */
+
+.sheet {
+  --paper: oklch(1 0 0);
+  --ink: oklch(15.686% 0.04872 271.219);
+  --ink-soft: oklch(0.44 0.02 265);
+  --ink-faint: oklch(0.58 0.015 265);
+  --rule: oklch(0.88 0.008 265);
+  --wash: oklch(0.97 0.005 265);
+
+  /* Notes render with the app's note component; give it light-theme tokens. */
+  --foreground: var(--ink);
+  --muted-foreground: var(--ink-soft);
+  --card: var(--paper);
+  --background: var(--paper);
+  --muted: var(--wash);
+  --well: var(--wash);
+  --border: var(--rule);
+  --primary: oklch(0.5 0.17 253);
+
+  color-scheme: light;
+  box-sizing: border-box;
+  width: 210mm;
+  padding: 16mm 15mm 18mm;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 9.5pt;
+  line-height: 1.45;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.sheet * {
+  box-sizing: border-box;
+}
+
+/* Opening: who prepared it, the trip, and the days at a glance. */
+.masthead {
+  display: flex;
+  justify-content: space-between;
+  gap: 6mm;
+  padding-bottom: 3mm;
+  border-bottom: 0.4pt solid var(--rule);
+  font-size: 8.5pt;
+  color: var(--ink-soft);
+}
+
+.title {
+  margin-top: 9mm;
+  font-size: 28pt;
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1mm 6mm;
+  margin-top: 3mm;
+  font-size: 10.5pt;
+  color: var(--ink-soft);
+}
+
+.facts strong {
+  color: var(--ink);
+  font-weight: 650;
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(42mm, 1fr));
+  gap: 4mm;
+  margin-top: 9mm;
+  padding: 0;
+  list-style: none;
+}
+
+.overviewDay {
+  --day-ink: color-mix(in oklch, var(--day) 78%, var(--ink));
+  padding-top: 2.5mm;
+  border-top: 2.2pt solid var(--day);
+  break-inside: avoid;
+}
+
+.overviewLabel {
+  font-weight: 750;
+  color: var(--day-ink);
+}
+
+.overviewRoute {
+  margin-top: 1mm;
+  font-size: 8.5pt;
+  color: var(--ink);
+}
+
+.overviewMeta {
+  font-size: 8pt;
+  color: var(--ink-faint);
+}
+
+/* A day: a coloured spine, the day's name, then its stops as a timetable. */
+.day {
+  --day-ink: color-mix(in oklch, var(--day) 78%, var(--ink));
+  --day-wash: color-mix(in oklch, var(--day) 12%, var(--paper));
+  margin-top: 11mm;
+}
+
+.sheet[data-day-breaks="true"] .day + .day {
+  break-before: page;
+  margin-top: 0;
+}
+
+.dayHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 6mm;
+  padding: 0 0 3mm 4mm;
+  border-left: 2.4pt solid var(--day);
+  break-after: avoid;
+}
+
+.dayName {
+  font-size: 18pt;
+  font-weight: 750;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--day-ink);
+}
+
+.dayDate {
+  margin-top: 1mm;
+  font-size: 10pt;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.dayStats {
+  font-size: 8.5pt;
+  text-align: right;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.dayStats strong {
+  display: block;
+  font-size: 10pt;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.stops {
+  margin-top: 4mm;
+  padding: 0;
+  list-style: none;
+}
+
+.stop,
+.leg {
+  display: grid;
+  grid-template-columns: 22mm 9mm minmax(0, 1fr) auto;
+  column-gap: 2.5mm;
+}
+
+.stop {
+  break-inside: avoid;
+}
+
+.when {
+  padding-top: 0.6mm;
+  font-size: 9.5pt;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.whenEnd {
+  display: block;
+  font-weight: 500;
+  color: var(--ink-soft);
+}
+
+/* The rail joins one stop to the next, like the route line on the map. */
+.rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.rail::after {
+  position: absolute;
+  top: 6.5mm;
+  bottom: -0.5mm;
+  left: calc(50% - 0.6pt);
+  width: 1.2pt;
+  background: color-mix(in oklch, var(--day) 45%, var(--paper));
+  content: "";
+}
+
+.stop:last-child .rail::after {
+  display: none;
+}
+
+.leg .rail::after {
+  top: 0;
+  bottom: 0;
+}
+
+.pin {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 6mm;
+  height: 6mm;
+  border-radius: 50%;
+  background: var(--day);
+  color: oklch(1 0 0);
+  font-size: 8pt;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.pin[data-kind="charger"] {
+  background: var(--paper);
+  border: 1pt solid oklch(0.5 0.15 150);
+  color: oklch(0.45 0.15 150);
+}
+
+.body {
+  min-width: 0;
+  padding-bottom: 4mm;
+}
+
+.nameLine {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4mm;
+}
+
+.name {
+  font-size: 11.5pt;
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.cost {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.meta {
+  margin-top: 0.5mm;
+  font-size: 8.5pt;
+  color: var(--ink-soft);
+}
+
+.notes {
+  margin-top: 2mm;
+  font-size: 9pt;
+  color: var(--ink);
+}
+
+/* Note headings stay below the stop name in the hierarchy: same size as the
+   text, set apart by weight. */
+.notes :is(h4, h5, h6) {
+  margin-top: 1.5mm;
+  font-size: 9.5pt !important;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.notes :is(p, li, label, blockquote) {
+  font-size: 9pt !important;
+  line-height: 1.45;
+}
+
+.moments {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.6mm 3mm;
+  margin-top: 2mm;
+  padding: 2mm 3mm;
+  border-radius: 1.5mm;
+  background: var(--day-wash);
+  font-size: 8.5pt;
+}
+
+.momentTime {
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--day-ink);
+}
+
+.photo {
+  width: 30mm;
+  height: 22mm;
+  margin-bottom: 4mm;
+  border-radius: 1.5mm;
+  object-fit: cover;
+  background: var(--wash);
+}
+
+.legContent {
+  padding: 0 0 3.5mm;
+}
+
+.legBody {
+  display: flex;
+  align-items: center;
+  gap: 1.5mm;
+  font-size: 8.5pt;
+  color: var(--ink-soft);
+}
+
+.legBody svg {
+  width: 3.2mm;
+  height: 3.2mm;
+  color: var(--mode);
+}
+
+.legBody strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rides {
+  display: flex;
+  flex-direction: column;
+  gap: 1mm;
+  margin-top: 1.5mm;
+  padding: 0;
+  list-style: none;
+  font-size: 8.5pt;
+  color: var(--ink-soft);
+}
+
+.ride {
+  display: flex;
+  align-items: baseline;
+  gap: 2mm;
+}
+
+.ride strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.rideChip {
+  flex: 0 0 auto;
+  max-width: 34mm;
+  overflow: hidden;
+  padding: 0.2mm 1.6mm;
+  border: 0.5pt solid var(--rule);
+  border-radius: 1mm;
+  font-weight: 650;
+  color: var(--ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rideChip[data-colored] {
+  border-color: transparent;
+  background: var(--line);
+  color: var(--line-ink);
+}
+
+.rideTowards {
+  color: var(--ink-faint);
+}
+
+.leg {
+  --mode: oklch(0.48 0.045 250);
+  break-after: avoid;
+}
+
+.leg[data-mode="transit"],
+.leg[data-mode="rail"] {
+  --mode: oklch(0.48 0.16 265);
+}
+
+.leg[data-mode="bus"] {
+  --mode: oklch(0.47 0.12 185);
+}
+
+.leg[data-mode="walk"] {
+  --mode: oklch(0.48 0.1 75);
+}
+
+.leg[data-mode="bike"] {
+  --mode: oklch(0.46 0.12 162);
+}
+
+.freeDay {
+  margin: 4mm 0 0 4mm;
+  color: var(--ink-soft);
+}
+
+.dayTotal {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4mm;
+  padding-top: 2mm;
+  border-top: 0.4pt solid var(--rule);
+  font-size: 9pt;
+  color: var(--ink-soft);
+}
+
+.dayTotal strong,
+.tripTotal strong {
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.tripTotal {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10mm;
+  padding: 3mm 4mm;
+  border-radius: 1.5mm;
+  background: var(--wash);
+  font-size: 10pt;
+  break-inside: avoid;
+}
+
+.closing {
+  margin-top: 8mm;
+  font-size: 8pt;
+  color: var(--ink-faint);
+}
+
+/* Printing: only the handout is printed. The print copy's own style tag resets
+   the page itself, so those global rules exist only while a handout is open. */
+.printRoot {
+  display: none;
+}
+
+@page {
+  size: A4;
+  margin: 15mm 15mm 18mm;
+}
+
+@media print {
+  :global(body) > :not(.printRoot) {
+    display: none !important;
+  }
+
+  .printRoot {
+    display: block;
+  }
+
+  /* The page margins replace the preview's padding. */
+  .printRoot .sheet {
+    width: auto;
+    padding: 0;
+  }
+}

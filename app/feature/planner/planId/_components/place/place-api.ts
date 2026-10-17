@@ -74,6 +74,9 @@ function placeDetailToSearchResult(
     website: detail.website ?? undefined,
     imageUrl: detail.photoUrl ?? undefined,
     openingHours: extractOpeningHoursSummary(detail.openingHours),
+    weekdayOpeningHours: Array.isArray(detail.openingHours.weekdayDescriptions)
+      ? detail.openingHours.weekdayDescriptions.filter((value): value is string => typeof value === "string")
+      : undefined,
     category: detail.category,
     description: detail.description,
     primaryType: detail.primaryType ?? undefined,
@@ -234,6 +237,7 @@ async function liveFetchDetail(
   providerPlaceId: string,
   provider: PlaceProvider,
   sessionToken?: string,
+  signal?: AbortSignal,
 ): Promise<PlaceSearchResult> {
   const params = new URLSearchParams({ provider });
 
@@ -244,6 +248,7 @@ async function liveFetchDetail(
   const encodedId = encodeURIComponent(providerPlaceId);
   const response = await fetch(`/api/geo/places/${encodedId}?${params}`, {
     cache: "no-store",
+    signal,
   });
 
   if (!response.ok) {
@@ -295,6 +300,7 @@ async function liveSearch(
   query: string,
   lat?: number,
   lng?: number,
+  signal?: AbortSignal,
 ): Promise<PlaceSearchResult[]> {
   const params = new URLSearchParams({ query });
 
@@ -308,6 +314,7 @@ async function liveSearch(
 
   const response = await fetch(`/api/geo/places/search?${params}`, {
     cache: "no-store",
+    signal,
   });
 
   if (!response.ok) {
@@ -344,7 +351,7 @@ export async function fetchPlaceAutocomplete(
 export async function fetchPlaceDetail(
   providerPlaceId: string,
   provider: PlaceProvider,
-  options?: { sessionToken?: string },
+  options?: { sessionToken?: string; signal?: AbortSignal },
 ): Promise<PlaceSearchResult> {
   if (isUsingMock) {
     const result = mockFetchDetail(providerPlaceId);
@@ -356,18 +363,18 @@ export async function fetchPlaceDetail(
     return result;
   }
 
-  return liveFetchDetail(providerPlaceId, provider, options?.sessionToken);
+  return liveFetchDetail(providerPlaceId, provider, options?.sessionToken, options?.signal);
 }
 
 export async function fetchPlaceSearch(
   query: string,
-  options?: { lat?: number; lng?: number },
+  options?: { lat?: number; lng?: number; signal?: AbortSignal },
 ): Promise<PlaceSearchResult[]> {
   if (isUsingMock) {
     return mockSearch(query, options?.lat, options?.lng);
   }
 
-  return liveSearch(query, options?.lat, options?.lng);
+  return liveSearch(query, options?.lat, options?.lng, options?.signal);
 }
 
 export async function fetchNearbyPlaces(

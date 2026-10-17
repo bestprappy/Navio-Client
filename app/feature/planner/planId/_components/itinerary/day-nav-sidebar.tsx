@@ -1,5 +1,7 @@
 "use client";
 
+import { usePlannerScrollPanelId } from "../layout/planner-scroll-panel-context";
+
 import { useEffect, useRef } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 
@@ -9,6 +11,7 @@ import {
 } from "../overview/trip-builder.atoms";
 
 export function DayNavSidebar() {
+  const scrollPanelId = usePlannerScrollPanelId();
   const blocks = useAtomValue(tripBlocksAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
 
@@ -21,7 +24,7 @@ export function DayNavSidebar() {
   }, [blocks]);
 
   useEffect(() => {
-    const container = document.getElementById("planner-scroll-panel");
+    const container = document.getElementById(scrollPanelId);
     if (!container) return;
     const scrollContainer = container;
 
@@ -73,7 +76,7 @@ export function DayNavSidebar() {
     handleScroll();
 
     return () => scrollContainer.removeEventListener("scroll", handleScroll);
-  }, [setActiveBlockId]);
+  }, [setActiveBlockId, scrollPanelId]);
 
   // Intentionally headless: keeps the active day in sync without rendering a day rail.
   return null;

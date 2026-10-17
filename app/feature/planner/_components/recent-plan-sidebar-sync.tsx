@@ -11,10 +11,12 @@ import {
   tripBlocksAtom,
 } from "../planId/_components/overview/trip-builder.atoms";
 import { isPersistedTripId } from "./planner-api";
+import { selectItineraryDayAtom } from "../planId/_components/itinerary/itinerary-day-view.atoms";
 import {
   pendingPlannerBlockIdAtom,
   recentPlanSidebarAtom,
   recentPlanSidebarStore,
+  lastWorkedPlanAtom,
 } from "./recent-plan-sidebar";
 
 type RecentPlanSidebarSyncProps = {
@@ -25,6 +27,7 @@ type RecentPlanSidebarSyncProps = {
 export function RecentPlanSidebarSync({ planId }: RecentPlanSidebarSyncProps) {
   const blocks = useAtomValue(tripBlocksAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
+  const selectItineraryDay = useSetAtom(selectItineraryDayAtom);
   const setOpenBlockIds = useSetAtom(openBlockIdsAtom);
   const setRecentPlan = useSetAtom(recentPlanSidebarAtom, { store: recentPlanSidebarStore });
   const [pendingBlockId, setPendingBlockId] = useAtom(pendingPlannerBlockIdAtom, { store: recentPlanSidebarStore });
@@ -36,17 +39,22 @@ export function RecentPlanSidebarSync({ planId }: RecentPlanSidebarSyncProps) {
     // Only offer saved trips owned by the current account.
     if (!ownerId || !isPersistedTripId(planId) || blocks.length === 0) return;
     setRecentPlan({ planId, ownerId, blocks, href: `${pathname}${window.location.search}` });
+    recentPlanSidebarStore.set(lastWorkedPlanAtom, { planId, ownerId });
   }, [blocks, ownerId, pathname, planId, setRecentPlan]);
 
   useEffect(() => {
     if (!pendingBlockId || !blocks.some((block) => block.id === pendingBlockId)) return;
-    setActiveBlockId(pendingBlockId);
-    setOpenBlockIds((ids) => (ids.includes(pendingBlockId) ? ids : [...ids, pendingBlockId]));
+    if (blocks.some((block) => block.id === pendingBlockId && block.kind !== "list")) {
+      selectItineraryDay(pendingBlockId);
+    } else {
+      setActiveBlockId(pendingBlockId);
+      setOpenBlockIds((ids) => (ids.includes(pendingBlockId) ? ids : [...ids, pendingBlockId]));
+    }
     setPendingBlockId(null);
     requestAnimationFrame(() =>
       document.getElementById(`trip-block-${pendingBlockId}`)?.scrollIntoView({ behavior: "smooth", block: "start" }),
     );
-  }, [blocks, pendingBlockId, setActiveBlockId, setOpenBlockIds, setPendingBlockId]);
+  }, [blocks, pendingBlockId, selectItineraryDay, setActiveBlockId, setOpenBlockIds, setPendingBlockId]);
 
   return null;
 }

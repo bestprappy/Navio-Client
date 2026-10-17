@@ -57,6 +57,9 @@ export function RouteJourneyOptions({ blockId, from, to, segment, plannedMode, a
   const plannedPreference = selectedKey === plannedKey && (plannedKey === "rail" || plannedKey === "bus") ? plannedKey : null;
   const journey = journeys.find(item => item.id === journeyId)
     ?? (selectedKey === plannedKey ? journeys.find(item => getTransitRouteKey(item.steps) === to.arrivalRouteKey) : undefined)
+    // When the saved sequence is not offered, agree with the closest journey the plan shows.
+    ?? (selectedKey === plannedKey && segment?.savedRouteUnavailable
+      ? journeys.find(item => getTransitRouteKey(item.steps) === getTransitRouteKey(segment.steps ?? [])) : undefined)
     ?? (plannedPreference ? journeys.find(item => matchesTransitPreference(item.steps, plannedPreference)) : undefined)
     ?? journeys[0];
   const leader = journeys[0];

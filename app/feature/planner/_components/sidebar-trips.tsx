@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 
-import SidebarMenu from "@/components/sidebar/sidebar.menu";
+import { SidebarTripsMenu } from "@/components/sidebar/sidebar.menu";
 import { Button } from "@/components/ui/button";
 import { CountryFlag } from "@/components/ui/country-flag";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,11 @@ export function SidebarTrips({ collapsed, onNavigate }: { collapsed: boolean; on
   const items = trips.data?.content.slice(0, 4) ?? [];
 
   return (
-    <SidebarMenu title="Trips" collapsed={collapsed}>
+    <SidebarTripsMenu
+      collapsed={collapsed}
+      dashboardActive={pathname === "/dashboard"}
+      onNavigate={onNavigate}
+    >
       {status === "loading" || (status === "authenticated" && trips.isPending) ? (
         <div role="status" aria-label="Loading trips" className="h-20 animate-pulse rounded-xl bg-muted" />
       ) : trips.isError && status === "authenticated" ? (
@@ -50,8 +54,8 @@ export function SidebarTrips({ collapsed, onNavigate }: { collapsed: boolean; on
                 className={cn("flex min-h-11 min-w-0 items-center gap-2 rounded-lg p-2 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", collapsed && "justify-center", active && "bg-secondary text-secondary-foreground")}>
                 <CountryFlag code={trip.destinationCountryCode} />
                 {!collapsed && <span className="min-w-0">
-                  <span className="block truncate text-xs font-semibold">{title}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{days} {days === 1 ? "day" : "days"}{start ? `, ${format(start, "d MMM yyyy")}` : " · Dates not set"}</span>
+                  <span className="block break-words text-xs font-semibold">{title}</span>
+                  <span className="block text-xs text-muted-foreground">{days} {days === 1 ? "day" : "days"}{start ? `, ${format(start, "d MMM yyyy")}` : " · Dates not set"}</span>
                 </span>}
               </Link>
             );
@@ -59,6 +63,6 @@ export function SidebarTrips({ collapsed, onNavigate }: { collapsed: boolean; on
           {!collapsed && (trips.data?.totalElements ?? 0) > 4 && <Link href="/dashboard" onClick={onNavigate} className="rounded-lg px-2 py-2 text-xs font-medium text-primary hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">View all trips</Link>}
         </div>
       )}
-    </SidebarMenu>
+    </SidebarTripsMenu>
   );
 }

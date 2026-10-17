@@ -678,6 +678,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
 
       {activeSearch && selectedPlace ? (
         <PlacePreviewPanel
+          compact
           place={selectedPlace}
           currentIndex={activeSearch.selectedIndex}
           total={activeSearch.results.length}

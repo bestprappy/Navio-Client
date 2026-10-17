@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
@@ -170,6 +171,7 @@ function ProfileEditor({ profile, sessionImage, onProfileSaved }: ProfileEditorP
 
 export function ProfileSettings() {
   const { data: session, status } = useSession();
+  const isAuthenticated = status === "authenticated" && !!session?.user && !session.error;
   const queryClient = useQueryClient();
   const userId = session?.user?.id ?? null;
   const queryKey = currentUserProfileQueryKey(userId);
@@ -177,7 +179,7 @@ export function ProfileSettings() {
   const profile = useQuery({
     queryKey,
     queryFn: getMyProfile,
-    enabled: status === "authenticated",
+    enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
@@ -191,7 +193,7 @@ export function ProfileSettings() {
     [queryClient, queryKey],
   );
 
-  if (status === "loading" || profile.isPending) {
+  if (status === "loading" || (isAuthenticated && profile.isPending)) {
     return <ProfileSkeleton />;
   }
 
@@ -199,7 +201,7 @@ export function ProfileSettings() {
     <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-8 sm:py-8 lg:flex-row lg:gap-8">
       <SettingsSidebar />
       <div className="min-w-0 flex-1 space-y-4">
-        {profile.data ? (
+        {profile.data && isAuthenticated ? (
           <ProfileEditor
             key={profile.data.id}
             profile={profile.data}
@@ -214,11 +216,11 @@ export function ProfileSettings() {
             <CircleAlert aria-hidden="true" className="mb-4 size-6 text-destructive" />
             <h1 className="text-xl font-semibold">We could not load your profile</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              {profile.error instanceof Error
+              {session?.error ? "Your session has expired. Sign in again to manage your profile." : profile.error instanceof Error
                 ? profile.error.message
                 : "Please try again, or sign in again to manage your account."}
             </p>
-            <Button
+            {session?.error ? <Link href="/sign-in?callbackUrl=%2Fsettings%2Fprofile" className="mt-5 inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4">Sign in again</Link> : <Button
               type="button"
               variant="outline"
               className="mt-5 h-11 px-5"
@@ -226,7 +228,7 @@ export function ProfileSettings() {
               onClick={() => void profile.refetch()}
             >
               {profile.isFetching ? "Retrying..." : "Try again"}
-            </Button>
+            </Button>}
           </div>
         )}
         <p className="px-1 text-center text-xs text-muted-foreground">

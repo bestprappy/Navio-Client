@@ -19,6 +19,8 @@ import {
 } from "../overview/trip-builder.atoms";
 import { EmptyMyListCallout } from "./empty-my-list-callout";
 import { InlineAddDivider } from "../inline-add-divider";
+import { SavedPlacesSection } from "./saved-places-section";
+import { visibleMyListBlocks } from "./saved-places-model";
 
 type MyListSectionProps = {
   destinationName: string;
@@ -34,6 +36,7 @@ export function MyListSection({
   createDefaultList = true,
 }: MyListSectionProps) {
   const listBlocks = useAtomValue(myListBlocksAtom);
+  const visibleBlocks = visibleMyListBlocks(listBlocks);
   const addMyListBlock = useSetAtom(addMyListBlockAtom);
   const store = useStore();
   const hasEnsuredDefaultList = useRef(false);
@@ -84,11 +87,14 @@ export function MyListSection({
           </div>
 
           <AccordionContent className="pt-0">
-            {listBlocks.length === 0 && (
+            {/* Saved places are collected from lists, so with no lists the callout is the only useful state. */}
+            {listBlocks.length === 0 ? (
               <EmptyMyListCallout onCreateList={addMyListBlock} />
+            ) : (
+              <SavedPlacesSection />
             )}
             <div className="space-y-8 pb-8 pt-2">
-              {listBlocks.map((block) => (
+              {visibleBlocks.map((block) => (
                 <TripBlock.Root key={block.id} block={block}>
                   <TripBlock.Header>
                     <TripBlock.Title />
@@ -111,7 +117,7 @@ export function MyListSection({
                 </TripBlock.Root>
               ))}
 
-              {listBlocks.length > 0 && (
+              {visibleBlocks.length > 0 && (
                 <InlineAddDivider
                   onClick={addMyListBlock}
                   label="Add new list"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, Route } from "lucide-react";
 import { useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
+import type { PlaceTimeSource } from "../../constants/types";
 import { updatePlaceItemAtom } from "../../overview/trip-builder.atoms";
 
 type PlaceTimePopoverProps = {
@@ -20,6 +21,7 @@ type PlaceTimePopoverProps = {
   itemId: string;
   time?: string;
   timeEnd?: string;
+  timeSource?: PlaceTimeSource | null;
 };
 
 type ActiveField = "start" | "end";
@@ -67,6 +69,7 @@ export function PlaceTimePopover({
   itemId,
   time,
   timeEnd,
+  timeSource,
 }: PlaceTimePopoverProps) {
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const [open, setOpen] = useState(false);
@@ -128,11 +131,18 @@ export function PlaceTimePopover({
     updatePlaceItem({
       blockId,
       itemId,
+      // A time the traveller sets is kept by every later Calculate times.
       updates: {
         time: parsedStart,
         timeEnd: parsedEnd ?? undefined,
+        timeSource: "fixed",
       },
     });
+    setOpen(false);
+  }
+
+  function handleRelease() {
+    updatePlaceItem({ blockId, itemId, updates: { timeSource: "calculated" } });
     setOpen(false);
   }
 
@@ -140,7 +150,7 @@ export function PlaceTimePopover({
     updatePlaceItem({
       blockId,
       itemId,
-      updates: { time: undefined, timeEnd: undefined },
+      updates: { time: undefined, timeEnd: undefined, timeSource: null },
     });
     setDraftStart("");
     setDraftEnd("");
@@ -154,17 +164,24 @@ export function PlaceTimePopover({
         ? formatDisplayTime(time)
         : "Add time";
 
+  const fixed = time !== undefined && timeSource !== "calculated";
+  // Times the traveller set use a softly filled block-colour chip and need no icon.
+  const TriggerIcon = !time ? Clock : fixed ? null : Route;
+
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
-        className={
-          time
-            ? "inline-flex h-8 items-center gap-1.5 rounded-sm border border-border bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-muted/80"
-            : "inline-flex h-8 items-center gap-1.5 rounded-sm border border-border bg-background px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted"
-        }
+        className={cn(
+          "inline-flex h-8 items-center gap-1.5 rounded-sm border px-3 text-xs font-medium tabular-nums transition-colors",
+          !time && "border-border bg-background text-muted-foreground hover:bg-muted",
+          time && fixed && "border-primary/20 bg-primary/10 text-primary hover:bg-primary/15",
+          time && !fixed && "border-dashed border-primary/35 bg-background text-primary hover:bg-primary/10",
+        )}
+        aria-label={time ? `${triggerLabel}, ${fixed ? "fixed time" : "calculated time"}. Edit time` : undefined}
+        title={time ? (fixed ? "Fixed time" : "Calculated time") : undefined}
         onClick={(e) => e.stopPropagation()}
       >
-        <Clock className="size-3.5" aria-hidden="true" />
+        {TriggerIcon ? <TriggerIcon className="size-3.5" aria-hidden="true" /> : null}
         {triggerLabel}
       </PopoverTrigger>
 
@@ -271,6 +288,25 @@ export function PlaceTimePopover({
             ))
           )}
         </div>
+
+        {/* Where the time comes from */}
+        {time ? (
+          <div className="flex items-start gap-2 border-t border-border px-3 py-2.5 text-xs text-muted-foreground">
+            {fixed ? null : <Route className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />}
+            <div className="min-w-0 flex-1">
+              <p>
+                {fixed
+                  ? "Fixed. Calculate times keeps this time."
+                  : "Calculated from visit and travel times. Saving a time here fixes it."}
+              </p>
+              {fixed ? (
+                <Button type="button" variant="link" size="xs" className="h-auto px-0 py-0.5" onClick={handleRelease}>
+                  Let Calculate times set this time
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         {/* Actions */}
         <div className="flex items-center justify-between border-t border-border p-3">
