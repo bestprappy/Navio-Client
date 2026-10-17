@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ClipboardList,
   CarFront,
+  Palette,
   Compass,
   Gauge,
   LayoutDashboard,
@@ -352,6 +353,7 @@ export default function SidebarWrapper() {
               collapsed={collapsed}
             />
             {isAdministrator(session?.user?.roles) && <SidebarItem title="Vehicle catalog" href="/admin/vehicles" icon={<CarFront className="size-5" />} isActive={isRouteActive("/admin/vehicles")} onClick={() => setMobileOpen(false)} collapsed={collapsed} />}
+            {isAdministrator(session?.user?.roles) && <SidebarItem title="Color palette" href="/admin/colors" icon={<Palette className="size-5" />} isActive={isRouteActive("/admin/colors")} onClick={() => setMobileOpen(false)} collapsed={collapsed} />}
             {isAdministrator(session?.user?.roles) && <SidebarItem title="Guides" href="/admin/guides" icon={<BookOpen className="size-5" />} isActive={isRouteActive("/admin/guides")} onClick={() => setMobileOpen(false)} collapsed={collapsed} />}
             {isAdministrator(session?.user?.roles) && <SidebarItem title="Activity" href="/admin/activity" icon={<ClipboardList className="size-5" />} isActive={isRouteActive("/admin/activity")} onClick={() => setMobileOpen(false)} collapsed={collapsed} />}
           </SidebarMenu>

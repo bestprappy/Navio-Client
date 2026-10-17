@@ -17,10 +17,8 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-import {
-  getTripBlockColorById,
-  tripBlockColorOptions,
-} from "../constants/trip-block-colors";
+import { getTripBlockColorById } from "../constants/trip-block-colors";
+import { usePaletteOptions } from "../constants/use-trip-block-color";
 import type { TripBlockData } from "../constants/types";
 import {
   removeTripBlockAtom,
@@ -46,6 +44,7 @@ export function BlockOptionsPopover({ block }: BlockOptionsPopoverProps) {
   const updateBlockColor = useSetAtom(updateBlockColorAtom);
   const updateMetadata = useUpdateTripMetadata(params.planId);
   const selectedColor = getTripBlockColorById(block.colorId);
+  const colorOptions = usePaletteOptions();
   const isDay = block.kind !== "list";
   const dayNumber = getDayIndex(blocks, block.id);
 
@@ -87,7 +86,7 @@ export function BlockOptionsPopover({ block }: BlockOptionsPopoverProps) {
             Change color
           </p>
           <div className="grid grid-cols-8 gap-2">
-            {tripBlockColorOptions.map((color) => {
+            {colorOptions.map((color) => {
               const isSelected = selectedColor.id === color.id;
 
               return (

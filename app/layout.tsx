@@ -6,6 +6,7 @@ import { QueryProvider } from "@/components/query-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { NavigationHistoryTracker } from "@/components/navigation-history";
 import { AuthSessionProvider } from "@/components/auth-session-provider";
+import { PaletteProvider } from "@/components/palette/palette-provider";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -46,7 +47,7 @@ export default function RootLayout({
               <Suspense fallback={null}>
                 <NavigationHistoryTracker />
               </Suspense>
-              {children}
+              <PaletteProvider>{children}</PaletteProvider>
             </QueryProvider>
           </AuthSessionProvider>
         </ThemeProvider>

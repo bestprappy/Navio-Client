@@ -6,11 +6,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { PlaceCardVisual } from "../../planId/_components/block/items/place-card-visual";
 import { PlaceCardFrame } from "../../planId/_components/block/items/place-card-frame";
 import { TripBlock } from "../../planId/_components/block/trip-block";
-import { getTripBlockColorByIndex } from "../../planId/_components/constants/trip-block-colors";
 import type { TripBlockColorId, TripBlockData } from "../../planId/_components/constants/types";
 
 import { EvPlanDisclaimer, hasChargerStops } from "./ev-plan-disclaimer";
 import type { PublicAnchor, PublicDay, PublicItem, PublicPlanSnapshot } from "./publication-api";
+import { sharedDayColorId } from "./shared-plan-blocks";
 
 /**
  * Renders a published snapshot, and nothing else.
@@ -165,7 +165,7 @@ function ItemCard({ item, currency, position, colorId }: { item: PublicItem; cur
 
 function DaySection({ day, currency, index }: { day: PublicDay; currency?: string; index: number }) {
   const items = day.items ?? [];
-  const colorId = getTripBlockColorByIndex(index);
+  const colorId = sharedDayColorId(day, index);
   const block: TripBlockData = {
     id: `published-day-${index}`,
     kind: "itinerary",

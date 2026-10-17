@@ -2,11 +2,13 @@ import { getTripBlockColorByIndex } from "../../planId/_components/constants/tri
 import type {
   EvConnectorType,
   PlaceItemEvChargerDetails,
+  TripBlockColorId,
   TripBlockData,
   TripBlockItem,
 } from "../../planId/_components/constants/types";
 import type { TripBudgetState, CurrencyCode } from "../../planId/_components/budget/budget.types";
-import type { PublicCharger, PublicItem, PublicPlanSnapshot } from "./publication-api";
+import { isPaletteColorId } from "../../../../../lib/palette/palette-colors";
+import type { PublicCharger, PublicDay, PublicItem, PublicPlanSnapshot } from "./publication-api";
 
 /**
  * Turns a published snapshot into the planner's own block model, so a shared
@@ -94,6 +96,14 @@ function toItem(item: PublicItem, id: string): TripBlockItem | null {
   };
 }
 
+/**
+ * The color the owner gave the day. Plans published before colors were shared,
+ * or with a value that is not a palette id, fall back to the default sequence.
+ */
+export function sharedDayColorId(day: PublicDay, dayIndex: number): TripBlockColorId {
+  return isPaletteColorId(day.colorId) ? day.colorId : getTripBlockColorByIndex(dayIndex);
+}
+
 export function toSharedPlanBlocks(plan: PublicPlanSnapshot): TripBlockData[] {
   return (plan.days ?? []).map((day, dayIndex) => {
     const blockId = `shared-day-${dayIndex + 1}`;
@@ -102,7 +112,7 @@ export function toSharedPlanBlocks(plan: PublicPlanSnapshot): TripBlockData[] {
       kind: "itinerary",
       title: day.label,
       date: day.date ?? "",
-      colorId: getTripBlockColorByIndex(dayIndex),
+      colorId: sharedDayColorId(day, dayIndex),
       items: (day.items ?? []).flatMap((item, itemIndex) => {
         const mapped = toItem(item, `${blockId}-item-${itemIndex + 1}`);
         return mapped ? [mapped] : [];

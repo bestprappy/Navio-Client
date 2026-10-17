@@ -25,7 +25,8 @@ import { cn } from "@/lib/utils";
 import "mapbox-gl/dist/mapbox-gl.css";
 
 import { ChargerPreviewPanel } from "./_components/charger/charger-preview-panel";
-import { defaultRouteMapColor, getTripBlockColorById } from "./_components/constants/trip-block-colors";
+import { defaultRouteMapColor } from "./_components/constants/trip-block-colors";
+import { useTripBlockColorResolver } from "./_components/constants/use-trip-block-color";
 import type { TripBlockData } from "./_components/constants/types";
 import { activeEvCarAtom } from "./_components/garage/garage.atoms";
 import { isCompatible } from "./_components/garage/ev-calculator";
@@ -163,15 +164,16 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
     () => new Set(selectedTripPlaces.map((place) => place.placeId)),
     [selectedTripPlaces],
   );
+  const resolveBlockColor = useTripBlockColorResolver();
   const blockColorById = useMemo(
     () =>
       new globalThis.Map(
         tripBlocks.map((block) => [
           block.id,
-          getTripBlockColorById(block.colorId),
+          resolveBlockColor(block.colorId),
         ]),
     ),
-    [tripBlocks],
+    [tripBlocks, resolveBlockColor],
   );
   const routeColorByBlockId = useRouteColorByBlockId(tripBlocks);
   const activeSearchColor = activeSearch
@@ -740,14 +742,15 @@ function getRouteFeatureCollection(
 function useRouteColorByBlockId(
   tripBlocks: TripBlockData[],
 ): globalThis.Map<string, string> {
+  const resolveColor = useTripBlockColorResolver();
   return useMemo(() => {
     const map = new globalThis.Map<string, string>();
     tripBlocks.forEach((block) => {
-      const blockColor = getTripBlockColorById(block.colorId);
+      const blockColor = resolveColor(block.colorId);
       map.set(block.id, blockColor.mapColor);
     });
     return map;
-  }, [tripBlocks]);
+  }, [tripBlocks, resolveColor]);
 }
 
 function getDistanceKm(

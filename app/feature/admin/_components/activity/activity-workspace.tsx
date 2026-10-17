@@ -9,7 +9,7 @@ import { AdminErrorState, AdminLoadingRows } from "../admin-query-state";
 import { formatAdminDateTime } from "../admin-format";
 import { activityKeys, activityLabel, listActivity, type ActivityEvent } from "./activity-api";
 
-const RESOURCE_TYPES = ["USER", "VEHICLE_MODEL", "USER_VEHICLE", "USER_SAVED_PLACE"] as const;
+const RESOURCE_TYPES = ["USER", "VEHICLE_MODEL", "PALETTE_COLOR", "USER_VEHICLE", "USER_SAVED_PLACE"] as const;
 
 export function ActivityWorkspace() {
   const search = useSearchParams();

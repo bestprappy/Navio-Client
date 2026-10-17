@@ -9,16 +9,11 @@ import { Input } from "@/components/ui/input";
 import { PopoverTitle } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-import { getTripBlockColorById } from "../../../../planner/planId/_components/constants/trip-block-colors";
+import { usePaletteOptions } from "../../../../planner/planId/_components/constants/use-trip-block-color";
 import type { TripBlockColorId } from "../../../../planner/planId/_components/constants/types";
 import { CategoryIcon } from "../category-icon";
 import { GUIDE_ICONS } from "../guide-icons";
 import { GUIDE_ICON_IDS, type GuideCategory, type GuideIconId } from "../guide-model";
-
-/** Distinct hues from the planner palette; enough to tell a dozen categories apart on the map. */
-export const CATEGORY_COLOR_IDS: readonly TripBlockColorId[] = [
-  "blue", "sky", "teal", "emerald", "lime", "gold", "amber", "coral", "rose", "fuchsia", "violet", "slate",
-];
 
 const NAME_MAX = 40;
 
@@ -39,6 +34,7 @@ export function CategoryForm({ initial, useCount, onSubmit, onDelete, onCancel }
   const [colorId, setColorId] = useState<TripBlockColorId>(initial?.colorId ?? "teal");
   const [error, setError] = useState<string | null>(null);
   const radioName = useId();
+  const colorOptions = usePaletteOptions();
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,8 +96,8 @@ export function CategoryForm({ initial, useCount, onSubmit, onDelete, onCancel }
       <FieldSet className="gap-2">
         <FieldLegend variant="label">Color</FieldLegend>
         <div className="grid grid-cols-6 gap-1.5">
-          {CATEGORY_COLOR_IDS.map((id) => {
-            const color = getTripBlockColorById(id);
+          {colorOptions.map((color) => {
+            const id = color.id;
             return (
               <label key={id} title={color.label} className="relative flex justify-center">
                 <input type="radio" name={`${radioName}-color`} value={id} checked={colorId === id} onChange={() => setColorId(id)} className="peer sr-only" />

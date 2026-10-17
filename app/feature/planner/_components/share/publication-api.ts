@@ -70,6 +70,8 @@ export type PublicDay = {
   label: string;
   date?: string;
   title?: string;
+  /** Palette color the owner gave the day; absent on plans published before colors were shared. */
+  colorId?: string;
   startsAt?: PublicAnchor;
   endsAt?: PublicAnchor;
   items?: PublicItem[];

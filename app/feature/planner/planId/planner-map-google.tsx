@@ -20,7 +20,7 @@ import { sidebarCollapsedAtom } from "@/app/configs/constant";
 import { cn } from "@/lib/utils";
 
 import { ChargerPreviewPanel } from "./_components/charger/charger-preview-panel";
-import { getTripBlockColorById } from "./_components/constants/trip-block-colors";
+import { useTripBlockColorResolver } from "./_components/constants/use-trip-block-color";
 import type { TripBlockData } from "./_components/constants/types";
 import { activeEvCarAtom } from "./_components/garage/garage.atoms";
 import { isCompatible } from "./_components/garage/ev-calculator";
@@ -175,14 +175,15 @@ function MapUnavailable({ message }: { message: string }) {
 function useRouteColorByBlockId(
   tripBlocks: TripBlockData[],
 ): globalThis.Map<string, string> {
+  const resolveColor = useTripBlockColorResolver();
   return useMemo(() => {
     const map = new globalThis.Map<string, string>();
     tripBlocks.forEach((block) => {
-      const blockColor = getTripBlockColorById(block.colorId);
+      const blockColor = resolveColor(block.colorId);
       map.set(block.id, blockColor.mapColor);
     });
     return map;
-  }, [tripBlocks]);
+  }, [tripBlocks, resolveColor]);
 }
 
 // --- Main component ---
@@ -232,15 +233,16 @@ export function PlannerMapGoogle({ latitude, longitude }: PlannerMapGoogleProps)
     () => new Set(selectedTripPlaces.map((place) => place.placeId)),
     [selectedTripPlaces],
   );
+  const resolveBlockColor = useTripBlockColorResolver();
   const blockColorById = useMemo(
     () =>
       new globalThis.Map(
         tripBlocks.map((block) => [
           block.id,
-          getTripBlockColorById(block.colorId),
+          resolveBlockColor(block.colorId),
         ]),
       ),
-    [tripBlocks],
+    [tripBlocks, resolveBlockColor],
   );
   const routeColorByBlockId = useRouteColorByBlockId(tripBlocks);
   const activeSearchColor = activeSearch

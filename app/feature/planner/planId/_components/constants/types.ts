@@ -155,7 +155,8 @@ export type PlaceSearchResult = {
   primaryType?: string;
 };
 
-export type TripBlockColorId =
+/** Colors that ship with Navio; their tokens live in globals.css. */
+export type BuiltInTripBlockColorId =
   | "teal"
   | "cyan"
   | "blue"
@@ -180,6 +181,12 @@ export type TripBlockColorId =
   | "mocha"
   | "stone"
   | "graphite";
+
+/**
+ * A palette color id. Administrators add colors at runtime, so any id matching
+ * PALETTE_COLOR_ID_PATTERN is valid; the built-in names stay for autocomplete.
+ */
+export type TripBlockColorId = BuiltInTripBlockColorId | (string & {});
 
 export type TripBlockKind = "itinerary" | "list";
 

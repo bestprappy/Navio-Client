@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { tripBlockColorOptions } from "../../../planner/planId/_components/constants/trip-block-colors";
+import { PALETTE_COLOR_ID_PATTERN } from "../../../../../lib/palette/palette-colors";
 import type { TripBlockColorId } from "../../../planner/planId/_components/constants/types";
 import { paragraphMarkdown } from "./data";
 import { GUIDE_ICON_IDS, guidePlaceMarkdown, placeKey, placeListMarkdown, type Guide, type GuidePlace } from "./guide-model";
@@ -21,8 +21,8 @@ export const LEGACY_GUIDE_STORAGE_KEY = "navio.admin.guides.v1";
 /** A guide as it was saved in a browser: no server status, version or editor yet. */
 export type LocalGuide = Omit<Guide, "status" | "version" | "publishedAt" | "updatedByName">;
 
-const COLOR_IDS = new Set<string>(tripBlockColorOptions.map((option) => option.id));
-const colorId = z.string().refine((value): value is TripBlockColorId => COLOR_IDS.has(value));
+/** Any palette id: administrators add colors, so the set is not known at build time. */
+const colorId = z.string().regex(PALETTE_COLOR_ID_PATTERN).transform((value): TripBlockColorId => value);
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,255}$/);
 const provider = z.enum(["GOOGLE", "MAPBOX"]);
 
