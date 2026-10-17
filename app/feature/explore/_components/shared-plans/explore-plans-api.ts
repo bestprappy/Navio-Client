@@ -92,6 +92,39 @@ export async function fetchExplorePlansPage(
   return parseExplorePlansPage(await response.json());
 }
 
+const SHARE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
+/** Share tokens are 32 random bytes in base64url; anything else cannot name a plan. */
+export function isShareToken(value: string | null | undefined): value is string {
+  return typeof value === "string" && SHARE_TOKEN_PATTERN.test(value);
+}
+
+/** Under the feed key, so publish/unlist invalidations refresh single cards too. */
+export function explorePlanSummaryQueryKey(token: string) {
+  return [...EXPLORE_SHARED_PLANS_QUERY_KEY, "summary", token] as const;
+}
+
+/** One listed plan's card, or null when the plan is no longer listed on Explore. */
+export async function fetchExplorePlanSummary(
+  token: string,
+  signal?: AbortSignal,
+): Promise<ExplorePlan | null> {
+  const response = await fetch(`/api/shared-plans/${encodeURIComponent(token)}/summary`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+    signal,
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new ExplorePlansError("This plan could not be loaded.", response.status);
+  }
+  const parsed = explorePlanSchema.safeParse(await response.json());
+  if (!parsed.success) {
+    throw new ExplorePlansError("Explore returned a plan in an unexpected format.", 502);
+  }
+  return parsed.data;
+}
+
 /** The Explore reading page for a listed plan. */
 export function explorePlanPath(token: string): string {
   return `/explore/shared/${encodeURIComponent(token)}`;

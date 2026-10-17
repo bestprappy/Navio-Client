@@ -14,7 +14,7 @@ type CommunityCreateRouteProps = {
   searchParams: Promise<{
     groupId?: string | string[];
     groupSlug?: string | string[];
-    planId?: string | string[];
+    plan?: string | string[];
   }>;
 };
 
@@ -36,10 +36,10 @@ export default async function CommunityCreateRoute({
     const query = new URLSearchParams();
     const groupId = getSearchParamValue(params.groupId);
     const groupSlug = getSearchParamValue(params.groupSlug);
-    const planId = getSearchParamValue(params.planId);
     if (groupId) query.set("groupId", groupId);
     if (groupSlug) query.set("groupSlug", groupSlug);
-    if (planId) query.set("planId", planId);
+    const plan = getSearchParamValue(params.plan);
+    if (plan) query.set("plan", plan);
     const callbackUrl = query.size
       ? `/community/create?${query.toString()}`
       : "/community/create";
@@ -50,7 +50,7 @@ export default async function CommunityCreateRoute({
     <CommunityCreatePage
       initialGroupId={getSearchParamValue(params.groupId)}
       initialGroupSlug={getSearchParamValue(params.groupSlug)}
-      initialPlanId={getSearchParamValue(params.planId)}
+      initialPlanToken={getSearchParamValue(params.plan)}
     />
   );
 }

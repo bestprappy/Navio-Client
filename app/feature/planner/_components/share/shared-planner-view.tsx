@@ -4,9 +4,10 @@ import { useCallback, useMemo } from "react";
 import Link from "next/link";
 import { Provider } from "jotai";
 import { useHydrateAtoms } from "jotai/utils";
-import { ArrowLeft, Eye, MapPin } from "lucide-react";
+import { ArrowLeft, Eye, MapPin, MessageSquarePlus } from "lucide-react";
 
 import { CopySharedPlanButton } from "@/app/feature/explore/_components/shared-plans/copy-shared-plan-button";
+import { Button } from "@/components/ui/button";
 import { PlanAuthor } from "@/app/feature/explore/_components/shared-plans/plan-author";
 import { getCurrencyOption } from "../../planId/_components/budget/budget.data";
 import { BudgetSection } from "../../planId/_components/budget/budget-section";
@@ -127,7 +128,23 @@ function SharedPlannerWorkspace({ shared, token, backLink }: SharedPlannerViewPr
             </p>
           )}
           {hasChargerStops(plan) && <EvPlanDisclaimer />}
-          {token && <CopySharedPlanButton token={token} hasUnlocatedStops={hasUnlocatedStops} />}
+          {token && (
+            <div className="flex flex-wrap items-start gap-2">
+              <CopySharedPlanButton token={token} hasUnlocatedStops={hasUnlocatedStops} />
+              {/* Only listed plans can be attached to a post; an unlisted link stays private. */}
+              {shared.listedInExplore && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href={`/community/create?${new URLSearchParams({ plan: token })}`} />}
+                >
+                  <MessageSquarePlus className="size-4" aria-hidden="true" />
+                  Discuss in Community
+                </Button>
+              )}
+            </div>
+          )}
         </TripInfoCardShell>
 
         <TripBuilderErrorBoundary>
