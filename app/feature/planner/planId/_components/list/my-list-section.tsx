@@ -87,9 +87,11 @@ export function MyListSection({
           </div>
 
           <AccordionContent className="pt-0">
-            <SavedPlacesSection />
-            {listBlocks.length === 0 && (
+            {/* Saved places are collected from lists, so with no lists the callout is the only useful state. */}
+            {listBlocks.length === 0 ? (
               <EmptyMyListCallout onCreateList={addMyListBlock} />
+            ) : (
+              <SavedPlacesSection />
             )}
             <div className="space-y-8 pb-8 pt-2">
               {visibleBlocks.map((block) => (

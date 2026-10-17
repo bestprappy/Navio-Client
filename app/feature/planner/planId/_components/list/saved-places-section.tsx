@@ -172,7 +172,7 @@ export function SavedPlacesSection() {
           <div className="max-h-96 space-y-1 overflow-y-auto">
             {!saved.length && (
               <p className="rounded-xl bg-muted/40 px-3 py-4 text-sm text-muted-foreground">
-                Places you add from Explore will appear here.
+                Add places to a list below, or save them from Explore.
               </p>
             )}
             {!!saved.length && !visible.length && (
