@@ -10,6 +10,7 @@ import type { ExplorePlan } from "./explore-plans-api";
 import { SharedPlanCard } from "./shared-plan-card";
 
 type SharedPlansSectionProps = {
+  kind?: "recent" | "trending";
   plans: ExplorePlan[];
   total: number;
   isLoading: boolean;
@@ -30,6 +31,7 @@ function SharedPlansGrid({ children }: { children: React.ReactNode }) {
 
 /** Plans travellers published and listed, newest first. */
 export function SharedPlansSection({
+  kind = "recent",
   plans,
   total,
   isLoading,
@@ -41,15 +43,17 @@ export function SharedPlansSection({
   onRetry,
   query = "",
 }: SharedPlansSectionProps) {
+  const trending = kind === "trending";
+  const headingId = trending ? "trending-plans-title" : SHARED_PLANS_HEADING_ID;
   return (
-    <section className="space-y-4" aria-labelledby={SHARED_PLANS_HEADING_ID}>
+    <section className="space-y-4" aria-labelledby={headingId}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 id={SHARED_PLANS_HEADING_ID} className="text-lg font-semibold text-foreground">
-            Recent plans shared by travelers
+          <h2 id={headingId} className="text-lg font-semibold text-foreground">
+            {trending ? "Trending plans" : "Recent plans shared by travelers"}
           </h2>
           <p className="text-sm text-muted-foreground">
-            The newest plans travelers chose to share.
+            {trending ? "Discover the shared itineraries travelers are opening most." : "The newest plans travelers chose to share."}
           </p>
         </div>
         {total > 0 && (
@@ -61,7 +65,7 @@ export function SharedPlansSection({
 
       {isLoading ? (
         <SharedPlansGrid>
-          {[0, 1, 2].map((key) => (
+          {[0, 1, 2, 3, 4, 5].map((key) => (
             <div key={key} className="space-y-3 rounded-lg border border-border bg-card p-0" aria-hidden="true">
               <Skeleton className="aspect-video w-full rounded-b-none" />
               <div className="space-y-2 p-4">
@@ -114,7 +118,7 @@ export function SharedPlansSection({
             <div className="flex flex-col items-start gap-2">
               <Button type="button" variant="outline" disabled={isFetchingMore} onClick={onLoadMore}>
                 {isFetchingMore && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-                {isFetchingMore ? "Loading…" : "Show more shared plans"}
+                {isFetchingMore ? "Loading…" : trending ? "Load more trending plans" : "Show more shared plans"}
               </Button>
               {loadMoreFailed && (
                 <p role="alert" className="text-sm text-destructive">

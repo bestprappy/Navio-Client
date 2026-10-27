@@ -4,6 +4,8 @@ import { placesEnabled } from "../feature/explore/places/places-config";
 import { ExplorePage } from "../feature/explore/_components/explore-page";
 import { fetchExplorePlansFromGateway } from "../feature/explore/_components/shared-plans/explore-plans-server";
 
+import { TRENDING_PAGE_SIZE } from "../feature/explore/_components/shared-plans/explore-plans-api";
+
 export const metadata: Metadata = {
   title: "Explore plans, guides and places - Navio",
   description:
@@ -19,7 +21,7 @@ export default async function ExploreRoute({ searchParams }: { searchParams: Pro
   // the page. A failure here is not fatal: the section retries in the browser.
   const [sharedPlans, trendingPlans] = await Promise.all([
     search.tab === "guides" || search.tab === "places" ? null : fetchExplorePlansFromGateway(),
-    search.tab === "guides" || search.tab === "places" ? null : fetchExplorePlansFromGateway(0, 3, "trending"),
+    search.tab === "guides" || search.tab === "places" ? null : fetchExplorePlansFromGateway(0, TRENDING_PAGE_SIZE, "trending"),
   ]);
 
   return (

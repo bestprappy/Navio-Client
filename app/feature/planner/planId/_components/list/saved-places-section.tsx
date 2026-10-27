@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactElement, type ComponentProps } from "react";
 import Image from "next/image";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
@@ -236,12 +236,20 @@ export function SavedPlacesSection() {
   );
 }
 
-export function DaySavedPlacesPicker({ dayId }: { dayId: string }) {
+export function DaySavedPlacesPicker({ dayId, beforeItemId, open: controlledOpen, onOpenChange, trigger, finalFocus }: {
+  dayId: string;
+  beforeItemId?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: ReactElement | null;
+  finalFocus?: ComponentProps<typeof ResponsivePicker>["finalFocus"];
+}) {
   const saved = useAtomValue(savedListPlacesAtom);
   const blocks = useAtomValue(tripBlocksAtom);
   const readOnly = useAtomValue(plannerReadOnlyAtom);
   const schedule = useSetAtom(scheduleSavedPlaceAtom);
-  const [open, setOpen] = useState(false);
+  const [localOpen, setOpen] = useState(false);
+  const open = controlledOpen ?? localOpen;
   const [search, setSearch] = useState("");
   const [message, setMessage] = useState("");
   if (readOnly) return null;
@@ -252,10 +260,12 @@ export function DaySavedPlacesPicker({ dayId }: { dayId: string }) {
   );
   return (
     <ResponsivePicker
-      desktop="popover"
+      desktop={trigger === null ? "dialog" : "popover"}
+      finalFocus={finalFocus}
       open={open}
       onOpenChange={(value) => {
         setOpen(value);
+        onOpenChange?.(value);
         if (!value) {
           setSearch("");
           setMessage("");
@@ -263,7 +273,7 @@ export function DaySavedPlacesPicker({ dayId }: { dayId: string }) {
       }}
       title="Saved places"
       description="Add from My List to this day. Your saved copy stays in My List."
-      trigger={
+      trigger={trigger === undefined ? (
         <Button
           type="button"
           variant="outline"
@@ -275,7 +285,7 @@ export function DaySavedPlacesPicker({ dayId }: { dayId: string }) {
           <span className="hidden @lg/planner:inline">Saved places</span>
           <span className="text-xs tabular-nums">{saved.length}</span>
         </Button>
-      }
+      ) : trigger}
     >
       <Input
         aria-label="Search places for this day"
@@ -307,8 +317,8 @@ export function DaySavedPlacesPicker({ dayId }: { dayId: string }) {
               disabled={added}
               className="h-auto min-h-16 w-full justify-start gap-3 whitespace-normal px-2 py-2 text-left"
               onClick={() => {
-                const id = schedule({ placeId: savedPlaceKey(place), dayId });
-                if (id) setMessage(`${place.name} added to this day.`);
+                const id = schedule({ placeId: savedPlaceKey(place), dayId, beforeItemId });
+                setMessage(id ? `${place.name} added to this day.` : "The insertion point changed. Close this picker and choose a gap again.");
               }}
             >
               <SavedPlaceThumbnail place={place} />

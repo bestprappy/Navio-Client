@@ -1,6 +1,6 @@
 import { memo } from "react";
 import Link from "next/link";
-import { MapPin } from "lucide-react";
+import { CalendarDays, MapPin, Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -10,7 +10,8 @@ import {
   type ExplorePlan,
 } from "./explore-plans-api";
 import { PlanAuthor } from "./plan-author";
-import { RouteStrip } from "./route-strip";
+import { PlanCover } from "./plan-cover";
+import { PlanEngagement } from "./plan-engagement";
 
 type SharedPlanCardProps = {
   plan: ExplorePlan;
@@ -18,96 +19,24 @@ type SharedPlanCardProps = {
   layout?: "tile" | "row" | "planner";
 };
 
-/** Fixed locale and UTC so the server render and the browser agree on hydration. */
-function formatListedDate(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
-}
-
-function joinHighlights(names: string[]): string | null {
-  if (names.length === 0) return null;
-  if (names.length === 1) return names[0];
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-}
-
-function PlanCover({ plan, className }: { plan: ExplorePlan; className?: string }) {
-  const destination = plan.destinationCity || plan.destinationCountry;
-  return (
-    <div className={cn("relative overflow-hidden bg-muted", className)}>
-      {plan.coverImageUrl ? (
-        // A plain img, not next/image: covers come from arbitrary place-photo
-        // hosts, and no-referrer keeps the Navio URL out of their logs.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={plan.coverImageUrl}
-          alt=""
-          loading="lazy"
-          decoding="async"
-          referrerPolicy="no-referrer"
-          // Absolute so the photo fills the cover instead of sizing the card:
-          // a portrait image would otherwise make a row card very tall.
-          className="absolute inset-0 size-full object-cover"
-        />
-      ) : (
-        <ItineraryCover plan={plan} destination={destination} />
-      )}
-    </div>
-  );
-}
-
-const COVER_DAY_ROWS = 3;
-
-/**
- * With no photo, the cover is the itinerary itself: one row per day. It says
- * more about the trip than a stock image would, and it is unique to the plan.
- * Hidden from assistive technology because the card's route strip already
- * announces the same shape.
- */
-function ItineraryCover({ plan, destination }: { plan: ExplorePlan; destination?: string | null }) {
-  const rows = plan.days.slice(0, COVER_DAY_ROWS);
-  const moreDays = plan.days.length - rows.length;
-  return (
-    <div aria-hidden="true" className="flex size-full flex-col justify-between gap-3 p-4">
-      <span className="text-lg font-semibold text-foreground/70">{destination ?? "Road trip"}</span>
-      <div className="space-y-1.5">
-        {rows.map((day, index) => (
-          <div key={index} className="flex items-center gap-3">
-            <span className="w-11 shrink-0 text-xs font-medium text-muted-foreground">Day {index + 1}</span>
-            <RouteStrip days={[day]} placeCount={0} chargerCount={0} surface="muted" />
-          </div>
-        ))}
-        {moreDays > 0 && (
-          <p className="pl-14 text-xs text-muted-foreground">
-            and {moreDays} more {moreDays === 1 ? "day" : "days"}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 /**
  * A plan a Navio traveller published and listed on Explore.
  *
  * <p>Sits beside the curated plan cards and follows their structure — cover,
  * title, place, footer — so the feed reads as one list. What differs is the
- * route strip, drawn from the real itinerary, and the absence of likes and
- * ratings, which shared plans do not have.
+ * duration, stop counts, real recorded activity and an explicit unrated state.
  */
 export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "tile" }: SharedPlanCardProps) {
   const href = explorePlanPath(plan.token);
   const destination = explorePlanDestination(plan);
-  const highlights = joinHighlights(plan.highlights);
-  const listed = formatListedDate(plan.listedAt);
+  const highlights = plan.highlights.slice(0, 3).join(", ");
   const isRow = layout === "row";
   const isPlanner = layout === "planner";
 
   return (
     <article
       className={cn(
-        "group relative flex h-full min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-background/90 shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:border-primary/25 hover:shadow-lg focus-within:ring-2 focus-within:ring-ring/50 motion-reduce:transition-none",
+        "group relative flex h-full min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-card shadow-xs transition-[border-color,box-shadow] duration-200 hover:border-primary/25 hover:shadow-md focus-within:ring-2 focus-within:ring-ring/50 motion-reduce:transition-none",
         isRow
           ? "flex-col sm:flex-row"
           : isPlanner
@@ -119,19 +48,20 @@ export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "til
         plan={plan}
         className={
           isRow
-            ? "aspect-video sm:aspect-auto sm:min-h-48 sm:w-72 sm:shrink-0"
+            ? "aspect-[16/9] sm:aspect-auto sm:min-h-48 sm:w-60 sm:shrink-0"
             : isPlanner
               ? "aspect-[16/7] bg-muted/70 @min-[30rem]:aspect-auto @min-[30rem]:min-h-40 @min-[30rem]:w-[42%] @min-[30rem]:shrink-0"
-              : "aspect-video"
+              : "aspect-[16/9]"
         }
       />
 
-      <div className={cn("flex min-w-0 flex-1 flex-col p-4", isPlanner ? "gap-2.5" : "gap-3")}>
+      <div className="flex min-w-0 flex-1 flex-col gap-2.5 p-4">
         <div className={cn("min-w-0 space-y-1", isPlanner && "@min-[30rem]:pr-16")}>
-          <h3 className="line-clamp-2 text-base font-semibold text-foreground">
+          <h3 className="line-clamp-2 min-h-11 text-base font-semibold leading-snug tracking-tight text-foreground">
             {/* Stretched link: the whole card is one target for pointer and keyboard. */}
             <Link
               href={href}
+              prefetch={false}
               className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-none group-hover:underline decoration-2 underline-offset-4"
             >
               {plan.title || destination || "Shared plan"}
@@ -145,7 +75,11 @@ export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "til
           )}
         </div>
 
-        <RouteStrip days={plan.days} placeCount={plan.placeCount} chargerCount={plan.chargerCount} />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-medium text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5"><CalendarDays className="size-3.5" aria-hidden="true" />{plan.dayCount} {plan.dayCount === 1 ? "day" : "days"}</span>
+          <span>{plan.placeCount} {plan.placeCount === 1 ? "place" : "places"}</span>
+          {plan.chargerCount > 0 && <span className="inline-flex items-center gap-1"><Zap className="size-3 text-charging" aria-hidden="true" />{plan.chargerCount} charging {plan.chargerCount === 1 ? "stop" : "stops"}</span>}
+        </div>
 
         {highlights && (
           <p className={cn("text-sm text-muted-foreground", isRow ? "line-clamp-2" : "line-clamp-1")}>
@@ -160,7 +94,10 @@ export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "til
           )}
         >
           <PlanAuthor name={plan.authorName} />
-          {listed && <span className="shrink-0">Listed {listed}</span>}
+
+        </div>
+        <div className="border-t border-border/60 pt-3">
+          <PlanEngagement viewCount={plan.viewCount} copyCount={plan.copyCount} />
         </div>
       </div>
     </article>

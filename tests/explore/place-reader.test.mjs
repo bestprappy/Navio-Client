@@ -79,6 +79,10 @@ test("reader leads with essentials, then real additional photos and visit detail
   );
   assert.ok(html.indexOf("Quiet Garden") < html.indexOf("one.jpg"));
   assert.match(html, /Second author/);
+  assert.doesNotMatch(html, /About this place|not ready yet/);
+  assert.equal(html.split(raw.place.description).length - 1, 1);
+  // Gallery attribution plus one shared lower attribution, each with light/dark assets.
+  assert.equal((html.match(/alt="Google Maps"/g) ?? []).length, 4);
   assert.match(html, /Monday/);
   assert.match(html, /9:00 AM – 5:00 PM/);
   assert.match(html, /overflow-y-auto/);
@@ -93,4 +97,23 @@ test("reader wheel zoom does not require Ctrl and retains zoom buttons", () => {
   assert.equal(readerMapOptions.gestureHandling, "greedy");
   assert.equal(readerMapOptions.scrollwheel, true);
   assert.equal(readerMapOptions.zoomControl, true);
+});
+
+test("deferring editorial articles restores provider description even for a catalogued place", () => {
+  const id="ChIJAQAAMCxu5kcRx--_4QnbGcI";
+  const client=new QueryClient();
+  client.setQueryData(["discovery-place",id],discoveryItemSchema.parse({
+    ...raw,place:{...raw.place,providerPlaceId:id,name:"Tuileries Garden",description:"Short provider summary",rating:1,reviewCount:0},
+  }));
+  const html=renderToStaticMarkup(React.createElement(AppRouterContext.Provider,{value:{back(){}}},
+    React.createElement(SearchParamsContext.Provider,{value:new URLSearchParams()},
+      React.createElement(SessionProvider,{session:null},
+        React.createElement(QueryClientProvider,{client},React.createElement(PlaceReader,{placeId:id}))))));
+  assert.doesNotMatch(html,/Navio editorial|About this place|Read the story|Show less/);
+  assert.match(html,/Short provider summary/);
+  assert.ok(html.indexOf("Short provider summary")<html.indexOf("Planning a visit"));
+
+  // Light/dark assets for the existing gallery logo and just one lower logo.
+  assert.equal((html.match(/alt="Google Maps"/g)??[]).length,4);
+  client.clear();
 });

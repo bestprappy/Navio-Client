@@ -64,6 +64,10 @@ export type PublicItem = {
   address?: string;
   lat?: number;
   lng?: number;
+  /** Optional on historical snapshots; applies only to a public stop-to-stop leg. */
+  arrivalMode?: "drive" | "transit" | "rail" | "bus" | "bike" | "walk";
+  arrivalRouteKey?: string;
+  placeType?: string;
 };
 
 export type PublicDay = {
@@ -97,6 +101,11 @@ export type PublicPlanSnapshot = {
   included?: PublicationOptions;
 };
 
+export type SharedPlanEngagement = {
+  viewCount?: number;
+  copyCount?: number;
+  uniqueCopierCount?: number;
+};
 export type SharedPlan = {
   plan: PublicPlanSnapshot;
   publishedAt: string;
@@ -104,7 +113,12 @@ export type SharedPlan = {
   listedInExplore: boolean;
   /** The owner's byline, or null. A display name only, never an account id. */
   authorName: string | null;
+  engagement?: SharedPlanEngagement;
 };
+
+function readEngagementCount(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -231,6 +245,11 @@ export function readSharedPlanResponse(value: unknown): SharedPlan {
     publishedAt: typeof value.publishedAt === "string" ? value.publishedAt : "",
     listedInExplore: value.listedInExplore === true,
     authorName: readAuthorName(value.authorName),
+    ...(value.listedInExplore === true && isRecord(value.engagement) ? { engagement: {
+      viewCount: readEngagementCount(value.engagement.viewCount),
+      copyCount: readEngagementCount(value.engagement.copyCount),
+      uniqueCopierCount: readEngagementCount(value.engagement.uniqueCopierCount),
+    }} : {}),
   };
 }
 

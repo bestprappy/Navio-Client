@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { CheckSquare, FileText, MapPin, Plus, X, Zap } from "lucide-react";
+import { Bookmark, CheckSquare, FileText, MapPin, Plus, X, Zap } from "lucide-react";
 import { useSetAtom } from "jotai";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -20,9 +20,11 @@ type InsertItemRowProps = {
   searchBias?: PlaceSearchBias;
   onAddEvStation: () => void;
   canAddEvStation: boolean;
+  onSavedPlaces?: (trigger: HTMLButtonElement | null) => void;
+  savedPickerOpen?: boolean;
 };
 
-export function InsertItemRow({ blockId, beforeItemId, afterItemId, label, open, onOpenChange, searchBias, onAddEvStation, canAddEvStation }: InsertItemRowProps) {
+export function InsertItemRow({ blockId, beforeItemId, afterItemId, label, open, onOpenChange, searchBias, onAddEvStation, canAddEvStation, onSavedPlaces, savedPickerOpen = false }: InsertItemRowProps) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const addNote = useSetAtom(addNoteToBlockAtom);
@@ -43,7 +45,7 @@ export function InsertItemRow({ blockId, beforeItemId, afterItemId, label, open,
   }
 
   return (
-    <div className="relative min-w-0" data-no-drag data-insertion-before={beforeItemId} data-insertion-after={afterItemId} data-insertion-expanded={open || menuOpen ? "true" : undefined}>
+    <div className="relative min-w-0" data-no-drag data-insertion-before={beforeItemId} data-insertion-after={afterItemId} data-insertion-expanded={open || menuOpen || savedPickerOpen ? "true" : undefined}>
       <div className="relative z-10 flex h-8 items-center justify-center">
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger
@@ -56,10 +58,13 @@ export function InsertItemRow({ blockId, beforeItemId, afterItemId, label, open,
               <Plus className="size-5" aria-hidden="true" />
             </span>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-52 p-1.5" finalFocus={open ? false : undefined}>
+          <DropdownMenuContent align="center" className="w-52 p-1.5" finalFocus={open || savedPickerOpen ? false : undefined}>
             <DropdownMenuItem className={menuItemClass} onClick={() => onOpenChange(true)}>
               <MapPin className="size-4 text-muted-foreground" aria-hidden="true" />Add a place
             </DropdownMenuItem>
+            {onSavedPlaces && <DropdownMenuItem className={menuItemClass} onClick={() => onSavedPlaces(triggerRef.current)}>
+              <Bookmark className="size-4 text-muted-foreground" aria-hidden="true" />Saved places
+            </DropdownMenuItem>}
             <DropdownMenuItem className={menuItemClass} onClick={() => addTextItem("note")}>
               <FileText className="size-4 text-muted-foreground" aria-hidden="true" />Add a note
             </DropdownMenuItem>

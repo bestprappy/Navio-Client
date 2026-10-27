@@ -19,8 +19,8 @@ const { SortableBlockItems } = await import("../../app/feature/planner/planId/_c
 const { tripBlocksAtom, plannerReadOnlyAtom } = await import("../../app/feature/planner/planId/_components/overview/trip-builder.atoms.ts");
 const { longDay } = await import("./place-insertion/data.ts");
 
-function renderItems(readOnly = false) {
-  const block = { ...longDay, items: longDay.items.slice(0, 2) };
+function renderItems(readOnly = false, count = 2) {
+  const block = { ...longDay, items: longDay.items.slice(0, count) };
   const store = createStore();
   store.set(tripBlocksAtom, [block]);
   store.set(plannerReadOnlyAtom, readOnly);
@@ -50,4 +50,9 @@ test("read-only cards never expose insertion gaps or drag controls", () => {
   assert.doesNotMatch(html, /data-insertion-gap|Add an item here|aria-label="Drag item"/);
   assert.match(html, /trip-item-stop-1/);
   assert.match(html, /trip-item-stop-2/);
+});
+
+test("an empty itinerary exposes one insertion gap, including between day anchors", () => {
+  assert.equal((renderItems(false, 0).match(/data-insertion-gap="true"/g) ?? []).length, 1);
+  assert.doesNotMatch(renderItems(true, 0), /data-insertion-gap/);
 });

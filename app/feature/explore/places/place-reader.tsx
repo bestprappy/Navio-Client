@@ -28,6 +28,8 @@ import {
 import { AddPlaceToPlan, DiscoveryPlanBanner } from "./plan-context";
 import { PhotoCredit } from "./places-discovery";
 import { readPlace, safeExternalUrl, type DiscoveryItem } from "./places-api";
+// [DEFERRED][EXCLUDE_FROM_REPORT] PLACES_EDITORIAL: integration retained for future work.
+// import { PlaceArticle } from "./place-article";
 import { GoogleAttribution } from "./google-attribution";
 
 export const readerMapOptions = {
@@ -303,7 +305,7 @@ export function PlaceReader({ placeId }: { placeId: string }) {
                 </p>
               </aside>
             )}
-            <ReaderPhotos key={placeId} item={item} />
+            <ReaderPhotos key={`photos:${placeId}`} item={item} />
             <section
               id="reader-visit-details"
               className="scroll-mt-5 space-y-4 rounded-2xl border border-border bg-card p-5"
@@ -375,6 +377,9 @@ export function PlaceReader({ placeId }: { placeId: string }) {
                 </a>
               </div>
             </section>
+            {/* [DEFERRED][EXCLUDE_FROM_REPORT] PLACES_EDITORIAL - do not enable without a new request.
+            <PlaceArticle key={`article:${placeId}`} item={item} />
+            */}
             <GoogleAttribution />
           </div>
         </article>

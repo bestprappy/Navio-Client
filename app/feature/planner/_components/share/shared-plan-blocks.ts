@@ -92,6 +92,9 @@ function toItem(item: PublicItem, id: string): TripBlockItem | null {
     time: item.time,
     timeEnd: item.timeEnd,
     cost: item.cost,
+    arrivalMode: item.arrivalMode,
+    arrivalRouteKey: item.arrivalRouteKey,
+    placeType: item.placeType,
     evCharger: isCharger ? toChargerDetails(item.charger) : undefined,
   };
 }

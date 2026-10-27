@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactElement, ReactNode } from "react";
+import type { ReactElement, ReactNode, ComponentProps } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Dialog,
@@ -27,7 +27,8 @@ import {
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  trigger: ReactElement;
+  trigger?: ReactElement | null;
+  finalFocus?: ComponentProps<typeof DialogContent>["finalFocus"];
   title: string;
   description: string;
   children: ReactNode;
@@ -39,6 +40,7 @@ export function ResponsivePicker({
   open,
   onOpenChange,
   trigger,
+  finalFocus,
   title,
   description,
   children,
@@ -48,8 +50,9 @@ export function ResponsivePicker({
   if (mobile)
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetTrigger render={trigger} />
+        {trigger && <SheetTrigger render={trigger} />}
         <SheetContent
+          finalFocus={finalFocus}
           side="bottom"
           className="max-h-[85dvh] overflow-y-auto rounded-t-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]"
         >
@@ -64,8 +67,9 @@ export function ResponsivePicker({
   if (desktop === "popover")
     return (
       <Popover open={open} onOpenChange={onOpenChange}>
-        <PopoverTrigger render={trigger} />
+        {trigger && <PopoverTrigger render={trigger} />}
         <PopoverContent
+          finalFocus={finalFocus}
           align="end"
           className="w-[min(24rem,calc(100vw-2rem))] max-h-[min(34rem,var(--available-height))] overflow-y-auto p-4"
         >
@@ -79,8 +83,8 @@ export function ResponsivePicker({
     );
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger render={trigger} />
-      <DialogContent className="max-h-[85dvh] overflow-y-auto rounded-2xl p-5 sm:max-w-lg">
+      {trigger && <DialogTrigger render={trigger} />}
+      <DialogContent finalFocus={finalFocus} className="max-h-[85dvh] overflow-y-auto rounded-2xl p-5 sm:max-w-lg">
         <div className="space-y-2 pr-7">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>

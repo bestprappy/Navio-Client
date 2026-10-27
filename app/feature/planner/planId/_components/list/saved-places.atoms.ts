@@ -16,7 +16,7 @@ export const savedListPlacesAtom = atom((get) =>
 
 export const scheduleSavedPlaceAtom = atom(
   null,
-  (get, set, payload: { placeId: string; dayId: string }) => {
+  (get, set, payload: { placeId: string; dayId: string; beforeItemId?: string }) => {
     if (get(plannerReadOnlyAtom)) return;
     const saved = get(savedListPlacesAtom).find(
       (entry) => savedPlaceKey(entry.place) === payload.placeId,
@@ -29,6 +29,7 @@ export const scheduleSavedPlaceAtom = atom(
     return set(addPlaceVisitToBlockAtom, {
       blockId: payload.dayId,
       place: saved.place,
+      beforeItemId: payload.beforeItemId,
     });
   },
 );

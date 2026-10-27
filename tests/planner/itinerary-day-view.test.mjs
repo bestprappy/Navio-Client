@@ -20,6 +20,24 @@ function plannerStore() {
   return store;
 }
 
+test("undated and malformed shared-plan days render in both modes without inventing dates", () => {
+  for (const date of ["", "not-a-date", "2026-99-99"]) {
+    for (const view of ["all", "single"]) {
+      const store = plannerStore();
+      store.set(tripBlocksAtom, dayViewBlocks.map(block => block.id === "day-2" ? { ...block, date } : block));
+      store.set(itineraryDayViewAtom, view);
+      const html = renderToStaticMarkup(createElement(Provider, { store }, createElement(ItineraryDayControls)));
+      assert.match(html, /Days displayed/);
+      assert.doesNotMatch(html, /Invalid Date|NaN/);
+      if (view === "single") {
+        assert.match(html, /Day 2/);
+        assert.match(html, /Date not set/);
+      }
+      assert.equal(store.get(tripBlocksAtom).find(block => block.id === "day-2")?.date, date);
+    }
+  }
+});
+
 test("defaults to all days; entering one day starts with the active itinerary day", () => {
   const store = plannerStore();
   assert.equal(store.get(itineraryDayViewAtom), "all");

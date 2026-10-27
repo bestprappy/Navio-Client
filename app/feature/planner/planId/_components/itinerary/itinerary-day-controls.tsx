@@ -1,6 +1,6 @@
 "use client";
 
-import { format, parseISO } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { CalendarDays } from "lucide-react";
 
@@ -19,6 +19,12 @@ const DAY_VIEWS: { value: ItineraryDayView; label: string }[] = [
   { value: "single", label: "By date" },
 ];
 
+// Shared snapshots can intentionally omit calendar dates; preserve their day numbers.
+function dayDateLabel(date: string): string {
+  const parsed = date ? parseISO(date) : null;
+  return parsed && isValid(parsed) ? format(parsed, "EEE, MMM d, yyyy") : "Date not set";
+}
+
 export function ItineraryDayControls() {
   const [view, setView] = useAtom(itineraryDayViewAtom);
   const days = useAtomValue(itineraryBlocksAtom);
@@ -26,7 +32,7 @@ export function ItineraryDayControls() {
   const selectDay = useSetAtom(selectItineraryDayAtom);
   const dayOptions = days.map((day, index) => ({
     value: day.id,
-    label: `Day ${index + 1} · ${format(parseISO(day.date), "EEE, MMM d, yyyy")}`,
+    label: `Day ${index + 1} · ${dayDateLabel(day.date)}`,
   }));
   const selectedIndex = days.findIndex((day) => day.id === selectedDay?.id);
 
@@ -60,7 +66,7 @@ export function ItineraryDayControls() {
             <SelectValue className="min-w-0">
               {() => <span className="flex min-w-0 flex-1 items-center gap-2">
                 <span className="shrink-0 font-medium">Day {selectedIndex + 1}</span>
-                <span className="truncate text-muted-foreground">{format(parseISO(selectedDay.date), "EEE, MMM d, yyyy")}</span>
+                <span className="truncate text-muted-foreground">{dayDateLabel(selectedDay.date)}</span>
               </span>}
             </SelectValue>
           </SelectTrigger>

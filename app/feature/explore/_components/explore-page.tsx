@@ -6,7 +6,6 @@ import { PlacesDiscovery } from "../places/places-discovery";
 import { placesEnabled } from "../places/places-config";
 import { Search } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,7 +13,7 @@ import { GuideDiscovery } from "../../guides/guide-discovery";
 
 import { ExploreErrorBoundary } from "./explore-error-boundary";
 import { explorePlanSearchText, type ExplorePlansPage } from "./shared-plans/explore-plans-api";
-import { SharedPlanCard } from "./shared-plans/shared-plan-card";
+import { TRENDING_PAGE_SIZE } from "./shared-plans/explore-plans-api";
 import { SharedPlansSection } from "./shared-plans/shared-plans-section";
 import { useExplorePlans } from "./shared-plans/use-explore-plans";
 
@@ -31,7 +30,7 @@ export function ExplorePage({ initialSharedPlans, initialTrendingPlans, initialT
   const tabParam = params.get("tab");
   const tab = tabParam === "guides" ? "guides" : tabParam === "places" && placesEnabled ? "places" : initialTab === "places" && !placesEnabled ? "plans" : tabParam === "plans" ? "plans" : initialTab;
   const recent = useExplorePlans(initialSharedPlans, "recent", undefined, tab === "plans");
-  const trending = useExplorePlans(initialTrendingPlans, "trending", undefined, tab === "plans");
+  const trending = useExplorePlans(initialTrendingPlans, "trending", TRENDING_PAGE_SIZE, tab === "plans");
   const [searches, setSearches] = useState({ plans: initialTab === "plans" ? initialSearch : "", guides: initialTab === "guides" ? initialSearch : "" });
   const search = tab === "guides" ? searches.guides : searches.plans;
   const deferredSearch = useDeferredValue(search.trim());
@@ -70,17 +69,15 @@ export function ExplorePage({ initialSharedPlans, initialTrendingPlans, initialT
         {placesEnabled && <TabsContent value="places"><ExploreErrorBoundary fallbackTitle="Places unavailable"><PlacesDiscovery /></ExploreErrorBoundary></TabsContent>}
         <TabsContent value="guides"><ExploreErrorBoundary fallbackTitle="Guides unavailable"><GuideDiscovery filter={{ term: deferredSearch }} /></ExploreErrorBoundary></TabsContent>
         <TabsContent value="plans" className="space-y-10">
-      {!query && trending.plans.length > 0 && (
+      {!query && (
         <ExploreErrorBoundary fallbackTitle="Trending plans unavailable">
-          <section aria-labelledby="trending-plans-title" className="space-y-4">
-            <div>
-              <h2 id="trending-plans-title" className="text-xl font-semibold text-foreground">Trending plans</h2>
-              <p className="text-sm text-muted-foreground">Shared plans travelers are opening most.</p>
-            </div>
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {trending.plans.slice(0, 3).map((plan) => <SharedPlanCard key={plan.token} plan={plan} />)}
-            </div>
-          </section>
+          <SharedPlansSection
+            kind="trending" plans={trending.plans} total={trending.total}
+            isLoading={trending.isLoading} isError={trending.isError}
+            isFetchingMore={trending.isFetchingMore} hasMore={trending.hasMore}
+            loadMoreFailed={trending.loadMoreFailed}
+            onLoadMore={() => void trending.fetchMore()} onRetry={() => void trending.refetch()}
+          />
         </ExploreErrorBoundary>
       )}
 
@@ -102,11 +99,7 @@ export function ExplorePage({ initialSharedPlans, initialTrendingPlans, initialT
       {query && recent.hasMore && matchingRecent.length === 0 && !recent.isFetchingMore && (
         <p className="text-sm text-muted-foreground">Search covers plans loaded so far. Load more to keep searching.</p>
       )}
-      {trending.isError && !recent.isError && !query && (
-        <Button type="button" variant="ghost" size="sm" className="self-start" onClick={() => void trending.refetch()}>
-          Refresh trending plans
-        </Button>
-      )}
+
         </TabsContent>
       </Tabs>
     </div>

@@ -21,6 +21,9 @@ export const explorePlanSchema = z.object({
   // The server already allows only http(s); re-checked here because this value
   // lands in a CSS url() on a public page.
   coverImageUrl: z.url({ protocol: /^https?$/ }).nullish().catch(null),
+  coverPlaceId: z.string().max(300).nullish().catch(null),
+  viewCount: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullish().catch(null),
+  copyCount: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).nullish().catch(null),
   highlights: z.array(z.string()).catch([]),
   days: z.array(z.object({ stops: z.array(stopKindSchema).catch([]) })).catch([]),
   listedAt: z.string().nullish(),
@@ -48,6 +51,7 @@ const explorePlansPageSchema = z.object({
 export type ExplorePlansPage = z.infer<typeof explorePlansPageSchema>;
 
 export const EXPLORE_PAGE_SIZE = 12;
+export const TRENDING_PAGE_SIZE = 6;
 export const EXPLORE_MAX_PAGE_SIZE = 48;
 export type ExploreSort = "recent" | "trending";
 

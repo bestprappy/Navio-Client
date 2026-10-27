@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type DragEvent, useMemo, useState } from "react";
+import { Fragment, type DragEvent, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp, GripVertical } from "lucide-react";
 import { useAtomValue, useSetAtom } from "jotai";
 
@@ -21,6 +21,7 @@ import { useDaySchedule } from "../itinerary/use-day-schedule";
 import { getTripItemElementId } from "../itinerary/use-reveal-plan-card";
 import { closeActiveSearchAtom, plannerReadOnlyAtom, reorderBlockItemsAtom, tripBlocksAtom } from "../overview/trip-builder.atoms";
 import { type PlaceSearchBias } from "../place/add-place-input";
+import { DaySavedPlacesPicker } from "../list/saved-places-section";
 import { InsertItemRow } from "./insert-item-row";
 import { getItemInsertionLabel } from "./item-insertion";
 import { useEvStationSearch } from "../charger/add-ev-station-button";
@@ -91,6 +92,9 @@ function renderBlockItem(
 
 export function SortableBlockItems({ block, hasStart = false, placeSearchBias }: SortableBlockItemsProps) {
   const [activeInsertionId, setActiveInsertionId] = useState<string | null>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const savedPickerTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const [savedPicker, setSavedPicker] = useState<{ controlId: string; beforeItemId?: string } | null>(null);
   const closeActiveSearch = useSetAtom(closeActiveSearchAtom);
   const evStationSearch = useEvStationSearch({
     blockId: block.id,
@@ -137,6 +141,13 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
       <div className={styles.gap} data-insertion-gap="true">
       <div className="pl-8">
       <InsertItemRow
+        savedPickerOpen={savedPicker?.controlId === controlId}
+        onSavedPlaces={block.kind === "itinerary" ? (trigger) => {
+          closeActiveSearch();
+          setActiveInsertionId(null);
+          savedPickerTriggerRef.current = trigger;
+          setSavedPicker({ controlId, beforeItemId });
+        } : undefined}
         blockId={block.id}
         beforeItemId={beforeItemId}
         afterItemId={afterItemId}
@@ -202,7 +213,8 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
   }
 
   return (
-    <div role="list" className={styles.list} data-read-only={readOnly ? "true" : undefined} data-dragging={draggedItemId ? "true" : undefined} aria-label={`${block.title} items`}>
+    <div ref={listRef} tabIndex={-1} role="list" className={styles.list} data-read-only={readOnly ? "true" : undefined} data-dragging={draggedItemId ? "true" : undefined} aria-label={`${block.title} items`}>
+      {!readOnly && block.kind === "itinerary" && block.items.length === 0 && insertionControl("empty")}
       {block.items.map((item, index) => {
         const placePosition = placePositions.get(item.id) ?? null;
         const isDragging = draggedItemId === item.id;
@@ -352,6 +364,14 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
           </Fragment>
         );
       })}
+      {!readOnly && block.kind === "itinerary" && <DaySavedPlacesPicker
+        dayId={block.id}
+        beforeItemId={savedPicker?.beforeItemId}
+        trigger={null}
+        open={savedPicker !== null}
+        onOpenChange={open => { if (!open) setSavedPicker(null); }}
+        finalFocus={() => savedPickerTriggerRef.current?.isConnected ? savedPickerTriggerRef.current : listRef.current}
+      />}
     </div>
   );
 }

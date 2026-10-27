@@ -222,3 +222,18 @@ test("day shortcut writes one fresh visit, retains the saved place, and obeys re
   );
   assert.ok(store.set(scheduleSavedPlaceAtom, { placeId: "abc", dayId: "d2" }));
 });
+
+test("saved-place shortcut inserts at the selected gap and rejects a removed target", async () => {
+  const { createStore } = await import("jotai");
+  const { tripBlocksAtom } = await import("../../app/feature/planner/planId/_components/overview/trip-builder.atoms.ts");
+  const { scheduleSavedPlaceAtom } = await import("../../app/feature/planner/planId/_components/list/saved-places.atoms.ts");
+  const store = createStore();
+  const target = { id: "target", type: "note", content: "After saved place" };
+  store.set(tripBlocksAtom, blocks.map(block => ({ ...block, colorId: "blue", items: block.kind === "list" ? [place] : [target] })));
+  assert.equal(store.set(scheduleSavedPlaceAtom, { placeId: "abc", dayId: "d2", beforeItemId: "removed" }), undefined);
+  assert.deepEqual(store.get(tripBlocksAtom).find(b => b.id === "d2").items, [target]);
+  const id = store.set(scheduleSavedPlaceAtom, { placeId: "abc", dayId: "d2", beforeItemId: "target" });
+  assert.ok(id);
+  assert.deepEqual(store.get(tripBlocksAtom).find(b => b.id === "d2").items.map(item => item.id), [id, "target"]);
+  assert.deepEqual(store.get(tripBlocksAtom).find(b => b.id === "list").items, [place]);
+});
