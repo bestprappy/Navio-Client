@@ -251,6 +251,10 @@ export async function savePlannerSnapshot(
     }
     const energySupported = server.capabilities?.includes("trip-energy-v1");
     const garageSupported = server.capabilities?.includes("trip-garage-v1");
+    if(energyState?.vehicles?.length&&!server.capabilities?.includes("trip-vehicles-v1")){
+      if(energyState.vehicles.some(entry=>entry.scope==="trip"))throw new PlannerApiError("Update the trip service before saving copied trip vehicles. Your draft is kept on this device.",409);
+      syncedEnergy=undefined;localOnlySettings=true;
+    }
     const observationsSupported = server.capabilities?.includes("observed-soc-v1");
     const travelModesSupported = server.capabilities?.includes("leg-travel-mode-v1");
     if (!energySupported) syncedEnergy = undefined;
@@ -259,7 +263,7 @@ export async function savePlannerSnapshot(
     const destinationsSupported = server.capabilities?.includes("day-destinations");
     const anchorsSupported = server.capabilities?.includes("day-anchors");
     const targetsSupported = server.capabilities?.includes("charge-targets");
-    localOnlySettings = Boolean((requiresEnergy && !energySupported) || (requiresObservations && !observationsSupported) || (requiresDestinations && !destinationsSupported) || (requiresAnchors && !anchorsSupported) || (requiresTargets && !targetsSupported) || (requiresTravelModes && !travelModesSupported));
+    localOnlySettings = localOnlySettings || Boolean((requiresEnergy && !energySupported) || (requiresObservations && !observationsSupported) || (requiresDestinations && !destinationsSupported) || (requiresAnchors && !anchorsSupported) || (requiresTargets && !targetsSupported) || (requiresTravelModes && !travelModesSupported));
     if (energyState?.garageVehicleIds !== undefined && !garageSupported) localOnlySettings = true;
     syncedBlocks = blocks.map((block) => ({
       ...block,

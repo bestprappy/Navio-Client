@@ -1,3 +1,4 @@
+import type { SavedVehicle } from "../../planId/_components/garage/vehicle-api";
 import { PlannerApiError, requestJson } from "../planner-api";
 
 /** Mirrors `PublicationOptions`. Every option is off unless the owner turned it on. */
@@ -5,6 +6,11 @@ export type PublicationOptions = {
   includeDates: boolean;
   includeNotes: boolean;
   includeBudget: boolean;
+  includeStartingPart?: boolean;
+  includeGarage?: boolean;
+  listIds?: string[];
+  excludedVehicleIds?: string[];
+  confirmedCustomVehicleIds?: string[];
 };
 
 export const NO_PUBLICATION_OPTIONS: PublicationOptions = {
@@ -68,6 +74,9 @@ export type PublicItem = {
   arrivalMode?: "drive" | "transit" | "rail" | "bus" | "bike" | "walk";
   arrivalRouteKey?: string;
   placeType?: string;
+  id?: string;
+  timeSource?: "fixed"|"calculated";
+  schedule?: {id:string;time:string;timeEnd?:string;label:string}[];
 };
 
 export type PublicDay = {
@@ -84,8 +93,10 @@ export type PublicDay = {
 export type PublicBudget = {
   currency: string;
   amount: number;
-  expenses?: { label: string; amount: number; categoryId?: string }[];
+  expenses?: { label: string; amount: number; categoryId?: string; itemRef?:string }[];
 };
+
+export type PublicTripVehicle={key:string;source:"catalog"|"custom";active:boolean;initialSocPct?:number|null;vehicle:Omit<SavedVehicle,"id"|"createdAt"|"updatedAt"|"isDefault">};
 
 /** Mirrors `PublicPlanSnapshot`: the whole of what a recipient receives. */
 export type PublicPlanSnapshot = {
@@ -99,6 +110,9 @@ export type PublicPlanSnapshot = {
   days?: PublicDay[];
   budget?: PublicBudget;
   included?: PublicationOptions;
+  startingPart?: {title:string;content:string};
+  lists?: PublicDay[];
+  garage?: PublicTripVehicle[];
 };
 
 export type SharedPlanEngagement = {
@@ -132,6 +146,9 @@ function readOptions(value: unknown): PublicationOptions {
     includeDates: value.includeDates === true,
     includeNotes: value.includeNotes === true,
     includeBudget: value.includeBudget === true,
+    ...(typeof value.includeStartingPart==="boolean"?{includeStartingPart:value.includeStartingPart}:{}),
+    ...(typeof value.includeGarage==="boolean"?{includeGarage:value.includeGarage}:{}),
+    ...Object.fromEntries(["listIds","excludedVehicleIds","confirmedCustomVehicleIds"].filter(key=>Array.isArray(value[key])).map(key=>[key,(value[key] as unknown[]).filter((id):id is string=>typeof id==="string")])),
   };
 }
 

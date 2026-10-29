@@ -1,10 +1,12 @@
 "use client";
 import { tripEnergyStateAtom, addTripVehicle, removeTripVehicle, tripGarageIds } from "./trip-energy-state";
 
-import { createContext, useContext, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { useAtom, useStore } from "jotai";
+import { tripVehicles,patchTripVehicle,updateImportedTripVehicle } from "./trip-vehicle-library";
+import {legacyEnergyProfile} from "./vehicle-api";
 import { type VehicleCommand } from "./vehicle-api";
 
 import { garageActiveIdSnapshotAtom, garageModalOpenAtom, garageVehiclesSnapshotAtom } from "./garage.atoms";
@@ -33,7 +35,10 @@ function useGarageState() {
       if (status === "loading") throw new Error("Wait for your session to finish loading.");
       if (!authenticated) throw new Error("Sign in to update your garage.");
       const library = queryClient.getQueryData<SavedVehicle[]>(queryKey) ?? [];
-      const ids = tripGarageIds(store.get(tripEnergyStateAtom));
+      const state=store.get(tripEnergyStateAtom);
+      const imported=(command.kind==="update"||command.kind==="reuse")?state?.vehicles?.find(e=>e.scope==="trip"&&e.vehicle.id===command.id):undefined;
+      if(imported)return command.kind==="update"?patchTripVehicle(imported.vehicle,command.patch):imported.vehicle;
+      const ids = tripGarageIds(state);
       const targetId = command.kind === "catalog" ? library.find(vehicle => vehicle.catalog?.id === command.catalogId)?.id
         : command.kind === "custom" ? undefined : command.id;
       if ((command.kind === "catalog" || command.kind === "custom" || command.kind === "reuse") && ids.length >= 25 && (!targetId || !ids.includes(targetId))) {
@@ -69,6 +74,9 @@ function useGarageState() {
       }
       const explicitlySelected = command.kind === "reuse" || command.kind === "catalog" || command.kind === "custom" ||
         (command.kind === "update" && (command.patch.isDefault === true || command.patch.energySelection !== undefined));
+      if(saved&&store.get(tripEnergyStateAtom)?.vehicles?.some(e=>e.scope==="trip"&&e.vehicle.id===saved.id)){
+        store.set(tripEnergyStateAtom,updateImportedTripVehicle(store.get(tripEnergyStateAtom),saved,explicitlySelected));return;
+      }
       if (saved && explicitlySelected) {
         const current = store.get(tripEnergyStateAtom);
         store.set(tripEnergyStateAtom, addTripVehicle(current, saved));
@@ -86,10 +94,12 @@ function useGarageState() {
     onError: (error) => { console.error("Could not save garage changes.", { component: "GarageProvider", error }); },
   });
   const libraryVehicles = useMemo(() => authenticated ? query.data ?? [] : [], [authenticated, query.data]);
-  const vehicles = useMemo(() => {
-    const ids = new Set(tripGarageIds(tripEnergy));
-    return libraryVehicles.filter(vehicle => ids.has(vehicle.id));
-  }, [libraryVehicles, tripEnergy]);
+  const vehicles=useMemo(()=>tripVehicles(tripEnergy,libraryVehicles),[libraryVehicles,tripEnergy]);
+  useEffect(()=>{
+    if(tripEnergy===undefined||!query.data)return;
+    const descriptors=vehicles.map(vehicle=>({scope:tripEnergy?.vehicles?.find(e=>e.vehicle.id===vehicle.id)?.scope??"account" as const,vehicle:{...vehicle,energyProfile:vehicle.energyProfile??legacyEnergyProfile(vehicle)}}));
+    if(JSON.stringify(descriptors)!==JSON.stringify(tripEnergy?.vehicles??[]))store.set(tripEnergyStateAtom,current=>({...current,initialSocPct:current?.initialSocPct??null,vehicleSnapshot:current?.vehicleSnapshot??null,vehicles:descriptors}));
+  },[query.data,store,tripEnergy,vehicles]);
   useLayoutEffect(() => {
     store.set(garageVehiclesSnapshotAtom, vehicles.map(savedVehicleForPlanner));
     store.set(garageActiveIdSnapshotAtom, null);

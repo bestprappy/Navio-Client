@@ -46,7 +46,7 @@ function toChargerDetails(charger: PublicCharger | undefined): PlaceItemEvCharge
     availableConnectors: null,
     priceText: charger?.priceText ?? null,
     openingHoursSummary: charger?.openingHoursSummary ?? null,
-    estimatedChargeMinutes: 0,
+    estimatedChargeMinutes: null,
     operatorName: charger?.operatorName ?? null,
   };
 }
@@ -70,7 +70,7 @@ function toItem(item: PublicItem, id: string): TripBlockItem | null {
   if (!isFiniteNumber(lat) || !isFiniteNumber(lng)) {
     // Published before stops carried a location. It can still be read, but it
     // cannot be a map stop, so it reads as a note until the owner updates.
-    return { id, type: "note", content: `${name} (location not shared)` };
+    return { id, type: "note", content: [`${name} (location not shared)`,item.description,item.notes,item.time&&`${item.time}${item.timeEnd?` - ${item.timeEnd}`:""}`,...(item.schedule??[]).map(moment=>`${moment.time} ${moment.label}`)].filter(Boolean).join("\n\n") };
   }
 
   const isCharger = item.type === "charger";
@@ -87,6 +87,8 @@ function toItem(item: PublicItem, id: string): TripBlockItem | null {
     lng,
     rating: item.rating,
     reviewCount: item.reviewCount,
+    schedule:item.schedule,
+    timeSource:item.timeSource,
     imageUrl: item.imageUrl,
     notes: item.notes,
     time: item.time,
@@ -113,7 +115,7 @@ export function toSharedPlanBlocks(plan: PublicPlanSnapshot): TripBlockData[] {
     return {
       id: blockId,
       kind: "itinerary",
-      title: day.label,
+      title: day.title ?? day.label,
       date: day.date ?? "",
       colorId: sharedDayColorId(day, dayIndex),
       items: (day.items ?? []).flatMap((item, itemIndex) => {

@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
-import { Bookmark, ChevronLeft, ChevronRight, Clock, ExternalLink, MapPin, Maximize2, Navigation, Phone, Search, Star, X } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight, Clock, ExternalLink, MapPin, Maximize2, Navigation, Phone, Star, X, ZoomIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { safeExternalUrl } from "@/app/feature/explore/places/places-api";
@@ -55,7 +55,7 @@ export function ReaderPlacePanel({ stop, reveal }: { stop: ReaderStop; reveal: (
         <button type="button" aria-label="Previous place" className={cn(readerIconButton,"size-8 border-0 bg-transparent")} disabled={index <= 0} onClick={() => action({ type:"step",direction:-1 })}><ChevronLeft className="size-4" /></button>
         <span aria-live="polite" className="min-w-15 px-1 text-center text-xs font-semibold tabular-nums">{index + 1} of {group.stops.length}</span>
         <button type="button" aria-label="Next place" className={cn(readerIconButton,"size-8 border-0 bg-transparent")} disabled={index >= group.stops.length - 1} onClick={() => action({ type:"step",direction:1 })}><ChevronRight className="size-4" /></button>
-      </div><button type="button" className={cn(readerIconButton,"bg-card/95 shadow-sm")} aria-label="Zoom to selected place" title={stop.located ? "Zoom to place" : "Map location not shared"} disabled={!stop.located} onClick={() => action({type:"zoom"})}><Search className="size-4" /></button></div>
+      </div><button type="button" className={cn(readerIconButton,"bg-card/95 shadow-sm")} aria-label="Zoom to selected place" title={stop.located ? "Zoom to place" : "Map location not shared"} disabled={!stop.located} onClick={() => action({type:"zoom"})}><ZoomIn className="size-4" /></button></div>
       <span className="max-w-[45%] truncate rounded-full border border-border/60 bg-card/95 px-3 py-2 text-xs font-medium shadow-sm">{group.label}</span>
     </div>
     <div className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-xl">

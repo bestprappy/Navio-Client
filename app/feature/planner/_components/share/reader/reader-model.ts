@@ -8,7 +8,7 @@ import type { PublicDay, PublicItem, PublicPlanSnapshot, SharedPlan } from "../p
 export type ReaderPresentation = {
   introduction?: string;
   cover?: { url: string; position?: string };
-  vehicles?: { id: string; name: string; source: "catalog" | "custom"; batteryKwh?: number; rangeKm?: number; connectors: string[] }[];
+  vehicles?: { id: string; name: string; source: "catalog" | "custom"; batteryKwh?: number; rangeKm?: number; connectors: string[]; active?:boolean;initialSocPct?:number|null;maxAcKw?:number|null;maxDcKw?:number|null }[];
   lists?: { title: string; items: PublicItem[] }[];
 };
 export type ReaderStop = { id: string; groupId: string; number: number; item: PublicItem; located: boolean };
@@ -26,6 +26,10 @@ export function locatedItem(item: PublicItem): boolean {
     && typeof item.lng === "number" && Number.isFinite(item.lng) && Math.abs(item.lng) <= 180;
 }
 export function buildReaderModel(shared: SharedPlan, presentation: ReaderPresentation = {}) {
+  presentation={...presentation,
+    introduction:shared.plan.startingPart?.content??presentation.introduction,
+    vehicles:shared.plan.garage?.map(entry=>({id:entry.key,source:entry.source,name:entry.vehicle.nickname||`${entry.vehicle.make} ${entry.vehicle.model}`,batteryKwh:entry.vehicle.batteryCapacityKwh,rangeKm:entry.vehicle.rangeKm,connectors:entry.vehicle.connectorTypes,active:entry.active,initialSocPct:entry.initialSocPct,maxAcKw:entry.vehicle.settings?.maxAcKw,maxDcKw:entry.vehicle.settings?.maxDcKw}))??presentation.vehicles,
+  };
   const groups: ReaderGroup[] = [];
   function group(day: PublicDay, index: number, kind: "day" | "list"): ReaderGroup {
     const id = `shared-${kind}-${index + 1}`;
@@ -40,7 +44,7 @@ export function buildReaderModel(shared: SharedPlan, presentation: ReaderPresent
     return { id, kind, label: kind === "day" ? `Day ${index + 1}` : day.label, title: day.title, date: day.date,
       colorId: sharedDayColorId(day,index), entries, stops, startsAt: day.startsAt, endsAt: day.endsAt };
   }
-  (presentation.lists ?? []).forEach((list, index) => groups.push(group({ label: list.title, items: list.items }, index, "list")));
+  (shared.plan.lists??presentation.lists??[]).forEach((list,index)=>groups.push(group({label:"My List",...list},index,"list")));
   (shared.plan.days ?? []).forEach((day, index) => groups.push(group(day, index, "day")));
   const days = groups.filter(g => g.kind === "day");
   const stops = groups.flatMap(g => g.stops);
@@ -56,7 +60,7 @@ export function buildReaderModel(shared: SharedPlan, presentation: ReaderPresent
     viewCount: shared.engagement?.viewCount, copyCount: shared.engagement?.copyCount,
     highlights: itineraryStops.slice(0, 3).map(s => s.item.name ?? ""), days: [],
   };
-  return { groups, days, lists: groups.filter(g => g.kind === "list"), stops, title, destination, coverPlan, presentation };
+  return { budget:shared.plan.budget, groups, days, lists: groups.filter(g => g.kind === "list"), stops, title, destination, coverPlan, presentation };
 }
 export type ReaderModel = ReturnType<typeof buildReaderModel>;
 export type ReaderCamera = { sequence: number; kind: "place"; stopId: string } | { sequence: number; kind: "overview" } | {sequence:number;kind:"leg";coordinates:[number,number][]};

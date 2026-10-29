@@ -16,6 +16,7 @@ import type { SharedPlan } from "../publication-api";
 import { buildReaderModel, readerDateLabel, type ReaderPresentation } from "./reader-model";
 import { readerActionAtom, readerDayModeAtom, readerModelAtom, readerSelectionAtom, readerSingleDayAtom } from "./reader-state";
 import { getTripBlockColorById } from "../../../planId/_components/constants/trip-block-colors";
+import {PlaceNotesPreview} from "../../../planId/_components/block/items/place-notes";
 import { ReaderGroupSection, ReaderItinerary } from "./reader-itinerary";
 import { ReaderFeedback } from "./reader-feedback";
 import { ReaderRelated } from "./reader-related";
@@ -29,8 +30,9 @@ export function SharedReader(props: SharedReaderProps) {
   const store=useMemo(()=>{const value=createStore();value.set(readerModelAtom,model);return value;},[model]);
   return <Provider store={store}><ReaderRoutesProvider><ReaderWorkspace {...props} /></ReaderRoutesProvider></Provider>;
 }
-function ReaderWorkspace({shared,token,backLink,presentation}:SharedReaderProps) {
+function ReaderWorkspace({shared,token,backLink}:SharedReaderProps) {
   const model=useAtomValue(readerModelAtom)!;
+  const presentation=model.presentation;
   const action=useSetAtom(readerActionAtom);
   const setSingleDay=useSetAtom(readerSingleDayAtom);
   const mode=useAtomValue(readerDayModeAtom);
@@ -68,7 +70,7 @@ function ReaderWorkspace({shared,token,backLink,presentation}:SharedReaderProps)
     panel.addEventListener("scroll",schedule,{passive:true});
     return()=>{panel.removeEventListener("scroll",schedule);if(frame!==null)cancelAnimationFrame(frame);};
   },[action,model,mode]);
-  const sections=[{id:"reader-overview",label:"Overview"},...(presentation?.vehicles?.length?[{id:"reader-garage",label:"Garage"}]:[]),...(model.lists.length?[{id:"reader-lists",label:"My List"}]:[]),...(shared.plan.budget?[{id:"reader-budget",label:"Budget"}]:[]),{id:"reader-itinerary",label:"Itinerary"},{id:"reader-feedback",label:"Ratings & comments"},...(shared.listedInExplore&&(token||presentation)?[{id:"reader-related",label:"Related plans"}]:[])];
+  const sections=[{id:"reader-overview",label:"Overview"},...(presentation.introduction?[{id:"reader-starting-part",label:"Before you go"}]:[]),...(model.lists.length?[{id:"reader-lists",label:"My List"}]:[]),...(presentation.vehicles?.length?[{id:"reader-garage",label:"Garage"}]:[]),{id:"reader-itinerary",label:"Itinerary"},...(shared.plan.budget?[{id:"reader-budget",label:"Budget"}]:[]),{id:"reader-feedback",label:"Ratings & comments"},...(shared.listedInExplore&&(token||presentation)?[{id:"reader-related",label:"Related plans"}]:[])];
   const cover=presentation?.cover;
   const showRelated=shared.listedInExplore&&Boolean(token||presentation);
   const coverUrl=cover?.url && (cover.url.startsWith("blob:")||/^https?:\/\//.test(cover.url)||cover.url.startsWith("/images/"))?cover.url:null;
@@ -100,15 +102,17 @@ function ReaderWorkspace({shared,token,backLink,presentation}:SharedReaderProps)
       <div className="px-5 @lg/planner:px-7">
         <section id="reader-overview" className="scroll-mt-24 space-y-5 pt-6 pb-8">
           <div className="flex flex-wrap items-center justify-between gap-3"><PlanAuthor name={shared.authorName} size="default" /><span className="text-[11px] text-muted-foreground">View-only trip plan</span></div>
-          {presentation?.introduction&&<p className="text-sm leading-7 text-muted-foreground">{presentation.introduction}</p>}
+
           {readerDateLabel(shared.plan.startDate)&&<p className="flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays className="size-3.5" />{readerDateLabel(shared.plan.startDate)}{shared.plan.endDate&&shared.plan.endDate!==shared.plan.startDate&&readerDateLabel(shared.plan.endDate)&&` – ${readerDateLabel(shared.plan.endDate)}`}</p>}
           {shared.listedInExplore&&<div className="rounded-xl border border-border/60 bg-card/60 p-3.5"><PlanEngagement {...shared.engagement} detail /></div>}
-          {token&&<div className="flex flex-wrap items-start gap-2"><CopySharedPlanButton token={token} hasUnlocatedStops={model.days.some(g=>g.stops.some(s=>!s.located))} />{shared.listedInExplore&&<Link href={`/community/create?${new URLSearchParams({plan:token})}`} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><MessageSquarePlus className="size-4" aria-hidden="true" />Discuss in Community</Link>}</div>}
+          {token&&<div className="flex flex-wrap items-start gap-2"><CopySharedPlanButton token={token} startDate={shared.plan.startDate??shared.plan.days?.find(day=>day.date)?.date} hasUnlocatedStops={model.days.some(g=>g.stops.some(s=>!s.located))} />{shared.listedInExplore&&<Link href={`/community/create?${new URLSearchParams({plan:token})}`} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><MessageSquarePlus className="size-4" aria-hidden="true" />Discuss in Community</Link>}</div>}
         </section>
-        {presentation?.vehicles?.length?<ReaderSection id="reader-garage" eyebrow="Made for the road" title="Garage"><div className="space-y-3">{presentation.vehicles.map(vehicle=><article key={vehicle.id} className="flex items-start gap-4 rounded-2xl border border-border/60 bg-card p-4"><span className="rounded-xl bg-primary/8 p-3"><CarFront className="size-7 text-primary" /></span><div className="min-w-0 flex-1"><p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{vehicle.source==="catalog"?"Navio catalogue":"Custom vehicle"}</p><h3 className="mt-1 font-semibold">{vehicle.name}</h3><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">{vehicle.batteryKwh&&<span>{vehicle.batteryKwh} kWh battery</span>}{vehicle.rangeKm&&<span>{vehicle.rangeKm} km reference range</span>}</div><p className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary"><Zap className="size-3.5" />{vehicle.connectors.join(" · ")||"Connector information not shared"}</p></div></article>)}</div><p className="text-xs leading-5 text-muted-foreground">Vehicle specifications are a planning reference. Actual range and charging availability can vary.</p></ReaderSection>:null}
+        {presentation.introduction&&<ReaderSection id="reader-starting-part" eyebrow="Before the journey" title={shared.plan.startingPart?.title||"Before you go"}><div className="max-w-prose text-sm leading-7"><PlaceNotesPreview value={presentation.introduction} interactive={true} clamped={false} /></div></ReaderSection>}
         {model.lists.length>0&&<ReaderSection id="reader-lists" eyebrow="Ideas beyond the itinerary" title="My List">{model.lists.map(group=><ReaderGroupSection key={group.id} group={group} />)}</ReaderSection>}
+        {presentation?.vehicles?.length?<ReaderSection id="reader-garage" eyebrow="Made for the road" title="Garage"><div className="space-y-3">{presentation.vehicles.map(vehicle=><article key={vehicle.id} className="flex items-start gap-4 rounded-2xl border border-border/60 bg-card p-4"><span className="rounded-xl bg-primary/8 p-3"><CarFront className="size-7 text-primary" /></span><div className="min-w-0 flex-1"><p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{vehicle.source==="catalog"?"Navio catalogue":"Custom vehicle"}</p><h3 className="mt-1 font-semibold">{vehicle.name}</h3><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">{vehicle.batteryKwh&&<span>{vehicle.batteryKwh} kWh battery</span>}{vehicle.rangeKm&&<span>{vehicle.rangeKm} km reference range</span>}{vehicle.initialSocPct!=null&&<span>{vehicle.initialSocPct}% starting charge</span>}{vehicle.maxAcKw!=null&&<span>AC {vehicle.maxAcKw} kW</span>}{vehicle.maxDcKw!=null&&<span>DC {vehicle.maxDcKw} kW</span>}{vehicle.active&&<span className="font-medium text-primary">Selected in plan</span>}</div><p className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary"><Zap className="size-3.5" />{vehicle.connectors.join(" · ")||"Connector information not shared"}</p></div></article>)}</div><p className="text-xs leading-5 text-muted-foreground">Vehicle specifications are a planning reference. Actual range and charging availability can vary.</p></ReaderSection>:null}
+        <ReaderItinerary />
         {shared.plan.budget&&<ReaderSection id="reader-budget" title="Trip budget"><details className="rounded-2xl border border-border/60 bg-card p-4"><summary className="flex cursor-pointer list-none items-center justify-between gap-3"><span className="text-sm text-muted-foreground">Budget shared by the owner</span><strong className="text-lg font-semibold">{shared.plan.budget.amount.toLocaleString()} {shared.plan.budget.currency}</strong></summary><ul className="mt-4 divide-y divide-border/60 text-sm">{shared.plan.budget.expenses?.map((expense,i)=><li key={i} className="flex justify-between gap-3 py-2"><span className="text-muted-foreground">{expense.label}</span><span>{expense.amount.toLocaleString()} {shared.plan.budget!.currency}</span></li>)}</ul></details></ReaderSection>}
-        <ReaderItinerary /><ReaderFeedback />
+        <ReaderFeedback />
         {showRelated&&<ReaderRelated token={token??"reader-design-preview"} plan={shared.plan} />}
         <footer className="flex items-center justify-between gap-3 border-t border-border/60 py-6 text-[10px] text-muted-foreground"><span>Shared by a traveler. Make it your own.</span><GoogleAttribution /></footer>
       </div>

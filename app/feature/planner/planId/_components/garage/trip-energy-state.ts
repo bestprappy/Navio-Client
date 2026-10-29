@@ -1,6 +1,6 @@
 import { atom } from "jotai";
 import { z } from "zod";
-import { legacyEnergyProfile, vehicleEnergyProfileSchema, type SavedVehicle } from "./vehicle-api";
+import { legacyEnergyProfile, savedVehicleSchema, vehicleEnergyProfileSchema, type SavedVehicle } from "./vehicle-api";
 
 export const tripEnergySnapshotSchema = z.object({
   version: z.literal(1),
@@ -13,6 +13,7 @@ export const tripEnergySnapshotSchema = z.object({
   legacyConsumptionConfirmed: z.boolean(),
 });
 export const tripEnergyStateSchema = z.object({
+  vehicles: z.array(z.object({scope:z.enum(["account","trip"]),vehicle:savedVehicleSchema})).max(25).optional(),
   initialSocPct: z.number().finite().min(0).max(100).nullable(),
   vehicleSnapshot: tripEnergySnapshotSchema.nullable(),
   garageVehicleIds: z.array(z.uuid()).max(25).refine(ids => new Set(ids).size === ids.length).optional(),
@@ -30,12 +31,15 @@ export function tripGarageIds(state: TripEnergyState | null | undefined): string
 export function addTripVehicle(state: TripEnergyState | null | undefined, vehicle: SavedVehicle): TripEnergyState {
   const ids = [...new Set([...tripGarageIds(state), vehicle.id])];
   if (ids.length > 25) throw new Error("Remove a vehicle from this trip before adding another.");
-  return { ...state, initialSocPct: state?.initialSocPct ?? null, garageVehicleIds: ids, vehicleSnapshot: snapshotTripVehicle(vehicle) };
+  const existing=state?.vehicles?.find(entry=>entry.vehicle.id===vehicle.id);
+  const vehicles=[...(state?.vehicles??[]).filter(entry=>entry.vehicle.id!==vehicle.id),{scope:existing?.scope??"account" as const,vehicle:{...vehicle,energyProfile:vehicle.energyProfile??legacyEnergyProfile(vehicle)}}];
+  return { ...state, initialSocPct: state?.initialSocPct ?? null, garageVehicleIds: ids, vehicleSnapshot: snapshotTripVehicle(vehicle),vehicles };
 }
 
 export function removeTripVehicle(state: TripEnergyState | null | undefined, id: string): TripEnergyState {
   return { ...state, initialSocPct: state?.initialSocPct ?? null,
     garageVehicleIds: tripGarageIds(state).filter(value => value !== id),
+    vehicles: state?.vehicles?.filter(entry=>entry.vehicle.id!==id),
     vehicleSnapshot: state?.vehicleSnapshot?.vehicleId === id ? null : state?.vehicleSnapshot ?? null };
 }
 export function snapshotTripVehicle(vehicle: SavedVehicle): TripEnergySnapshot {

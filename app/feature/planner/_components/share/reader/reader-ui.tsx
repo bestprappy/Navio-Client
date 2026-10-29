@@ -32,7 +32,7 @@ export function ReaderNotes({ value, label = "From the planner", plain=false }: 
     <details className="group/notes"><summary className="cursor-pointer list-none rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <div className="group-open/notes:hidden"><PlaceNotesPreview value={value} interactive={false} /></div>
       <span className="mt-1 inline-block text-xs font-medium text-primary group-open/notes:hidden">Read note</span><span className="hidden text-xs font-medium text-primary group-open/notes:inline">Hide note</span>
-    </summary><div className="mt-2"><PlaceNotesPreview value={value} interactive={false} clamped={false} /></div></details>
+    </summary><div className="mt-2"><PlaceNotesPreview value={value} interactive={true} clamped={false} /></div></details>
   </div>;
 }
 export function useReaderPlace(item: PublicItem, enabled = true) {

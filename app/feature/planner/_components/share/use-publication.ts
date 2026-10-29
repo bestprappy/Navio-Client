@@ -52,7 +52,11 @@ export function usePublicationPreview(
 ) {
   return useQuery({
     queryKey: publicationPreviewQueryKey(tripId, options),
-    queryFn: () => previewPublication(tripId, options),
+    queryFn: async () => {
+      await flushPlannerAutosave(tripId);
+      const source=await getPlannerSnapshot(tripId);requireSectionSupport(source.capabilities,options);
+      return previewPublication(tripId, options);
+    },
     enabled,
     staleTime: 0,
     gcTime: 0,
@@ -87,8 +91,9 @@ export function usePublishPlan(tripId: string) {
       // point), so nothing local can be pending and the server's version is
       // authoritative.
       const flushedVersion = await flushPlannerAutosave(tripId);
-      const expectedTripVersion =
-        flushedVersion ?? (await getPlannerSnapshot(tripId)).version;
+      const source=await getPlannerSnapshot(tripId);
+      requireSectionSupport(source.capabilities,options);
+      const expectedTripVersion=flushedVersion??source.version;
 
       return publishPlan(tripId, {
         expectedTripVersion,
@@ -159,4 +164,8 @@ export function useStopSharing(tripId: string) {
       });
     },
   });
+}
+
+function requireSectionSupport(capabilities:string[]|undefined,options:PublicationOptions){
+ if((options.includeStartingPart||options.includeGarage||options.listIds?.length)&&!capabilities?.includes("publication-sections-v1"))throw new PlannerApiError("Update the trip service before publishing the Starting Part, My List or Garage. Your current shared plan has not been changed.",409);
 }

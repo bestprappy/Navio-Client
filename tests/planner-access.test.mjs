@@ -96,13 +96,14 @@ test("trip creation requires sign-in during both form submission and mutation", 
 test("signed-out garage mutations reject every command before changing trip or account state", async () => {
   let mutation;
   const { GarageProvider } = moduleFrom("../app/feature/planner/planId/_components/garage/garage-provider.tsx", {
-    react: { createContext: () => ({ Provider: "GarageContext" }), useRef: () => ({ current: 0 }), useMemo: fn => fn(), useLayoutEffect() {} },
+    react: { createContext: () => ({ Provider: "GarageContext" }), useRef: () => ({ current: 0 }), useMemo: fn => fn(), useLayoutEffect() {}, useEffect() {} },
     "next-auth/react": { useSession: () => ({ data: null, status: "unauthenticated" }) },
     jotai: { useStore: () => ({ get() { throw new Error("Private state must not be read"); } }), useAtom: () => [undefined] },
     "@tanstack/react-query": {
       useQueryClient: () => ({}), useQuery: () => ({}),
       useMutation: options => { mutation = options; return {}; },
     },
+    "./trip-vehicle-library": {tripVehicles:()=>[],patchTripVehicle(){throw new Error("Private state must not be patched");}},
     "./trip-energy-state": { tripGarageIds: () => [] }, "./garage.atoms": {}, "./vehicle-mappers": {},
     "./vehicle-api": { executeVehicleCommand() { throw new Error("Account API must not be called"); } },
   });

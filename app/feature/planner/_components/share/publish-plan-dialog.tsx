@@ -38,6 +38,7 @@ import {
   sharedPlanUrl,
   type PublicationOptions,
 } from "./publication-api";
+import { PublicationSectionsOptions } from "./publication-sections-options";
 import { ShareOptionRow } from "./share-option-row";
 import { SharedLinkField } from "./shared-link-field";
 import { SharedPlannerView } from "./shared-planner-view";
@@ -61,11 +62,7 @@ type PublishPlanDialogProps = {
 type View = "settings" | "preview";
 
 function sameOptions(a: PublicationOptions, b: PublicationOptions): boolean {
-  return (
-    a.includeDates === b.includeDates &&
-    a.includeNotes === b.includeNotes &&
-    a.includeBudget === b.includeBudget
-  );
+  return a.includeDates===b.includeDates&&a.includeNotes===b.includeNotes&&a.includeBudget===b.includeBudget&&Boolean(a.includeStartingPart)===Boolean(b.includeStartingPart)&&Boolean(a.includeGarage)===Boolean(b.includeGarage)&&["listIds","excludedVehicleIds","confirmedCustomVehicleIds"].every(key=>JSON.stringify([...(a[key as keyof PublicationOptions] as string[]|undefined)??[]].sort())===JSON.stringify([...(b[key as keyof PublicationOptions] as string[]|undefined)??[]].sort()));
 }
 
 function formatPublishedAt(value: string): string {
@@ -113,7 +110,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
   // would discard a checkbox the owner ticked while the query was revalidating.
   useEffect(() => {
     if (!publication || hasEditedOptions) return;
-    setOptions(publication.published ? publication.options : NO_PUBLICATION_OPTIONS);
+    setOptions(publication.published ? publication.options : {...NO_PUBLICATION_OPTIONS,includeStartingPart:true,includeGarage:true});
   }, [publication, hasEditedOptions]);
 
   useEffect(() => {
@@ -315,6 +312,7 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
                 />
               </section>
 
+              <PublicationSectionsOptions tripId={tripId} options={options} disabled={isBusy} onChange={next=>{setHasEditedOptions(true);setOptions(next);}} />
               <section aria-labelledby="share-explore-heading" className={`${styles.explore} space-y-3`}>
                 <h3 id="share-explore-heading" className="text-sm font-semibold text-foreground">
                   Explore

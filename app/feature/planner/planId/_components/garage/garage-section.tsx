@@ -34,7 +34,7 @@ export function GarageSection() {
   const savedActiveVehicle = savedVehicles.find((vehicle) => vehicle.id === activeVehicleId);
   const featuredVehicle = vehicles.find((vehicle) => vehicle.id === activeVehicleId) ?? vehicles[0];
   const featuredCar = featuredVehicle ? getVehicleCar(featuredVehicle) : null;
-  const controlsDisabled = !authenticated || mutation.isPending || loadingSession || query.isError;
+  const controlsDisabled = !authenticated || mutation.isPending || loadingSession || (query.isError && !savedActiveVehicle);
 
   const blocks = useAtomValue(itineraryBlocksAtom);
   const { data: routeData } = useTripRoutes();

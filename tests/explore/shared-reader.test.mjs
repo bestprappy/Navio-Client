@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { register } from "node:module";
 import { test } from "node:test";
 register(new URL("../support/typescript-loader.mjs", import.meta.url));
+register(new URL("../support/css-module-loader.mjs", import.meta.url));
 const { buildReaderModel, initialReaderSelection, reduceReaderSelection, rankRelatedPlans, readerDateLabel, groupReaderMarkers } = await import("../../app/feature/planner/_components/share/reader/reader-model.ts");
 const shared={plan:{sanitizerVersion:1,dayCount:2,destinationCity:"Sydney",destinationCountry:"Australia",days:[
  {label:"Day 1",items:[{type:"note",noteContent:"Owner advice"},{type:"place",placeId:"GOOGLE:repeat",name:"Harbour",lat:-33.85,lng:151.21},{type:"charger",name:"Charge",lat:-33.86,lng:151.22}]},
@@ -98,3 +99,30 @@ test("photo attribution remains a separate link instead of being nested in the m
  assert.ok(button);assert.doesNotMatch(button,/<a\b/);assert.match(html,/Photo credit/);assert.match(html,/commons.wikimedia.org/);
  client.clear();
 });
+
+ test("real published lists and Garage render without preview-only overlays",()=>{
+ const input=structuredClone(shared);input.plan.startingPart={title:"Before you go",content:"## Welcome"};
+ input.plan.lists=[{label:"My List",title:"Ideas",colorId:"rose",items:[{type:"note",noteContent:"Take time"}]}];
+ input.plan.garage=[{key:"vehicle-1",source:"catalog",active:true,vehicle:{make:"BYD",model:"ATTO 3",nickname:null,batteryCapacityKwh:60.48,rangeKm:420,connectorTypes:["CCS2"]}}];
+ const model=buildReaderModel(input);assert.equal(model.lists.length,1);assert.equal(model.lists[0].title,"Ideas");
+ assert.equal(model.presentation.vehicles[0].name,"BYD ATTO 3");assert.equal(model.presentation.introduction,"## Welcome");
+ });
+
+ test("every maintained review example contains a starting document lists Garage itinerary and budget",async()=>{
+ const {readerReviewSamples}=await import("../../app/feature/planner/_components/share/reader/review-samples.data.ts");
+ assert.ok(readerReviewSamples.length>=3);
+ for(const {shared:example} of readerReviewSamples){const model=buildReaderModel(example);assert.ok(example.plan.startingPart.content.includes("## Before you go"));assert.ok(model.lists.length);assert.ok(model.presentation.vehicles.length);assert.ok(model.days.length);assert.ok(example.plan.budget.expenses.length);assert.ok(example.plan.lists[0].items.some(item=>item.type==="checklist"));}
+ });
+
+ test("expanded shared notes retain safe clickable links",async()=>{
+ const {createElement}=await import("react");const {renderToPipeableStream}=await import("react-dom/server");const {Writable}=await import("node:stream");
+ const {ReaderNotes}=await import("../../app/feature/planner/_components/share/reader/reader-ui.tsx");
+ let html="";await new Promise((resolve,reject)=>{const sink=new Writable({write(chunk,_encoding,next){html+=chunk.toString();next();}});sink.on("finish",resolve);const stream=renderToPipeableStream(createElement(ReaderNotes,{value:"Read the [official guide](https://example.com/guide)."}),{onAllReady(){stream.pipe(sink);},onError:reject});});
+ assert.match(html,/href="https:\/\/example.com\/guide"/);
+ });
+
+ test("complete review sources are editable planner data with trip-only vehicles and explicit publication selections",async()=>{
+ const {readerReviewSamples}=await import("../../app/feature/planner/_components/share/reader/review-samples.data.ts");
+ const {reviewPlannerSource}=await import("../../app/feature/planner/_components/share/reader/review-source.ts");
+ for(const {shared:example} of readerReviewSamples){const source=reviewPlannerSource(example);assert.equal(source.blocks.find(block=>block.kind==="itinerary").title,example.plan.days[0].title);assert.ok(source.blocks[0].id.startsWith("starting-part-"));assert.ok(source.options.listIds.length);assert.ok(source.energyState.vehicles.every(entry=>entry.scope==="trip"));assert.equal(source.options.confirmedCustomVehicleIds.length,source.energyState.vehicles.filter(entry=>!entry.vehicle.catalog).length);assert.ok(source.blocks.some(block=>block.kind==="list"&&block.items.some(item=>item.type==="checklist")));}
+ });

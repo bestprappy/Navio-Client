@@ -407,7 +407,7 @@ export const itineraryBlocksAtom = atom<TripBlockData[]>((get) =>
   get(tripBlocksAtom).filter(isItineraryBlock),
 );
 export const myListBlocksAtom = atom<TripBlockData[]>((get) =>
-  get(tripBlocksAtom).filter((block) => block.kind === "list"),
+  get(tripBlocksAtom).filter((block) => block.kind === "list" && !block.id.startsWith("starting-part-")),
 );
 export const tripCurrencyAtom = atom<CurrencyOption>(currencyOptions[0]);
 export const tripExpensesAtom = atom<ExpenseItem[]>([]);

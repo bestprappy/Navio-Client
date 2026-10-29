@@ -11,7 +11,7 @@ export function savedPlaceKey(place: Pick<PlaceItem, "placeId">) {
 
 /** Presentation only: saved places live in their original blocks but appear once in Places. */
 export function visibleMyListBlocks(blocks: TripBlockData[]) {
-  return blocks.map((block) => {
+  return blocks.filter(block=>!block.id.startsWith("starting-part-")).map((block) => {
     const items = block.items.filter(
       (item) => !isPlaceItem(item) || isEvChargerPlaceItem(item),
     );

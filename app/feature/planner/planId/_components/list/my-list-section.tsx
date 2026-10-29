@@ -20,6 +20,7 @@ import {
 import { EmptyMyListCallout } from "./empty-my-list-callout";
 import { InlineAddDivider } from "../inline-add-divider";
 import { SavedPlacesSection } from "./saved-places-section";
+import { AddStartingPart, StartingPart } from "./starting-part";
 import { visibleMyListBlocks } from "./saved-places-model";
 
 type MyListSectionProps = {
@@ -87,12 +88,14 @@ export function MyListSection({
           </div>
 
           <AccordionContent className="pt-0">
+            <div className="mb-4 flex justify-end"><AddStartingPart /></div>
             {/* Saved places are collected from lists, so with no lists the callout is the only useful state. */}
             {listBlocks.length === 0 ? (
               <EmptyMyListCallout onCreateList={addMyListBlock} />
             ) : (
               <SavedPlacesSection />
             )}
+            <StartingPart />
             <div className="space-y-8 pb-8 pt-2">
               {visibleBlocks.map((block) => (
                 <TripBlock.Root key={block.id} block={block}>
