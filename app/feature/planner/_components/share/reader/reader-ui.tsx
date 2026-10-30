@@ -1,7 +1,7 @@
 "use client";
 /* Provider photos are live, credited and never sent through the image optimizer. */
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ImageIcon, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -25,14 +25,26 @@ export function PreviewAction({ label, children, className, title }: { label: st
     <DialogContent><DialogHeader><DialogTitle>{label}</DialogTitle><DialogDescription>This interaction is a design preview. Nothing is saved or shared yet.</DialogDescription></DialogHeader></DialogContent>
   </Dialog>;
 }
-export function ReaderNotes({ value, label = "From the planner", plain=false }: { value?: string; label?: string; plain?:boolean }) {
-  if (!value?.trim()) return null;
+export function ReaderDisclosure({ children, label, preview }: { children: ReactNode; label: string; preview?: ReactNode }) {
+  const [expanded, setExpanded] = useState(true);
+  const contentId = useId();
+  return <div className="min-w-0">
+    <div id={contentId} hidden={!expanded} className="space-y-3">{children}</div>
+    {!expanded && preview}
+    <button type="button" aria-expanded={expanded} aria-controls={contentId} aria-label={`${expanded ? "Hide" : "Show"} ${label}`} onClick={() => setExpanded(value => !value)}
+      className="mt-1 inline-flex min-h-8 items-center rounded-sm text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      {expanded ? "Hide" : "Show Note"}
+    </button>
+  </div>;
+}
+export function ReaderNotes({ value, label = "From the planner", plain=false, previewWhenHidden=false, children }: { value?: string; label?: string; plain?:boolean; previewWhenHidden?:boolean; children?:ReactNode }) {
+  if (!value?.trim() && !children) return null;
   return <div className={cn("text-sm",!plain&&"rounded-xl bg-muted/40 p-3.5")}>
     <p className="mb-2 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">{label}</p>
-    <details className="group/notes"><summary className="cursor-pointer list-none rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      <div className="group-open/notes:hidden"><PlaceNotesPreview value={value} interactive={false} /></div>
-      <span className="mt-1 inline-block text-xs font-medium text-primary group-open/notes:hidden">Read note</span><span className="hidden text-xs font-medium text-primary group-open/notes:inline">Hide note</span>
-    </summary><div className="mt-2"><PlaceNotesPreview value={value} interactive={true} clamped={false} /></div></details>
+    <ReaderDisclosure label={label} preview={previewWhenHidden && value?.trim() ? <PlaceNotesPreview value={value} interactive={false} /> : undefined}>
+      {value?.trim() && <PlaceNotesPreview value={value} interactive={true} clamped={false} />}
+      {children}
+    </ReaderDisclosure>
   </div>;
 }
 export function useReaderPlace(item: PublicItem, enabled = true) {

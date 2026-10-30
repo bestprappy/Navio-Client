@@ -16,3 +16,5 @@ export const readerActionAtom = atom(null, (get, set, action: ReaderAction) => {
 export const readerDayModeAtom = atom<"all" | "single">("all");
 export const readerSingleDayAtom = atom<string | null>(null);
 export const readerFilterMapAtom = atom(false);
+
+export const readerSourceTokenAtom=atom<string|null>(null);

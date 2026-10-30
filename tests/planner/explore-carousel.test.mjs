@@ -5,7 +5,10 @@ import { dirname, resolve } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup as renderMarkup } from "react-dom/server";
+import {QueryClient,QueryClientProvider} from "@tanstack/react-query";
+import {SessionProvider} from "next-auth/react";
+function renderToStaticMarkup(element){return renderMarkup(createElement(SessionProvider,{session:null},createElement(QueryClientProvider,{client:new QueryClient()},element)));}
 import ts from "typescript";
 
 function resolveModule(basePath) {

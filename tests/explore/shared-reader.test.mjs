@@ -126,3 +126,19 @@ test("photo attribution remains a separate link instead of being nested in the m
  const {reviewPlannerSource}=await import("../../app/feature/planner/_components/share/reader/review-source.ts");
  for(const {shared:example} of readerReviewSamples){const source=reviewPlannerSource(example);assert.equal(source.blocks.find(block=>block.kind==="itinerary").title,example.plan.days[0].title);assert.ok(source.blocks[0].id.startsWith("starting-part-"));assert.ok(source.options.listIds.length);assert.ok(source.energyState.vehicles.every(entry=>entry.scope==="trip"));assert.equal(source.options.confirmedCustomVehicleIds.length,source.energyState.vehicles.filter(entry=>!entry.vehicle.catalog).length);assert.ok(source.blocks.some(block=>block.kind==="list"&&block.items.some(item=>item.type==="checklist")));}
  });
+
+
+test("shared notes start fully expanded with full rich content and an accessible Hide button",async()=>{
+ const {createElement}=await import("react");const {renderToPipeableStream}=await import("react-dom/server");const {Writable}=await import("node:stream");
+ const {ReaderNotes}=await import("../../app/feature/planner/_components/share/reader/reader-ui.tsx");
+ const value="## Visit notes\n\nOpening paragraph.\n\n- [ ] Bring water\n- [ ] Reserve a seat\n\n[Official information](https://example.com/visit)\n\nFinal paragraph that must never be truncated initially.";
+ let html="";await new Promise((resolve,reject)=>{const sink=new Writable({write(chunk,_encoding,next){html+=chunk.toString();next();}});sink.on("finish",resolve);const stream=renderToPipeableStream(createElement(ReaderNotes,{value,label:"Owner's tip"}),{onAllReady(){stream.pipe(sink);},onError:reject});});
+ assert.match(html,/aria-expanded="true"/);assert.match(html,/>Hide<\/button>/);assert.match(html,/aria-controls="[^"]+"/);assert.match(html,/Final paragraph that must never be truncated initially/);assert.match(html,/Bring water/);assert.match(html,/href="https:\/\/example.com\/visit"/);assert.doesNotMatch(html,/<summary|Read note|max-h-24/);
+});
+
+test("shared attachment disclosure starts open and contains all checklist and timetable content",async()=>{
+ const {createElement}=await import("react");const {renderToStaticMarkup}=await import("react-dom/server");
+ const {ReaderDisclosure}=await import("../../app/feature/planner/_components/share/reader/reader-ui.tsx");
+ const html=renderToStaticMarkup(createElement(ReaderDisclosure,{label:"Visit details"},createElement("ul",null,createElement("li",null,"First checklist item"),createElement("li",null,"Last checklist item")),createElement("p",null,"09:00 arrival; 12:00 departure")));
+ assert.match(html,/aria-expanded="true"/);assert.match(html,/>Hide<\/button>/);assert.match(html,/Last checklist item/);assert.match(html,/12:00 departure/);assert.doesNotMatch(html,/hidden=""|<summary/);
+});

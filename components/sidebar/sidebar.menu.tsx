@@ -59,6 +59,14 @@ export function PlannerDiscoverMenu({
         collapsed={collapsed}
       />
       <SidebarItem
+        title="Dashboard"
+        href="/dashboard"
+        icon={<LayoutDashboard className="size-5" />}
+        isActive={isRouteActive("/dashboard")}
+        onClick={onNavigate}
+        collapsed={collapsed}
+      />
+      <SidebarItem
         title="Explore"
         href="/explore"
         icon={<Compass className="size-5" />}
@@ -89,26 +97,14 @@ export function PlannerDiscoverMenu({
 type SidebarTripsMenuProps = {
   children: ReactNode;
   collapsed: boolean;
-  dashboardActive: boolean;
-  onNavigate: () => void;
 };
 
 export function SidebarTripsMenu({
   children,
   collapsed,
-  dashboardActive,
-  onNavigate,
 }: SidebarTripsMenuProps) {
   return (
     <SidebarMenu title="Trips" collapsed={collapsed}>
-      <SidebarItem
-        title="Dashboard"
-        href="/dashboard"
-        icon={<LayoutDashboard className="size-5" />}
-        isActive={dashboardActive}
-        onClick={onNavigate}
-        collapsed={collapsed}
-      />
       {children}
     </SidebarMenu>
   );

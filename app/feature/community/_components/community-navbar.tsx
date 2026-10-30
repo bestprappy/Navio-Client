@@ -9,6 +9,7 @@ import { communitySearchQueryAtom, createCommunityOpenAtom } from "./community-a
 import { COMMUNITY_NAV, isCommunityNavActive } from "../community-sidebar";
 import { AuthActions } from "@/components/auth-actions";
 import { Logo } from "@/components/logo";
+import { SavedLink } from "@/components/saved-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ export function CommunityNavbar() {
             <Plus className="size-5" aria-hidden="true" />
             <span className="hidden sm:inline">Create</span>
           </Button>
+          <SavedLink />
           <ThemeToggle />
           <AuthActions compact />
         </div>

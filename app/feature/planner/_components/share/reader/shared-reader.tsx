@@ -2,9 +2,10 @@
 /* Owner-selected covers in the UI preview are temporary browser-local images. */
 /* eslint-disable @next/next/no-img-element */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {SaveButton} from "@/app/feature/saved/save-button";
 import Link from "next/link";
 import { createStore, Provider, useAtomValue, useSetAtom } from "jotai";
-import { ArrowLeft, Bookmark, CalendarDays, CarFront, ChevronDown, Compass, MapPin, MessageSquarePlus, Share2, Zap } from "lucide-react";
+import { ArrowLeft, CalendarDays, CarFront, ChevronDown, Compass, MapPin, MessageSquarePlus, Share2, Zap } from "lucide-react";
 import { PlanCover } from "@/app/feature/explore/_components/shared-plans/plan-cover";
 import { PlanAuthor } from "@/app/feature/explore/_components/shared-plans/plan-author";
 import { PlanEngagement } from "@/app/feature/explore/_components/shared-plans/plan-engagement";
@@ -14,7 +15,7 @@ import { PlannerWorkspace } from "../../../planId/_components/layout/planner-wor
 import { TripBuilderErrorBoundary } from "../../../planId/_components/overview/trip-builder-error-boundary";
 import type { SharedPlan } from "../publication-api";
 import { buildReaderModel, readerDateLabel, type ReaderPresentation } from "./reader-model";
-import { readerActionAtom, readerDayModeAtom, readerModelAtom, readerSelectionAtom, readerSingleDayAtom } from "./reader-state";
+import { readerSourceTokenAtom, readerActionAtom, readerDayModeAtom, readerModelAtom, readerSelectionAtom, readerSingleDayAtom } from "./reader-state";
 import { getTripBlockColorById } from "../../../planId/_components/constants/trip-block-colors";
 import { ReaderGroupSection, ReaderItinerary } from "./reader-itinerary";
 import { ReaderFeedback } from "./reader-feedback";
@@ -27,7 +28,7 @@ import { PreviewAction, ReaderSection } from "./reader-ui";
 export type SharedReaderProps = { shared:SharedPlan;token?:string;backLink?:{href:string;label:string};presentation?:ReaderPresentation };
 export function SharedReader(props: SharedReaderProps) {
   const model=useMemo(()=>buildReaderModel(props.shared,props.presentation),[props.shared,props.presentation]);
-  const store=useMemo(()=>{const value=createStore();value.set(readerModelAtom,model);return value;},[model]);
+  const store=useMemo(()=>{const value=createStore();value.set(readerModelAtom,model);value.set(readerSourceTokenAtom,props.token??null);return value;},[model,props.token]);
   return <Provider store={store}><ReaderRoutesProvider><ReaderWorkspace {...props} /></ReaderRoutesProvider></Provider>;
 }
 function ReaderWorkspace({shared,token,backLink}:SharedReaderProps) {
@@ -97,7 +98,7 @@ function ReaderWorkspace({shared,token,backLink}:SharedReaderProps) {
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold tabular-nums" style={{background:dayColor.value,color:dayColor.foreground}}>{activeDay.label.replace("Day ","").padStart(2,"0")}</span>
           <span className="min-w-0"><span className="block truncate text-xs font-semibold">{activeDay.title||activeDay.label}</span><span className="block truncate text-[10px] text-muted-foreground">{readerDateLabel(activeDay.date)||"Dates not shared"} · {activeDay.stops.length} stops</span></span>
         </button>}
-        <div className="order-2 flex shrink-0 justify-self-end gap-2 @lg/planner:order-3 @lg/planner:col-start-3"><PreviewAction label="Save plan"><Bookmark className="size-3.5" /></PreviewAction><PreviewAction label="Share plan"><Share2 className="size-3.5" /></PreviewAction></div>
+        <div className="order-2 flex shrink-0 justify-self-end gap-2 @lg/planner:order-3 @lg/planner:col-start-3"><SaveButton token={token} className="size-9" trackOpen /><PreviewAction label="Share plan"><Share2 className="size-3.5" /></PreviewAction></div>
       </nav>
       <div className="px-5 @lg/planner:px-7">
         {/* The owner's note comes first, before the plan's details. */}

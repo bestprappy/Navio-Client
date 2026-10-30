@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { SavedLink } from "@/components/saved-link";
 import { Logo } from "@/components/logo";
 import { ProfileMenu } from "@/components/profile/profile-menu";
 import { Button } from "@/components/ui/button";
@@ -262,6 +263,8 @@ export default function SidebarWrapper() {
         <ProfileMenu compact={collapsed} wrapName onNavigate={() => setMobileOpen(false)} />
         <Button variant="ghost" size="icon" onClick={() => setCollapsed((previous) => !previous)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="shrink-0 text-muted-foreground">{collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}</Button>
       </div>
+
+      <SavedLink label={!collapsed} onNavigate={() => setMobileOpen(false)} className={cn("mt-3 w-full text-sm", collapsed && "justify-center")} />
 
       {/* Nav */}
       <nav

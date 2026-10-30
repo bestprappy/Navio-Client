@@ -1,16 +1,17 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
+import {SaveButton} from "@/app/feature/saved/save-button";
 import { useState } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
-import { Bookmark, ChevronLeft, ChevronRight, Clock, ExternalLink, MapPin, Maximize2, Navigation, Phone, Star, X, ZoomIn } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, ExternalLink, MapPin, Maximize2, Navigation, Phone, Star, X, ZoomIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { safeExternalUrl } from "@/app/feature/explore/places/places-api";
 import { GoogleAttribution } from "@/app/feature/explore/places/google-attribution";
 import { usePlaceDetails } from "../../../planId/_components/place/use-place-details";
 import { plannerMobileViewAtom } from "../../../planId/_components/layout/planner-workspace";
-import { readerActionAtom, readerModelAtom } from "./reader-state";
-import { PreviewAction, ReaderNotes, ReaderStopPhoto, readerButton, readerIconButton, useReaderPlace } from "./reader-ui";
+import { readerSourceTokenAtom, readerActionAtom, readerModelAtom } from "./reader-state";
+import { ReaderNotes, ReaderStopPhoto, readerButton, readerIconButton, useReaderPlace } from "./reader-ui";
 import type { ReaderStop } from "./reader-model";
 
 const TABS = ["Overview", "Photos", "Reviews", "In this plan"] as const;
@@ -20,6 +21,7 @@ export function ReaderPlacePanel({ stop, reveal }: { stop: ReaderStop; reveal: (
   const [photoIndex, setPhotoIndex] = useState(0);
   const [failedPhotos, setFailedPhotos] = useState<string[]>([]);
   const model = useAtomValue(readerModelAtom)!;
+  const sourceToken=useAtomValue(readerSourceTokenAtom)??undefined;
   const action = useSetAtom(readerActionAtom);
   const setMobileView = useSetAtom(plannerMobileViewAtom);
   const group = model.groups.find(g => g.id === stop.groupId)!;
@@ -81,7 +83,7 @@ export function ReaderPlacePanel({ stop, reveal }: { stop: ReaderStop; reveal: (
       </div>
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-border/60 bg-muted/15 px-4 py-2.5">
         <button type="button" className="min-h-8 rounded-sm text-xs font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" onClick={()=>{reveal(stop.id);setMobileView("itinerary");}}>View in itinerary</button>
-        <div className="flex items-center gap-2">{website && <a href={website} target="_blank" rel="noreferrer" className={cn(readerIconButton,"size-8")} aria-label="Place website"><ExternalLink className="size-3.5" /></a>}{directions && <a href={directions} target="_blank" rel="noreferrer" className={cn(readerButton,"min-h-8 px-3 text-xs")}><Navigation className="size-3.5" />Directions</a>}<PreviewAction label="Save place" className="size-8"><Bookmark className="size-3.5" /></PreviewAction></div>
+        <div className="flex items-center gap-2">{website && <a href={website} target="_blank" rel="noreferrer" className={cn(readerIconButton,"size-8")} aria-label="Place website"><ExternalLink className="size-3.5" /></a>}{directions && <a href={directions} target="_blank" rel="noreferrer" className={cn(readerButton,"min-h-8 px-3 text-xs")}><Navigation className="size-3.5" />Directions</a>}{stop.located&&<SaveButton sourceToken={sourceToken} place={{providerPlaceId:item.placeId,name,address,location:{lat:item.lat!,lng:item.lng!},category:live?.category}} className="size-9" />}</div>
       </div>
     </div>
   </aside>;

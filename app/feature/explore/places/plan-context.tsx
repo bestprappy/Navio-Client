@@ -99,17 +99,19 @@ const acknowledgement = z.object({
   alreadyAdded: z.boolean(),
 });
 
-export function AddPlaceToPlan({ placeId }: { placeId: string }) {
+export type SavedLocationInput={name:string;address?:string|null;lat:number;lng:number};
+export function AddPlaceToPlan({ placeId,savedLocation }: { placeId: string;savedLocation?:SavedLocationInput }) {
   const { ownerId, planId } = useDiscoveryPlan();
   return (
     <AddPlaceToPlanAction
       key={`${ownerId}-${planId}-${placeId}`}
       placeId={placeId}
+      savedLocation={savedLocation}
     />
   );
 }
 
-function AddPlaceToPlanAction({ placeId }: { placeId: string }) {
+function AddPlaceToPlanAction({ placeId,savedLocation }: { placeId: string;savedLocation?:SavedLocationInput }) {
   const { plan, status, ownerId } = useDiscoveryPlan();
   const recent = useAtomValue(recentPlanSidebarAtom, {
     store: recentPlanSidebarStore,
@@ -191,7 +193,8 @@ function AddPlaceToPlanAction({ placeId }: { placeId: string }) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 providerPlaceId: placeId,
-                provider: "GOOGLE",
+                provider: savedLocation?"SAVED_LOCATION":"GOOGLE",
+                savedLocation,
                 listBlockId: listId || lists[0]?.id,
                 expectedVersion: snapshot.version,
               }),

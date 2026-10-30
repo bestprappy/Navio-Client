@@ -7,6 +7,7 @@ import { Menu, X } from "lucide-react";
 import { AuthActions } from "@/components/auth-actions";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
+import { SavedLink } from "@/components/saved-link";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +62,7 @@ export function Navbar() {
 
         {/* Desktop actions */}
         <div className="hidden items-center gap-1 md:flex">
+          <SavedLink />
           <ThemeToggle />
           <AuthActions />
         </div>
@@ -110,6 +112,7 @@ export function Navbar() {
               </li>
             ))}
             <li className="mt-4 flex flex-col gap-2 border-t border-border/40 pt-4">
+              <SavedLink label onNavigate={() => setIsMenuOpen(false)} />
               <AuthActions
                 mobile
                 onNavigate={() => setIsMenuOpen(false)}

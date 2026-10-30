@@ -8,7 +8,7 @@ import { plannerMobileViewAtom } from "../../../planId/_components/layout/planne
 import { SharedDayAnchors } from "../shared-day-anchors";
 import { readerDateLabel, type ReaderGroup, type ReaderStop } from "./reader-model";
 import { readerActionAtom, readerDayModeAtom, readerFilterMapAtom, readerModelAtom, readerSelectionAtom, readerSingleDayAtom } from "./reader-state";
-import { ReaderNotes, ReaderSection, ReaderStopPhoto } from "./reader-ui";
+import { ReaderDisclosure, ReaderNotes, ReaderSection, ReaderStopPhoto } from "./reader-ui";
 import { ReaderRouteRow } from "./reader-route-row";
 import { useReaderRoutes } from "./reader-routes";
 
@@ -36,8 +36,9 @@ export function SharedStopCard({ stop }: { stop: ReaderStop }) {
       {item.rating!=null&&item.rating>0&&<p className="mt-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><Star className="size-3.5 fill-rating text-rating" /><strong className="font-medium text-foreground">{item.rating.toFixed(1)}</strong>{item.reviewCount!=null&&<span>({new Intl.NumberFormat("en",{notation:"compact"}).format(item.reviewCount)})</span>}</p>}
       {item.cost!=null&&<p className="mt-2 text-xs text-muted-foreground">Estimated cost <span className="font-medium text-foreground">{item.cost.toLocaleString()} {model?.budget?.currency??""}</span></p>}
       {item.description&&<p className="mt-3 line-clamp-2 text-sm leading-6 text-muted-foreground">{item.description}</p>}
-      {item.notes&&<div className="mt-4 border-l-2 pl-3" style={{borderColor:`color-mix(in srgb, ${color.value} 45%, transparent)`}}><ReaderNotes value={item.notes} label="Owner's tip" plain /></div>}
-      {item.schedule?.length?<div className="mt-4 space-y-2 border-l border-border pl-3" aria-label="Visit schedule">{item.schedule.map(moment=><div key={moment.id} className="flex gap-3 text-xs"><span className="shrink-0 font-medium tabular-nums text-primary">{moment.time}{moment.timeEnd&&` - ${moment.timeEnd}`}</span><span className="min-w-0 text-muted-foreground">{moment.label}</span></div>)}</div>:null}
+      {(item.notes || Boolean(item.schedule?.length)) && <div className="mt-4 border-l-2 pl-3" style={{borderColor:`color-mix(in srgb, ${color.value} 45%, transparent)`}}><ReaderNotes value={item.notes} label={item.notes ? "Owner's tip" : "Visit details"} plain>
+        {item.schedule?.length ? <div className="space-y-2" aria-label="Visit schedule">{item.schedule.map(moment=><div key={moment.id} className="flex gap-3 text-xs"><span className="shrink-0 font-medium tabular-nums text-primary">{moment.time}{moment.timeEnd&&` - ${moment.timeEnd}`}</span><span className="min-w-0 text-muted-foreground">{moment.label}</span></div>)}</div> : null}
+      </ReaderNotes></div>}
       {item.charger&&<div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">{item.charger.connectorTypes?.map(c=><span key={c} className="rounded-md bg-muted px-2 py-1">{c}</span>)}{item.charger.maxKw&&<span>{item.charger.maxKw} kW</span>}{item.charger.priceText&&<span>{item.charger.priceText}</span>}</div>}
       <div className="mt-auto flex items-end justify-between gap-3 pt-4"><p className="min-w-0 text-[11px] leading-5 text-muted-foreground">{!stop.located?"Map location not shared":item.address&&<span className="line-clamp-2">{item.address}</span>}</p><button type="button" onClick={select} className="inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-full bg-muted/60 px-3 text-xs font-medium text-foreground transition-colors hover:bg-primary/8 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><MapPin className="size-3.5" />Explore stop</button></div>
     </div>
@@ -65,8 +66,8 @@ export function ReaderGroupSection({ group }: { group: ReaderGroup }) {
         {(group.startsAt || group.endsAt) && <SharedDayAnchors startsAt={group.startsAt} endsAt={group.endsAt} />}
         {group.entries.length === 0 && <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground">No stops were shared for this section.</p>}
         {group.entries.map(entry => entry.stop ? <div key={entry.id}>{routes.legs.find(leg=>leg.id===entry.stop!.id)&&<ReaderRouteRow leg={routes.legs.find(leg=>leg.id===entry.stop!.id)!} colorId={group.colorId} />}<SharedStopCard stop={entry.stop} /></div> : entry.item.type === "note"
-          ? <ReaderNotes key={entry.id} value={entry.item.noteContent} label="Trip note" />
-          : entry.item.type === "checklist" ? <div key={entry.id} className="rounded-xl border border-border/60 bg-card p-4"><h4 className="mb-2 text-sm font-medium">{entry.item.checklistTitle || "Checklist"}</h4><ul className="space-y-2 text-sm text-muted-foreground">{entry.item.checklistLabels?.map((label, index) => <li key={index} className="flex gap-2"><Check className="mt-1 size-3.5 shrink-0" />{label}</li>)}</ul></div> : null)}
+          ? <ReaderNotes key={entry.id} value={entry.item.noteContent} label="Trip note" previewWhenHidden />
+          : entry.item.type === "checklist" ? <div key={entry.id} className="rounded-xl border border-border/60 bg-card p-4"><h4 className="mb-2 text-sm font-medium">{entry.item.checklistTitle || "Checklist"}</h4><ReaderDisclosure label={entry.item.checklistTitle || "Checklist"}><ul className="space-y-2 text-sm text-muted-foreground">{entry.item.checklistLabels?.map((label, index) => <li key={index} className="flex gap-2"><Check className="mt-1 size-3.5 shrink-0" />{label}</li>)}</ul></ReaderDisclosure></div> : null)}
       </div>
     </details>
   </div>;

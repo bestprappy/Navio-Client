@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { TripAnchor } from "../constants/types";
 import { createSavedPlace, listSavedPlaces, savedPlacesQueryKey, type SavedPlace, type SavedPlaceKind } from "./saved-place-api";
+import {libraryKey} from "@/app/feature/saved/library-api";
 
 export function SaveFavoritePlaceButton({ anchor }: { anchor: TripAnchor }) {
   const { isAuthenticated, isAuthenticationLoading, requireAuth } = useRequireAuth();
@@ -28,6 +29,7 @@ export function SaveFavoritePlaceButton({ anchor }: { anchor: TripAnchor }) {
         ...(previous ?? []).filter((item) => item.id !== place.id), place,
       ]);
       void queryClient.invalidateQueries({ queryKey: savedPlacesQueryKey });
+      void queryClient.invalidateQueries({ queryKey: libraryKey(session?.user?.id) });
       setOpen(false);
     },
   });

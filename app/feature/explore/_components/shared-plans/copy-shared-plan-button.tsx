@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 import type { TripResponse } from "@/app/feature/planner/_components/planner-api";
 
-export function CopySharedPlanButton({ token, hasUnlocatedStops = false,startDate }: { token: string; hasUnlocatedStops?: boolean;startDate?:string }) {
+export function CopySharedPlanButton({ token, hasUnlocatedStops = false,startDate,loadPublishedStartDate }: { token: string; hasUnlocatedStops?: boolean;startDate?:string;loadPublishedStartDate?:()=>Promise<string|undefined> }) {
   const router = useRouter();
   const { requireAuth, isAuthenticationLoading } = useRequireAuth();
   const [open,setOpen]=useState(false);
@@ -17,6 +17,14 @@ export function CopySharedPlanButton({ token, hasUnlocatedStops = false,startDat
   const [newDate,setNewDate]=useState("");
   const [isCopying, setIsCopying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resolvedDate,setResolvedDate]=useState(startDate);
+  const [preparing,setPreparing]=useState(false);
+  async function prepareCopy(){
+    setError(null);setPreparing(true);
+    try{const date=loadPublishedStartDate?await loadPublishedStartDate():startDate;setResolvedDate(date);setDateMode(date?"retain":"change");setOpen(true);}
+    catch(cause){setError(cause instanceof Error?cause.message:"This plan could not be checked. Try again.");}
+    finally{setPreparing(false);}
+  }
 
   async function copyPlan() {
     setIsCopying(true);
@@ -54,11 +62,11 @@ export function CopySharedPlanButton({ token, hasUnlocatedStops = false,startDat
 
   return (
     <div className="space-y-2">
-      <Button type="button" size="lg" disabled={isCopying || isAuthenticationLoading} onClick={() => requireAuth(() => {setDateMode(startDate?"retain":"change");setError(null);setOpen(true);})}>
+      <Button type="button" size="lg" disabled={isCopying || preparing || isAuthenticationLoading} onClick={() => requireAuth(() => {void prepareCopy();})}>
         {isCopying ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
         {isCopying ? "Copying plan…" : "Copy this plan"}
       </Button>
-      <Dialog open={open} onOpenChange={value=>{if(!isCopying)setOpen(value);}}><DialogContent className="max-w-md"><form onSubmit={event=>{event.preventDefault();void copyPlan();}}><DialogHeader><DialogTitle>Make this trip your own</DialogTitle><DialogDescription>Keep the published dates or choose a new start. You can edit the copied trip afterward.</DialogDescription></DialogHeader><fieldset className="my-5 space-y-3"><legend className="mb-3 text-sm font-medium">Trip dates</legend>{startDate&&<label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3 text-sm"><input type="radio" name="copy-dates" value="retain" checked={dateMode==="retain"} onChange={()=>setDateMode("retain")} className="mt-1 accent-primary" /><span>Retain published dates<span className="mt-1 block text-xs text-muted-foreground">Starting {startDate}</span></span></label>}<label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 text-sm"><input type="radio" name="copy-dates" value="change" checked={dateMode==="change"} onChange={()=>setDateMode("change")} className="accent-primary" />Choose new dates</label>{dateMode==="change"&&<label className="block text-sm">New start date<input type="date" value={newDate} required onChange={event=>setNewDate(event.target.value)} className="mt-2 block min-h-10 w-full rounded-xl border border-border bg-background px-3" /><span className="mt-2 block text-xs text-muted-foreground">The order and spacing of the shared days stay the same.</span></label>}</fieldset>{error&&<p role="alert" className="mb-4 text-sm text-destructive">{error}</p>}<DialogFooter><Button type="button" variant="outline" disabled={isCopying} onClick={()=>setOpen(false)}>Cancel</Button><Button type="submit" disabled={isCopying||(dateMode==="change"&&!newDate)}>{isCopying?"Copying...":"Copy to my trips"}</Button></DialogFooter></form></DialogContent></Dialog>
+      <Dialog open={open} onOpenChange={value=>{if(!isCopying)setOpen(value);}}><DialogContent className="max-w-md"><form onSubmit={event=>{event.preventDefault();void copyPlan();}}><DialogHeader><DialogTitle>Make this trip your own</DialogTitle><DialogDescription>Keep the published dates or choose a new start. You can edit the copied trip afterward.</DialogDescription></DialogHeader><fieldset className="my-5 space-y-3"><legend className="mb-3 text-sm font-medium">Trip dates</legend>{resolvedDate&&<label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3 text-sm"><input type="radio" name="copy-dates" value="retain" checked={dateMode==="retain"} onChange={()=>setDateMode("retain")} className="mt-1 accent-primary" /><span>Retain published dates<span className="mt-1 block text-xs text-muted-foreground">Starting {resolvedDate}</span></span></label>}<label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border p-3 text-sm"><input type="radio" name="copy-dates" value="change" checked={dateMode==="change"} onChange={()=>setDateMode("change")} className="accent-primary" />Choose new dates</label>{dateMode==="change"&&<label className="block text-sm">New start date<input type="date" value={newDate} required onChange={event=>setNewDate(event.target.value)} className="mt-2 block min-h-10 w-full rounded-xl border border-border bg-background px-3" /><span className="mt-2 block text-xs text-muted-foreground">The order and spacing of the shared days stay the same.</span></label>}</fieldset>{error&&<p role="alert" className="mb-4 text-sm text-destructive">{error}</p>}<DialogFooter><Button type="button" variant="outline" disabled={isCopying} onClick={()=>setOpen(false)}>Cancel</Button><Button type="submit" disabled={isCopying||(dateMode==="change"&&!newDate)}>{isCopying?"Copying...":"Copy to my trips"}</Button></DialogFooter></form></DialogContent></Dialog>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {hasUnlocatedStops && <p className="max-w-sm text-xs leading-5 text-muted-foreground">Stops without shared map locations become editable notes in your copy.</p>}
     </div>

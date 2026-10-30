@@ -28,8 +28,6 @@ export function SidebarTrips({ collapsed, onNavigate }: { collapsed: boolean; on
   return (
     <SidebarTripsMenu
       collapsed={collapsed}
-      dashboardActive={pathname === "/dashboard"}
-      onNavigate={onNavigate}
     >
       {status === "loading" || (status === "authenticated" && trips.isPending) ? (
         <div role="status" aria-label="Loading trips" className="h-20 animate-pulse rounded-xl bg-muted" />

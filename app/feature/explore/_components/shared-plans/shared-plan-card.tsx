@@ -12,6 +12,7 @@ import {
 import { PlanAuthor } from "./plan-author";
 import { PlanCover } from "./plan-cover";
 import { PlanEngagement } from "./plan-engagement";
+import { SharedPlanCardActions } from "./shared-plan-card-actions";
 
 type SharedPlanCardProps = {
   plan: ExplorePlan;
@@ -89,12 +90,11 @@ export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "til
 
         <div
           className={cn(
-            "mt-auto flex items-center justify-between gap-x-3 gap-y-1 pt-1 text-xs text-muted-foreground",
-            isPlanner ? "flex-nowrap" : "flex-wrap",
+            "mt-auto flex items-center justify-between gap-3 pt-1 text-xs text-muted-foreground",
           )}
         >
-          <PlanAuthor name={plan.authorName} />
-
+          <PlanAuthor name={plan.authorName} className="flex-1" />
+          <SharedPlanCardActions token={plan.token} />
         </div>
         <div className="border-t border-border/60 pt-3">
           <PlanEngagement viewCount={plan.viewCount} copyCount={plan.copyCount} />

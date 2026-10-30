@@ -13,7 +13,7 @@ function hrefs(markup) {
   return [...markup.matchAll(/<a[^>]+href="([^"]+)"/g)].map((match) => match[1]);
 }
 
-test("Discover renders Home, Explore, Community, and Help in landing-navigation order", () => {
+test("Discover renders Dashboard directly below Home", () => {
   const DiscoverMenu = sidebarMenu.PlannerDiscoverMenu;
   const html = typeof DiscoverMenu === "function"
     ? renderToStaticMarkup(createElement(DiscoverMenu, {
@@ -24,28 +24,26 @@ test("Discover renders Home, Explore, Community, and Help in landing-navigation 
     : "";
 
   assert.match(html, />Discover</);
-  assert.deepEqual(hrefs(html), ["/", "/explore", "/community", "/help"]);
+  assert.deepEqual(hrefs(html), ["/", "/dashboard", "/explore", "/community", "/help"]);
   assert.match(html, />Home</);
   assert.match(html, />Help</);
 });
 
-test("Trips renders Dashboard before saved-trip content", () => {
+test("Trips retains saved-trip content without a duplicate Dashboard link", () => {
   const TripsMenu = sidebarMenu.SidebarTripsMenu;
   const html = typeof TripsMenu === "function"
     ? renderToStaticMarkup(createElement(
       TripsMenu,
       {
         collapsed: false,
-        dashboardActive: false,
-        onNavigate() {},
       },
       createElement("a", { href: "/planner/example" }, "Example trip"),
     ))
     : "";
 
   assert.match(html, />Trips</);
-  assert.deepEqual(hrefs(html), ["/dashboard", "/planner/example"]);
-  assert.ok(html.indexOf(">Dashboard<") < html.indexOf(">Example trip<"));
+  assert.deepEqual(hrefs(html), ["/planner/example"]);
+  assert.doesNotMatch(html, />Dashboard</);
 });
 
 test("active sidebar links keep their selected surface without an edge marker or persistent focus outline", () => {

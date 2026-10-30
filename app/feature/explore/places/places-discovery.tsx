@@ -1,6 +1,8 @@
 "use client";
 /* Google photos retain provider attribution and bypass Next's image optimizer. */
 /* eslint-disable @next/next/no-img-element */
+import {SavedPlaceSources} from "@/app/feature/saved/source-plan-links";
+import {SaveButton} from "@/app/feature/saved/save-button";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -130,9 +132,11 @@ function PlaceCard({
         <div className="min-h-4">
           <PhotoCredit item={item} />
         </div>
-        <div className="border-t border-border/50 pt-3">
-          <AddPlaceToPlan placeId={p.providerPlaceId} />
+        <div className="flex items-center gap-3 border-t border-border/50 pt-3">
+          <div className="min-w-0 flex-1"><AddPlaceToPlan placeId={p.providerPlaceId} /></div>
+          <SaveButton place={p} />
         </div>
+        <SavedPlaceSources place={p} />
       </div>
     </article>
   );

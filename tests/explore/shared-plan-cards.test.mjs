@@ -3,7 +3,10 @@ import { register } from "node:module";
 import { test } from "node:test";
 import { stat } from "node:fs/promises";
 import React from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { renderToStaticMarkup as renderMarkup } from "react-dom/server";
+import {QueryClient,QueryClientProvider} from "@tanstack/react-query";
+import {SessionProvider} from "next-auth/react";
+function renderToStaticMarkup(element){return renderMarkup(React.createElement(SessionProvider,{session:null},React.createElement(QueryClientProvider,{client:new QueryClient()},element)));}
 register(new URL("../support/typescript-loader.mjs", import.meta.url));
 const { explorePlanSchema } = await import("../../app/feature/explore/_components/shared-plans/explore-plans-api.ts");
 const { SharedPlanCard } = await import("../../app/feature/explore/_components/shared-plans/shared-plan-card.tsx");
@@ -76,4 +79,15 @@ test("public detail reads only valid aggregate counts and drops engagement for u
  assert.deepEqual(readSharedPlanResponse(response).engagement,{viewCount:12,copyCount:8,uniqueCopierCount:3});
  assert.equal(readSharedPlanResponse({...response,listedInExplore:false}).engagement,undefined);
  assert.equal(readSharedPlanResponse({...response,engagement:{copyCount:-1}}).engagement.copyCount,undefined);
+});
+
+
+test("published plan cards expose Share then Save beside the author in every layout",()=>{
+ for(const layout of ["tile","row","planner"]){
+  const html=renderToStaticMarkup(React.createElement(SharedPlanCard,{plan:explorePlanSchema.parse({...raw,authorName:"Navio Team"}),layout}));
+  const author=html.indexOf("Shared by");const share=html.indexOf('aria-label="Share plan"');const save=html.indexOf('aria-label="Save plan"');
+  assert.ok(author>=0 && share>author && save>share,"author, Share, Save appear in that order");
+  assert.match(html,/aria-label="Plan actions"/);assert.match(html,/relative z-10/);
+  assert.doesNotMatch(html,/<a[^>]*>[^<]*<button/);
+ }
 });

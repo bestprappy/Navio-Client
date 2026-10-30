@@ -26,6 +26,8 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {SavedPlaceSources} from "@/app/feature/saved/source-plan-links";
+import {SaveButton} from "@/app/feature/saved/save-button";
 import { AddPlaceToPlan, DiscoveryPlanBanner } from "./plan-context";
 import { PhotoCredit } from "./places-discovery";
 import { readPlace, safeExternalUrl, type DiscoveryItem } from "./places-api";
@@ -284,7 +286,7 @@ export function PlaceReader({ placeId }: { placeId: string }) {
                     Google Maps lists this place as permanently closed.
                   </p>
                 ) : (
-                  <AddPlaceToPlan placeId={place.providerPlaceId} />
+                  <div className="space-y-3"><div className="flex items-center gap-3"><div className="min-w-0 flex-1"><AddPlaceToPlan placeId={place.providerPlaceId} /></div><SaveButton place={place} trackOpen /></div><SavedPlaceSources place={place} /></div>
                 )}
                 {item.businessStatus === "CLOSED_TEMPORARILY" && (
                   <p className="text-sm text-muted-foreground">
