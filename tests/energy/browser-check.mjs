@@ -71,7 +71,7 @@ try {
   await page.setViewportSize({width:1440,height:1000});
   await page.goto(`${origin}/planner/${secondId}`);
   const garage=page.getByRole("region",{name:"Trip vehicles"});
-  await garage.getByText("No vehicle added",{exact:true}).waitFor();
+  await garage.getByRole("heading",{name:"Add the EV you're driving",exact:true}).waitFor();
   await garage.getByRole("button",{name:"Add vehicle",exact:true}).click();
   await page.getByRole("button",{name:"My custom EVs",exact:true}).click();
   await page.getByRole("button",{name:"Reusable custom EV",exact:true}).click();
@@ -81,7 +81,7 @@ try {
   await garage.getByRole("button",{name:"Remove Reusable custom EV from garage",exact:true}).click();
   await eventually(()=>secondSnapshot.energyState?.garageVehicleIds?.length===0,"trip removal did not save");
   await page.reload();
-  await garage.getByText("No vehicle added",{exact:true}).waitFor();
+  await garage.getByRole("heading",{name:"Add the EV you're driving",exact:true}).waitFor();
   await garage.getByRole("button",{name:"Add vehicle",exact:true}).click();
   await page.getByRole("button",{name:"My custom EVs",exact:true}).click();
   await page.getByRole("button",{name:"Reusable custom EV",exact:true}).waitFor();

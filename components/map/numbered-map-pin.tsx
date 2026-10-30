@@ -5,32 +5,27 @@ import { MapPin } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-type NumberedMapPinProps = {
+type MapPinMarkProps = {
   /** CSS colour of the pin, such as a planner block colour value. */
   color: string;
   /** CSS colour of the number. */
   foreground: string;
-  label: string;
   selected: boolean;
   /** Dashed outline instead of a fill: a place found but not added yet. */
   pending?: boolean;
+  children?: ReactNode;
+};
+
+type NumberedMapPinProps = MapPinMarkProps & {
+  label: string;
   onSelect: () => void;
   children: ReactNode;
 };
 
-/** A map pin with a number or icon in its head, as the planner draws itinerary stops. */
-export function NumberedMapPin({ color, foreground, label, selected, pending = false, onSelect, children }: NumberedMapPinProps) {
+/** The planner's pin shape with a number or icon in its head. Not interactive on its own. */
+export function MapPinMark({ color, foreground, selected, pending = false, children }: MapPinMarkProps) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      aria-pressed={selected}
-      className="relative block cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect();
-      }}
-    >
+    <>
       <MapPin
         aria-hidden="true"
         className={cn(
@@ -49,6 +44,24 @@ export function NumberedMapPin({ color, foreground, label, selected, pending = f
       >
         {children}
       </span>
+    </>
+  );
+}
+
+/** A map pin with a number or icon in its head, as the planner draws itinerary stops. */
+export function NumberedMapPin({ label, onSelect, ...mark }: NumberedMapPinProps) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      aria-pressed={mark.selected}
+      className="relative block cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect();
+      }}
+    >
+      <MapPinMark {...mark} />
     </button>
   );
 }

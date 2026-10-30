@@ -1,50 +1,66 @@
 "use client";
 
-import { ListPlus } from "lucide-react";
+import { Landmark, ListPlus, UtensilsCrossed, Zap, type LucideIcon } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+import { PlannerEmptyState } from "../layout/planner-empty-state";
 
 type EmptyMyListCalloutProps = {
   onCreateList: () => void;
 };
 
+type PreviewPlace = {
+  icon: LucideIcon;
+  label: string;
+  barWidth: string;
+};
+
+const PREVIEW_PLACES: readonly PreviewPlace[] = [
+  { icon: Landmark, label: "Must-see", barWidth: "w-3/4" },
+  { icon: UtensilsCrossed, label: "Restaurant", barWidth: "w-1/2" },
+  { icon: Zap, label: "Charging stop", barWidth: "w-2/3" },
+];
+
 export function EmptyMyListCallout({ onCreateList }: EmptyMyListCalloutProps) {
   return (
-    <div className="mx-6 overflow-hidden rounded-sm border border-border/70 bg-card text-card-foreground">
-      <div className="relative isolate p-6">
-        <div
-          className="pointer-events-none absolute inset-0 -z-10 bg-linear-to-br from-primary/10 via-transparent to-accent/10"
-          aria-hidden="true"
-        />
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/50 to-transparent"
-          aria-hidden="true"
-        />
-
-        <div className="space-y-4">
-          <h3 className="text-xl font-bold leading-tight text-foreground">
-            Save places as you plan
-          </h3>
-
-          <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-            Create a list to organise your must-sees, restaurants, charging
-            stops, or anything worth revisiting along the way.
-          </p>
-
-          <button
-            type="button"
-            className={cn(
-              buttonVariants({ size: "lg" }),
-              "h-11 rounded-full px-6 shadow-md shadow-primary/20",
-            )}
-            onClick={onCreateList}
-          >
+    <PlannerEmptyState.Root className="mx-6">
+      <PlannerEmptyState.Body>
+        <PlannerEmptyState.Title>Save places as you plan</PlannerEmptyState.Title>
+        <PlannerEmptyState.Description>
+          Collect must-sees, restaurants and charging stops in one list
+          while you work out the days.
+        </PlannerEmptyState.Description>
+        <PlannerEmptyState.Action>
+          <Button type="button" size="lg" className="gap-2" onClick={onCreateList}>
             <ListPlus className="size-4" aria-hidden="true" />
             Create a list
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </PlannerEmptyState.Action>
+      </PlannerEmptyState.Body>
+
+      <PlannerEmptyState.Preview>
+        <ul className="grid gap-1.5">
+          {PREVIEW_PLACES.map(({ icon: Icon, label, barWidth }, index) => (
+            <li
+              key={label}
+              className={cn(
+                "flex items-center gap-2.5 rounded-sm bg-card px-2.5 py-2",
+                index === PREVIEW_PLACES.length - 1 && "opacity-60",
+              )}
+            >
+              <span className="grid size-6 shrink-0 place-items-center rounded-sm bg-primary/10 text-primary">
+                <Icon className="size-3.5" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="text-xs font-medium text-foreground/80">{label}</span>
+                <span className={cn("h-1.5 rounded-full bg-muted-foreground/20", barWidth)} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      </PlannerEmptyState.Preview>
+    </PlannerEmptyState.Root>
   );
 }

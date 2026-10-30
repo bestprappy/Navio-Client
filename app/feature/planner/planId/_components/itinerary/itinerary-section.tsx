@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { useTripMetadata, useUpdateTripMetadata } from "../../../_components/use-trip-metadata";
 import { DayDestinationPicker } from "./day-destination-picker";
 import { resolveDayDestinations } from "./day-destinations";
+import { DayCityRoute } from "./day-city-route";
+import { getDayCities, getDayEndColorId, getDestinationAt } from "./day-sections";
 import { AutoPlanUndoNotice } from "../auto-plan/auto-plan-undo-notice";
 import { focusedAnchorAtom } from "./anchor-map.atoms";
 import { AnchorStopCard, EndAnchorRouteInfo } from "./anchor-stop-card";
@@ -44,7 +46,6 @@ import { ItineraryOptionsPopover } from "./itinerary-options-popover";
 import { InlineAddDivider } from "../inline-add-divider";
 import { PopularPlaces } from "../guide/popular-places";
 import { ItineraryViewSwitch } from "./table/itinerary-view-switch";
-import { ItineraryDayControls } from "./itinerary-day-controls";
 import { itineraryDayViewAtom, visibleItineraryDaysAtom, selectItineraryDayAtom } from "./itinerary-day-view.atoms";
 
 function getNextAvailableBlockDate(
@@ -235,7 +236,7 @@ export function ItinerarySection({
                 />
               ) : (
                 <>
-                  <div className="space-y-3 border-b border-border/60 pb-4">
+                  <div className="border-b border-border/60 pb-4">
                     <div className="flex min-w-0 items-center justify-between gap-2">
                     <ItineraryViewSwitch />
                     <div className="flex shrink-0 items-center gap-1">
@@ -257,12 +258,14 @@ export function ItinerarySection({
                     <ItineraryOptionsPopover />
                     </div>
                     </div>
-                    <ItineraryDayControls />
                   </div>
                   {visibleDays.map(({ block, index }) => {
                     const destination = destinations.get(block.id) ?? initialDestination;
                     const anchors = dayAnchors.get(block.id) ?? EMPTY_DAY_ANCHORS;
                     const placeCount = getDayPlacePositions(block, !!anchors.start).size;
+                    // Sections can move the day on to another city; adding at the end searches there.
+                    const endDestination = getDestinationAt(block, block.items.length, destination);
+                    const endColor = getTripBlockColorById(getDayEndColorId(block));
                     const isOpen = dayView === "single" || openIds.includes(block.id);
                     return <TripBlock.Root
                       key={block.id}
@@ -273,6 +276,7 @@ export function ItinerarySection({
                       <TripBlock.Header>
                         <TripBlock.Title />
                         {readOnly ? null : <AutoPlanUndoNotice blockId={block.id} />}
+                        <DayCityRoute cities={getDayCities(block, destination)} />
                         {readOnly ? renderDayAnchors?.(block) : <>
                         <DayDestinationPicker destination={destination} isFirstDay={block.id === firstBlockId} isOverride={!!block.destination} onChange={(next) => changeDestination(block.id, next)} />
                         <DayAnchorRail.Root
@@ -307,8 +311,8 @@ export function ItinerarySection({
                       {isOpen && <TripBlock.Content>
                         <AnchorStopCard blockId={block.id} edge="start" anchor={anchors.start} position={1} colorId={block.colorId} />
                         <TripBlock.Items hasStart={!!anchors.start} placeSearchBias={{ label: destination.name, lat: destination.lat, lng: destination.lng }} />
-                        {anchors.end && (anchors.start || block.items.some(isPlaceItem)) && <EndAnchorRouteInfo blockId={block.id} routeColor={getTripBlockColorById(block.colorId).value} />}
-                        <AnchorStopCard blockId={block.id} edge="end" anchor={anchors.end} position={placeCount + (anchors.start ? 2 : 1)} colorId={block.colorId} />
+                        {anchors.end && (anchors.start || block.items.some(isPlaceItem)) && <EndAnchorRouteInfo blockId={block.id} routeColor={endColor.value} />}
+                        <AnchorStopCard blockId={block.id} edge="end" anchor={anchors.end} position={placeCount + (anchors.start ? 2 : 1)} colorId={endColor.id} />
                         <DayRouteOverview
                           blockId={block.id}
                           blockIndex={index}
@@ -316,13 +320,13 @@ export function ItinerarySection({
                         {!readOnly && <TripBlock.Actions
                           evSearchAnchor={{
                             id: `destination-${block.id}`,
-                            lat: destination.lat,
-                            lng: destination.lng,
+                            lat: endDestination.lat,
+                            lng: endDestination.lng,
                           }}
                           placeSearchBias={{
-                            label: destination.name,
-                            lat: destination.lat,
-                            lng: destination.lng,
+                            label: endDestination.name,
+                            lat: endDestination.lat,
+                            lng: endDestination.lng,
                           }}
                         />}
                       </TripBlock.Content>}

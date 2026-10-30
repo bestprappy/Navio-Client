@@ -64,6 +64,8 @@ type PlacePreviewPanelProps = {
   addLabel?: string;
   /** Shown above the add button in place of "To …", such as a picker for where the place goes. */
   addTarget?: ReactNode;
+  /** A control joined to the add button's right edge, such as a menu of other destinations. */
+  addMenu?: ReactNode;
 };
 
 function formatReviewCount(count: number): string {
@@ -85,7 +87,7 @@ function isGooglePlacePhoto(imageUrl?: string): boolean {
 function CompactPreviewActions({
   isAdded, usageLabel, targetLabel, insertionLabel, addUnavailableReason,
   showAddAction = true, savedToTrip = false, canAddToTrip = true, total = 1,
-  onPrevious, onNext, onAddToTrip, addLabel, addTarget,
+  onPrevious, onNext, onAddToTrip, addLabel, addTarget, addMenu,
 }: PlacePreviewPanelProps) {
   return <div className="flex shrink-0 items-center gap-2 border-t border-border/70 px-3 py-2.5">
     <DialogTrigger type="button" aria-label="View full place details" className="min-h-8 shrink-0 rounded-sm px-1 text-xs font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Details</DialogTrigger>
@@ -100,10 +102,13 @@ function CompactPreviewActions({
         {!canAddToTrip && <p className="line-clamp-2">{addUnavailableReason ?? "Add a day to your itinerary first"}</p>}
         {addTarget}
       </div>
-      <Button type="button" size="sm" className="shrink-0 rounded-sm" onClick={onAddToTrip} disabled={!canAddToTrip || !onAddToTrip}
-        aria-label={targetLabel && onAddToTrip ? `${isAdded ? "Add another visit to" : "Add to"} ${targetLabel}${insertionLabel ? `, ${insertionLabel.toLowerCase()}` : ""}` : undefined}>
-        {addLabel ?? (isAdded ? onAddToTrip ? "Add another visit" : "Added" : "Add to trip")}
-      </Button>
+      <div className="flex shrink-0">
+        <Button type="button" size="sm" className={addMenu ? "rounded-l-sm rounded-r-none" : "rounded-sm"} onClick={onAddToTrip} disabled={!canAddToTrip || !onAddToTrip}
+          aria-label={targetLabel && onAddToTrip ? `${isAdded ? "Add another visit to" : "Add to"} ${targetLabel}${insertionLabel ? `, ${insertionLabel.toLowerCase()}` : ""}` : undefined}>
+          {addLabel ?? (isAdded ? onAddToTrip ? "Add another visit" : "Added" : "Add to trip")}
+        </Button>
+        {addMenu}
+      </div>
     </>}
   </div>;
 }
@@ -130,6 +135,7 @@ export function PlacePreviewPanel(props: PlacePreviewPanelProps) {
   statusLabel,
   addLabel,
   addTarget,
+  addMenu,
  } = props;
   const panelRef = useRef<HTMLElement>(null);
   const [availableHeight, setAvailableHeight] = useState<number | null>(null);
@@ -303,16 +309,19 @@ export function PlacePreviewPanel(props: PlacePreviewPanelProps) {
               <Check className="size-3.5 shrink-0" aria-hidden="true" />{usageLabel}
             </p> : null}
             {addTarget}
-            <Button
-              type="button"
-              size="sm"
-              className="rounded-sm"
-              onClick={onAddToTrip}
-              disabled={!canAddToTrip || !onAddToTrip}
-              aria-label={targetLabel && onAddToTrip ? `${isAdded ? "Add another visit to" : "Add to"} ${targetLabel}${insertionLabel ? `, ${insertionLabel.toLowerCase()}` : ""}` : undefined}
-            >
-              {addLabel ?? (isAdded ? onAddToTrip ? "Add another visit" : "Added" : "Add to trip")}
-            </Button>
+            <div className="flex">
+              <Button
+                type="button"
+                size="sm"
+                className={addMenu ? "rounded-l-sm rounded-r-none" : "rounded-sm"}
+                onClick={onAddToTrip}
+                disabled={!canAddToTrip || !onAddToTrip}
+                aria-label={targetLabel && onAddToTrip ? `${isAdded ? "Add another visit to" : "Add to"} ${targetLabel}${insertionLabel ? `, ${insertionLabel.toLowerCase()}` : ""}` : undefined}
+              >
+                {addLabel ?? (isAdded ? onAddToTrip ? "Add another visit" : "Added" : "Add to trip")}
+              </Button>
+              {addMenu}
+            </div>
             {targetLabel && canAddToTrip ? <p className="text-right text-xs text-muted-foreground">To {targetLabel}{insertionLabel ? <span className="block">{insertionLabel}</span> : null}</p> : null}
             {!canAddToTrip ? (
               <p className="text-xs text-muted-foreground">

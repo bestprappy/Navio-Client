@@ -77,6 +77,9 @@ export type PublicItem = {
   id?: string;
   timeSource?: "fixed"|"calculated";
   schedule?: {id:string;time:string;timeEnd?:string;label:string}[];
+  /** Section dividers: palette colour id, and the city's name without coordinates. */
+  colorId?: string;
+  city?: string;
 };
 
 export type PublicDay = {

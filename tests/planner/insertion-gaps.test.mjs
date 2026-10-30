@@ -33,9 +33,10 @@ function renderItems(readOnly = false, count = 2) {
   return html;
 }
 
-test("two cards have three independent insertion gaps with correct insertion targets", () => {
+test("two cards have three edge + controls: above the first card and below each card", () => {
   const html = renderItems();
-  assert.equal((html.match(/data-insertion-gap="true"/g) ?? []).length, 3);
+  assert.equal((html.match(/data-insertion-(?:before|after)="[^"]+"(?: data-insertion-after="[^"]+")?/g) ?? []).length, 3);
+  assert.equal((html.match(/-top-3/g) ?? []).length, 3);
   assert.match(html, /data-insertion-before="stop-1"/);
   assert.match(html, /data-insertion-before="stop-2" data-insertion-after="stop-1"/);
   assert.match(html, /data-insertion-after="stop-2"/);
@@ -47,7 +48,7 @@ test("two cards have three independent insertion gaps with correct insertion tar
 
 test("read-only cards never expose insertion gaps or drag controls", () => {
   const html = renderItems(true);
-  assert.doesNotMatch(html, /data-insertion-gap|Add an item here|aria-label="Drag item"/);
+  assert.doesNotMatch(html, /data-insertion-before|data-insertion-after|Add an item here|aria-label="Drag item"/);
   assert.match(html, /trip-item-stop-1/);
   assert.match(html, /trip-item-stop-2/);
 });

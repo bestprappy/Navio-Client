@@ -14,6 +14,7 @@ import type {
   NoteItem,
   PlaceItem,
   PlaceItemEvChargerDetails,
+  SectionItem,
   TripBlockData,
   TripBlockItem,
 } from "../planId/_components/constants/types";
@@ -232,11 +233,16 @@ export async function savePlannerSnapshot(
   const requiresRouteChoice = blocks.some(block => block.items.some(item => item.type === "place" && item.arrivalRouteKey != null));
   const requiresTimeSources = blocks.some(block => block.items.some(item => item.type === "place" && item.timeSource != null));
   const requiresSchedules = blocks.some(block => block.items.some(item => item.type === "place" && item.schedule !== undefined));
+  const requiresSections = blocks.some(block => block.items.some(item => item.type === "section"));
   let syncedEnergy = energyState;
   let syncedBlocks = blocks;
   let localOnlySettings = false;
-  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations || requiresTravelModes || requiresRouteChoice || requiresPreciseCharging || requiresTimeSources || requiresSchedules) {
+  if (requiresDestinations || requiresAnchors || requiresTargets || requiresEnergy || requiresObservations || requiresTravelModes || requiresRouteChoice || requiresPreciseCharging || requiresTimeSources || requiresSchedules || requiresSections) {
     const server = await getPlannerSnapshot(tripId);
+    // An older trip service rejects the whole save on an unknown item type.
+    if (requiresSections && !server.capabilities?.includes("day-sections-v1")) {
+      throw new PlannerApiError("The trip service must be updated before day sections can be saved. Your local changes have been kept.", 409);
+    }
     if (requiresCycling && !server.capabilities?.includes("cycling-legs-v1")) {
       throw new PlannerApiError("The trip service must be updated before bike journeys can be saved. Your local changes have been kept.", 409);
     }
@@ -623,7 +629,16 @@ function isTripBlockItem(value: unknown): value is TripBlockItem {
   if (value.type === "note") return isNoteItem(value);
   if (value.type === "checklist") return isChecklistItem(value);
   if (value.type === "place") return isPlaceItem(value);
+  if (value.type === "section") return isSectionItem(value);
   return false;
+}
+
+function isSectionItem(value: Record<string, unknown>): value is SectionItem {
+  return (
+    typeof value.title === "string" &&
+    (value.colorId == null || (typeof value.colorId === "string" && /^[a-z]{1,32}$/.test(value.colorId))) &&
+    (value.destination == null || isTripDestination(value.destination))
+  );
 }
 
 function isNoteItem(value: Record<string, unknown>): value is NoteItem {

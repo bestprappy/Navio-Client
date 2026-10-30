@@ -1,4 +1,4 @@
-import { getTripBlockColorByIndex } from "../../planId/_components/constants/trip-block-colors";
+import { getTripBlockColorByIndex, tripBlockColorOptions } from "../../planId/_components/constants/trip-block-colors";
 import type {
   EvConnectorType,
   PlaceItemEvChargerDetails,
@@ -51,7 +51,16 @@ function toChargerDetails(charger: PublicCharger | undefined): PlaceItemEvCharge
   };
 }
 
+function toColorId(value: string | undefined): TripBlockColorId | null {
+  return tripBlockColorOptions.find((option) => option.id === value)?.id ?? null;
+}
+
 function toItem(item: PublicItem, id: string): TripBlockItem | null {
+  if (item.type === "section") {
+    // The published city has no coordinates, so it reads as part of the name.
+    const title = [item.name?.trim(), item.city?.trim()].filter(Boolean).join(" · ");
+    return { id, type: "section", title, colorId: toColorId(item.colorId), destination: null };
+  }
   if (item.type === "note") {
     return item.noteContent ? { id, type: "note", content: item.noteContent } : null;
   }

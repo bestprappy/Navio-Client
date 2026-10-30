@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
   activeBlockIdAtom, addPlaceVisitToBlockAtom, plannerReadOnlyAtom, tripBlocksAtom,
@@ -7,6 +8,7 @@ import {
 } from "../overview/trip-builder.atoms";
 import { getPlaceUsage } from "../itinerary/trip-location-markers";
 import { useRevealPlanCard } from "../itinerary/use-reveal-plan-card";
+import { AddPlaceMenu } from "./add-place-menu";
 import { PlacePreviewPanel } from "./place-preview-panel";
 import { usePlaceDetails } from "./use-place-details";
 
@@ -24,6 +26,8 @@ export function TripPlacePreviewPanel({ place, onClose }: TripPlacePreviewPanelP
   const reveal = useRevealPlanCard();
   const targetBlockId = blocks.some((block) => block.id === activeBlockId) ? activeBlockId! : place.blockId;
   const usage = getPlaceUsage(blocks, place, targetBlockId);
+  const placeType = details.data?.primaryType ?? place.placeType;
+  const visit = useMemo(() => ({ ...place, placeType }), [place, placeType]);
 
   return (
     <PlacePreviewPanel
@@ -45,9 +49,10 @@ export function TripPlacePreviewPanel({ place, onClose }: TripPlacePreviewPanelP
       showAddAction={!readOnly && !place.isEvCharger}
       canAddToTrip={blocks.some((block) => block.id === targetBlockId)}
       onAddToTrip={() => {
-        const itemId = addVisit({ blockId: targetBlockId, place: { ...place, placeType: details.data?.primaryType ?? place.placeType } });
+        const itemId = addVisit({ blockId: targetBlockId, place: visit });
         if (itemId) reveal(targetBlockId, itemId);
       }}
+      addMenu={<AddPlaceMenu place={visit} />}
       savedToTrip
       isLoadingDetails={details.isLoading}
       onClose={onClose}

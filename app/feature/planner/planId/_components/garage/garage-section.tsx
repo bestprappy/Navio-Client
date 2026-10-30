@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { AlertTriangle, Car, Plus } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 import { useAtom, useAtomValue } from "jotai";
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { useTripCharging } from "./use-trip-charging";
 import { VehicleCard } from "./vehicle-card";
 import { VehicleSwitcher } from "./vehicle-switcher";
 import { AddVehicleDialog } from "./add-vehicle-dialog";
+import { GarageEmptyState } from "./garage-empty-state";
 import { VehicleUsageOverview } from "./vehicle-usage-overview";
 import { VehicleSettingsForm } from "./vehicle-settings-form";
 import { useGarage } from "./garage-provider";
@@ -35,6 +36,12 @@ export function GarageSection() {
   const featuredVehicle = vehicles.find((vehicle) => vehicle.id === activeVehicleId) ?? vehicles[0];
   const featuredCar = featuredVehicle ? getVehicleCar(featuredVehicle) : null;
   const controlsDisabled = !authenticated || mutation.isPending || loadingSession || (query.isError && !savedActiveVehicle);
+  const addVehicleDisabled = !authenticated || loadingSession || query.isPending || query.isError || mutation.isPending || vehicles.length >= 25;
+  const showEmptyState = authenticated && query.isSuccess && vehicles.length === 0;
+  const openAddVehicle = () => {
+    mutation.reset();
+    setModalOpen(true);
+  };
 
   const blocks = useAtomValue(itineraryBlocksAtom);
   const { data: routeData } = useTripRoutes();
@@ -58,33 +65,28 @@ export function GarageSection() {
             Pick the EV you&apos;re driving and the planner estimates battery and charging for every day.
           </p>
         </div>
-        <Button
-          type="button"
-          size="lg"
-          variant={vehicles.length > 0 ? "outline" : "default"}
-          className="gap-2"
-          disabled={!authenticated || loadingSession || query.isPending || query.isError || mutation.isPending || vehicles.length >= 25}
-          onClick={() => { mutation.reset(); setModalOpen(true); }}
-        >
-          <Plus className="size-4" aria-hidden="true" />
-          Add vehicle
-        </Button>
+        {/* The empty state carries its own Add vehicle action. */}
+        {!showEmptyState && (
+          <Button
+            type="button"
+            size="lg"
+            variant={vehicles.length > 0 ? "outline" : "default"}
+            className="gap-2"
+            disabled={addVehicleDisabled}
+            onClick={openAddVehicle}
+          >
+            <Plus className="size-4" aria-hidden="true" />
+            Add vehicle
+          </Button>
+        )}
       </div>
 
       {(loadingSession || (authenticated && query.isPending)) && <p role="status" className="p-4 text-sm text-muted-foreground">Loading your saved vehicles…</p>}
       {authenticated && query.isError && <div role="alert" className="mb-4 rounded-md bg-destructive/10 p-4 text-sm text-destructive"><p>{query.error.message}</p><Button variant="outline" className="mt-2" onClick={() => void query.refetch()}>Reload garage</Button></div>}
       {mutation.isError && !isModalOpen && <p role="alert" className="mb-4 rounded-md bg-destructive/10 p-4 text-sm text-destructive">{mutation.error.message}</p>}
       {mutation.isPending && <p role="status" className="mb-3 text-sm text-muted-foreground">Saving your garage…</p>}
-      {authenticated && query.isSuccess && vehicles.length === 0 ? (
-        <div className="mx-1 flex items-center gap-3 rounded-md border border-dashed border-input p-4">
-          <Car className="size-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <div>
-            <p className="text-sm font-medium text-foreground">No vehicle added</p>
-            <p className="text-sm text-muted-foreground">
-              Add your EV to track battery usage and charge time per day.
-            </p>
-          </div>
-        </div>
+      {showEmptyState ? (
+        <GarageEmptyState disabled={addVehicleDisabled} onAddVehicle={openAddVehicle} />
       ) : featuredVehicle && featuredCar ? (
         <div className="mx-1 grid min-w-0 gap-3">
           <VehicleCard

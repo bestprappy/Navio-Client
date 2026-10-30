@@ -9,15 +9,9 @@ export function savedPlaceKey(place: Pick<PlaceItem, "placeId">) {
   return place.placeId.replace(/^GOOGLE:/, "");
 }
 
-/** Presentation only: saved places live in their original blocks but appear once in Places. */
+/** The lists My List renders; each keeps its own places. Starting Part is pinned separately. */
 export function visibleMyListBlocks(blocks: TripBlockData[]) {
-  return blocks.filter(block=>!block.id.startsWith("starting-part-")).map((block) => {
-    const items = block.items.filter(
-      (item) => !isPlaceItem(item) || isEvChargerPlaceItem(item),
-    );
-    // Keep list management available even when all its places are shown in the subsection.
-    return { ...block, items };
-  });
+  return blocks.filter((block) => !block.id.startsWith("starting-part-"));
 }
 
 export function collectListPlaces(blocks: TripBlockData[]) {

@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { AppearanceGoogleMap } from "@/components/map/appearance-google-map";
 import { AppearanceGoogleMarker } from "@/components/map/appearance-google-marker";
+import { MapPinMark } from "@/components/map/numbered-map-pin";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -440,11 +441,10 @@ export function PlaceReader({ placeId }: { placeId: string }) {
               >
                 <ReaderMapResize />
                 <AppearanceGoogleMarker position={place.location}>
-                  <span
-                    className="flex size-11 items-center justify-center rounded-full border-4 border-background bg-primary text-primary-foreground shadow-lg"
-                    aria-label={place.name}
-                  >
-                    <MapPin className="size-5" aria-hidden="true" />
+                  <span role="img" aria-label={place.name} className="relative block">
+                    <MapPinMark color="var(--map-pin)" foreground="var(--map-pin-foreground)" selected>
+                      <span className="size-2.5 rounded-full bg-current" />
+                    </MapPinMark>
                   </span>
                 </AppearanceGoogleMarker>
               </AppearanceGoogleMap>

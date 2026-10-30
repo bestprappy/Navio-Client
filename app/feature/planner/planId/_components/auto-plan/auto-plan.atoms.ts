@@ -2,6 +2,7 @@ import { atom } from "jotai";
 
 import { isPlaceItem, type TripBlockData, type TripBlockItem } from "../constants/types";
 import { calculateDaySchedule } from "../itinerary/day-timing";
+import { getDayEdgeStops } from "../itinerary/day-anchors";
 import {
   activeSearchAtom,
   openBlockIdsAtom,
@@ -60,7 +61,8 @@ export const applyDayAutoPlanAtom = atom(null, (get, set, payload: ApplyDayAutoP
     : undefined;
   if (payload.moveTo && !target) return false;
 
-  const { items, moved } = arrangeDayItems(block.items, payload.plan, !target);
+  // The day's start and end stops are not planned; they keep the edges of the day.
+  const { items, moved } = arrangeDayItems(block.items, payload.plan, !target, getDayEdgeStops(block));
   const targetItems = target ? [...target.items, ...moved] : null;
   set(tripBlocksAtom, blocks.map((candidate) => {
     if (candidate.id === block.id) return { ...candidate, items };

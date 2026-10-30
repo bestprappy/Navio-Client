@@ -27,6 +27,7 @@ export function getItemInsertionLabel(
     if (isPlaceItem(item)) {
       return block.kind === "list" ? item.name : positions.has(item.id) ? `stop ${positions.get(item.id)}` : "charging stop";
     }
+    if (item.type === "section") return item.title.trim() ? `the ${item.title.trim()} section` : "the next section";
     return item.type === "note" ? "note" : "checklist";
   }
 

@@ -30,7 +30,14 @@ export function useDayAutoPlan(block: TripBlockData) {
   const [applyError, setApplyError] = useState<string | null>(null);
   const placeDetails = useDayPlaceDetails(block.items);
 
-  const anchors = useMemo(() => resolveDayAnchors(blocks).get(block.id) ?? EMPTY_DAY_ANCHORS, [blocks, block.id]);
+  const resolved = useMemo(() => resolveDayAnchors(blocks).get(block.id) ?? EMPTY_DAY_ANCHORS, [blocks, block.id]);
+  // A start or end stop stays where it is; the plan orders the stops between them.
+  const anchors = useMemo(() => ({
+    ...resolved,
+    start: resolved.start ?? (resolved.startStopId ? resolved.startPlace : null),
+    end: resolved.end ?? (resolved.endStopId ? resolved.endPlace : null),
+  }), [resolved]);
+  const planItems = useMemo(() => block.items.filter((item) => item.id !== resolved.startStopId && item.id !== resolved.endStopId), [block.items, resolved.startStopId, resolved.endStopId]);
   const dayNumber = getDayIndex(blocks, block.id);
   const otherDays = useMemo<DayOption[]>(() => blocks
     .filter((candidate) => candidate.kind === "itinerary" && candidate.id !== block.id)
@@ -43,7 +50,7 @@ export function useDayAutoPlan(block: TripBlockData) {
     ? "Enter a start and finish time."
     : endMinute - startMinute < MIN_DAY_MINUTES ? "Finish at least an hour after you start." : null;
 
-  const classified = useMemo(() => classifyDayPlaces(block.items, placeDetails.details, block.date), [block.items, placeDetails.details, block.date]);
+  const classified = useMemo(() => classifyDayPlaces(planItems, placeDetails.details, block.date), [planItems, placeDetails.details, block.date]);
   const setTimeCount = classified.plan.filter((stop) => isFixedTime(stop.item)).length;
   const canPlan = classified.plan.length >= 2;
 
@@ -51,7 +58,7 @@ export function useDayAutoPlan(block: TripBlockData) {
     if (!canPlan || placeDetails.isLoading || settingsError || startMinute === null || endMinute === null) return null;
     try {
       return buildDayAutoPlan({
-        items: block.items,
+        items: planItems,
         date: block.date,
         details: placeDetails.details,
         start: anchors.start,
@@ -62,7 +69,7 @@ export function useDayAutoPlan(block: TripBlockData) {
       console.error("[AutoPlan] Could not build a plan", { blockId: block.id, error });
       return null;
     }
-  }, [canPlan, placeDetails.isLoading, placeDetails.details, settingsError, startMinute, endMinute, mode, keepSetTimes, block.items, block.date, block.id, anchors.start, anchors.end]);
+  }, [canPlan, placeDetails.isLoading, placeDetails.details, settingsError, startMinute, endMinute, mode, keepSetTimes, planItems, block.date, block.id, anchors.start, anchors.end]);
 
   const hoursUnknown = plan?.stops.filter((stop) => stop.hours === null).map((stop) => stop.name) ?? [];
   const validMoveTo = moveTo === KEEP_ON_THIS_DAY || otherDays.some((day) => day.value === moveTo) ? moveTo : KEEP_ON_THIS_DAY;

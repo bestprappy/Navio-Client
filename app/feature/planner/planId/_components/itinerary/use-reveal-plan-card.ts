@@ -9,6 +9,7 @@ import {
   activeBlockIdAtom,
   openBlockIdsAtom,
 } from "../overview/trip-builder.atoms";
+import { expandSectionOfItemAtom } from "./day-sections.atoms";
 
 // Keeps the card off the panel's top edge; small enough that the day's own top
 // stays above the scroll-detection threshold, so the active day does not flip.
@@ -36,18 +37,20 @@ function scrollPanelTo(element: HTMLElement, panel: HTMLElement) {
 
 /**
  * Brings a trip item's card into view in the itinerary panel: opens its day
- * (collapsed days do not render their items), marks the day active, then
+ * and its section (collapsed ones do not render their items), marks the day active, then
  * scrolls once the opened content has painted.
  */
 export function useRevealPlanCard() {
   const scrollPanelId = usePlannerScrollPanelId();
   const setOpenBlockIds = useSetAtom(openBlockIdsAtom);
   const setActiveBlockId = useSetAtom(activeBlockIdAtom);
+  const expandSectionOfItem = useSetAtom(expandSectionOfItemAtom);
 
   return useCallback(
     (blockId: string, itemId?: string) => {
       setOpenBlockIds((ids) => (ids.includes(blockId) ? ids : [...ids, blockId]));
       setActiveBlockId(blockId);
+      if (itemId) expandSectionOfItem({ blockId, itemId });
 
       // Two frames: one for React to commit the opened day, one for layout.
       window.requestAnimationFrame(() => {
@@ -72,6 +75,6 @@ export function useRevealPlanCard() {
         });
       });
     },
-    [setActiveBlockId, setOpenBlockIds, scrollPanelId],
+    [expandSectionOfItem, setActiveBlockId, setOpenBlockIds, scrollPanelId],
   );
 }

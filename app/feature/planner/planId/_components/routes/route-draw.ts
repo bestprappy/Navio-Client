@@ -27,12 +27,14 @@ export type RouteDrawPiece = {
  */
 export function getRouteDrawPieces(
   segments: RouteSegment[],
+  /** Colours by block id, and optionally by stop id for a stop whose section has its own colour. */
   dayColorByBlockId: Map<string, string>,
   defaultColor: string,
   focusedSegmentId: string | null = null,
 ): RouteDrawPiece[] {
   const pieces = segments.flatMap((segment): RouteDrawPiece[] => {
-    const dayColor = dayColorByBlockId.get(segment.blockId) ?? defaultColor;
+    // A leg takes the colour of the section it arrives in.
+    const dayColor = dayColorByBlockId.get(segment.toItemId) ?? dayColorByBlockId.get(segment.blockId) ?? defaultColor;
     const muted = focusedSegmentId !== null && segment.id !== focusedSegmentId;
     const base = { blockId: segment.blockId, color: dayColor, muted };
 

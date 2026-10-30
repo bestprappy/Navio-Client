@@ -241,7 +241,7 @@ export type TripBlockData = {
   items: TripBlockItem[];
 };
 
-export type TripBlockItem = PlaceItem | NoteItem | ChecklistItem;
+export type TripBlockItem = PlaceItem | NoteItem | ChecklistItem | SectionItem;
 
 export type PlaceTimeSource = "fixed" | "calculated";
 
@@ -312,6 +312,21 @@ export type ChecklistItem = {
   items: ChecklistSubItem[];
 };
 
+/**
+ * Starts a new part of a day. Every item after it, up to the next section,
+ * belongs to it: its stops draw in its colour, and places are searched near its city.
+ */
+export type SectionItem = {
+  id: string;
+  type: "section";
+  /** Empty when the traveller has not named it; the city is shown instead. */
+  title: string;
+  /** `null` or absent keeps the day's colour. */
+  colorId?: TripBlockColorId | null;
+  /** Where this part of the day is; absent keeps the city of the part before it. */
+  destination?: TripDestination | null;
+};
+
 export type PremadeList = {
   id: string;
   title: string;
@@ -340,4 +355,8 @@ export function isNoteItem(item: TripBlockItem): item is NoteItem {
 
 export function isChecklistItem(item: TripBlockItem): item is ChecklistItem {
   return item.type === "checklist";
+}
+
+export function isSectionItem(item: TripBlockItem): item is SectionItem {
+  return item.type === "section";
 }

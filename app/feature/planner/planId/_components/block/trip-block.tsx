@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { CheckSquare, FileText } from "lucide-react";
+import { CheckSquare, FileText, SeparatorHorizontal } from "lucide-react";
 import { useAtomValue, useSetAtom } from "jotai";
 
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,7 @@ import {
   activeBlockIdAtom,
   addChecklistToBlockAtom,
   addNoteToBlockAtom,
+  addSectionToBlockAtom,
   tripDateRangeAtom,
   updateBlockDateAtom,
   updateBlockTitleAtom,
@@ -37,6 +38,7 @@ import { BlockDatePicker } from "./block-date-picker";
 import { BlockOptionsPopover } from "./block-options-popover";
 import { SortableBlockItems } from "./sortable-block-items";
 import { DaySavedPlacesPicker } from "../list/saved-places-section";
+import { useRevealPlanCard } from "../itinerary/use-reveal-plan-card";
 
 type TripBlockContextValue = {
   block: TripBlockData;
@@ -202,6 +204,8 @@ function TripBlockActions({
   const { block } = useTripBlockContext();
   const addNoteToBlock = useSetAtom(addNoteToBlockAtom);
   const addChecklistToBlock = useSetAtom(addChecklistToBlockAtom);
+  const addSectionToBlock = useSetAtom(addSectionToBlockAtom);
+  const reveal = useRevealPlanCard();
 
   return (
     <div className="mx-0 mt-5 space-y-3">
@@ -231,6 +235,22 @@ function TripBlockActions({
           blockId={block.id}
           fallbackAnchor={evSearchAnchor}
         />
+        {block.kind === "itinerary" ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="h-11 min-w-0 w-full rounded-lg"
+            title="Split a long day, or start the part of the day spent in another city"
+            onClick={() => {
+              const id = addSectionToBlock({ blockId: block.id });
+              if (id) reveal(block.id, id);
+            }}
+          >
+            <SeparatorHorizontal className="size-4" aria-hidden="true" />
+            New section
+          </Button>
+        ) : null}
       </div>
     </div>
   );

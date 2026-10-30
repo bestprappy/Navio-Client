@@ -1,8 +1,16 @@
-import { atom } from "jotai";
+import { atom, type SetStateAction } from "jotai";
 import { activeVehicleAtom } from "../garage/garage.atoms";
 import { getVehicleCar } from "../constants/vehicle.data";
 import { isCompatible } from "../garage/ev-calculator";
-import { getDayPlacePositions, placeItemToAnchor, resolveDayAnchors } from "../itinerary/day-anchors";
+import {
+  findDayStopForAnchor,
+  getDayEdgeStops,
+  getDayPlacePositions,
+  keepDayEdgeStopsInPlace,
+  moveStopToDayEdge,
+  placeItemToAnchor,
+  resolveDayAnchors,
+} from "../itinerary/day-anchors";
 import { createPlaceVisit, getPlaceUsage } from "../itinerary/trip-location-markers";
 import { getItemInsertionIndex, getItemInsertionLabel } from "../block/item-insertion";
 
@@ -34,6 +42,7 @@ import {
   type PlaceItem,
   type PlaceSearchResult,
   type PremadeList,
+  type SectionItem,
   type TripAnchor,
   type TripBlockData,
   type TripBlockColorId,
@@ -83,6 +92,12 @@ type SetDayAnchorPayload = {
   blockId: string;
   edge: DayAnchorEdge;
   anchor: TripAnchor | null;
+};
+
+type UpdateSectionPayload = {
+  blockId: string;
+  itemId: string;
+  updates: Partial<Pick<SectionItem, "title" | "colorId" | "destination">>;
 };
 
 type UpdateNotePayload = {
@@ -401,7 +416,19 @@ export const tripDateRangeAtom = atom<TripDateRange>({});
  * rather than a second renderer that can drift from it.
  */
 export const plannerReadOnlyAtom = atom(false);
-export const tripBlocksAtom = atom<TripBlockData[]>([]);
+const storedTripBlocksAtom = atom<TripBlockData[]>([]);
+/**
+ * Every write keeps each day's start and end stops at the edges of the day, so
+ * no insert, drag or auto plan can route past where the day ends.
+ */
+export const tripBlocksAtom = atom(
+  (get) => get(storedTripBlocksAtom),
+  (get, set, update: SetStateAction<TripBlockData[]>) => {
+    const previous = get(storedTripBlocksAtom);
+    const next = typeof update === "function" ? update(previous) : update;
+    set(storedTripBlocksAtom, keepDayEdgeStopsInPlace(previous, next));
+  },
+);
 export const activePlannerKeyAtom = atom<string | null>(null);
 export const itineraryBlocksAtom = atom<TripBlockData[]>((get) =>
   get(tripBlocksAtom).filter(isItineraryBlock),
@@ -808,6 +835,7 @@ export const addMyListBlockAtom = atom(null, (get, set) => {
   set(tripBlocksAtom, [nextBlock, ...blocks]);
   set(activeBlockIdAtom, nextBlock.id);
   set(openBlockIdsAtom, [...get(openBlockIdsAtom), nextBlock.id]);
+  return nextBlock.id;
 });
 
 export const addTripBlocksForDatesAtom = atom(
@@ -871,12 +899,19 @@ export const setDayAnchorAtom = atom(
   (get, set, payload: SetDayAnchorPayload) => {
     set(
       tripBlocksAtom,
-      updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
-        ...block,
-        // null clears the override so the day falls back to where the previous
-        // one ended; undefined would leave the old value in place on merge.
-        [payload.edge === "start" ? "startAnchor" : "endAnchor"]: payload.anchor,
-      })),
+      updateBlock(get(tripBlocksAtom), payload.blockId, (block) => {
+        const next = {
+          ...block,
+          // null clears the override so the day falls back to where the previous
+          // one ended; undefined would leave the old value in place on merge.
+          [payload.edge === "start" ? "startAnchor" : "endAnchor"]: payload.anchor,
+        };
+        if (!payload.anchor) return next;
+        // A place the day already visits becomes that stop's role rather than
+        // a second visit, so it keeps its time, notes and expenses.
+        const stopId = findDayStopForAnchor(next, payload.anchor, payload.edge);
+        return stopId ? { ...next, items: moveStopToDayEdge(next.items, stopId, payload.edge) } : next;
+      }),
     );
   },
 );
@@ -985,6 +1020,41 @@ export const addNoteToBlockAtom = atom(
       })),
     );
     return id;
+  },
+);
+
+/** Starts a new part of the day at the chosen gap; the stops after it join it. */
+export const addSectionToBlockAtom = atom(
+  null,
+  (get, set, payload: AddItemPayload) => {
+    if (get(plannerReadOnlyAtom)) return;
+    const block = get(tripBlocksAtom).find((entry) => entry.id === payload.blockId);
+    if (!block) return;
+    const index = getItemInsertionIndex(block, payload.beforeItemId);
+    if (index < 0) return;
+    const id = createClientId("section");
+    const section: SectionItem = { id, type: "section", title: "", colorId: null, destination: null };
+    set(
+      tripBlocksAtom,
+      updateBlock(get(tripBlocksAtom), payload.blockId, (current) => ({
+        ...current,
+        items: [...current.items.slice(0, index), section, ...current.items.slice(index)],
+      })),
+    );
+    return id;
+  },
+);
+
+export const updateSectionItemAtom = atom(
+  null,
+  (get, set, payload: UpdateSectionPayload) => {
+    if (get(plannerReadOnlyAtom)) return;
+    set(
+      tripBlocksAtom,
+      updateItem(get(tripBlocksAtom), payload.blockId, payload.itemId, (item) =>
+        item.type === "section" ? { ...item, ...payload.updates } : item,
+      ),
+    );
   },
 );
 
@@ -1097,10 +1167,17 @@ export const removeItemFromBlockAtom = atom(
   (get, set, payload: RemoveItemPayload) => {
     set(
       tripBlocksAtom,
-      updateBlock(get(tripBlocksAtom), payload.blockId, (block) => ({
-        ...block,
-        items: block.items.filter((item) => item.id !== payload.itemId),
-      })),
+      updateBlock(get(tripBlocksAtom), payload.blockId, (block) => {
+        const edges = getDayEdgeStops(block);
+        return {
+          ...block,
+          // Deleting the start or end stop deletes that choice too, instead of
+          // leaving a bare card for a place the day no longer visits.
+          ...(edges.startStopId === payload.itemId ? { startAnchor: null } : {}),
+          ...(edges.endStopId === payload.itemId ? { endAnchor: null } : {}),
+          items: block.items.filter((item) => item.id !== payload.itemId),
+        };
+      }),
     );
     set(tripExpensesAtom, (prev) =>
       prev.filter((expense) => !isExpenseForPlace(expense, payload.itemId)),
@@ -1108,22 +1185,43 @@ export const removeItemFromBlockAtom = atom(
   },
 );
 
+type DayEdgeStopPayload = RemoveItemPayload & { edge: DayAnchorEdge };
+
 /**
- * Turns a stop into the day's end place.
+ * Makes a stop the place the day starts or ends at.
  *
- * The stop leaves the list rather than being copied, so the route does not
- * visit the same place twice with a zero-length final leg.
+ * The stop stays a full card with its time, notes and expenses, and moves to
+ * the top or bottom of the day. Its place also becomes where the next day
+ * starts when it is the end.
  */
-export const markPlaceAsDayEndAtom = atom(
+export const markPlaceAsDayEdgeAtom = atom(
   null,
-  (get, set, payload: RemoveItemPayload) => {
+  (get, set, payload: DayEdgeStopPayload) => {
     const block = get(tripBlocksAtom).find((entry) => entry.id === payload.blockId);
     const item = block?.items.find((entry) => entry.id === payload.itemId);
     if (!block || block.kind !== "itinerary" || !item || !isPlaceItem(item) || isEvChargerPlaceItem(item)) {
       return;
     }
-    set(setDayAnchorAtom, { blockId: payload.blockId, edge: "end", anchor: placeItemToAnchor(item) });
-    set(removeItemFromBlockAtom, payload);
+    set(
+      tripBlocksAtom,
+      updateBlock(get(tripBlocksAtom), payload.blockId, (current) => ({
+        ...current,
+        [payload.edge === "start" ? "startAnchor" : "endAnchor"]: placeItemToAnchor(item),
+        items: moveStopToDayEdge(current.items, item.id, payload.edge),
+      })),
+    );
+  },
+);
+
+/** Turns a start or end stop back into an ordinary stop; the day falls back to its previous start or end. */
+export const clearDayEdgeStopAtom = atom(
+  null,
+  (get, set, payload: RemoveItemPayload) => {
+    const block = get(tripBlocksAtom).find((entry) => entry.id === payload.blockId);
+    if (!block) return;
+    const edges = getDayEdgeStops(block);
+    const edge = edges.startStopId === payload.itemId ? "start" : edges.endStopId === payload.itemId ? "end" : null;
+    if (edge) set(setDayAnchorAtom, { blockId: payload.blockId, edge, anchor: null });
   },
 );
 

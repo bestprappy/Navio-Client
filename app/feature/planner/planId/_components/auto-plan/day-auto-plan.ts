@@ -423,10 +423,17 @@ export function buildDayAutoPlan(input: DayAutoPlanInput): DayAutoPlan {
  * the place they followed; hotels stay last. Places that did not fit lose their time and either
  * stay at the end of the day or come back in `moved` for another day.
  */
-export function arrangeDayItems(items: readonly TripBlockItem[], plan: DayAutoPlan, keepUnplanned: boolean): { items: TripBlockItem[]; moved: TripBlockItem[] } {
+export function arrangeDayItems(
+  items: readonly TripBlockItem[],
+  plan: DayAutoPlan,
+  keepUnplanned: boolean,
+  /** The day's start and end stops: not planned, kept first and last with what follows them. */
+  edges: { startStopId: string | null; endStopId: string | null } = { startStopId: null, endStopId: null },
+): { items: TripBlockItem[]; moved: TripBlockItem[] } {
   const stops = new Map(plan.stops.map((stop) => [stop.itemId, stop]));
   const unplanned = new Set(plan.unplanned.map((stop) => stop.itemId));
-  const heads = new Set([...stops.keys(), ...unplanned, ...plan.lastIds]);
+  const edgeIds = [edges.startStopId, edges.endStopId].filter((id): id is string => Boolean(id));
+  const heads = new Set([...stops.keys(), ...unplanned, ...plan.lastIds, ...edgeIds]);
   const leading: TripBlockItem[] = [];
   const groups = new Map<string, TripBlockItem[]>();
   let current: TripBlockItem[] | null = null;
@@ -457,9 +464,11 @@ export function arrangeDayItems(items: readonly TripBlockItem[], plan: DayAutoPl
   return {
     items: [
       ...leading,
+      ...(edges.startStopId ? groupOf(edges.startStopId) : []),
       ...plan.stops.flatMap((stop) => timed(groupOf(stop.itemId))),
       ...(keepUnplanned ? left : []),
       ...plan.lastIds.flatMap(groupOf),
+      ...(edges.endStopId ? groupOf(edges.endStopId) : []),
     ],
     moved: keepUnplanned ? [] : left,
   };

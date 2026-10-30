@@ -11,6 +11,7 @@ import {
   MapPin,
   Route,
   Trash2,
+  Undo2,
   Zap,
 } from "lucide-react";
 import { useAtomValue, useSetAtom } from "jotai";
@@ -25,7 +26,8 @@ import {
   type TripBlockColorId,
 } from "../../constants/types";
 import {
-  markPlaceAsDayEndAtom,
+  clearDayEdgeStopAtom,
+  markPlaceAsDayEdgeAtom,
   plannerReadOnlyAtom,
   removeItemFromBlockAtom,
   selectedTripPlaceItemIdReadonlyAtom,
@@ -55,8 +57,12 @@ type TripPlaceCardProps = {
   chargeBatteryFrom?: number | null;
   chargeBatteryTo?: number | null;
   showEvChargeDetails?: boolean;
+  /** Only the day's first stop can become where the day starts. */
+  canMarkAsStart?: boolean;
   /** Only the day's last stop can become where the day ends. */
   canMarkAsEnd?: boolean;
+  /** Set when this stop is where the day starts or ends. */
+  dayRole?: "start" | "end" | null;
   /** Minutes short of reaching this stop's fixed time, after the day's times are calculated. */
   lateMinutes?: number | null;
 };
@@ -68,6 +74,22 @@ function LateWarning({ name, minutes }: { name: string; minutes: number }) {
       <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" aria-hidden="true" />
       <span>{describeTimingIssue({ kind: "late", itemId: "", name, minutes })}</span>
     </div>
+  );
+}
+
+const DAY_ROLE = {
+  start: { label: "Day starts here", Icon: MapPin },
+  end: { label: "Day ends here", Icon: Flag },
+} as const;
+
+/** Names the stop's role in the day, using the same words as the itinerary table and handout. */
+function DayRoleBand({ role }: { role: "start" | "end" }) {
+  const { label, Icon } = DAY_ROLE[role];
+  return (
+    <p className="flex items-center gap-1.5 border-b border-border/70 bg-primary/5 px-4 py-2 text-xs font-medium text-primary">
+      <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+      {label}
+    </p>
   );
 }
 
@@ -87,12 +109,15 @@ export function TripPlaceCard({
   position,
   chargeBatteryFrom,
   chargeBatteryTo,
+  canMarkAsStart = false,
   canMarkAsEnd = false,
+  dayRole = null,
   lateMinutes,
 }: TripPlaceCardProps) {
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const removeItemFromBlock = useSetAtom(removeItemFromBlockAtom);
-  const markPlaceAsDayEnd = useSetAtom(markPlaceAsDayEndAtom);
+  const markPlaceAsDayEdge = useSetAtom(markPlaceAsDayEdgeAtom);
+  const clearDayEdgeStop = useSetAtom(clearDayEdgeStopAtom);
   const selectTripPlace = useSetAtom(selectTripPlaceAtom);
   const selectedTripPlaceItemId = useAtomValue(
     selectedTripPlaceItemIdReadonlyAtom,
@@ -289,6 +314,7 @@ export function TripPlaceCard({
       ) : (
         /* ── Regular place branch — uses shared PlaceCardVisual ── */
         <>
+          {dayRole ? <DayRoleBand role={dayRole} /> : null}
           <PlaceCardVisual
             name={item.name}
             imageUrl={item.imageUrl || placeDetails.data?.imageUrl}
@@ -351,22 +377,57 @@ export function TripPlaceCard({
                       "Mark as visited"
                     )}
                   </Button>
-                  {canMarkAsEnd ? (
+                  {dayRole ? (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       className="rounded-sm"
-                      title="Make this the place the day ends at"
+                      title={`Stop treating this as where the day ${dayRole === "start" ? "starts" : "ends"}`}
                       onClick={(event) => {
                         event.stopPropagation();
-                        markPlaceAsDayEnd({ blockId, itemId: item.id });
+                        clearDayEdgeStop({ blockId, itemId: item.id });
                       }}
                     >
-                      <Flag className="size-3.5" aria-hidden="true" />
-                      Mark as end stop
+                      <Undo2 className="size-3.5" aria-hidden="true" />
+                      Make a regular stop
                     </Button>
-                  ) : null}
+                  ) : (
+                    <>
+                      {canMarkAsStart ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-sm"
+                          title="Make this the place the day starts at"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            markPlaceAsDayEdge({ blockId, itemId: item.id, edge: "start" });
+                          }}
+                        >
+                          <MapPin className="size-3.5" aria-hidden="true" />
+                          Mark as start stop
+                        </Button>
+                      ) : null}
+                      {canMarkAsEnd ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-sm"
+                          title="Make this the place the day ends at"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            markPlaceAsDayEdge({ blockId, itemId: item.id, edge: "end" });
+                          }}
+                        >
+                          <Flag className="size-3.5" aria-hidden="true" />
+                          Mark as end stop
+                        </Button>
+                      ) : null}
+                    </>
+                  )}
                 </div>
                 <Button
                   type="button"

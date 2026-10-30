@@ -14,6 +14,7 @@ import { ItinerarySection } from "./_components/itinerary/itinerary-section";
 import { ItineraryTableViewLazy } from "./_components/itinerary/table/itinerary-table-view-lazy";
 import { RouteStopTracker } from "./_components/itinerary/route-stop-tracker";
 import { MyListSection } from "./_components/list/my-list-section";
+import { BeforeYouGoSection } from "./_components/list/starting-part";
 import { BudgetSection } from "./_components/budget/budget-section";
 import { TripBuilderErrorBoundary } from "./_components/overview/trip-builder-error-boundary";
 import { PlannerTemplateHydrator } from "./_components/overview/planner-template-hydrator";
@@ -61,6 +62,10 @@ export function PlannerDetail({
             from={from}
             to={to}
           />
+          {/* A reader meets the owner's note before anything else in the plan. */}
+          <TripBuilderErrorBoundary>
+            <BeforeYouGoSection />
+          </TripBuilderErrorBoundary>
           <ExploreSection
             destinationName={tripDestinationName}
             country={metadata.data?.destinationCountry ?? country ?? ""}

@@ -147,7 +147,7 @@ function AnchorRow({ edge, withConnector = false }: AnchorRowProps) {
   } = useDayAnchorRailContext(edge === "start" ? "Start" : "End");
 
   const isStart = edge === "start";
-  const anchor = isStart ? anchors.start : anchors.end;
+  const anchor = isStart ? anchors.startPlace : anchors.endPlace;
   const own = isStart ? ownStart : ownEnd;
   const carriedOver = isStart ? anchors.startIsCarriedOver : anchors.endIsCarriedOver;
   const inherited = isStart ? anchors.inheritedStart : anchors.inheritedEnd;
@@ -283,7 +283,7 @@ function DayAnchorRailEnd() {
 function DayAnchorRailSummary({ className }: { className?: string }) {
   const { anchors } = useDayAnchorRailContext("Summary");
 
-  if (!anchors.start && !anchors.end) {
+  if (!anchors.startPlace && !anchors.endPlace) {
     return (
       <p className={cn("text-xs text-muted-foreground", className)}>
         Open this day to set where it starts and ends.
@@ -299,11 +299,11 @@ function DayAnchorRailSummary({ className }: { className?: string }) {
       )}
     >
       <span className="truncate font-medium text-foreground">
-        {anchors.start?.name ?? "Start not set"}
+        {anchors.startPlace?.name ?? "Start not set"}
       </span>
       <ArrowDownRight className="size-3 shrink-0 -rotate-45" aria-hidden="true" />
       <span className="truncate font-medium text-foreground">
-        {anchors.end?.name ?? "End not set"}
+        {anchors.endPlace?.name ?? "End not set"}
       </span>
     </p>
   );

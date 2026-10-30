@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Plus } from "lucide-react";
-import { useAtomValue, useSetAtom, useStore } from "jotai";
+import { LayoutList, ListChecks, Plus } from "lucide-react";
+import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
 
 import {
   Accordion,
@@ -19,9 +19,15 @@ import {
 } from "../overview/trip-builder.atoms";
 import { EmptyMyListCallout } from "./empty-my-list-callout";
 import { InlineAddDivider } from "../inline-add-divider";
-import { SavedPlacesSection } from "./saved-places-section";
-import { AddStartingPart, StartingPart } from "./starting-part";
 import { visibleMyListBlocks } from "./saved-places-model";
+import { myListViewAtom, type MyListView } from "./saved-places.atoms";
+import { MyListSummary } from "./my-list-summary";
+import { ViewSwitch, type ViewSwitchOption } from "../layout/view-switch";
+
+const VIEWS: readonly ViewSwitchOption<MyListView>[] = [
+  { id: "planner", label: "Planner", Icon: LayoutList },
+  { id: "summary", label: "Summary", Icon: ListChecks },
+];
 
 type MyListSectionProps = {
   destinationName: string;
@@ -39,6 +45,7 @@ export function MyListSection({
   const listBlocks = useAtomValue(myListBlocksAtom);
   const visibleBlocks = visibleMyListBlocks(listBlocks);
   const addMyListBlock = useSetAtom(addMyListBlockAtom);
+  const [view, setView] = useAtom(myListViewAtom);
   const store = useStore();
   const hasEnsuredDefaultList = useRef(false);
 
@@ -88,45 +95,48 @@ export function MyListSection({
           </div>
 
           <AccordionContent className="pt-0">
-            <div className="mb-4 flex justify-end"><AddStartingPart /></div>
-            {/* Saved places are collected from lists, so with no lists the callout is the only useful state. */}
             {listBlocks.length === 0 ? (
               <EmptyMyListCallout onCreateList={addMyListBlock} />
             ) : (
-              <SavedPlacesSection />
+              <div className="mb-4 border-b border-border/60 pb-4">
+                <ViewSwitch label="My List view" views={VIEWS} value={view} onChange={setView} />
+              </div>
             )}
-            <StartingPart />
-            <div className="space-y-8 pb-8 pt-2">
-              {visibleBlocks.map((block) => (
-                <TripBlock.Root key={block.id} block={block}>
-                  <TripBlock.Header>
-                    <TripBlock.Title />
-                  </TripBlock.Header>
-                  <TripBlock.Content>
-                    <TripBlock.Items />
-                    <TripBlock.Actions
-                      evSearchAnchor={{
-                        id: `destination-${block.id}`,
-                        lat: latitude,
-                        lng: longitude,
-                      }}
-                      placeSearchBias={{
-                        label: destinationName,
-                        lat: latitude,
-                        lng: longitude,
-                      }}
-                    />
-                  </TripBlock.Content>
-                </TripBlock.Root>
-              ))}
-
-              {visibleBlocks.length > 0 && (
-                <InlineAddDivider
-                  onClick={addMyListBlock}
-                  label="Add new list"
-                />
-              )}
-            </div>
+            {listBlocks.length > 0 && view === "summary" ? (
+              <div className="pb-8"><MyListSummary /></div>
+            ) : (
+              <div className="space-y-8 pb-8 pt-2">
+                {visibleBlocks.map((block) => (
+                  <TripBlock.Root key={block.id} block={block}>
+                    <TripBlock.Header>
+                      <TripBlock.Title />
+                    </TripBlock.Header>
+                    <TripBlock.Content>
+                      <TripBlock.Items />
+                      <TripBlock.Actions
+                        evSearchAnchor={{
+                          id: `destination-${block.id}`,
+                          lat: latitude,
+                          lng: longitude,
+                        }}
+                        placeSearchBias={{
+                          label: destinationName,
+                          lat: latitude,
+                          lng: longitude,
+                        }}
+                      />
+                    </TripBlock.Content>
+                  </TripBlock.Root>
+                ))}
+  
+                {visibleBlocks.length > 0 && (
+                  <InlineAddDivider
+                    onClick={addMyListBlock}
+                    label="Add new list"
+                  />
+                )}
+              </div>
+            )}
           </AccordionContent>
         </AccordionItem>
       </Accordion>

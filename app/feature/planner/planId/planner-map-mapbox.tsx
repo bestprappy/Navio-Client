@@ -27,6 +27,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { ChargerPreviewPanel } from "./_components/charger/charger-preview-panel";
 import { defaultRouteMapColor } from "./_components/constants/trip-block-colors";
 import { useTripBlockColorResolver } from "./_components/constants/use-trip-block-color";
+import { getRouteColorsById } from "./_components/itinerary/day-sections";
 import type { TripBlockData } from "./_components/constants/types";
 import { activeEvCarAtom } from "./_components/garage/garage.atoms";
 import { isCompatible } from "./_components/garage/ev-calculator";
@@ -56,6 +57,7 @@ import {
   stepSearchResultAtom,
   tripBlocksAtom,
 } from "./_components/overview/trip-builder.atoms";
+import { AddPlaceMenu } from "./_components/place/add-place-menu";
 import { PlacePreviewPanel } from "./_components/place/place-preview-panel";
 import {
   fetchNearbyPlaces,
@@ -132,6 +134,11 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
   const tripBlocks = useAtomValue(tripBlocksAtom);
   const focusedAnchor = useAtomValue(focusedAnchorAtom);
   const selectedPlace = useAtomValue(selectedSearchPlaceAtom);
+  // The same visit the main add button creates, for the menu of other destinations.
+  const selectedPlaceVisit = useMemo(
+    () => selectedPlace ? { ...selectedPlace, placeId: selectedPlace.id, placeType: selectedPlace.primaryType } : null,
+    [selectedPlace],
+  );
   const selectedTripPlace = useAtomValue(selectedTripPlaceAtom);
   const selectedTripPlaces = useAtomValue(selectedTripPlacesAtom);
   const locationMarkers = useMemo(() => buildTripLocationMarkers(tripBlocks), [tripBlocks]);
@@ -694,6 +701,7 @@ export function PlannerMapMapbox({ latitude, longitude }: PlannerMapProps) {
             const itemId = addSelectedPlaceToTrip();
             if (itemId) revealPlanCard(activeSearch.blockId, itemId);
           }}
+          addMenu={selectedPlaceVisit && !readOnly ? <AddPlaceMenu place={selectedPlaceVisit} /> : undefined}
           onClose={() => closeSelectedSearchPlace()}
         />
       ) : selectedEvChargerResult ? (
@@ -744,14 +752,8 @@ function useRouteColorByBlockId(
   tripBlocks: TripBlockData[],
 ): globalThis.Map<string, string> {
   const resolveColor = useTripBlockColorResolver();
-  return useMemo(() => {
-    const map = new globalThis.Map<string, string>();
-    tripBlocks.forEach((block) => {
-      const blockColor = resolveColor(block.colorId);
-      map.set(block.id, blockColor.mapColor);
-    });
-    return map;
-  }, [tripBlocks, resolveColor]);
+  // Also keyed by stop, so a section with its own colour draws its legs in it.
+  return useMemo(() => getRouteColorsById(tripBlocks, resolveColor), [tripBlocks, resolveColor]);
 }
 
 function getDistanceKm(

@@ -70,6 +70,12 @@ function summarizeBlocks(blocks: readonly TripBlockData[]): TripPlanStats {
         ? [...stats.destinationPlaces, block.destination] : stats.destinationPlaces };
 
     for (const item of block.items) {
+      // A section can take the day on to another city.
+      if (item.type === "section" && item.destination && !next.destinations.includes(item.destination.name)) {
+        next.destinations = [...next.destinations, item.destination.name];
+        next.destinationPlaces = [...next.destinationPlaces, item.destination];
+        continue;
+      }
       if (isPlaceItem(item)) {
         next.placeCount += 1;
         if (isEvChargerPlaceItem(item)) next.chargerCount += 1;

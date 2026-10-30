@@ -27,7 +27,7 @@ test("undated and malformed shared-plan days render in both modes without invent
       store.set(tripBlocksAtom, dayViewBlocks.map(block => block.id === "day-2" ? { ...block, date } : block));
       store.set(itineraryDayViewAtom, view);
       const html = renderToStaticMarkup(createElement(Provider, { store }, createElement(ItineraryDayControls)));
-      assert.match(html, /Days displayed/);
+      assert.match(html, /Days shown/);
       assert.doesNotMatch(html, /Invalid Date|NaN/);
       if (view === "single") {
         assert.match(html, /Day 2/);
@@ -89,16 +89,23 @@ test("removing the selected day or loading another trip falls back to a valid da
   assert.equal(store.get(selectedItineraryDayAtom), null);
 });
 
-test("mobile day selector keeps original day numbering and dates", () => {
+test("options-menu day picker keeps original day numbering and dates", () => {
   const store = plannerStore();
   store.set(itineraryDayViewAtom, "single");
   store.set(selectItineraryDayAtom, "day-3");
   const html = renderToStaticMarkup(createElement(Provider, { store }, createElement(ItineraryDayControls)));
-  assert.match(html, /aria-label="Days displayed"/);
-  assert.match(html, /Show:/);
-  assert.match(html, /aria-pressed="true"[^>]*>By date</);
-  assert.match(html, /aria-label="Choose itinerary day"/);
-  assert.match(html, /Day 3/);
-  assert.match(html, /Oct 23/);
+  const checked = [...html.matchAll(/<button[^>]*aria-checked="true"[^>]*>([\s\S]*?)<\/button>/g)].map(([, inner]) => inner);
+  assert.equal(checked.length, 2, "one view radio and one day radio are checked");
+  assert.match(checked[0], /One day/);
+  assert.match(checked[1], /Day 3/);
+  assert.match(checked[1], /Oct 23/);
+  assert.equal(html.match(/role="radio"/g)?.length, 2 + 3, "two view options plus one row per itinerary day");
   assert.doesNotMatch(html, /My places/);
+});
+
+test("all-days mode hides the day list", () => {
+  const store = plannerStore();
+  const html = renderToStaticMarkup(createElement(Provider, { store }, createElement(ItineraryDayControls)));
+  assert.match(html, /aria-checked="true"[^>]*>All days</);
+  assert.doesNotMatch(html, /Day to show/);
 });

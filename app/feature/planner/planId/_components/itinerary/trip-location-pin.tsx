@@ -8,7 +8,7 @@ import { getTripBlockColorById } from "../constants/trip-block-colors";
 import type { TripLocationVisit } from "./trip-location-markers";
 
 function visitLabel(visit: TripLocationVisit): string {
-  const role = visit.edge === "start" ? "Start" : visit.edge === "end" ? "End" : visit.isEvCharger ? "EV station" : `Stop ${visit.number}`;
+  const role = visit.edge === "start" || visit.dayRole === "start" ? "Start" : visit.edge === "end" || visit.dayRole === "end" ? "End" : visit.isEvCharger ? "EV station" : `Stop ${visit.number}`;
   return `${visit.blockLabel} · ${role}${visit.time ? ` · ${visit.time}` : ""}`;
 }
 

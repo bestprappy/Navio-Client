@@ -16,7 +16,7 @@ register("data:text/javascript," + encodeURIComponent(`export async function loa
     source: 'import { createElement } from "react"; export default function Image({ unoptimized, ...props }) { return createElement("img", props); }' };
   return next(url, context);
 }`), import.meta.url);
-const { SavedPlacesSection, DaySavedPlacesPicker } = await import(
+const { DaySavedPlacesPicker } = await import(
   "../../app/feature/planner/planId/_components/list/saved-places-section.tsx"
 );
 const { tripBlocksAtom, plannerReadOnlyAtom } = await import(
@@ -98,17 +98,11 @@ test("provider details never replace the card's existing saved name or visual fi
   queryClient.clear();
 });
 
-test("Places is an accessible expandable subsection and day shortcut is hidden when read-only", () => {
+test("the day picker offers saved places and is hidden when read-only", () => {
   const store = createStore();
   store.set(tripBlocksAtom, blocks);
   const render = (component) =>
     renderToStaticMarkup(React.createElement(Provider, { store }, component));
-  const html = render(React.createElement(SavedPlacesSection));
-  assert.match(html, /aria-expanded="true"/);
-  assert.match(html, /Garden/);
-  assert.match(html, /Search saved places/);
-  assert.match(html, /Add Garden to a day/);
-  assert.match(html, /Remove Garden from Ideas/);
   assert.match(
     render(React.createElement(DaySavedPlacesPicker, { dayId: "day" })),
     /Saved places \(1\)/,
@@ -118,17 +112,9 @@ test("Places is an accessible expandable subsection and day shortcut is hidden w
     render(React.createElement(DaySavedPlacesPicker, { dayId: "day" })),
     "",
   );
-  assert.doesNotMatch(
-    render(React.createElement(SavedPlacesSection)),
-    /Add Garden to a day/,
-  );
-  assert.doesNotMatch(
-    render(React.createElement(SavedPlacesSection)),
-    /Remove Garden from Ideas/,
-  );
 });
 
-test("My List renders saved places once, inside the expandable subsection", () => {
+test("My List renders a saved place once, inside the list it was added to", () => {
   const store = createStore();
   store.set(tripBlocksAtom, blocks);
   const client = new QueryClient();
@@ -145,8 +131,8 @@ test("My List renders saved places once, inside the expandable subsection", () =
     );
   const html = renderToStaticMarkup(React.createElement(AppRouterContext.Provider, { value: {} }, React.createElement(PathParamsContext.Provider, { value: { planId: "new" } }, React.createElement(SessionProvider, { session: null }, React.createElement(QueryClientProvider, { client }, content)))));
   assert.equal((html.match(/>Garden</g) || []).length, 1);
-  assert.match(html, /aria-expanded="true"/);
-  assert.match(html, /Edit list title: Ideas/);
+  assert.ok(html.indexOf("Edit list title: Ideas") < html.indexOf(">Garden<"), "the place renders in its own list");
+  assert.doesNotMatch(html, /Saved across your lists/);
   assert.deepEqual(store.get(tripBlocksAtom), blocks);
   client.clear();
 });

@@ -33,3 +33,18 @@ export const scheduleSavedPlaceAtom = atom(
     });
   },
 );
+
+/** Adds several saved places to one day, skipping any the day already has. */
+export const scheduleSavedPlacesAtom = atom(
+  null,
+  (_get, set, payload: { placeIds: readonly string[]; dayId: string }) => {
+    let added = 0;
+    for (const placeId of payload.placeIds) {
+      if (set(scheduleSavedPlaceAtom, { placeId, dayId: payload.dayId })) added += 1;
+    }
+    return { added, skipped: payload.placeIds.length - added };
+  },
+);
+
+export type MyListView = "planner" | "summary";
+export const myListViewAtom = atom<MyListView>("planner");

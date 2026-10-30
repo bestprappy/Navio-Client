@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAtomValue } from "jotai";
 import { MoreHorizontal, Table2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
+import { ItineraryDayControls } from "./itinerary-day-controls";
+import { itineraryDayViewAtom } from "./itinerary-day-view.atoms";
 import { RouteLineModeSwitch } from "./route-line-mode-switch";
 import { useItineraryView } from "./table/use-itinerary-view";
 
@@ -19,20 +22,25 @@ import { useItineraryView } from "./table/use-itinerary-view";
 export function ItineraryOptionsPopover() {
   const [isOpen, setIsOpen] = useState(false);
   const [, setView] = useItineraryView();
+  const isSingleDay = useAtomValue(itineraryDayViewAtom) === "single";
 
   return (
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger
           type="button"
-          aria-label="Itinerary options"
-          className="flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          aria-label={isSingleDay ? "Itinerary options, showing one day" : "Itinerary options"}
+          className="relative flex size-10 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         >
           <MoreHorizontal className="size-5" aria-hidden="true" />
+          {/* The day filter now lives in this menu; flag it so a hidden filter is never a surprise. */}
+          {isSingleDay && <span aria-hidden="true" className="absolute right-1.5 top-1.5 size-2 rounded-full bg-primary ring-2 ring-card" />}
         </PopoverTrigger>
-        <PopoverContent align="end" sideOffset={8} className="w-72 gap-4 rounded-sm p-4">
+        <PopoverContent align="end" sideOffset={8} className="max-h-[var(--available-height)] w-72 gap-4 overflow-y-auto rounded-sm p-4">
           <PopoverHeader>
             <PopoverTitle>Itinerary options</PopoverTitle>
           </PopoverHeader>
+
+          <ItineraryDayControls onDaySelected={() => setIsOpen(false)} />
 
           <RouteLineModeSwitch />
 

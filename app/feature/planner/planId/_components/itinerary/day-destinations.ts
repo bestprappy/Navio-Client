@@ -1,6 +1,10 @@
 import type { TripBlockData, TripDestination } from "../constants/types";
+import { getDayFinalDestination } from "./day-sections";
 
-/** Resolve chronological destination changes without moving or deleting stops. */
+/**
+ * Resolve chronological destination changes without moving or deleting stops.
+ * A day that moves on to another city in a section hands that city to the next day.
+ */
 export function resolveDayDestinations(
   blocks: TripBlockData[],
   initialDestination: TripDestination,
@@ -10,6 +14,7 @@ export function resolveDayDestinations(
   for (const block of blocks.filter((item) => item.kind === "itinerary").toSorted((a, b) => a.date.localeCompare(b.date))) {
     if (block.destination) current = block.destination;
     destinations.set(block.id, current);
+    current = getDayFinalDestination(block, current);
   }
   return destinations;
 }

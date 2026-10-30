@@ -167,5 +167,5 @@ export function useStopSharing(tripId: string) {
 }
 
 function requireSectionSupport(capabilities:string[]|undefined,options:PublicationOptions){
- if((options.includeStartingPart||options.includeGarage||options.listIds?.length)&&!capabilities?.includes("publication-sections-v1"))throw new PlannerApiError("Update the trip service before publishing the Starting Part, My List or Garage. Your current shared plan has not been changed.",409);
+ if((options.includeStartingPart||options.includeGarage||options.listIds?.length)&&!capabilities?.includes("publication-sections-v1"))throw new PlannerApiError("Update the trip service before publishing Before you go, My List or Garage. Your current shared plan has not been changed.",409);
 }

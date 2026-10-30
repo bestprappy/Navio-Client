@@ -7,6 +7,7 @@ import {
   type TripBlockData,
 } from "../constants/types";
 import { getDayPlacePositions, resolveDayAnchors } from "./day-anchors";
+import { getDayEndColorId, getItemColorIds } from "./day-sections";
 
 export type TripLocationVisit = {
   key: string;
@@ -19,6 +20,8 @@ export type TripLocationVisit = {
   itemId?: string;
   time?: string;
   anchor?: TripAnchor;
+  /** Set on a stop that is where its day starts or ends. */
+  dayRole?: "start" | "end";
   isEvCharger: boolean;
 };
 
@@ -41,7 +44,7 @@ function placeKey(id: string): string {
   return id.startsWith("GOOGLE:") ? id.slice(7) : id;
 }
 
-function samePlace(a: Location, b: Location): boolean {
+export function samePlace(a: Location, b: Location): boolean {
   if (a.placeId && b.placeId && placeKey(a.placeId) === placeKey(b.placeId)) return true;
   return coordinateKey(a) === coordinateKey(b) && a.name.trim().toLocaleLowerCase() === b.name.trim().toLocaleLowerCase();
 }
@@ -86,16 +89,21 @@ export function buildTripLocationMarkers(blocks: TripBlockData[]): TripLocationM
     const day = anchors.get(block.id);
     const positions = getDayPlacePositions(block, Boolean(day?.start));
     const base = { blockId: block.id, blockLabel: labels.get(block.id)!, colorId: block.colorId };
+    // A stop's pin takes its section's colour; the end of the day takes the last section's.
+    const itemColors = getItemColorIds(block);
     function addAnchor(edge: "start" | "end", anchor: TripAnchor, number: number) {
       add({ ...anchor, placeId: anchor.kind === "PLACE" ? anchor.id : undefined }, {
         ...base, key: `${block.id}:${edge}`, edge, number, name: anchor.name, anchor, isEvCharger: false,
+        colorId: edge === "end" ? getDayEndColorId(block) : block.colorId,
       });
     }
     if (day?.start) addAnchor("start", day.start, 1);
     for (const item of block.items.filter(isPlaceItem)) {
       add(item, {
-        ...base, key: `${block.id}:${item.id}`, edge: "stop", number: positions.get(item.id) ?? null,
+        ...base, colorId: itemColors.get(item.id) ?? block.colorId,
+        key: `${block.id}:${item.id}`, edge: "stop", number: positions.get(item.id) ?? null,
         name: item.name, itemId: item.id, time: item.time, isEvCharger: isEvChargerPlaceItem(item),
+        dayRole: item.id === day?.startStopId ? "start" : item.id === day?.endStopId ? "end" : undefined,
       });
     }
     if (day?.end) addAnchor("end", day.end, positions.size + (day.start ? 2 : 1));

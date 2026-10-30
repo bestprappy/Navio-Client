@@ -131,7 +131,7 @@ const blocks = [
     items: [{ ...place, id: "visit", placeId: "abc" }],
   },
 ];
-test("ordinary saved places render only in Places while mixed-list notes and EV stops remain", () => {
+test("each list keeps its own places, notes and EV stops", () => {
   const original = structuredClone(blocks);
   const mixed = {
     ...blocks[0],
@@ -149,10 +149,10 @@ test("ordinary saved places render only in Places while mixed-list notes and EV 
   );
   assert.deepEqual(
     visible[0].items.map((item) => item.id),
-    ["ev", "note"],
+    ["saved", "saved2", "ev", "note"],
   );
+  assert.deepEqual(visible[1].items.map((item) => item.id), ["saved"]);
   assert.deepEqual(blocks, original);
-  assert.equal(mixed.items.length, 4);
 });
 
 test("saved places aggregate custom lists without EV chargers or duplicate provider IDs", () => {
