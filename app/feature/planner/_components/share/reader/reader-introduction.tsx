@@ -10,16 +10,21 @@ import { PlaceNotesPreview } from "../../../planId/_components/block/items/place
 
 type ReaderIntroductionProps = { title: string; authorName?: string | null; value: string };
 
-/** The owner's Before you go note, first in the shared plan; a long note folds so the plan stays in reach. */
+/** The owner's note opens in full; readers can choose a shorter preview. */
 export function ReaderIntroduction({ title, authorName, value }: ReaderIntroductionProps) {
   const frameRef = useRef<HTMLDivElement>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [overflowing, setOverflowing] = useState(false);
 
   useLayoutEffect(() => {
     const frame = frameRef.current;
     if (!frame || typeof ResizeObserver === "undefined") return;
-    const measure = () => setOverflowing(frame.scrollHeight > frame.clientHeight + 1);
+    // Keep a conservative preview threshold while open, so folding never
+    // removes the button needed to expand the note again.
+    const measure = () => {
+      const previewHeight = 18 * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+      setOverflowing(frame.scrollHeight > previewHeight + 1);
+    };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(frame);

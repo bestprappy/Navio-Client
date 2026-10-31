@@ -33,10 +33,11 @@ function renderItems(readOnly = false, count = 2) {
   return html;
 }
 
-test("two cards have three edge + controls: above the first card and below each card", () => {
+test("two cards have three separate insertion gaps, before, between and after the cards", () => {
   const html = renderItems();
   assert.equal((html.match(/data-insertion-(?:before|after)="[^"]+"(?: data-insertion-after="[^"]+")?/g) ?? []).length, 3);
-  assert.equal((html.match(/-top-3/g) ?? []).length, 3);
+  assert.equal((html.match(/data-insertion-gap="true"/g) ?? []).length, 3);
+  assert.doesNotMatch(html, /-top-3/, "insertion controls must not overlap a card edge");
   assert.match(html, /data-insertion-before="stop-1"/);
   assert.match(html, /data-insertion-before="stop-2" data-insertion-after="stop-1"/);
   assert.match(html, /data-insertion-after="stop-2"/);
