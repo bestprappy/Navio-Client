@@ -215,13 +215,3 @@ export function updateNotificationPreferences(preferences: NotificationPreferenc
     method: "PUT", body: preferences, schema: notificationPreferencesSchema, operation: "updateNotificationPreferences",
   });
 }
-
-/** Tells followers about a plan just listed on Explore under the caller's name. Best effort. */
-export async function announceSharedPlan(token: string): Promise<void> {
-  try {
-    await apiRequest("/api/notifications/plan-shared", { method: "POST", body: { token }, operation: "announceSharedPlan" });
-  } catch (error) {
-    // The plan is already shared; a missed announcement must not look like a failed publish.
-    console.warn("Followers could not be told about the shared plan.", { component: "social-api", error });
-  }
-}

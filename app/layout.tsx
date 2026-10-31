@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { NavigationHistoryTracker } from "@/components/navigation-history";
 import { AuthSessionProvider } from "@/components/auth-session-provider";
 import { PaletteProvider } from "@/components/palette/palette-provider";
+import { NotificationLiveProvider } from "@/components/notifications/notification-live-provider";
+import { NotificationToaster } from "@/components/notifications/notification-toaster";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -48,6 +50,8 @@ export default function RootLayout({
                 <NavigationHistoryTracker />
               </Suspense>
               <PaletteProvider>{children}</PaletteProvider>
+              <NotificationLiveProvider />
+              <NotificationToaster />
             </QueryProvider>
           </AuthSessionProvider>
         </ThemeProvider>

@@ -2,7 +2,22 @@ import { withAuthenticatedSession } from "@/app/api/_lib/with-authenticated-sess
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 1800;
+
+/**
+ * Upper bound for one proxied stream. Community already ends a stream when the
+ * access token it was opened with expires; the browser's EventSource then
+ * reconnects through here, which refreshes the session and sends a fresh token.
+ */
+const STREAM_LIFETIME_MS = 25 * 60_000;
+
+/**
+ * Same-origin live notification stream. The browser cannot attach a bearer token
+ * to EventSource, so this route adds it from the server-side session and pipes
+ * Community's text/event-stream through unbuffered. A refused upstream answers
+ * with its status and a JSON body, which closes the EventSource; the client
+ * provider then backs off instead of retrying in a tight loop.
+ */
 
 export async function GET(request: Request) {
   return withAuthenticatedSession(request, async (_request, session) => {
@@ -12,7 +27,7 @@ export async function GET(request: Request) {
     const controller = new AbortController();
     const abort = () => controller.abort();
     request.signal.addEventListener("abort", abort, { once: true });
-    const lifetime = setTimeout(abort, 50_000);
+    const lifetime = setTimeout(abort, STREAM_LIFETIME_MS);
     const cleanup = () => { clearTimeout(lifetime); request.signal.removeEventListener("abort", abort); };
     try {
       const upstream = await fetch(new URL("/v1/notifications/stream", base), {
