@@ -112,3 +112,12 @@ test("the shared reader opens with the owner's note, credited to them", () => {
   assert.match(html, /A note from Mali/);
   assert.match(html, /Bring a scarf for the temples/);
 });
+
+test("a long shared introduction is fully visible by default and can be folded", () => {
+  const html = renderToStaticMarkup(React.createElement(ReaderIntroduction, {
+    title: "Before you go", value: "Read this before travelling. ".repeat(100),
+  }));
+  assert.doesNotMatch(html, /max-h-72|overflow-hidden|mask-image/, "the initial introduction must not be clipped or faded");
+  assert.match(html, /aria-expanded="true"/);
+  assert.match(html, /Show less/);
+});

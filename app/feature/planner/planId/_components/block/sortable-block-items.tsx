@@ -40,6 +40,7 @@ import { TripChecklistItem } from "./items/trip-checklist-item";
 import { TripNoteItem } from "./items/trip-note-item";
 import { TripPlaceCard } from "./items/trip-place-card";
 import { TripSectionDivider } from "./items/trip-section-divider";
+import styles from "./item-insertion.module.css";
 
 type SortableBlockItemsProps = {
   block: TripBlockData;
@@ -158,6 +159,9 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
 
   function insertionControl(controlId: string, beforeItemId?: string, afterItemId?: string) {
     return (
+      <div className={styles.gap} data-insertion-gap="true">
+      <div className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2">
+      <div aria-hidden="true" />
       <InsertItemRow
         savedPickerOpen={savedPicker?.controlId === controlId}
         onSavedPlaces={block.kind === "itinerary" ? (trigger) => {
@@ -180,6 +184,8 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
           setActiveInsertionId(isOpen ? controlId : null);
         }}
       />
+      </div>
+      </div>
     );
   }
 
@@ -230,8 +236,8 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
   }
 
   return (
-    <div ref={listRef} tabIndex={-1} role="list" className="space-y-3 outline-none" aria-label={`${block.title} items`}>
-      {!readOnly && block.kind === "itinerary" && block.items.length === 0 && <div className="py-3" data-insertion-gap="true">{insertionControl("empty")}</div>}
+    <div ref={listRef} tabIndex={-1} role="list" className={cn(styles.list, "outline-none")} data-read-only={readOnly ? "true" : undefined} data-dragging={draggedItemId ? "true" : undefined} aria-label={`${block.title} items`}>
+      {!readOnly && block.kind === "itinerary" && block.items.length === 0 && insertionControl("empty")}
       {block.items.map((item, index) => {
         if (hiddenItemIds.has(item.id)) return null;
         const itemColor = getTripBlockColorById(itemColorIds.get(item.id) ?? block.colorId);
@@ -268,7 +274,8 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
 
         return (
           <Fragment key={item.id}>
-            <div className="flex min-w-0 flex-col gap-3">
+            {!readOnly && index === 0 && insertionControl(`before-${item.id}`, item.id)}
+            <div className={styles.item}>
             {shouldShowRouteInfo ? (
               <div
                 role="listitem"
@@ -378,7 +385,6 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
 
               {/* A column, so a section card can fill the row beside the taller move controls. */}
               <div className="group/plan-card flex min-w-0 flex-col">
-                {!readOnly && index === 0 && insertionControl(`before-${item.id}`, item.id)}
                 {isSectionItem(item) ? (
                   <TripSectionDivider
                     blockId={block.id}
@@ -404,10 +410,10 @@ export function SortableBlockItems({ block, hasStart = false, placeSearchBias }:
                   itemBatteryState?.departurePct,
                   shouldShowRouting ? daySchedule.lateByItemId.get(item.id)?.minutes : null,
                 )}
-                {!readOnly && insertionControl(`after-${item.id}`, block.items[index + 1]?.id, item.id)}
               </div>
             </div>
             </div>
+            {!readOnly && insertionControl(`after-${item.id}`, block.items[index + 1]?.id, item.id)}
           </Fragment>
         );
       })}
