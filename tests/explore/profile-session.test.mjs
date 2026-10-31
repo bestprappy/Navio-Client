@@ -10,11 +10,11 @@ const { AuthActions } = await import("../../components/auth-actions.tsx");
 const { ProfileMenu } = await import(
   "../../components/profile/profile-menu.tsx"
 );
-const { ProfileSettings } = await import("../../components/profile/profile-settings.tsx");
+const { ProfileSection } = await import("../../app/feature/settings/_components/profile/profile-section.tsx");
 
 test("expired settings session without cached profile exposes sign-in instead of a permanent skeleton", () => {
   const client = new QueryClient();
-  const html = renderToStaticMarkup(React.createElement(SessionProvider, { session: { user: { id: "owner" }, expires: "2099-01-01", error: "RefreshTokenError" } }, React.createElement(QueryClientProvider, { client }, React.createElement(ProfileSettings))));
+  const html = renderToStaticMarkup(React.createElement(SessionProvider, { session: { user: { id: "owner" }, expires: "2099-01-01", error: "RefreshTokenError" } }, React.createElement(QueryClientProvider, { client }, React.createElement(ProfileSection))));
   assert.match(html, /Your session has expired/);
   assert.match(html, /Sign in again/);
   assert.doesNotMatch(html, /animate-pulse/);

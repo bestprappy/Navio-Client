@@ -1,8 +1,9 @@
 import { z } from "zod";
 
 /**
- * Client-side mirrors of the server contract in `UpdateProfileRequest`,
- * `UserPreferences`, and `UserProfileResponse`.
+ * Client-side mirrors of the server contract in `UpdateProfileRequest` and
+ * `UserProfileResponse`. Only the display name is edited here; the other
+ * stored profile and preference fields are read leniently and never written.
  *
  * The form schemas repeat the backend's own constraints so an invalid value is
  * caught before it costs a round trip, and the response schema validates what
@@ -10,29 +11,12 @@ import { z } from "zod";
  * undefined read somewhere in the tree.
  */
 
-/** Matches the server's `^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})?$`. */
-const LANGUAGE_TAG_PATTERN = /^[a-zA-Z]{2,3}(-[a-zA-Z0-9]{2,8})?$/;
-const COUNTRY_CODE_PATTERN = /^[A-Za-z]{2}$/;
-
-const LANGUAGE_TAG_MESSAGE = "Choose a language such as English or Thai.";
-
 export const profileFormSchema = z.object({
   displayName: z
     .string()
     .trim()
-    .min(1, "Please enter a display name.")
-    .max(120, "Display name must be 120 characters or fewer."),
-  locale: z.string().trim().max(20).regex(LANGUAGE_TAG_PATTERN, LANGUAGE_TAG_MESSAGE),
-  countryCode: z
-    .string()
-    .trim()
-    .regex(COUNTRY_CODE_PATTERN, "Please choose your country."),
-});
-
-export const preferencesFormSchema = z.object({
-  distanceUnit: z.enum(["km", "mi"], { message: "Choose kilometres or miles." }),
-  notificationEmail: z.boolean(),
-  notificationPush: z.boolean(),
+    .min(1, "Enter the name other travellers will see.")
+    .max(120, "Keep your display name to 120 characters or fewer."),
 });
 
 /**
@@ -71,4 +55,39 @@ export const userProfileSchema = z.object({
     .transform((value) => value ?? userPreferencesSchema.parse({})),
   createdAt: z.string().nullish().transform((value) => value ?? null),
   updatedAt: z.string().nullish().transform((value) => value ?? null),
+  username: z.string().nullish().transform((value) => value ?? null),
+  usernameChangeAvailableAt: z.string().nullish().transform((value) => value ?? null),
+  accountId: z.string().nullish().transform((value) => value ?? null),
+  bio: z.string().nullish().transform((value) => value ?? ""),
+  bannerMediaId: z.string().nullish().transform((value) => value ?? null),
+  travelInterests: z.array(z.string()).nullish().transform((value) => value ?? []),
+  travelPace: z.string().nullish().transform((value) => value ?? null),
+  showTravelPreferences: z.boolean().nullish().transform((value) => value ?? true),
+});
+
+export const USERNAME_PATTERN = /^[a-z][a-z0-9_]{2,29}$/;
+export const BIO_MAX_LENGTH = 280;
+export const MAX_TRAVEL_INTERESTS = 8;
+
+/** The public-profile form on Settings > Profile. Mirrors `UpdateProfileRequest`. */
+export const publicProfileFormSchema = z.object({
+  displayName: z
+    .string()
+    .trim()
+    .min(1, "Enter the name other travellers will see.")
+    .max(120, "Keep your display name to 120 characters or fewer."),
+  username: z
+    .string()
+    .trim()
+    .transform((value) => value.replace(/^@/, "").toLowerCase())
+    .pipe(
+      z
+        .string()
+        .min(3, "Usernames are 3 to 30 characters.")
+        .max(30, "Usernames are 3 to 30 characters.")
+        .regex(USERNAME_PATTERN, "Use lowercase letters, numbers and underscores, starting with a letter."),
+    ),
+  bio: z.string().max(BIO_MAX_LENGTH, `Keep your bio to ${BIO_MAX_LENGTH} characters.`),
+  travelInterests: z.array(z.string()).max(MAX_TRAVEL_INTERESTS, `Choose up to ${MAX_TRAVEL_INTERESTS} interests.`),
+  travelPace: z.enum(["", "relaxed", "balanced", "packed"]),
 });

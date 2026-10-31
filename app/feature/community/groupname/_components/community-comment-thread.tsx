@@ -37,6 +37,7 @@ import { formatCount, formatRelativeTime } from "../../_components/data";
 import { useCommunityComments, usePostMutation } from "../../_components/community-queries";
 import { useCommunityIdentity } from "../../_components/community-group-queries";
 import { useCommunityUserProfile } from "../../_components/community-user-label";
+import { ProfileLink } from "@/components/social/profile-link";
 import { CommunityMembershipButton } from "../../_components/community-membership-button";
 import { CommunityQueryError } from "../../_components/community-query-state";
 import { CommunityCommentComposer } from "./community-comment-composer";
@@ -516,7 +517,7 @@ function CommentNode({
     onContinueThread,
     onShowMoreReplies,
   } = useCommentThreadContext();
-  const { name, avatarUrl, initials } = useCommunityUserProfile(
+  const { name, username, avatarUrl, initials } = useCommunityUserProfile(
     comment.authorId,
   );
 
@@ -591,7 +592,7 @@ function CommentNode({
                 comment.deleted ? "text-muted-foreground" : "text-foreground",
               )}
             >
-              {comment.deleted ? "[deleted]" : name}
+              {comment.deleted ? "[deleted]" : <ProfileLink username={username}>{name}</ProfileLink>}
             </span>
             <time
               dateTime={comment.createdAt}

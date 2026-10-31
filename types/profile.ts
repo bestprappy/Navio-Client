@@ -1,8 +1,8 @@
 import type { z } from "zod";
 
 import type {
-  preferencesFormSchema,
   profileFormSchema,
+  publicProfileFormSchema,
   userPreferencesSchema,
   userProfileSchema,
 } from "@/lib/validations/profile";
@@ -15,7 +15,8 @@ export type UserPreferences = z.infer<typeof userPreferencesSchema>;
 /** Editable profile fields, matching `PATCH /v1/users/me`. */
 export type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
-/** Editable preference fields, matching `PATCH /v1/users/me/preferences`. */
-export type PreferencesFormValues = z.infer<typeof preferencesFormSchema>;
+/** Settings > Profile form values; `username` is normalized by the schema. */
+export type PublicProfileFormInput = z.input<typeof publicProfileFormSchema>;
+export type PublicProfileFormValues = z.output<typeof publicProfileFormSchema>;
 
 export type ProfileSaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";

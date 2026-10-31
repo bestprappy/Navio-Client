@@ -1,4 +1,5 @@
 import type { SavedVehicle } from "../../planId/_components/garage/vehicle-api";
+import { announceSharedPlan } from "@/lib/social-api";
 import { PlannerApiError, requestJson } from "../planner-api";
 
 /** Mirrors `PublicationOptions`. Every option is off unless the owner turned it on. */
@@ -222,13 +223,26 @@ export async function publishPlan(
   tripId: string,
   payload: PublishPlanPayload,
 ): Promise<Publication> {
-  return toPublication(
+  return announceIfNamedListing(toPublication(
     await requestJson(`/api/trips/${encodeURIComponent(tripId)}/publication`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     }),
-  );
+  ));
+}
+
+/**
+ * Followers hear about a plan once it is listed on Explore under the owner's
+ * name. Community verifies the listing with trip planning and deduplicates per
+ * plan, so repeating this after an update notifies nobody twice. Best effort:
+ * it never delays or fails the publish itself.
+ */
+function announceIfNamedListing(publication: Publication): Publication {
+  if (publication.published && publication.listedInExplore && publication.authorDisplayName) {
+    void announceSharedPlan(publication.token);
+  }
+  return publication;
 }
 
 /** Lists or unlists a published plan on Explore. Immediate; the shared content is unchanged. */
@@ -238,13 +252,13 @@ export async function setExploreListing(
   /** Refreshes the byline when given; null keeps the one already published. */
   authorDisplayName: string | null,
 ): Promise<Publication> {
-  return toPublication(
+  return announceIfNamedListing(toPublication(
     await requestJson(`/api/trips/${encodeURIComponent(tripId)}/publication`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ listedInExplore, authorDisplayName }),
     }),
-  );
+  ));
 }
 
 export async function stopSharingPlan(tripId: string): Promise<void> {

@@ -121,7 +121,8 @@ export function AuthActions({
           mobile && "rounded-lg border border-border p-3",
         )}
       >
-        <Avatar aria-label={userLabel}>
+        {/* Keyed so removing a photo remounts the root and its fallback shows again. */}
+        <Avatar key={pictureUrl ?? "none"} aria-label={userLabel}>
           {pictureUrl ? (
             <AvatarImage src={pictureUrl} alt="" />
           ) : null}

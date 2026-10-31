@@ -17,6 +17,7 @@ import { CommunityPlanAttachment } from "./community-plan-attachment";
 import { CommunityIcon, communityHandle } from "./community-identity";
 import { useCommunityIdentity } from "./community-group-queries";
 import { useCommunityUserProfile } from "./community-user-label";
+import { ProfileLink } from "@/components/social/profile-link";
 import type { CommunityGroup, CommunityPost } from "./data";
 import {
   formatCount,
@@ -94,7 +95,7 @@ export function CommunityPostCard({
           </Link>
         ) : (
           <span className="flex min-w-0 items-center gap-1.5 font-semibold text-foreground">
-            <span className="truncate">{author.name}</span>
+            <ProfileLink username={author.username} className="truncate">{author.name}</ProfileLink>
           </span>
         )}
         <span aria-hidden="true" className="text-muted-foreground">
@@ -105,7 +106,7 @@ export function CommunityPostCard({
         </time>
         {showGroup ? (
           <span className="hidden min-w-0 truncate text-muted-foreground sm:inline">
-            by {author.name}
+            by <ProfileLink username={author.username}>{author.name}</ProfileLink>
           </span>
         ) : null}
 

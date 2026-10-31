@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 
-import { ProfileSettings } from "@/components/profile/profile-settings";
+import { ProfileSection } from "@/app/feature/settings/_components/profile/profile-section";
 
 export const metadata: Metadata = {
-  title: "Personal information - Navio",
-  description: "Manage your personal details and account information.",
+  title: "Profile settings - Navio",
+  description: "Your photo, banner, name, username, bio and travel preferences.",
 };
 
-export default function ProfilePage() {
-  return <ProfileSettings />;
+export default function ProfileSettingsPage() {
+  return <ProfileSection />;
 }

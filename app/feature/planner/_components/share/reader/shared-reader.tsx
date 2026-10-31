@@ -7,7 +7,7 @@ import Link from "next/link";
 import { createStore, Provider, useAtomValue, useSetAtom } from "jotai";
 import { ArrowLeft, CalendarDays, CarFront, ChevronDown, Compass, MapPin, MessageSquarePlus, Share2, Zap } from "lucide-react";
 import { PlanCover } from "@/app/feature/explore/_components/shared-plans/plan-cover";
-import { PlanAuthor } from "@/app/feature/explore/_components/shared-plans/plan-author";
+import { PlanAuthorLink } from "@/components/social/plan-author-link";
 import { PlanEngagement } from "@/app/feature/explore/_components/shared-plans/plan-engagement";
 import { GoogleAttribution } from "@/app/feature/explore/places/google-attribution";
 import { CopySharedPlanButton } from "@/app/feature/explore/_components/shared-plans/copy-shared-plan-button";
@@ -104,7 +104,7 @@ function ReaderWorkspace({shared,token,backLink}:SharedReaderProps) {
         {/* The owner's note comes first, before the plan's details. */}
         {presentation.introduction&&<ReaderIntroduction title={shared.plan.startingPart?.title||"Before you go"} authorName={shared.authorName} value={presentation.introduction} />}
         <section id="reader-overview" className="scroll-mt-24 space-y-5 pt-6 pb-8">
-          <div className="flex flex-wrap items-center justify-between gap-3"><PlanAuthor name={shared.authorName} size="default" /><span className="text-[11px] text-muted-foreground">View-only trip plan</span></div>
+          <div className="flex flex-wrap items-center justify-between gap-3"><PlanAuthorLink token={token} name={shared.authorName} size="default" /><span className="text-[11px] text-muted-foreground">View-only trip plan</span></div>
 
           {readerDateLabel(shared.plan.startDate)&&<p className="flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays className="size-3.5" />{readerDateLabel(shared.plan.startDate)}{shared.plan.endDate&&shared.plan.endDate!==shared.plan.startDate&&readerDateLabel(shared.plan.endDate)&&` – ${readerDateLabel(shared.plan.endDate)}`}</p>}
           {shared.listedInExplore&&<div className="rounded-xl border border-border/60 bg-card/60 p-3.5"><PlanEngagement {...shared.engagement} detail /></div>}

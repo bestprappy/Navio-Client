@@ -31,12 +31,13 @@ export function ProfileMenu({ compact = false, wrapName = false, onNavigate }: P
 
   return (
     <Link
-      href={isAuthenticated ? "/settings/profile" : "/sign-in"}
+      href={!isAuthenticated ? "/sign-in" : profile.data?.username ? `/u/${encodeURIComponent(profile.data.username)}` : "/settings/profile"}
       onClick={onNavigate}
       aria-label={isAuthenticated ? "Open profile" : "Sign in"}
       className={cn("flex h-auto min-w-0 items-center gap-2 rounded-md p-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring", !compact && "flex-1 justify-start text-left")}
     >
-        <Avatar size="lg">
+        {/* Keyed so removing a photo remounts the root and its fallback shows again. */}
+        <Avatar key={picture ?? "none"} size="lg">
           {picture && <AvatarImage src={picture} alt="" />}
           <AvatarFallback>{isAuthenticated ? initials : <UserRound className="size-4" />}</AvatarFallback>
         </Avatar>
@@ -47,7 +48,7 @@ export function ProfileMenu({ compact = false, wrapName = false, onNavigate }: P
               <span className="block truncate">{remainingName.join(" ")}</span>
             </> : <span className="block truncate">{displayName}</span>}
           </span>
-          <span className={cn("block truncate text-xs font-normal text-muted-foreground", wrapName && "leading-snug")}>{isAuthenticated ? "Travel enthusiast" : "Sign in to plan trips"}</span>
+          <span className={cn("block truncate text-xs font-normal text-muted-foreground", wrapName && "leading-snug")}>{isAuthenticated ? "View profile" : "Sign in to plan trips"}</span>
         </span>}
     </Link>
   );

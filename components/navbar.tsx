@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 
 import { AuthActions } from "@/components/auth-actions";
+import { NotificationBell } from "@/components/notifications/notification-bell";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { SavedLink } from "@/components/saved-link";
@@ -63,11 +64,14 @@ export function Navbar() {
         {/* Desktop actions */}
         <div className="hidden items-center gap-1 md:flex">
           <SavedLink />
+          <NotificationBell />
           <ThemeToggle />
           <AuthActions />
         </div>
 
-        {/* Mobile menu toggle */}
+        {/* Mobile: the bell stays visible beside the menu toggle */}
+        <div className="flex items-center gap-1 md:hidden">
+        <NotificationBell />
         <Button
           className="md:hidden"
           variant="ghost"
@@ -81,6 +85,7 @@ export function Navbar() {
         >
           {isMenuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
         </Button>
+        </div>
       </nav>
 
       {/* Mobile menu */}

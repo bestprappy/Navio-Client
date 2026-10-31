@@ -3,7 +3,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { LogIn, LogOut, Settings } from "lucide-react";
+import { Bell, LogIn, LogOut, Settings } from "lucide-react";
+
+import { useUnreadCount } from "@/hooks/use-social";
 
 import { cn } from "@/lib/utils";
 import { SidebarAppearance } from "./sidebar-appearance";
@@ -17,6 +19,7 @@ type SidebarAccountActionsProps = {
 export function SidebarAccountActions({ collapsed, onNavigate }: SidebarAccountActionsProps) {
   const pathName = usePathname();
   const { status } = useSession();
+  const unread = useUnreadCount().data?.unreadCount ?? 0;
   const logout = useMutation({
     mutationFn: () => signOut({ redirectTo: "/" }),
     onError: (error) => console.error("SidebarAccountActions: sign out failed", error),
@@ -28,6 +31,10 @@ export function SidebarAccountActions({ collapsed, onNavigate }: SidebarAccountA
 
   return (
     <nav aria-label="Account" className="mt-3 flex shrink-0 flex-col gap-1 border-t border-border/50 pt-3">
+      {status === "authenticated" ? (
+        <SidebarItem title={unread > 0 ? `Notifications (${unread > 99 ? "99+" : unread} unread)` : "Notifications"} href="/notifications"
+          icon={<Bell className="size-5" />} isActive={pathName === "/notifications"} collapsed={collapsed} onClick={onNavigate} />
+      ) : null}
       <SidebarItem title="Settings" href="/settings/profile" icon={<Settings className="size-5" />}
         isActive={pathName === "/settings" || pathName.startsWith("/settings/")}
         collapsed={collapsed} onClick={onNavigate} />

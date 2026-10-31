@@ -15,6 +15,7 @@ import { CommunityPostImage } from "../../_components/community-post-image";
 import { linkHost } from "../../_components/community-post-card";
 import { CommunityIcon, communityHandle } from "../../_components/community-identity";
 import { useCommunityUserProfile } from "../../_components/community-user-label";
+import { ProfileLink } from "@/components/social/profile-link";
 import { useCommunityIdentity } from "../../_components/community-group-queries";
 import type { CommunityGroup, CommunityPost } from "../../_components/data";
 import {
@@ -67,11 +68,13 @@ export function CommunityPostDetailCard({ post, group }: CommunityPostDetailCard
             </time>
           </div>
           <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
-            <Avatar size="sm" className="size-4">
-              {author.avatarUrl ? <AvatarImage src={author.avatarUrl} alt="" /> : null}
-              <AvatarFallback className="text-[0.5rem]">{author.initials}</AvatarFallback>
-            </Avatar>
-            {author.name}
+            <ProfileLink username={author.username} className="flex items-center gap-1.5">
+              <Avatar size="sm" className="size-4">
+                {author.avatarUrl ? <AvatarImage src={author.avatarUrl} alt="" /> : null}
+                <AvatarFallback className="text-[0.5rem]">{author.initials}</AvatarFallback>
+              </Avatar>
+              {author.name}
+            </ProfileLink>
           </p>
         </div>
         {canWrite ? (

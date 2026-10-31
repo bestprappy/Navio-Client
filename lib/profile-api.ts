@@ -1,12 +1,10 @@
-import {
-  DEFAULT_COUNTRY_CODE,
-  DEFAULT_DISTANCE_UNIT,
-  DEFAULT_LOCALE,
-} from "@/components/profile/data";
+import { apiRequest, uploadWithProgress } from "@/lib/api-client";
 import { userProfileSchema } from "@/lib/validations/profile";
+import { securityOverviewSchema, usernameAvailabilitySchema } from "@/lib/validations/social";
 import type {
-  PreferencesFormValues,
   ProfileFormValues,
+  PublicProfileFormInput,
+  PublicProfileFormValues,
   UserProfile,
 } from "@/types/profile";
 
@@ -143,9 +141,7 @@ export function updateMyProfile(
   baseline: ProfileFormValues,
 ): Promise<UserProfile> {
   const patch: Partial<ProfileFormValues> = {};
-  if (values.displayName !== baseline.displayName) patch.displayName = values.displayName;
-  if (values.locale !== baseline.locale) patch.locale = values.locale;
-  if (values.countryCode !== baseline.countryCode) patch.countryCode = values.countryCode;
+  if (values.displayName !== baseline.displayName) patch.displayName = values.displayName.trim();
 
   return requestProfile("/api/users/me", "updateMyProfile", {
     method: "PATCH",
@@ -153,42 +149,75 @@ export function updateMyProfile(
   });
 }
 
-/**
- * Preferences are merged server-side, so only the changed keys are sent.
- * `language` is deliberately never included — the profile-level `locale` is the
- * field this UI edits.
- */
-export function updateMyPreferences(
-  values: PreferencesFormValues,
-  baseline: PreferencesFormValues,
-): Promise<UserProfile> {
-  const patch: Partial<PreferencesFormValues> = {};
-  if (values.distanceUnit !== baseline.distanceUnit) patch.distanceUnit = values.distanceUnit;
-  if (values.notificationEmail !== baseline.notificationEmail) {
-    patch.notificationEmail = values.notificationEmail;
-  }
-  if (values.notificationPush !== baseline.notificationPush) {
-    patch.notificationPush = values.notificationPush;
-  }
+export function toProfileFormValues(profile: UserProfile): ProfileFormValues {
+  return { displayName: profile.displayName };
+}
 
-  return requestProfile("/api/users/me/preferences", "updateMyPreferences", {
-    method: "PATCH",
-    body: patch,
+// --- Public profile, banner and account security ------------------------------
+
+/** Same as {@link uploadProfilePicture} but reports upload progress. */
+export function uploadProfilePictureWithProgress(file: File, onProgress: (percent: number) => void): Promise<UserProfile> {
+  return uploadWithProgress("/api/users/me/picture", file, {
+    schema: userProfileSchema, operation: "uploadProfilePicture", onProgress,
   });
 }
 
-export function toProfileFormValues(profile: UserProfile): ProfileFormValues {
-  return {
-    displayName: profile.displayName,
-    locale: profile.locale ?? DEFAULT_LOCALE,
-    countryCode: (profile.countryCode ?? DEFAULT_COUNTRY_CODE).toUpperCase(),
-  };
+export function uploadProfileBanner(file: File, onProgress: (percent: number) => void): Promise<UserProfile> {
+  return uploadWithProgress("/api/users/me/banner", file, {
+    schema: userProfileSchema, operation: "uploadProfileBanner", onProgress,
+  });
 }
 
-export function toPreferencesFormValues(profile: UserProfile): PreferencesFormValues {
+export async function removeProfileBanner(): Promise<UserProfile> {
+  await apiRequest("/api/users/me/banner", { method: "DELETE", operation: "removeProfileBanner" });
+  return getMyProfile();
+}
+
+/** The fields of Settings > Profile that differ from the saved profile; empty when nothing changed. */
+export function publicProfilePatch(values: PublicProfileFormValues, profile: UserProfile): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  if (values.displayName.trim() !== profile.displayName) patch.displayName = values.displayName.trim();
+  if (values.username !== (profile.username ?? "")) patch.username = values.username;
+  if (values.bio.trim() !== profile.bio.trim()) patch.bio = values.bio.trim();
+  const interestsChanged =
+    values.travelInterests.length !== profile.travelInterests.length ||
+    values.travelInterests.some((interest, index) => interest !== profile.travelInterests[index]);
+  if (interestsChanged) patch.travelInterests = values.travelInterests;
+  if (values.travelPace !== (profile.travelPace ?? "")) patch.travelPace = values.travelPace;
+  return patch;
+}
+
+export function savePublicProfile(patch: Record<string, unknown>): Promise<UserProfile> {
+  return apiRequest("/api/users/me", { method: "PATCH", body: patch, schema: userProfileSchema, operation: "savePublicProfile" });
+}
+
+export function setShowTravelPreferences(show: boolean): Promise<UserProfile> {
+  return apiRequest("/api/users/me", {
+    method: "PATCH", body: { showTravelPreferences: show }, schema: userProfileSchema, operation: "setShowTravelPreferences",
+  });
+}
+
+export function checkUsername(username: string, signal?: AbortSignal) {
+  return apiRequest(`/api/users/username-availability?username=${encodeURIComponent(username)}`, {
+    schema: usernameAvailabilitySchema, operation: "checkUsername", signal,
+  });
+}
+
+export function getSecurityOverview(signal?: AbortSignal) {
+  return apiRequest("/api/users/me/security", { schema: securityOverviewSchema, operation: "getSecurityOverview", signal });
+}
+
+/** Ends every session. Rejects with code `reauthentication_required` when the sign-in is too old. */
+export function signOutEverywhere() {
+  return apiRequest("/api/users/me/sessions/revoke", { method: "POST", operation: "signOutEverywhere" });
+}
+
+export function toPublicProfileForm(profile: UserProfile): PublicProfileFormInput {
   return {
-    distanceUnit: profile.preferences.distanceUnit === "mi" ? "mi" : DEFAULT_DISTANCE_UNIT,
-    notificationEmail: profile.preferences.notificationEmail,
-    notificationPush: profile.preferences.notificationPush,
+    displayName: profile.displayName,
+    username: profile.username ?? "",
+    bio: profile.bio,
+    travelInterests: profile.travelInterests,
+    travelPace: (["relaxed", "balanced", "packed"].includes(profile.travelPace ?? "") ? profile.travelPace : "") as PublicProfileFormInput["travelPace"],
   };
 }

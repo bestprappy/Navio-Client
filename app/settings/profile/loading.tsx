@@ -1,5 +1,5 @@
-import { ProfileSkeleton } from "@/components/profile/profile-skeleton";
+import { SettingsSkeleton } from "@/app/feature/settings/_components/settings-states";
 
-export default function ProfileLoading() {
-  return <ProfileSkeleton />;
+export default function ProfileSettingsLoading() {
+  return <SettingsSkeleton title="Profile" />;
 }
