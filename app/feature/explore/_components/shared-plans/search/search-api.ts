@@ -6,6 +6,10 @@ export const planSearchPageSchema = z.object({
  destinations: z.array(z.object({ id: z.string(), label: z.string(), country: z.string(), kind: z.enum(["city","country"]), count: z.number().nonnegative() })),
  plans: z.array(explorePlanSchema), number: z.number().int().nonnegative(), last: z.boolean(),
  totalElements: z.number().int().nonnegative(), matchedCount: z.number().int().nonnegative(),
+ matching: z.array(explorePlanSchema).optional(), related: z.array(explorePlanSchema).optional(),
+ matchingTotal: z.number().int().nonnegative().optional(), relatedTotal: z.number().int().nonnegative().optional(),
+ matchingLast: z.boolean().optional(), relatedLast: z.boolean().optional(),
+ relatedPlans: z.array(explorePlanSchema).optional(), reasons: z.record(z.string(), z.string()).optional(), correction: z.string().nullable().optional(),
 });
 export type PlanSearchPage = z.infer<typeof planSearchPageSchema>;
 export type PlanDestinationSuggestion = PlanSearchPage["destinations"][number];

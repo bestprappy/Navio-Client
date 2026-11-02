@@ -1,4 +1,4 @@
-﻿import assert from 'node:assert/strict';
+import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { register } from 'node:module';
 register(new URL('../support/typescript-loader.mjs',import.meta.url));
@@ -29,4 +29,28 @@ test('real public plan titles complete immediately and respect country and durat
  assert.deepEqual(matchKnownPlans('Jap',{...state,country:'TH'},[plan]),[]);
  assert.deepEqual(matchKnownPlans('Jap',{...state,duration:'5'},[plan]),[]);
  assert.deepEqual(matchKnownPlans('Bangkok',state,[plan]),[]);
+});
+
+test('multiword phrases retain travel suggestions with no catalogue matches',()=>{
+ for(const text of ['Thailand Food Trip','Huahin scenary and food trip','California Food Focus Trip']) {
+  const result=buildPlanSuggestions(text,'',[]);
+  assert.ok(result.queries.length>0,text);
+ }
+ assert.ok(buildPlanSuggestions('Huahin scenary and food trip','',[]).queries.some(q=>q.includes('Hua Hin')&&q.includes('scenic')&&q.includes('food')));
+});
+test('country plus partial city completes from real catalogue destinations',()=>{
+ const plans=[{token:'hua',title:'Coastal escape',destinationCity:'Hua Hin',destinationCountry:'Thailand',dayCount:4}];
+ assert.ok(buildPlanSuggestions('Thailand Hua','',[],plans).queries.includes('Thailand Hua Hin'));
+});
+
+test('multiword location completion replaces the unfinished span instead of duplicating words',()=>{
+ const plans=[{token:'hua',title:'Coastal escape',destinationCity:'Hua Hin',destinationCountry:'Thailand',dayCount:4},{token:'ny',title:'City walks',destinationCity:'New York',destinationCountry:'United States',dayCount:4}];
+ assert.ok(buildPlanSuggestions('Thailand Hua Hi','',[],plans).queries.includes('Thailand Hua Hin'));
+ assert.ok(buildPlanSuggestions('New Yo','',[],plans).queries.includes('New York'));
+ assert.ok(!buildPlanSuggestions('New Ne','',[],plans).queries.includes('New New York'));
+});
+
+test('unfinished travel words complete inside a longer destination phrase',()=>{
+ assert.ok(buildPlanSuggestions('Japan fo','',[]).queries.some(q=>q==='Japan food trip'));
+ assert.ok(buildPlanSuggestions('Thailand camp','',[]).queries.some(q=>q==='Thailand camping trip'));
 });

@@ -1,3 +1,4 @@
+import { requestText } from "./search-draft";
 import { countries } from "../../../places/search-state";
 export type DurationUnit = "days" | "months" | "years";
 export type PlanSearchSort = "relevance" | "recent" | "trending";
@@ -19,7 +20,7 @@ export function parsePlanSearch(params: URLSearchParams): PlanSearchState {
 export function hasPlanSearch(state: PlanSearchState) { return !!(state.query.trim() || state.country || state.duration.trim()); }
 export function planSearchParams(state: PlanSearchState, base = new URLSearchParams()) {
  const params = new URLSearchParams(base);
- const values = { planQuery: state.query.trim(), planCountry: state.country, planDuration: state.duration,
+ const values = { planQuery: requestText(state.query), planCountry: state.country, planDuration: state.duration,
  planDurationUnit: state.unit !== "days" ? state.unit : "", planSort: state.sort !== "relevance" ? state.sort : "" };
  for (const [key,value] of Object.entries(values)) { if(value) params.set(key,value); else params.delete(key); }
  if(params.get("tab") !== "guides" && params.get("tab") !== "places") params.delete("term");

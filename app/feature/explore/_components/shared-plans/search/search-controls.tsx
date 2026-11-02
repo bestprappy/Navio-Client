@@ -7,7 +7,7 @@ import { countries } from "../../../places/search-state";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { explorePlanPath, type ExplorePlan } from "../explore-plans-api";
-import { buildPlanSuggestions, matchKnownPlans } from "./search-suggestions";
+import { buildPlanSuggestions, knownPlanSuggestions } from "./search-suggestions";
 import type { PlanSearchPage } from "./search-api";
 import { durationDays, type DurationUnit, type PlanSearchState } from "./search-state";
 
@@ -21,8 +21,14 @@ export function PlanSearchControls({knownPlans=[],suggestionsUnavailable=false,s
  const router=useRouter(),id=useId(),root=useRef<HTMLDivElement>(null),list=useRef<HTMLDivElement>(null),composing=useRef(false);
  const [open,setOpen]=useState(false),[active,setActive]=useState(-1);
  const ready=!isUpdating&&draft.trim().length>=2;
- const {destinations,queries}=buildPlanSuggestions(draft,state.country,ready?suggestions?.destinations??[]:[]);
- const plans=[...new Map([...(ready?suggestions?.plans??[]:[]),...matchKnownPlans(draft,state,knownPlans)].map(plan=>[plan.token,plan])).values()].slice(0,4);
+ const general=buildPlanSuggestions(draft,state.country,ready?suggestions?.destinations??[]:[],knownPlans);
+ const destinations=general.destinations;
+ const queries=[...new Set([...(ready&&suggestions?.correction?[suggestions.correction]:[]),...general.queries])].slice(0,4);
+ const known=knownPlanSuggestions(draft,state,knownPlans);
+ const matchingPlans=ready&&suggestions?suggestions.plans:known.matching;
+ const relatedPlans=ready&&suggestions?suggestions.relatedPlans??known.related:known.related;
+ const relatedOnly=matchingPlans.length===0&&relatedPlans.length>0;
+ const plans=(matchingPlans.length?matchingPlans:relatedPlans).slice(0,4);
  const count=destinations.length+queries.length+plans.length;
  const countryName=countries.find(c=>c.code===state.country)?.name;
  const durationInvalid=!!state.duration&&durationDays(state.duration,state.unit)===null;
@@ -61,7 +67,7 @@ export function PlanSearchControls({knownPlans=[],suggestionsUnavailable=false,s
        </button>)}</div>}
        {queries.length>0&&<div role="group" aria-label="Suggested searches"><p className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Suggested searches</p>{queries.map((query,index)=>{const i=index+destinations.length;return <button key={query} type="button" role="option" aria-label={query} id={`${id}-option-${i}`} data-index={i} aria-selected={active===i} tabIndex={-1} onMouseEnter={()=>setActive(i)} onMouseDown={event=>event.preventDefault()} onClick={()=>select(i)} className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm ${active===i?"bg-muted":"hover:bg-muted/60"}`}><Search className="size-4 shrink-0 text-muted-foreground"/><span className="min-w-0 truncate"><Highlight text={query} query={draft.trim()}/></span></button>;})}</div>}
        {isUpdating&&<p role="status" className="px-3 py-2 text-xs text-muted-foreground">Looking for matching shared plans...</p>}
-       {plans.length>0&&<div role="group" aria-label="Shared plans"><p className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Shared plans</p>{plans.map((plan,index)=>{const i=index+destinations.length+queries.length;return <button key={plan.token} type="button" role="option" id={`${id}-option-${i}`} data-index={i} aria-selected={active===i} tabIndex={-1} onMouseEnter={()=>setActive(i)} onMouseDown={event=>event.preventDefault()} onClick={()=>select(i)} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${active===i?"bg-muted":"hover:bg-muted/60"}`}><Route className="size-4 shrink-0 text-primary"/><span className="min-w-0"><span className="block truncate text-sm"><Highlight text={plan.title||"Untitled plan"} query={draft.trim()}/></span><span className="block truncate text-xs text-muted-foreground">{[plan.destinationCity,plan.destinationCountry].filter(Boolean).join(", ")}{plan.dayCount>0?` / ${plan.dayCount} days`:""}</span></span></button>;})}</div>}
+       {<div role="group" aria-label="Shared plans"><p className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Shared plans</p>{relatedOnly&&<p className="px-3 pb-1 text-xs text-muted-foreground">Related plans</p>}{!plans.length&&!isUpdating&&!suggestionsUnavailable&&<p className="px-3 py-3 text-sm text-muted-foreground">No matching or related plans found.</p>}{plans.map((plan,index)=>{const i=index+destinations.length+queries.length;return <button key={plan.token} type="button" role="option" id={`${id}-option-${i}`} data-index={i} aria-selected={active===i} tabIndex={-1} onMouseEnter={()=>setActive(i)} onMouseDown={event=>event.preventDefault()} onClick={()=>select(i)} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${active===i?"bg-muted":"hover:bg-muted/60"}`}><Route className="size-4 shrink-0 text-primary"/><span className="min-w-0"><span className="block truncate text-sm"><Highlight text={plan.title||"Untitled plan"} query={draft.trim()}/></span><span className="block truncate text-xs text-muted-foreground">{relatedOnly?"Related - ":""}{[plan.destinationCity,plan.destinationCountry].filter(Boolean).join(", ")}{plan.dayCount>0?` / ${plan.dayCount} days`:""}</span></span></button>;})}</div>}
        {suggestionsUnavailable&&<p className="px-3 py-2 text-xs text-muted-foreground">Live plan suggestions are temporarily unavailable.</p>}
        {!count&&!isUpdating&&<p className="px-3 py-4 text-sm text-muted-foreground">Press Enter to search shared plans for this phrase.</p>}
       </>
