@@ -80,7 +80,7 @@ export function PlaceNotesEditor({ blockId, itemId, itemName, value, placeholder
 }
 
 /**
- * The notes on a closed card, formatted and faded out after a few lines. Links and toggles
+ * Formatted notes, read-only. With `clamped` they fade out after a few lines. Links and toggles
  * work only where the card cannot be opened for editing; otherwise a press opens the card.
  */
 export function PlaceNotesPreview({ value, interactive, clamped = true }: { value: string; interactive: boolean; clamped?: boolean }) {

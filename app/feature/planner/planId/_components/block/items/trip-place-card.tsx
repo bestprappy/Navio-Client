@@ -307,7 +307,7 @@ export function TripPlaceCard({
                   Charging completed
                 </span>
               )}
-              {item.notes ? <PlaceNotesPreview value={item.notes} interactive={readOnly} /> : null}
+              {item.notes ? <PlaceNotesPreview value={item.notes} interactive={readOnly} clamped={false} /> : null}
             </>
           )}
         </div>
@@ -481,7 +481,7 @@ export function TripPlaceCard({
                   ) : null}
                   <StopScheduleList item={item} />
                   {lateMinutes ? <LateWarning name={item.name} minutes={lateMinutes} /> : null}
-                  {item.notes ? <PlaceNotesPreview value={item.notes} interactive={readOnly} /> : null}
+                  {item.notes ? <PlaceNotesPreview value={item.notes} interactive={readOnly} clamped={false} /> : null}
                 </div>
               ) : null}
             </>
