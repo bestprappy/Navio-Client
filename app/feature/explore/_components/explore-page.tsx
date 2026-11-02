@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PlacesDiscovery } from "../places/places-discovery";
 import { placesEnabled } from "../places/places-config";
@@ -12,10 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GuideDiscovery } from "../../guides/guide-discovery";
 
 import { ExploreErrorBoundary } from "./explore-error-boundary";
-import { explorePlanSearchText, type ExplorePlansPage } from "./shared-plans/explore-plans-api";
+import { type ExplorePlansPage } from "./shared-plans/explore-plans-api";
 import { TRENDING_PAGE_SIZE } from "./shared-plans/explore-plans-api";
 import { SharedPlansSection } from "./shared-plans/shared-plans-section";
 import { useExplorePlans } from "./shared-plans/use-explore-plans";
+import { SharedPlanSearch } from "./shared-plans/search/shared-plan-search";
 
 type ExplorePageProps = {
   initialTab?: "plans" | "guides" | "places";
@@ -34,11 +35,7 @@ export function ExplorePage({ initialSharedPlans, initialTrendingPlans, initialT
   const [searches, setSearches] = useState({ plans: initialTab === "plans" ? initialSearch : "", guides: initialTab === "guides" ? initialSearch : "" });
   const search = tab === "guides" ? searches.guides : searches.plans;
   const deferredSearch = useDeferredValue(search.trim());
-  const query = deferredSearch.toLowerCase();
-  const matchingRecent = useMemo(
-    () => query ? recent.plans.filter((plan) => explorePlanSearchText(plan).includes(query)) : recent.plans,
-    [query, recent.plans],
-  );
+
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-10 px-4 pb-16 pt-10 sm:px-6 sm:pt-12">
@@ -53,7 +50,7 @@ export function ExplorePage({ initialSharedPlans, initialTrendingPlans, initialT
         <header className="max-w-3xl space-y-4">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{tab === "plans" ? "Find your next itinerary" : tab === "guides" ? "Get to know a destination" : "Find somewhere worth going"}</h1>
         <p className="max-w-2xl text-base leading-7 text-muted-foreground">{tab === "plans" ? "Explore shared trips and find ideas for your own route." : tab === "guides" ? "Discover places and practical tips shared by travelers." : "Discover seasonal picks, scenic spots, and places that suit your trip."}</p>
-        {tab !== "places" &&
+        {tab === "guides" &&
         <label className="relative block max-w-xl">
           <span className="sr-only">Search by city, country or title</span>
           <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -68,8 +65,8 @@ export function ExplorePage({ initialSharedPlans, initialTrendingPlans, initialT
       </header>
         {placesEnabled && <TabsContent value="places"><ExploreErrorBoundary fallbackTitle="Places unavailable"><PlacesDiscovery /></ExploreErrorBoundary></TabsContent>}
         <TabsContent value="guides"><ExploreErrorBoundary fallbackTitle="Guides unavailable"><GuideDiscovery filter={{ term: deferredSearch }} /></ExploreErrorBoundary></TabsContent>
-        <TabsContent value="plans" className="space-y-10">
-      {!query && (
+        <TabsContent value="plans" className="space-y-10"><SharedPlanSearch>
+      {(
         <ExploreErrorBoundary fallbackTitle="Trending plans unavailable">
           <SharedPlansSection
             kind="trending" plans={trending.plans} total={trending.total}
@@ -83,8 +80,8 @@ export function ExplorePage({ initialSharedPlans, initialTrendingPlans, initialT
 
       <ExploreErrorBoundary fallbackTitle="Recent plans unavailable">
         <SharedPlansSection
-          plans={matchingRecent}
-          total={query ? matchingRecent.length : recent.total}
+          plans={recent.plans}
+          total={recent.total}
           isLoading={recent.isLoading}
           isError={recent.isError}
           isFetchingMore={recent.isFetchingMore}
@@ -92,13 +89,10 @@ export function ExplorePage({ initialSharedPlans, initialTrendingPlans, initialT
           loadMoreFailed={recent.loadMoreFailed}
           onLoadMore={() => void recent.fetchMore()}
           onRetry={() => void recent.refetch()}
-          query={query}
         />
       </ExploreErrorBoundary>
 
-      {query && recent.hasMore && matchingRecent.length === 0 && !recent.isFetchingMore && (
-        <p className="text-sm text-muted-foreground">Search covers plans loaded so far. Load more to keep searching.</p>
-      )}
+      </SharedPlanSearch>
 
         </TabsContent>
       </Tabs>

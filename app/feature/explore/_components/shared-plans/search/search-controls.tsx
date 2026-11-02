@@ -1,0 +1,72 @@
+"use client";
+import { useEffect, useId, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowRight, CalendarDays, ChevronDown, Globe2, MapPin, Route, Search, SlidersHorizontal, X } from "lucide-react";
+import { CountrySelect } from "../../../places/search-controls";
+import { countries } from "../../../places/search-state";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { explorePlanPath } from "../explore-plans-api";
+import type { PlanSearchPage } from "./search-api";
+import { durationDays, type DurationUnit, type PlanSearchState } from "./search-state";
+
+const control="flex h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-border/70 bg-card px-3 text-sm outline-none transition-colors hover:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring";
+function Highlight({text,query}:{text:string;query:string}) {
+ const index=text.toLocaleLowerCase().indexOf(query.toLocaleLowerCase());
+ return index<0||!query ? <>{text}</> : <>{text.slice(0,index)}<strong className="font-semibold text-foreground">{text.slice(index,index+query.length)}</strong>{text.slice(index+query.length)}</>;
+}
+type Props={state:PlanSearchState;draft:string;onDraft:(text:string)=>void;onChange:(state:PlanSearchState)=>void;onSubmit:()=>void;onComposition:(value:boolean)=>void;suggestions?:PlanSearchPage;isUpdating:boolean};
+export function PlanSearchControls({state,draft,onDraft,onChange,onSubmit,onComposition,suggestions,isUpdating}:Props){
+ const router=useRouter(),id=useId(),root=useRef<HTMLDivElement>(null),list=useRef<HTMLDivElement>(null),composing=useRef(false);
+ const [open,setOpen]=useState(false),[active,setActive]=useState(-1);
+ const ready=!isUpdating&&draft.trim().length>=2;
+ const destinations=ready?suggestions?.destinations??[]:[],plans=ready?suggestions?.plans??[]:[];
+ const count=destinations.length+plans.length;
+ const countryName=countries.find(c=>c.code===state.country)?.name;
+ const durationInvalid=!!state.duration&&durationDays(state.duration,state.unit)===null;
+ useEffect(()=>{const close=(event:PointerEvent)=>{if(!root.current?.contains(event.target as Node))setOpen(false);};document.addEventListener("pointerdown",close);return()=>document.removeEventListener("pointerdown",close);},[]);
+ useEffect(()=>{list.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({block:"nearest"});},[active]);
+ function select(index:number){
+  const destination=destinations[index];setOpen(false);setActive(-1);
+  if(destination){const next={...state,country:state.country||destination.country,query:destination.kind==="country"?"":destination.label};onDraft(next.query);onChange(next);}
+  else {const plan=plans[index-destinations.length];if(plan)router.push(explorePlanPath(plan.token));}
+ }
+ return <div className="space-y-4">
+  <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(10rem,1fr)_minmax(15rem,2.2fr)_7rem_minmax(12rem,1.1fr)]">
+   <CountrySelect value={state.country} onChange={country=>onChange({...state,country})}/>
+   <div className="relative min-w-0 sm:col-span-2 sm:row-start-1 lg:col-span-1 lg:row-start-auto" ref={root} onBlur={event=>{if(!event.currentTarget.contains(event.relatedTarget))setOpen(false);}}>
+    <label htmlFor={id} className="mb-2 block text-xs font-medium text-muted-foreground">Search shared plans</label>
+    <form role="search" onSubmit={event=>{event.preventDefault();if(composing.current)return;setOpen(false);setActive(-1);onSubmit();}}>
+     <div className={`${control} gap-1 pl-3 pr-1`}>
+      <Search className="mr-1 size-4 shrink-0 text-muted-foreground" aria-hidden="true"/>
+      <input id={id} role="combobox" aria-expanded={open&&draft.trim().length>=2} aria-controls={`${id}-suggestions`} aria-autocomplete="list" aria-activedescendant={open&&active>=0&&active<count?`${id}-option-${active}`:undefined}
+       autoComplete="off" maxLength={100} value={draft} placeholder="City, country, plan or place" className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/80"
+       onFocus={()=>setOpen(true)} onChange={event=>{onDraft(event.target.value);setOpen(true);setActive(-1);}}
+       onCompositionStart={()=>{composing.current=true;onComposition(true);}} onCompositionEnd={()=>{composing.current=false;onComposition(false);}}
+       onKeyDown={event=>{if(event.nativeEvent.isComposing)return;if(event.key==="ArrowDown"||event.key==="ArrowUp"){event.preventDefault();setOpen(true);setActive(value=>Math.max(-1,Math.min(count-1,value+(event.key==="ArrowDown"?1:-1))));}
+        if(event.key==="Escape"){event.preventDefault();setOpen(false);setActive(-1);}
+        if(event.key==="Enter"&&open&&active>=0&&active<count){event.preventDefault();select(active);}}}/>
+      {draft&&<button type="button" aria-label="Clear search text" className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring" onClick={()=>{onDraft("");onChange({...state,query:""});setOpen(false);}}><X className="size-3.5"/></button>}
+      <button type="submit" aria-label="Search shared plans" className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary hover:bg-primary/20 focus-visible:outline-2 focus-visible:outline-ring"><ArrowRight className="size-4"/></button>
+     </div>
+    </form>
+    {open&&draft.trim().length>=2&&<div className="absolute inset-x-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-border/70 bg-popover shadow-lg">
+     <div ref={list} id={`${id}-suggestions`} role="listbox" aria-label="Search suggestions" className="max-h-96 overflow-y-auto overscroll-contain p-1.5">
+      {isUpdating?<p role="status" className="px-3 py-4 text-sm text-muted-foreground">Finding suggestions...</p>:<>
+       {destinations.length>0&&<div role="group" aria-label="Destinations"><p className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Destinations</p>{destinations.map((destination,index)=><button key={destination.id} type="button" role="option" id={`${id}-option-${index}`} data-index={index} aria-selected={active===index} tabIndex={-1} onMouseEnter={()=>setActive(index)} onMouseDown={event=>event.preventDefault()} onClick={()=>select(index)} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${active===index?"bg-muted":"hover:bg-muted/60"}`}>
+        {destination.kind==="country"?<Globe2 className="size-4 shrink-0 text-muted-foreground"/>:<MapPin className="size-4 shrink-0 text-muted-foreground"/>}<span className="min-w-0 flex-1"><span className="block truncate text-sm"><Highlight text={destination.label} query={draft.trim()}/></span><span className="block text-xs text-muted-foreground">{destination.kind==="country"?"Country":countries.find(c=>c.code===destination.country)?.name||"City"}</span></span><span className="shrink-0 text-xs text-muted-foreground">{destination.count?`${destination.count} ${destination.count===1?'plan':'plans'}`:"No plans yet"}</span>
+       </button>)}</div>}
+       {plans.length>0&&<div role="group" aria-label="Shared plans"><p className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Shared plans</p>{plans.map((plan,index)=>{const i=index+destinations.length;return <button key={plan.token} type="button" role="option" id={`${id}-option-${i}`} data-index={i} aria-selected={active===i} tabIndex={-1} onMouseEnter={()=>setActive(i)} onMouseDown={event=>event.preventDefault()} onClick={()=>select(i)} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${active===i?"bg-muted":"hover:bg-muted/60"}`}><Route className="size-4 shrink-0 text-primary"/><span className="min-w-0"><span className="block truncate text-sm"><Highlight text={plan.title||"Untitled plan"} query={draft.trim()}/></span><span className="block truncate text-xs text-muted-foreground">{[plan.destinationCity,plan.destinationCountry].filter(Boolean).join(", ")}{plan.dayCount>0?` / ${plan.dayCount} days`:""}</span></span></button>;})}</div>}
+       {!count&&<p className="px-3 py-4 text-sm text-muted-foreground">No suggestions. Press Enter to search.</p>}
+      </>}
+     </div>
+    </div>}
+   </div>
+   <div><span className="mb-2 block text-xs font-medium text-muted-foreground">Interests</span><Popover><PopoverTrigger className={control}><SlidersHorizontal className="size-4 shrink-0 text-muted-foreground"/><span>Filters</span><ChevronDown className="ml-auto size-3.5 text-muted-foreground"/></PopoverTrigger><PopoverContent align="end" className="w-72 rounded-2xl p-4"><p className="text-sm font-medium">Keyword filters</p><p className="mt-1 text-xs leading-5 text-muted-foreground">A preview of upcoming filters. These do not change results yet.</p><div className="mt-3 flex flex-wrap gap-2" aria-label="Filter design preview">{["Food & culture","Scenic routes","EV trips","City breaks"].map(label=><span key={label} aria-disabled="true" className="rounded-full border border-dashed border-border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">{label}</span>)}</div></PopoverContent></Popover></div>
+   <div><label htmlFor={`${id}-duration`} className="mb-2 block text-xs font-medium text-muted-foreground">Trip duration</label><div className={`${control} pr-1 ${durationInvalid?"border-destructive":""}`}><CalendarDays className="size-4 shrink-0 text-muted-foreground"/><input id={`${id}-duration`} aria-describedby={`${id}-duration-help`} aria-invalid={durationInvalid} inputMode="numeric" maxLength={8} value={state.duration} onChange={event=>onChange({...state,duration:event.target.value})} placeholder="Any" className="h-full min-w-0 flex-1 bg-transparent outline-none"/><select aria-label="Duration unit" className="h-9 max-w-24 rounded-lg border-0 bg-muted/50 px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring" value={state.unit} onChange={event=>onChange({...state,unit:event.target.value as DurationUnit})}><option value="days">Days</option><option value="months">Months</option><option value="years">Years</option></select></div>
+    <p id={`${id}-duration-help`} className={`mt-1.5 text-[11px] leading-4 ${durationInvalid?"text-destructive":"text-muted-foreground"}`}>{durationInvalid?"Enter a whole duration between 1 and 36,500 days.":state.unit==="days"?"Match the exact number of itinerary days.":state.unit==="months"?"1 month = 30 itinerary days.":"1 year = 365 itinerary days."}</p>
+   </div>
+  </div>
+  {(state.country||state.duration)&&<div className="flex flex-wrap gap-2 text-xs">{countryName&&<Button variant="outline" size="sm" className="h-8 text-xs" onClick={()=>onChange({...state,country:""})}>{countryName}<X className="size-3"/><span className="sr-only">Remove country filter</span></Button>}{state.duration&&<Button variant="outline" size="sm" className="h-8 text-xs" onClick={()=>onChange({...state,duration:""})}>{state.duration} {state.unit}<X className="size-3"/><span className="sr-only">Remove duration filter</span></Button>}</div>}
+ </div>;
+}

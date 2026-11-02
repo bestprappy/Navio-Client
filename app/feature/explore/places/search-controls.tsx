@@ -74,7 +74,7 @@ const normal = (value: string) =>
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
 
-function CountrySelect({
+export function CountrySelect({
   value,
   onChange,
 }: {
