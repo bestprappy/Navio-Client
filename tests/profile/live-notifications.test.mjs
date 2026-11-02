@@ -10,9 +10,7 @@ const {
   reconnectDelay,
   selectArrivals,
   signalFromFrame,
-  toastActionLabel,
-  visibleToasts,
-  MAX_VISIBLE_TOASTS,
+  unreadCountRose,
 } = await import("../../lib/notifications/live-notifications.ts");
 
 const MOUNT = Date.parse("2026-10-31T09:00:00Z");
@@ -65,12 +63,11 @@ test("refused streams back off from five seconds to five minutes with bounded ji
   assert.equal(reconnectDelay(0, () => 1), 6_000);
 });
 
-test("at most three toasts show, newest first, with the rest counted for the summary", () => {
-  const toasts = ["1", "2", "3", "4", "5"].map((n) => ({ item: item(n, `2026-10-31T09:0${n}:00Z`) }));
-  const { shown, hidden } = visibleToasts(toasts);
-  assert.equal(shown.length, MAX_VISIBLE_TOASTS);
-  assert.deepEqual(shown.map((toast) => toast.item.id), ["5", "4", "3"]);
-  assert.equal(hidden, 2);
+test("the first polled count is a baseline; only a later rise can bring toasts", () => {
+  assert.equal(unreadCountRose(null, 12), false);
+  assert.equal(unreadCountRose(4, 4), false);
+  assert.equal(unreadCountRose(4, 0), false);
+  assert.equal(unreadCountRose(4, 5), true);
 });
 
 test("toast links open a new tab only inside a plan, where leaving could lose unsaved work", () => {
@@ -80,10 +77,4 @@ test("toast links open a new tab only inside a plan, where leaving could lose un
   assert.equal(opensInNewTab("/planner"), false);
   assert.equal(opensInNewTab("/explore"), false);
   assert.equal(opensInNewTab(null), false);
-});
-
-test("each kind names exactly what View opens", () => {
-  assert.equal(toastActionLabel("followed_plan"), "View plan");
-  assert.equal(toastActionLabel("followed_post"), "View post");
-  assert.equal(toastActionLabel("new_follower"), "View profile");
 });

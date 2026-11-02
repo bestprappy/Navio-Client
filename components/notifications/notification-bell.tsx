@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNotifications } from "@/hooks/use-notifications";
 import { useUnreadCount, useViewer } from "@/hooks/use-social";
+import { NotificationCountBadge, notificationsLabel } from "./notification-count-badge";
 import { NotificationRow } from "./notification-item";
 
 /**
@@ -24,17 +25,12 @@ export function NotificationBell() {
   if (!viewer.signedIn) return null;
 
   const count = unread.data?.unreadCount ?? 0;
-  const label = count > 0 ? `Notifications, ${count} unread` : "Notifications";
 
   return (
     <Popover open={open} onOpenChange={(next) => { setOpen(next); if (next) void list.refetch(); }}>
-      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" className="relative" aria-label={label} />}>
+      <PopoverTrigger render={<Button type="button" variant="ghost" size="icon-sm" className="relative" aria-label={notificationsLabel(count)} />}>
         <Bell aria-hidden="true" />
-        {count > 0 ? (
-          <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[0.625rem] font-bold leading-none text-primary-foreground">
-            {count > 99 ? "99+" : count}
-          </span>
-        ) : null}
+        <NotificationCountBadge count={count} size="sm" className="absolute left-1/2 -top-1" />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-[min(24rem,calc(100vw-2rem))] gap-0 p-0">
         <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">

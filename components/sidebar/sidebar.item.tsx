@@ -8,7 +8,10 @@ import { cn } from "@/lib/utils";
 type SidebarItemProps = {
   title: string;
   href: string;
-  alert?: number | string;
+  /** Shown at the row's end, or on the icon when collapsed. Mark it aria-hidden and describe it in `accessibleLabel`. */
+  badge?: ReactNode;
+  /** Replaces `title` as the link's accessible name when the visible text isn't the whole story. */
+  accessibleLabel?: string;
   icon?: ReactNode;
   iconClassName?: string;
   isActive?: boolean;
@@ -17,7 +20,8 @@ type SidebarItemProps = {
 };
 
 export default function SidebarItem({
-  alert,
+  accessibleLabel,
+  badge,
   href,
   icon,
   iconClassName,
@@ -30,13 +34,13 @@ export default function SidebarItem({
     <Link
       href={href}
       data-active={isActive ? "true" : "false"}
-      aria-label={collapsed ? title : undefined}
+      aria-label={accessibleLabel ?? (collapsed ? title : undefined)}
       onClick={onClick}
       aria-current={isActive ? "page" : undefined}
-      title={collapsed ? title : undefined}
+      title={collapsed ? (accessibleLabel ?? title) : undefined}
       className={cn(
-        "group relative isolate flex min-h-11 w-full items-center overflow-hidden rounded-xl text-sm font-medium transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/45",
-        collapsed ? "justify-center px-1" : "gap-2.5 px-3",
+        "group relative isolate flex min-h-11 w-full items-center rounded-xl text-sm font-medium transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/45",
+        collapsed ? "justify-center px-1" : "gap-2.5 overflow-hidden px-3",
         isActive
           ? "bg-sidebar-accent/90 font-semibold text-sidebar-accent-foreground"
           : "text-muted-foreground hover:bg-sidebar-accent/55 hover:text-foreground",
@@ -45,7 +49,7 @@ export default function SidebarItem({
       {icon ? (
         <span
           className={cn(
-            "flex size-8 shrink-0 items-center justify-center rounded-lg transition-[background-color,color]",
+            "relative flex size-8 shrink-0 items-center justify-center rounded-lg transition-[background-color,color]",
             iconClassName
               ? iconClassName
               : isActive
@@ -54,6 +58,7 @@ export default function SidebarItem({
           )}
         >
           {icon}
+          {collapsed && badge ? <span className="absolute left-1/2 -top-1 flex">{badge}</span> : null}
         </span>
       ) : null}
 
@@ -61,14 +66,7 @@ export default function SidebarItem({
         <span className="min-w-0 flex-1 break-words text-left">{title}</span>
       )}
 
-      {!collapsed && alert !== undefined ? (
-        <span
-          className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-semibold text-destructive-foreground"
-          aria-label={`${alert} notifications`}
-        >
-          {alert}
-        </span>
-      ) : null}
+      {!collapsed && badge ? <span className="-mr-1 ml-auto flex shrink-0">{badge}</span> : null}
     </Link>
   );
 }

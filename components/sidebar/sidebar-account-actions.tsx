@@ -5,6 +5,7 @@ import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { Bell, LogIn, LogOut, Settings } from "lucide-react";
 
+import { NotificationCountBadge, notificationsLabel } from "@/components/notifications/notification-count-badge";
 import { useUnreadCount } from "@/hooks/use-social";
 
 import { cn } from "@/lib/utils";
@@ -32,7 +33,8 @@ export function SidebarAccountActions({ collapsed, onNavigate }: SidebarAccountA
   return (
     <nav aria-label="Account" className="mt-3 flex shrink-0 flex-col gap-1 border-t border-border/50 pt-3">
       {status === "authenticated" ? (
-        <SidebarItem title={unread > 0 ? `Notifications (${unread > 99 ? "99+" : unread} unread)` : "Notifications"} href="/notifications"
+        <SidebarItem title="Notifications" accessibleLabel={notificationsLabel(unread)} href="/notifications"
+          badge={unread > 0 ? <NotificationCountBadge count={unread} size={collapsed ? "sm" : "default"} /> : undefined}
           icon={<Bell className="size-5" />} isActive={pathName === "/notifications"} collapsed={collapsed} onClick={onNavigate} />
       ) : null}
       <SidebarItem title="Settings" href="/settings/profile" icon={<Settings className="size-5" />}

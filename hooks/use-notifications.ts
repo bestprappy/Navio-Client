@@ -6,10 +6,29 @@ import { useViewer } from "@/hooks/use-social";
 import { listNotifications, markAllNotificationsRead, markNotificationRead, notificationKeys } from "@/lib/social-api";
 import type { NotificationItem } from "@/lib/validations/social";
 
+function useRefreshAfterRead() {
+  const client = useQueryClient();
+  return async (unreadCount: number) => {
+    client.setQueryData(notificationKeys.unread, { unreadCount });
+    await client.invalidateQueries({ queryKey: ["notifications", "list"] });
+  };
+}
+
+/** Marks one notification read and keeps the list and the bell count in step. */
+export function useMarkNotificationRead() {
+  const refresh = useRefreshAfterRead();
+  return useMutation({
+    mutationFn: (item: NotificationItem) => markNotificationRead(item.id),
+    onSuccess: (result) => refresh(result.unreadCount),
+    onError: (error) => console.error("Marking a notification read failed.", { component: "useMarkNotificationRead", error }),
+  });
+}
+
 /** Paged notifications plus read actions that keep the list and the bell count in step. */
 export function useNotifications(unreadOnly: boolean, pageSize = 20) {
   const viewer = useViewer();
-  const client = useQueryClient();
+  const refresh = useRefreshAfterRead();
+  const markRead = useMarkNotificationRead();
 
   const list = useInfiniteQuery({
     queryKey: [...notificationKeys.list(unreadOnly), pageSize],
@@ -18,17 +37,6 @@ export function useNotifications(unreadOnly: boolean, pageSize = 20) {
     getNextPageParam: (last) => (last.last ? undefined : last.number + 1),
     enabled: viewer.signedIn,
     staleTime: 15_000,
-  });
-
-  const refresh = async (unreadCount: number) => {
-    client.setQueryData(notificationKeys.unread, { unreadCount });
-    await client.invalidateQueries({ queryKey: ["notifications", "list"] });
-  };
-
-  const markRead = useMutation({
-    mutationFn: (item: NotificationItem) => markNotificationRead(item.id),
-    onSuccess: (result) => refresh(result.unreadCount),
-    onError: (error) => console.error("Marking a notification read failed.", { component: "useNotifications", error }),
   });
 
   const markAll = useMutation({

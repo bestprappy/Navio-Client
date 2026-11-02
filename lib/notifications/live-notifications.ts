@@ -13,10 +13,8 @@ export const LIVE_CHANNEL = "navio-notifications";
 export const LIVE_LOCK = "navio-notifications-stream";
 export const STREAM_URL = "/api/notifications/stream";
 
-/** Most toasts on screen at once; the rest collapse into a summary. */
-export const MAX_VISIBLE_TOASTS = 3;
-/** How long an untouched toast stays. Hover or focus pauses it. */
-export const TOAST_LIFETIME_MS = 8_000;
+/** More arrivals than this at once become one summary toast. */
+export const MAX_INDIVIDUAL_TOASTS = 3;
 
 const SIGNALS: ReadonlySet<string> = new Set(["ready", "created", "removed", "read_state"]);
 
@@ -68,10 +66,16 @@ export function selectArrivals(
   return unread.filter((item) => !seen.has(item.id) && Date.parse(item.createdAt) >= watermark);
 }
 
-/** Newest first, then capped for display; returns the overflow count for the summary row. */
-export function visibleToasts<T extends { item: NotificationItem }>(toasts: readonly T[]): { shown: T[]; hidden: number } {
-  const ordered = [...toasts].sort((a, b) => Date.parse(b.item.createdAt) - Date.parse(a.item.createdAt));
-  return { shown: ordered.slice(0, MAX_VISIBLE_TOASTS), hidden: Math.max(0, ordered.length - MAX_VISIBLE_TOASTS) };
+export function arrivalsAreSummarised(count: number): boolean {
+  return count > MAX_INDIVIDUAL_TOASTS;
+}
+
+/**
+ * Whether the polled unread count went up. The first count after loading is only a
+ * baseline. This is the fallback that still produces toasts when the stream is down.
+ */
+export function unreadCountRose(previous: number | null, current: number): boolean {
+  return previous !== null && current > previous;
 }
 
 /** Pages where following a link would interrupt unsaved work, so toast links open a new tab there. */
@@ -79,13 +83,13 @@ export function opensInNewTab(pathname: string | null): boolean {
   return !!pathname && /^\/planner\/[^/]+/.test(pathname);
 }
 
-export function toastActionLabel(type: NotificationItem["type"]): string {
-  switch (type) {
+export function notificationToastCopy(item: NotificationItem, actorName: string): { title: string; description: string | null } {
+  switch (item.type) {
     case "new_follower":
-      return "View profile";
+      return { title: `${actorName} started following you`, description: null };
     case "followed_post":
-      return "View post";
+      return { title: `${actorName} posted`, description: item.postTitle };
     case "followed_plan":
-      return "View plan";
+      return { title: `${actorName} shared a plan`, description: item.planTitle };
   }
 }

@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSetAtom } from "jotai";
 
-import { clearNotificationToastsAtom, pushNotificationToastsAtom } from "@/components/notifications/notification-toasts.atoms";
-import { useViewer } from "@/hooks/use-social";
+import { showNotificationToasts } from "@/components/notifications/notification-toast";
+import { notify } from "@/components/toast/notify";
+import { useUnreadCount, useViewer } from "@/hooks/use-social";
 import {
   isLiveSignal,
   LIVE_CHANNEL,
@@ -16,6 +16,7 @@ import {
   signalFromFrame,
   STREAM_URL,
   type LiveSignal,
+  unreadCountRose,
 } from "@/lib/notifications/live-notifications";
 import { listNotifications, notificationKeys } from "@/lib/social-api";
 
@@ -35,7 +36,8 @@ const CLOCK_SKEW_MS = 30_000;
  *   <li>The stream carries hints only. Each tab then re-reads its counts and the
  *       newest unread items through the authorised API, so content never travels
  *       on the stream and a missed frame is repaired by the next reconcile, by
- *       window focus, or by the bell's own polling.</li>
+ *       window focus, or by the bell's own polling, which also still produces
+ *       toasts if the stream is unavailable.</li>
  *   <li>Only notification queries are touched; planner and trip queries are never
  *       invalidated, and nothing here navigates or moves focus.</li>
  * </ul>
@@ -43,9 +45,17 @@ const CLOCK_SKEW_MS = 30_000;
 export function NotificationLiveProvider() {
   const { signedIn, accountId } = useViewer();
   const client = useQueryClient();
-  const pushToasts = useSetAtom(pushNotificationToastsAtom);
-  const clearToasts = useSetAtom(clearNotificationToastsAtom);
+  const unreadCount = useUnreadCount().data?.unreadCount;
+  const lastUnreadCount = useRef<number | null>(null);
+  const onUnreadRose = useRef<(() => void) | null>(null);
   const seen = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (unreadCount === undefined) return;
+    const rose = unreadCountRose(lastUnreadCount.current, unreadCount);
+    lastUnreadCount.current = unreadCount;
+    if (rose) onUnreadRose.current?.();
+  }, [unreadCount]);
 
   useEffect(() => {
     if (!signedIn || !accountId) return;
@@ -53,28 +63,35 @@ export function NotificationLiveProvider() {
     const watermark = Date.now() - CLOCK_SKEW_MS;
     let hydrating = true;
     let wantsArrivals = true;
+    let checkingArrivals = false;
+    const shownToasts = new Set<string>();
     let timer: ReturnType<typeof setTimeout> | undefined;
     seen.current = new Set();
 
     const reconcile = async () => {
       const checkArrivals = wantsArrivals;
       wantsArrivals = false;
-      await Promise.all([
-        client.invalidateQueries({ queryKey: notificationKeys.unread }),
-        client.invalidateQueries({ queryKey: ["notifications", "list"] }),
-      ]);
-      if (!checkArrivals || stop.signal.aborted) return;
+      checkingArrivals = checkArrivals;
       try {
+        await Promise.all([
+          client.invalidateQueries({ queryKey: notificationKeys.unread }),
+          client.invalidateQueries({ queryKey: ["notifications", "list"] }),
+        ]);
+        if (!checkArrivals || stop.signal.aborted) return;
         const page = await listNotifications(true, 0, 10, stop.signal);
         const arrivals = selectArrivals(page.content, seen.current, watermark, hydrating);
         page.content.forEach((item) => seen.current.add(item.id));
         hydrating = false;
         // A hidden tab records arrivals without showing them; the bell keeps the count.
-        if (document.visibilityState === "visible") pushToasts(arrivals.filter((item) => item.available));
+        if (document.visibilityState === "visible") {
+          showNotificationToasts(arrivals.filter((item) => item.available)).forEach((id) => shownToasts.add(id));
+        }
       } catch (error) {
         if (!stop.signal.aborted) {
           console.warn("Live notifications could not check new arrivals.", { component: "NotificationLiveProvider", error });
         }
+      } finally {
+        checkingArrivals = false;
       }
     };
 
@@ -134,14 +151,20 @@ export function NotificationLiveProvider() {
     }
     // Hydrate now even if this tab never holds the stream.
     handle("ready");
+    // The count also rises from this reconcile's own refresh; that one is already being checked.
+    onUnreadRose.current = () => {
+      if (!checkingArrivals) handle("created");
+    };
 
     return () => {
       stop.abort();
       clearTimeout(timer);
       channel?.close();
-      clearToasts();
+      onUnreadRose.current = null;
+      // One person's notifications must not stay on screen for the next account.
+      shownToasts.forEach((id) => notify.dismiss(id));
     };
-  }, [signedIn, accountId, client, pushToasts, clearToasts]);
+  }, [signedIn, accountId, client]);
 
   return null;
 }

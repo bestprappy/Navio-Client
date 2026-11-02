@@ -66,6 +66,23 @@
   --color-info: var(--info);
   --color-info-foreground: var(--info-foreground);
 
+  /* Unread notification count */
+  --color-notification: var(--notification);
+  --color-notification-foreground: var(--notification-foreground);
+  --animate-notification-ping: notification-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+
+  @keyframes notification-ping {
+    0% {
+      transform: scale(1);
+      opacity: 0.75;
+    }
+    70%,
+    100% {
+      transform: scale(1.7);
+      opacity: 0;
+    }
+  }
+
   /* Feature tints — one base per purpose, tinted with opacity (bg-note/10) */
   --color-rating: var(--rating);
   --color-note: var(--note);
@@ -238,6 +255,10 @@
   /* TColors.info #1976D2 */
   --info: oklch(0.514 0.141 261.2);
   --info-foreground: oklch(1 0 0);
+
+  /* Unread count: signal yellow with navy digits in both themes */
+  --notification: oklch(0.87 0.175 95);
+  --notification-foreground: var(--brand-pine);
 
   /* Feature tints — dark enough to read as text; tint surfaces with opacity.
      Chroma kept high: at this lightness, low chroma turns tints muddy on white. */
@@ -415,6 +436,9 @@
   /* TColors.info brightened for dark visibility */
   --info: oklch(0.76 0 0);
   --info-foreground: var(--brand-pine);
+
+  --notification: oklch(0.88 0.165 96);
+  --notification-foreground: var(--brand-pine);
 
   /* Feature tints brightened for dark backgrounds */
   --rating: oklch(0.85 0.15 90);
