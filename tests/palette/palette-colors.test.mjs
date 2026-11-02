@@ -18,9 +18,10 @@ const { categorySchema } = await import("../../app/feature/admin/_components/gui
 
 const color = (id, hex, retired = false) => ({ id, name: id, hex, retired });
 
-test("built-in colors keep their theme tokens whether or not the palette has loaded", () => {
+test("built-in colors fall back to their theme tokens whether or not the palette has loaded", () => {
   palette.registerPaletteColors([]);
-  assert.equal(colors.getTripBlockColorById("amber").value, "var(--planner-block-amber)");
+  assert.equal(colors.getTripBlockColorById("amber").value, "var(--palette-amber, var(--planner-block-amber))");
+  assert.equal(colors.getTripBlockColorById("amber").foreground, "var(--palette-amber-fg, var(--planner-block-foreground))");
   palette.registerPaletteColors([color("amber", "#ea8a18")]);
   assert.equal(colors.getTripBlockColorById("amber").mapColor, "#ea8a18");
 });
@@ -29,7 +30,7 @@ test("an admin-added color renders through its CSS variable and maps with its he
   palette.registerPaletteColors([color("sunset-orange", "#e8590c")]);
   const resolved = colors.getTripBlockColorById("sunset-orange");
   assert.equal(resolved.id, "sunset-orange");
-  assert.equal(resolved.value, "var(--palette-sunset-orange, var(--planner-block-teal))");
+  assert.equal(resolved.value, "var(--palette-sunset-orange, var(--palette-teal, var(--planner-block-teal)))");
   assert.equal(resolved.mapColor, "#e8590c");
 });
 
@@ -44,6 +45,35 @@ test("a malformed saved color falls back to the first built-in color and never r
   for (const value of ["#FF6B6B", "x);background:url(evil)", "Teal", ""]) {
     assert.equal(colors.getTripBlockColorById(value).id, "teal", value);
   }
+});
+
+test("a deleted color, built-in or added, resolves to the default color everywhere", () => {
+  palette.registerPaletteColors([color("teal", "#00ae84"), { ...color("amber", "#00ae84", true), deleted: true }, { ...color("red", "#00ae84", true), deleted: true }]);
+  for (const id of ["amber", "red"]) {
+    const resolved = colors.getTripBlockColorById(id);
+    assert.equal(resolved.id, "teal", id);
+    assert.equal(resolved.mapColor, "#00ae84", id);
+  }
+});
+
+test("a deleted color's CSS variables point at the default color so unrefreshed DOM follows too", () => {
+  const css = palette.paletteCssVariables(palette.paletteColorsSchema.parse([{ ...color("red", "#00ae84", true), deleted: true }]));
+  assert.equal(css, ":root{--palette-red:var(--palette-teal, #00ae84);--palette-red-fg:var(--palette-teal-fg, #ffffff);}");
+});
+
+test("label text follows the administrator's choice per theme", () => {
+  const parsed = palette.paletteColorsSchema.parse([{ ...color("amber", "#ea8a18"), textOnLight: "white", textOnDark: "black" }]);
+  assert.equal(palette.paletteCssVariables(parsed), ":root{--palette-amber:#ea8a18;--palette-amber-fg:#ffffff;}.dark{--palette-amber-fg:#14161c;}");
+  assert.equal(palette.labelColor("#ea8a18", "auto"), "#14161c");
+  assert.equal(palette.labelColor("#ea8a18", "white"), "#ffffff");
+  assert.equal(palette.labelColor("#005189", "black"), "#14161c");
+});
+
+test("older palette responses without label or deleted fields still parse as automatic and live", () => {
+  const [parsed] = palette.paletteColorsSchema.parse([color("ok", "#123456")]);
+  assert.equal(parsed.deleted, false);
+  assert.equal(parsed.textOnLight, "auto");
+  assert.equal(palette.paletteColorsSchema.parse([{ ...color("ok", "#123456"), textOnDark: "purple" }])[0].textOnDark, "auto");
 });
 
 test("new days skip default colors an administrator retired", () => {
@@ -87,12 +117,16 @@ test("the palette response rejects ids and hex codes that could break out of CSS
   assert.equal(palette.paletteCssVariables(parsed), ":root{--palette-ok:#abcdef;--palette-ok-fg:#14161c;}");
 });
 
-test("the admin proxy forwards only list, add, retire and restore", () => {
+test("the admin proxy forwards only list, add, label text, retire, restore and delete", () => {
   assert.equal(isAllowedPaletteRoute("GET", []), true);
   assert.equal(isAllowedPaletteRoute("POST", []), true);
   assert.equal(isAllowedPaletteRoute("POST", ["teal", "retire"]), true);
   assert.equal(isAllowedPaletteRoute("POST", ["teal", "restore"]), true);
-  assert.equal(isAllowedPaletteRoute("DELETE", ["teal"]), false);
+  assert.equal(isAllowedPaletteRoute("PATCH", ["teal"]), true);
+  assert.equal(isAllowedPaletteRoute("DELETE", ["teal"]), true);
+  assert.equal(isAllowedPaletteRoute("DELETE", []), false);
+  assert.equal(isAllowedPaletteRoute("DELETE", ["../users"]), false);
+  assert.equal(isAllowedPaletteRoute("PATCH", ["teal", "retire"]), false);
   assert.equal(isAllowedPaletteRoute("PUT", ["teal"]), false);
   assert.equal(isAllowedPaletteRoute("POST", ["teal", "delete"]), false);
   assert.equal(isAllowedPaletteRoute("POST", ["../users", "retire"]), false);

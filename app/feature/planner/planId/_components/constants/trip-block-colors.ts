@@ -1,4 +1,5 @@
 import {
+  DEFAULT_PALETTE_COLOR_ID,
   getRegisteredActiveColorIds,
   getRegisteredPaletteColor,
   isPaletteColorId,
@@ -18,7 +19,7 @@ export type TripBlockColorOption = {
   mapColor: string;
 };
 
-export const tripBlockColorOptions: (TripBlockColorOption & { id: BuiltInTripBlockColorId })[] = [
+const builtInColors: (TripBlockColorOption & { id: BuiltInTripBlockColorId })[] = [
   { id: "teal",    label: "Teal",    value: "var(--planner-block-teal)",    foreground: "var(--planner-block-foreground)", mapColor: "#00ae84" },
   { id: "cyan",    label: "Cyan",    value: "var(--planner-block-cyan)",    foreground: "var(--planner-block-foreground)", mapColor: "#00b2b2" },
   { id: "blue",    label: "Blue",    value: "var(--planner-block-blue)",    foreground: "var(--planner-block-foreground)", mapColor: "#008cdf" },
@@ -45,6 +46,17 @@ export const tripBlockColorOptions: (TripBlockColorOption & { id: BuiltInTripBlo
   { id: "graphite", label: "Graphite", value: "var(--planner-block-graphite)", foreground: "var(--planner-block-foreground)", mapColor: "#4e535b" },
 ];
 
+/**
+ * The built-in set. Each token is the fallback for the palette's own variable,
+ * so an administrator's label choice applies, and a deleted built-in color
+ * turns into the default as soon as the palette arrives.
+ */
+export const tripBlockColorOptions = builtInColors.map((option) => ({
+  ...option,
+  value: `var(${paletteColorVariable(option.id)}, ${option.value})`,
+  foreground: `var(${paletteForegroundVariable(option.id)}, ${option.foreground})`,
+}));
+
 export const defaultTripBlockColorId = "blue" satisfies TripBlockColorId;
 
 const builtInById = new Map<string, TripBlockColorOption>(tripBlockColorOptions.map((option) => [option.id, option]));
@@ -54,21 +66,22 @@ export function isBuiltInTripBlockColorId(colorId: string): boolean {
 }
 
 /**
- * Resolves any saved color id. Built-in ids keep their theme tokens. Colors an
- * administrator added resolve through CSS custom properties published by
- * PaletteProvider, so they render even before the palette request finishes;
- * map layers need a real hex and use the loaded palette. Unknown or malformed
- * ids fall back to the first built-in color.
+ * Resolves any saved color id. Built-in ids fall back to their theme tokens.
+ * Colors an administrator added resolve through CSS custom properties
+ * published by PaletteProvider, so they render even before the palette request
+ * finishes; map layers need a real hex and use the loaded palette. Deleted,
+ * unknown or malformed ids fall back to the default color.
  */
 export function getTripBlockColorById(
   colorId: TripBlockColorId,
   lookup: (id: string) => PaletteColor | undefined = getRegisteredPaletteColor,
 ): TripBlockColorOption {
-  const builtIn = builtInById.get(colorId);
-  if (builtIn) return builtIn;
-  const fallback = tripBlockColorOptions[0];
+  const fallback = builtInById.get(DEFAULT_PALETTE_COLOR_ID) ?? tripBlockColorOptions[0];
   if (!isPaletteColorId(colorId)) return fallback;
   const registered = lookup(colorId);
+  if (registered?.deleted) return fallback;
+  const builtIn = builtInById.get(colorId);
+  if (builtIn) return builtIn;
   return {
     id: colorId,
     label: registered?.name ?? "Custom color",
