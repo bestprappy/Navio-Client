@@ -65,7 +65,7 @@ export function ExplorePage({ initialSharedPlans, initialTrendingPlans, initialT
       </header>
         {placesEnabled && <TabsContent value="places"><ExploreErrorBoundary fallbackTitle="Places unavailable"><PlacesDiscovery /></ExploreErrorBoundary></TabsContent>}
         <TabsContent value="guides"><ExploreErrorBoundary fallbackTitle="Guides unavailable"><GuideDiscovery filter={{ term: deferredSearch }} /></ExploreErrorBoundary></TabsContent>
-        <TabsContent value="plans" className="space-y-10"><SharedPlanSearch>
+        <TabsContent value="plans" className="space-y-10"><SharedPlanSearch knownPlans={[...trending.plans,...recent.plans]}>
       {(
         <ExploreErrorBoundary fallbackTitle="Trending plans unavailable">
           <SharedPlansSection

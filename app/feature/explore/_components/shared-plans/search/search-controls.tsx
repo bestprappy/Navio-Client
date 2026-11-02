@@ -6,7 +6,8 @@ import { CountrySelect } from "../../../places/search-controls";
 import { countries } from "../../../places/search-state";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { explorePlanPath } from "../explore-plans-api";
+import { explorePlanPath, type ExplorePlan } from "../explore-plans-api";
+import { buildPlanSuggestions, matchKnownPlans } from "./search-suggestions";
 import type { PlanSearchPage } from "./search-api";
 import { durationDays, type DurationUnit, type PlanSearchState } from "./search-state";
 
@@ -15,21 +16,23 @@ function Highlight({text,query}:{text:string;query:string}) {
  const index=text.toLocaleLowerCase().indexOf(query.toLocaleLowerCase());
  return index<0||!query ? <>{text}</> : <>{text.slice(0,index)}<strong className="font-semibold text-foreground">{text.slice(index,index+query.length)}</strong>{text.slice(index+query.length)}</>;
 }
-type Props={state:PlanSearchState;draft:string;onDraft:(text:string)=>void;onChange:(state:PlanSearchState)=>void;onSubmit:()=>void;onComposition:(value:boolean)=>void;suggestions?:PlanSearchPage;isUpdating:boolean};
-export function PlanSearchControls({state,draft,onDraft,onChange,onSubmit,onComposition,suggestions,isUpdating}:Props){
+type Props={knownPlans?:ExplorePlan[];suggestionsUnavailable?:boolean;state:PlanSearchState;draft:string;onDraft:(text:string)=>void;onChange:(state:PlanSearchState)=>void;onSubmit:()=>void;onComposition:(value:boolean)=>void;suggestions?:PlanSearchPage;isUpdating:boolean};
+export function PlanSearchControls({knownPlans=[],suggestionsUnavailable=false,state,draft,onDraft,onChange,onSubmit,onComposition,suggestions,isUpdating}:Props){
  const router=useRouter(),id=useId(),root=useRef<HTMLDivElement>(null),list=useRef<HTMLDivElement>(null),composing=useRef(false);
  const [open,setOpen]=useState(false),[active,setActive]=useState(-1);
  const ready=!isUpdating&&draft.trim().length>=2;
- const destinations=ready?suggestions?.destinations??[]:[],plans=ready?suggestions?.plans??[]:[];
- const count=destinations.length+plans.length;
+ const {destinations,queries}=buildPlanSuggestions(draft,state.country,ready?suggestions?.destinations??[]:[]);
+ const plans=[...new Map([...(ready?suggestions?.plans??[]:[]),...matchKnownPlans(draft,state,knownPlans)].map(plan=>[plan.token,plan])).values()].slice(0,4);
+ const count=destinations.length+queries.length+plans.length;
  const countryName=countries.find(c=>c.code===state.country)?.name;
  const durationInvalid=!!state.duration&&durationDays(state.duration,state.unit)===null;
  useEffect(()=>{const close=(event:PointerEvent)=>{if(!root.current?.contains(event.target as Node))setOpen(false);};document.addEventListener("pointerdown",close);return()=>document.removeEventListener("pointerdown",close);},[]);
  useEffect(()=>{list.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({block:"nearest"});},[active]);
  function select(index:number){
   const destination=destinations[index];setOpen(false);setActive(-1);
-  if(destination){const next={...state,country:state.country||destination.country,query:destination.kind==="country"?"":destination.label};onDraft(next.query);onChange(next);}
-  else {const plan=plans[index-destinations.length];if(plan)router.push(explorePlanPath(plan.token));}
+  if(destination){const next={...state,country:state.country,query:destination.label};onDraft(next.query);onChange(next);}
+  else if(index<destinations.length+queries.length){const query=queries[index-destinations.length];onDraft(query);onChange({...state,query});}
+  else {const plan=plans[index-destinations.length-queries.length];if(plan)router.push(explorePlanPath(plan.token));}
  }
  return <div className="space-y-4">
   <div className="grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(10rem,1fr)_minmax(15rem,2.2fr)_7rem_minmax(12rem,1.1fr)]">
@@ -52,13 +55,16 @@ export function PlanSearchControls({state,draft,onDraft,onChange,onSubmit,onComp
     </form>
     {open&&draft.trim().length>=2&&<div className="absolute inset-x-0 top-full z-40 mt-2 overflow-hidden rounded-2xl border border-border/70 bg-popover shadow-lg">
      <div ref={list} id={`${id}-suggestions`} role="listbox" aria-label="Search suggestions" className="max-h-96 overflow-y-auto overscroll-contain p-1.5">
-      {isUpdating?<p role="status" className="px-3 py-4 text-sm text-muted-foreground">Finding suggestions...</p>:<>
+      <>
        {destinations.length>0&&<div role="group" aria-label="Destinations"><p className="px-3 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Destinations</p>{destinations.map((destination,index)=><button key={destination.id} type="button" role="option" id={`${id}-option-${index}`} data-index={index} aria-selected={active===index} tabIndex={-1} onMouseEnter={()=>setActive(index)} onMouseDown={event=>event.preventDefault()} onClick={()=>select(index)} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${active===index?"bg-muted":"hover:bg-muted/60"}`}>
-        {destination.kind==="country"?<Globe2 className="size-4 shrink-0 text-muted-foreground"/>:<MapPin className="size-4 shrink-0 text-muted-foreground"/>}<span className="min-w-0 flex-1"><span className="block truncate text-sm"><Highlight text={destination.label} query={draft.trim()}/></span><span className="block text-xs text-muted-foreground">{destination.kind==="country"?"Country":countries.find(c=>c.code===destination.country)?.name||"City"}</span></span><span className="shrink-0 text-xs text-muted-foreground">{destination.count?`${destination.count} ${destination.count===1?'plan':'plans'}`:"No plans yet"}</span>
+        {destination.kind==="country"?<Globe2 className="size-4 shrink-0 text-muted-foreground"/>:<MapPin className="size-4 shrink-0 text-muted-foreground"/>}<span className="min-w-0 flex-1"><span className="block truncate text-sm"><Highlight text={destination.label} query={draft.trim()}/></span><span className="block text-xs text-muted-foreground">{destination.kind==="country"?"Country":countries.find(c=>c.code===destination.country)?.name||"City"}</span></span><span className="shrink-0 text-xs text-muted-foreground">{destination.count?`${destination.count} ${destination.count===1?'plan':'plans'}`:destination.count===0?"No plans yet":"Search plans"}</span>
        </button>)}</div>}
-       {plans.length>0&&<div role="group" aria-label="Shared plans"><p className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Shared plans</p>{plans.map((plan,index)=>{const i=index+destinations.length;return <button key={plan.token} type="button" role="option" id={`${id}-option-${i}`} data-index={i} aria-selected={active===i} tabIndex={-1} onMouseEnter={()=>setActive(i)} onMouseDown={event=>event.preventDefault()} onClick={()=>select(i)} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${active===i?"bg-muted":"hover:bg-muted/60"}`}><Route className="size-4 shrink-0 text-primary"/><span className="min-w-0"><span className="block truncate text-sm"><Highlight text={plan.title||"Untitled plan"} query={draft.trim()}/></span><span className="block truncate text-xs text-muted-foreground">{[plan.destinationCity,plan.destinationCountry].filter(Boolean).join(", ")}{plan.dayCount>0?` / ${plan.dayCount} days`:""}</span></span></button>;})}</div>}
-       {!count&&<p className="px-3 py-4 text-sm text-muted-foreground">No suggestions. Press Enter to search.</p>}
-      </>}
+       {queries.length>0&&<div role="group" aria-label="Suggested searches"><p className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Suggested searches</p>{queries.map((query,index)=>{const i=index+destinations.length;return <button key={query} type="button" role="option" aria-label={query} id={`${id}-option-${i}`} data-index={i} aria-selected={active===i} tabIndex={-1} onMouseEnter={()=>setActive(i)} onMouseDown={event=>event.preventDefault()} onClick={()=>select(i)} className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm ${active===i?"bg-muted":"hover:bg-muted/60"}`}><Search className="size-4 shrink-0 text-muted-foreground"/><span className="min-w-0 truncate"><Highlight text={query} query={draft.trim()}/></span></button>;})}</div>}
+       {isUpdating&&<p role="status" className="px-3 py-2 text-xs text-muted-foreground">Looking for matching shared plans...</p>}
+       {plans.length>0&&<div role="group" aria-label="Shared plans"><p className="px-3 pb-1 pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Shared plans</p>{plans.map((plan,index)=>{const i=index+destinations.length+queries.length;return <button key={plan.token} type="button" role="option" id={`${id}-option-${i}`} data-index={i} aria-selected={active===i} tabIndex={-1} onMouseEnter={()=>setActive(i)} onMouseDown={event=>event.preventDefault()} onClick={()=>select(i)} className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2 text-left ${active===i?"bg-muted":"hover:bg-muted/60"}`}><Route className="size-4 shrink-0 text-primary"/><span className="min-w-0"><span className="block truncate text-sm"><Highlight text={plan.title||"Untitled plan"} query={draft.trim()}/></span><span className="block truncate text-xs text-muted-foreground">{[plan.destinationCity,plan.destinationCountry].filter(Boolean).join(", ")}{plan.dayCount>0?` / ${plan.dayCount} days`:""}</span></span></button>;})}</div>}
+       {suggestionsUnavailable&&<p className="px-3 py-2 text-xs text-muted-foreground">Live plan suggestions are temporarily unavailable.</p>}
+       {!count&&!isUpdating&&<p className="px-3 py-4 text-sm text-muted-foreground">Press Enter to search shared plans for this phrase.</p>}
+      </>
      </div>
     </div>}
    </div>
