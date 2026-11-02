@@ -538,21 +538,33 @@ function CommentNode({
   const threadContinued = continuedCommentThreadIds.includes(comment.id);
   const hasReplies = comment.replies.length > 0;
   const showReplies = hasReplies && !isCollapsed;
+  const showInlineReplies = showReplies && (!depthLimitReached || threadContinued);
 
   return (
     <article
       id={`comment-${comment.id}`}
       className={cn(
-        "min-w-0",
+        "relative min-w-0",
         level > 0 &&
-          "relative before:absolute before:-left-[1.8125rem] before:top-4 before:h-px before:w-6 before:bg-border before:content-['']",
-        level > 0 &&
-          isLastSibling &&
-          "after:pointer-events-none after:absolute after:-left-7 after:top-[18px] after:-bottom-8 after:z-10 after:w-3 after:-translate-x-1/2 after:bg-background after:content-['']",
+          !isLastSibling &&
+          "after:pointer-events-none after:absolute after:-left-7 after:top-0 after:bottom-0 after:border-l after:border-border after:content-['']",
       )}
     >
-      {/* Keep the avatar rail aligned while the row stretches around replies. */}
-      <div className="flex min-w-0 gap-3">
+      {level > 0 ? (
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none absolute -left-7 -top-3 h-7 w-6 overflow-visible text-border"
+          viewBox="0 0 24 28"
+          fill="none"
+        >
+          <path d="M 0.5 0 V 11.5 Q 0.5 27.5 16.5 27.5 H 24" stroke="currentColor" />
+        </svg>
+      ) : null}
+      {/* Rail and elbows share x=16px: 44px reply indent minus 28px. */}
+      <div className={cn(
+        "relative flex min-w-0 gap-3",
+        showInlineReplies && "min-h-[58px] before:pointer-events-none before:absolute before:left-4 before:top-[58px] before:bottom-0 before:border-l before:border-border before:content-['']",
+      )}>
         <div className="flex shrink-0 flex-col items-center">
           <Avatar className="size-8">
             {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
@@ -576,9 +588,6 @@ function CommentNode({
                 )}
               </button>
 
-              {showReplies ? (
-                <div className="mt-1 min-h-2 w-px flex-1 border-l border-border" />
-              ) : null}
             </div>
           ) : null}
         </div>
@@ -631,59 +640,59 @@ function CommentNode({
               <CommentReplyComposer comment={comment} />
             </div>
           ) : null}
-
-          {hasReplies ? (
-            <div className="mt-3" id={`replies-${comment.id}`}>
-              {isCollapsed ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onToggleCollapse(comment.id)}
-                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  {comment.replies.length}{" "}
-                  {comment.replies.length === 1 ? "reply" : "replies"}
-                </Button>
-              ) : depthLimitReached && !threadContinued ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onContinueThread(comment.id)}
-                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <MessageCircle className="size-3.5" aria-hidden="true" />
-                  Continue this thread
-                </Button>
-              ) : (
-                <div>
-                  <CommentBranch nodes={visibleReplies} level={level + 1} />
-
-                  {hiddenReplyCount > 0 ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        onShowMoreReplies(
-                          comment.id,
-                          visibleReplyCount + REPLY_INCREMENT,
-                        )
-                      }
-                      className="relative mt-3 h-7 px-2 text-xs text-muted-foreground before:pointer-events-none before:absolute before:-left-7 before:-top-3 before:-bottom-3 before:w-3 before:-translate-x-1/2 before:bg-background before:content-[''] hover:text-foreground"
-                    >
-                      <Plus className="size-3.5" aria-hidden="true" />
-                      View {hiddenReplyCount} more{" "}
-                      {hiddenReplyCount === 1 ? "reply" : "replies"}
-                    </Button>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          ) : null}
         </div>
       </div>
+
+      {hasReplies ? (
+        <div className="ml-11 mt-3" id={`replies-${comment.id}`}>
+          {isCollapsed ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onToggleCollapse(comment.id)}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              {comment.replies.length}{" "}
+              {comment.replies.length === 1 ? "reply" : "replies"}
+            </Button>
+          ) : depthLimitReached && !threadContinued ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => onContinueThread(comment.id)}
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+            >
+              <MessageCircle className="size-3.5" aria-hidden="true" />
+              Continue this thread
+            </Button>
+          ) : (
+            <div>
+              <CommentBranch nodes={visibleReplies} level={level + 1} />
+
+              {hiddenReplyCount > 0 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() =>
+                    onShowMoreReplies(
+                      comment.id,
+                      visibleReplyCount + REPLY_INCREMENT,
+                    )
+                  }
+                  className="mt-3 h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <Plus className="size-3.5" aria-hidden="true" />
+                  View {hiddenReplyCount} more{" "}
+                  {hiddenReplyCount === 1 ? "reply" : "replies"}
+                </Button>
+              ) : null}
+            </div>
+          )}
+        </div>
+      ) : null}
     </article>
   );
 }
