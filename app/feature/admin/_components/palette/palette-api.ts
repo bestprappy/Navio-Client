@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { PALETTE_COLOR_ID_PATTERN, isVisibleOnBothThemes, paletteQueryKey } from "@/lib/palette/palette-colors";
+import { PALETTE_COLOR_ID_PATTERN, TEXT_COLOR_CHOICES, isVisibleOnBothThemes, paletteQueryKey, type TextColorChoice } from "@/lib/palette/palette-colors";
 
 import { AdminApiError } from "../admin-api";
 
@@ -13,6 +13,8 @@ export const adminPaletteColorSchema = z.object({
   retiredAt: z.string().nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  textOnLight: z.enum(TEXT_COLOR_CHOICES).catch("auto").default("auto"),
+  textOnDark: z.enum(TEXT_COLOR_CHOICES).catch("auto").default("auto"),
 });
 export type AdminPaletteColor = z.infer<typeof adminPaletteColorSchema>;
 
@@ -25,8 +27,11 @@ export const newColorSchema = z.object({
     .trim()
     .regex(/^#[0-9a-f]{6}$/i, "Use a hex color such as #E8590C.")
     .refine(isVisibleOnBothThemes, "This color disappears on the light or dark background. Pick a less extreme shade."),
+  textOnLight: z.enum(TEXT_COLOR_CHOICES),
+  textOnDark: z.enum(TEXT_COLOR_CHOICES),
 });
 export type NewColor = z.infer<typeof newColorSchema>;
+export type TextColors = { textOnLight: TextColorChoice; textOnDark: TextColorChoice };
 
 export const paletteAdminKeys = { root: ["admin", "palette-colors"] as const };
 /** Both caches change together: the admin list and the palette every picker reads. */
@@ -62,6 +67,7 @@ async function request<T>(path: string, schema: z.ZodType<T>, method = "GET", bo
       response.status,
     );
   }
+  if (response.status === 204) return schema.parse(undefined);
   const parsed = schema.safeParse(payload);
   if (!parsed.success) {
     console.error("[palette-api] unreadable response", { method, path, issues: parsed.error.issues });
@@ -71,6 +77,11 @@ async function request<T>(path: string, schema: z.ZodType<T>, method = "GET", bo
 }
 
 export const listAdminPalette = () => request("", z.array(adminPaletteColorSchema));
-export const addPaletteColor = (color: NewColor) => request("", adminPaletteColorSchema, "POST", { name: color.name.trim(), hex: color.hex.trim() });
+export const addPaletteColor = (color: NewColor) => request("", adminPaletteColorSchema, "POST", {
+  name: color.name.trim(), hex: color.hex.trim(), textOnLight: color.textOnLight, textOnDark: color.textOnDark,
+});
+export const updatePaletteTextColors = (id: string, colors: TextColors) => request(`/${encodeURIComponent(id)}`, adminPaletteColorSchema, "PATCH", colors);
+/** Permanent. Only a removed color can be deleted; saved references switch to the default color. */
+export const deletePaletteColor = (id: string) => request(`/${encodeURIComponent(id)}`, z.undefined(), "DELETE");
 export const retirePaletteColor = (id: string) => request(`/${encodeURIComponent(id)}/retire`, adminPaletteColorSchema, "POST");
 export const restorePaletteColor = (id: string) => request(`/${encodeURIComponent(id)}/restore`, adminPaletteColorSchema, "POST");
