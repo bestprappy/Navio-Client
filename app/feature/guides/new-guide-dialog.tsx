@@ -35,10 +35,10 @@ export function NewGuideDialog() {
         <PenLine aria-hidden="true" />
         Write a guide
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="gap-6 p-6 sm:max-w-lg [&>[data-slot=dialog-close]]:top-4 [&>[data-slot=dialog-close]]:right-4">
+        <DialogHeader className="pr-8">
           <DialogTitle>Where is your guide for?</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-pretty">
             Choose a city, region or country. Add your favorite places and write
             what makes them worth a visit.
           </DialogDescription>
@@ -101,8 +101,8 @@ function NewGuideForm({ onCancel }: { onCancel: () => void }) {
     );
   }
   return (
-    <form onSubmit={submit} className="space-y-5">
-      <div className="space-y-2">
+    <form onSubmit={submit} className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
         <label htmlFor={inputId} className="text-sm font-medium">
           City, region or country
         </label>
@@ -116,17 +116,17 @@ function NewGuideForm({ onCancel }: { onCancel: () => void }) {
             <DestinationSearch.Listbox />
           </DestinationSearch>
         </Provider>
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Your guide starts as a private draft. Publish it when you are ready to
-        share.
-      </p>
-      {error ? (
-        <p id={errorId} role="alert" className="text-sm text-destructive">
-          {error}
+        {error ? (
+          <p id={errorId} role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          Your guide starts as a private draft. Publish it when you are ready to
+          share.
         </p>
-      ) : null}
-      <DialogFooter>
+      </div>
+      <DialogFooter className="-mx-6 -mb-6 px-6 py-4">
         <Button
           type="button"
           variant="outline"
