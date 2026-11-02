@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RotateCcw, Trash2, X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
+import { notify } from "@/components/toast/notify";
 import { Button } from "@/components/ui/button";
 import { DEFAULT_PALETTE_COLOR_ID } from "@/lib/palette/palette-colors";
 
@@ -28,59 +29,64 @@ import {
 } from "./palette-api";
 import { PaletteColorTile } from "./palette-color-tile";
 
-type Notice = { tone: "status" | "error"; message: string; undoId?: string };
+/** Long enough to reach Undo after removing a color by mistake. */
+const UNDO_DURATION_MS = 10_000;
 
 /** Add colors, set their label text, remove them from pickers, bring them back or delete them for good. */
 export function PaletteWorkspace() {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: paletteAdminKeys.root, queryFn: listAdminPalette, staleTime: 0, retry: false });
-  const [notice, setNotice] = useState<Notice | null>(null);
   const [editing, setEditing] = useState<AdminPaletteColor | null>(null);
   const [deleting, setDeleting] = useState<AdminPaletteColor | null>(null);
 
   async function refresh() {
     await Promise.all(paletteCacheKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
   }
-  function fail(error: unknown, operation: string) {
-    console.error(`[PaletteWorkspace] ${operation} failed`, error);
-    setNotice({ tone: "error", message: error instanceof AdminApiError ? error.message : "Something went wrong. Reload the palette and try again." });
+  function fail(error: unknown, title: string) {
+    console.error(`[PaletteWorkspace] ${title}`, error);
+    notify.error({ title, description: error instanceof AdminApiError ? error.message : "Reload the palette and try again." });
   }
 
   const add = useMutation({
     mutationFn: addPaletteColor,
-    onSuccess: async (color) => { setNotice({ tone: "status", message: `Added ${color.name}.` }); await refresh(); },
-    onError: (error) => fail(error, "add color"),
+    onSuccess: async (color) => { notify.success({ title: `Added ${color.name}` }); await refresh(); },
+    onError: (error) => fail(error, "Color not added"),
   });
   const updateText = useMutation({
     mutationFn: ({ color, colors }: { color: AdminPaletteColor; colors: TextColors }) => updatePaletteTextColors(color.id, colors),
     onSuccess: async (color) => {
       setEditing(null);
-      setNotice({ tone: "status", message: `Saved label text for ${color.name}.` });
+      notify.success({ title: `Saved label text for ${color.name}` });
       await refresh();
     },
-    onError: (error) => { setEditing(null); fail(error, "change label text"); },
+    onError: (error) => { setEditing(null); fail(error, "Label text not saved"); },
   });
   const retire = useMutation({
     mutationFn: (color: AdminPaletteColor) => retirePaletteColor(color.id),
     onSuccess: async (color) => {
-      setNotice({ tone: "status", message: `Removed ${color.name}. Trips and guides that use it keep it.`, undoId: color.id });
+      notify.success({
+        title: `Removed ${color.name}`,
+        description: "Trips and guides that use it keep it.",
+        action: { label: "Undo", onClick: () => restore.mutate(color.id) },
+        duration: UNDO_DURATION_MS,
+      });
       await refresh();
     },
-    onError: (error) => fail(error, "remove color"),
+    onError: (error) => fail(error, "Color not removed"),
   });
   const restore = useMutation({
     mutationFn: (id: string) => restorePaletteColor(id),
-    onSuccess: async (color) => { setNotice({ tone: "status", message: `${color.name} is back in the palette.` }); await refresh(); },
-    onError: (error) => fail(error, "restore color"),
+    onSuccess: async (color) => { notify.success({ title: `${color.name} is back in the palette` }); await refresh(); },
+    onError: (error) => fail(error, "Color not restored"),
   });
   const remove = useMutation({
     mutationFn: async (color: AdminPaletteColor) => { await deletePaletteColor(color.id); return color; },
     onSuccess: async (color) => {
       setDeleting(null);
-      setNotice({ tone: "status", message: `Deleted ${color.name}. Everything that used it now shows the default color.` });
+      notify.success({ title: `Deleted ${color.name}`, description: "Everything that used it now shows the default color." });
       await refresh();
     },
-    onError: (error) => { setDeleting(null); fail(error, "delete color"); },
+    onError: (error) => { setDeleting(null); fail(error, "Color not deleted"); },
   });
   const busy = add.isPending || updateText.isPending || retire.isPending || restore.isPending || remove.isPending;
 
@@ -94,28 +100,6 @@ export function PaletteWorkspace() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div aria-live="polite" className="min-h-0">
-        {notice ? (
-          <div
-            role={notice.tone === "error" ? "alert" : "status"}
-            className={notice.tone === "error"
-              ? "flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm"
-              : "flex flex-wrap items-center gap-3 rounded-lg border bg-muted/40 p-3 text-sm"}
-          >
-            <p className="flex-1">{notice.message}</p>
-            {notice.undoId ? (
-              <Button variant="outline" size="sm" disabled={busy} onClick={() => notice.undoId && restore.mutate(notice.undoId)}>
-                <RotateCcw aria-hidden="true" />
-                Undo
-              </Button>
-            ) : null}
-            <Button variant="ghost" size="icon-sm" aria-label="Dismiss message" onClick={() => setNotice(null)}>
-              <X aria-hidden="true" />
-            </Button>
-          </div>
-        ) : null}
-      </div>
-
       <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
         <div className="w-full lg:sticky lg:top-6 lg:w-[22rem] lg:shrink-0">
           <AddColorForm
