@@ -2,6 +2,7 @@ import { z } from "zod";
 import { explorePlanSchema, ExplorePlansError } from "../explore-plans-api";
 import { durationDays, type PlanSearchState } from "./search-state";
 export const planSearchPageSchema = z.object({
+ querySuggestions:z.array(z.object({text:z.string(),source:z.enum(["catalogue","vocabulary"])})).optional(), notice:z.string().nullable().optional(),
  content: z.array(explorePlanSchema), recommendations: z.array(explorePlanSchema),
  destinations: z.array(z.object({ id: z.string(), label: z.string(), country: z.string(), kind: z.enum(["city","country"]), count: z.number().nonnegative() })),
  plans: z.array(explorePlanSchema), number: z.number().int().nonnegative(), last: z.boolean(),

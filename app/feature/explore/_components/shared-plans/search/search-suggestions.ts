@@ -21,7 +21,6 @@ export function buildPlanSuggestions(text:string,country:string,remote:PlanDesti
  const matches=(label:string)=>normalizeTravelText(label).startsWith(query)||normalizeTravelText(label).split(' ').some((_,i,parts)=>parts.slice(i).join(' ').startsWith(query));
  const mentionedCountries=countries.filter(c=>mentions(query,c.name)||countryAliases[c.code]?.some(alias=>mentions(query,alias)));
  const locations=contexts(knownPlans,remote).filter(g=>(!country||g.country===country)&&(!mentionedCountries.length||mentionedCountries.some(c=>c.code===g.country)));
- const mentioned=locations.filter(g=>mentions(query,g.name)||geographicAliases.find(a=>a.name===g.name)?.aliases.some(alias=>mentions(query,alias))).sort((a,b)=>b.name.length-a.name.length);
  const local:SearchDestination[]=countries.filter(c=>(!country||country===c.code)&&(matches(c.name)||mentions(query,c.name)||countryAliases[c.code]?.some(a=>normalizeTravelText(a).startsWith(query)||mentions(query,a))))
   .map(c=>({id:`country:${c.code}`,label:c.name,country:c.code,kind:'country'}));
  const relevantRemote=remote.filter(d=>(!country||d.country===country)&&(matches(d.label)||mentions(query,d.label)||locations.some(g=>g.name===d.label&&normalizeTravelText(g.name).startsWith(tail))));
@@ -37,19 +36,19 @@ export function buildPlanSuggestions(text:string,country:string,remote:PlanDesti
   }
  }
  const cityCompleted=phrases.some(phrase=>locations.some(location=>mentions(phrase,location.name)&&!mentions(text,location.name)));
- if(!cityCompleted)phrases.push(...travelTopics.filter(topic=>normalizeTravelText(topic).startsWith(tail)).slice(0,3).map(topic=>prefix+topic.toLowerCase()));
- const place=mentioned[0]?.name||mentionedCountries[0]?.name||destinations.find(d=>d.kind==='country')?.label;
- const themes=themesIn(query);
- if(place){
-  const subject=[place,...themes.map(t=>t==='road'?'road':t==='walking'?'walking':t==='ev'?'EV':t)].join(' ');
-  if(themes.length){phrases.push(`${subject} trip`,`${subject} itinerary`,`${subject} weekend trip`);}
-  else phrases.push(`${place} itinerary`,`${place} road trip`,`${place} weekend trip`);
- }else{
-  if(themes.length){const subject=themes.join(' and ');phrases.push(`${subject} trip`,`${subject} itinerary`);}
- }
+ if(!cityCompleted)phrases.push(...travelTopics.filter(topic=>normalizeTravelText(topic).startsWith(tail)).slice(0,3).map(topic=>prefix+(topic==='Christmas'||topic==='New Year'?topic:topic.toLowerCase())));
+ // Real titles can suggest a complete search only when they preserve all typed concepts.
+ const state:PlanSearchState={query:text,country,duration:'',unit:'days',sort:'relevance'};
+ phrases.push(...knownPlanSuggestions(text,state,knownPlans).matching.flatMap(plan=>{
+  if(!plan.title)return [];
+  const titleQuery=normalizeTravelText(plan.title),required=query.split(' ').filter(word=>!['trip','trips','plan','plans','itinerary','and','for','in','the'].includes(word));
+  return required.every(word=>titleQuery.split(' ').some(token=>token.startsWith(word)))?[plan.title]:[];
+ }));
+ // Country names complete directly, without padding with invented country/suffix combinations.
+ phrases.push(...destinations.filter(d=>normalizeTravelText(d.label).startsWith(query)&&normalizeTravelText(d.label)!==query).map(d=>d.label));
  // An unknown phrase remains searchable, without pretending that it is a known destination or plan.
- if(!phrases.length)phrases.push(text.trim());
- return {destinations,queries:[...new Map(phrases.map(p=>[normalizeTravelText(p),p])).values()].slice(0,4)};
+
+ return {destinations,queries:[...new Map(phrases.filter(p=>normalizeTravelText(p)!==query).map(p=>[normalizeTravelText(p),p])).values()].slice(0,4)};
 }
 export function knownPlanSuggestions(text:string,state:PlanSearchState,plans:ExplorePlan[]){
  const query=normalizeTravelText(text);if(query.length<2)return {matching:[] as ExplorePlan[],related:[] as ExplorePlan[]};
@@ -69,7 +68,7 @@ export function knownPlanSuggestions(text:string,state:PlanSearchState,plans:Exp
   const themeHits=wanted.filter(t=>themesIn(all).includes(t)).length,termHits=terms.filter(t=>all.split(' ').some(w=>w.startsWith(t))).length;
   const localMatch=geo.every(g=>mentions(all,g.name));
   if(localMatch&&themeHits===wanted.length&&termHits===terms.length)matching.push(plan);
-  else if(anchor||themeHits||termHits)related.push(plan);
+  // Incomplete summaries cannot prove missing event dates or missing activity evidence.
  }
  const rank=(a:ExplorePlan,b:ExplorePlan)=>Number(!normalizeTravelText(a.title||'').startsWith(query))-Number(!normalizeTravelText(b.title||'').startsWith(query));
  return {matching:matching.sort(rank).slice(0,4),related:related.sort(rank).slice(0,4)};

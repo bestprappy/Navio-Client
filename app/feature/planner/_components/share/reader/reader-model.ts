@@ -1,4 +1,4 @@
-import { format, isValid, parseISO } from "date-fns";
+import { publishedDateLabel } from "../public-dates";
 import type { ExplorePlan } from "@/app/feature/explore/_components/shared-plans/explore-plans-api";
 import { sharedDayColorId } from "../shared-plan-blocks";
 import type { TripBlockColorId } from "../../../planId/_components/constants/types";
@@ -18,8 +18,7 @@ export type ReaderGroup = {
   entries: { id: string; item: PublicItem; stop?: ReaderStop }[]; stops: ReaderStop[];
 };
 export function readerDateLabel(value?: string): string | null {
-  const date = value ? parseISO(value) : null;
-  return date && isValid(date) ? format(date, "EEE, MMM d, yyyy") : null;
+  return publishedDateLabel(value);
 }
 export function locatedItem(item: PublicItem): boolean {
   return typeof item.lat === "number" && Number.isFinite(item.lat) && Math.abs(item.lat) <= 90
@@ -41,7 +40,7 @@ export function buildReaderModel(shared: SharedPlan, presentation: ReaderPresent
       if (stop) stops.push(stop);
       return { id: itemId, item, stop };
     });
-    return { id, kind, label: kind === "day" ? `Day ${index + 1}` : day.label, title: day.title, date: day.date,
+    return { id, kind, label: kind === "day" ? `Day ${index + 1}` : day.label, title: day.title?.match(/^(?:\d{4}-|--)?\d{2}-\d{2}$/)?publishedDateLabel(day.title)??day.label:day.title, date: day.date,
       colorId: sharedDayColorId(day,index), entries, stops, startsAt: day.startsAt, endsAt: day.endsAt };
   }
   (shared.plan.lists??presentation.lists??[]).forEach((list,index)=>groups.push(group({label:"My List",...list},index,"list")));

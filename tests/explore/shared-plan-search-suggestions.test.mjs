@@ -7,7 +7,8 @@ test('Jap offers Japan and travel queries without a server response',()=>{
  const result=buildPlanSuggestions('Jap','',[]);
  assert.equal(result.destinations[0].label,'Japan');
  assert.equal(result.destinations[0].count,undefined);
- assert.ok(result.queries.includes('Japan road trip'));
+ assert.ok(result.queries.includes('Japan'));
+ assert.ok(!result.queries.includes('Japan road trip'));
 });
 test('country filter constrains generic destinations and remote counts replace unknown counts',()=>{
  assert.equal(buildPlanSuggestions('Jap','TH',[]).destinations.length,0);
@@ -34,7 +35,7 @@ test('real public plan titles complete immediately and respect country and durat
 test('multiword phrases retain travel suggestions with no catalogue matches',()=>{
  for(const text of ['Thailand Food Trip','Huahin scenary and food trip','California Food Focus Trip']) {
   const result=buildPlanSuggestions(text,'',[]);
-  assert.ok(result.queries.length>0,text);
+  assert.ok(result.queries.every(q=>!q.includes('weekend trip')&&!q.includes('road trip')),text);
  }
  assert.ok(buildPlanSuggestions('Huahin scenary and food trip','',[]).queries.some(q=>q.includes('Hua Hin')&&q.includes('scenic')&&q.includes('food')));
 });

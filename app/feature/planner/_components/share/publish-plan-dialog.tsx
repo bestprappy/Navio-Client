@@ -290,8 +290,8 @@ export function PublishPlanDialog({ tripId, tripTitle, open, onOpenChange }: Pub
                   <Button type="button" size="sm" variant="outline" disabled={isBusy} onClick={() => { setHasEditedOptions(true); setOptions({ includeDates: true, includeNotes: true, includeBudget: true }); }}>All trip details</Button>
                 </div>
                 <ShareOptionRow
-                  label="Include travel dates"
-                  description="Shows real dates instead of Day 1, Day 2."
+                  label="Include month and day"
+                  description="Shares the travel month and day. Your original year stays private."
                   checked={options.includeDates}
                   disabled={isBusy}
                   onCheckedChange={(checked) => updateOption("includeDates", checked)}

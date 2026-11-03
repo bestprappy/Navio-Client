@@ -84,7 +84,9 @@ export type PublicItem = {
 
 export type PublicDay = {
   label: string;
+  /** Published MM-dd, never an owner travel year. */
   date?: string;
+  dayOffset?:number;
   title?: string;
   /** Palette color the owner gave the day; absent on plans published before colors were shared. */
   colorId?: string;
@@ -110,6 +112,7 @@ export type PublicPlanSnapshot = {
   startDate?: string;
   endDate?: string;
   dayCount: number;
+  daySpan?:number;
   days?: PublicDay[];
   budget?: PublicBudget;
   included?: PublicationOptions;
