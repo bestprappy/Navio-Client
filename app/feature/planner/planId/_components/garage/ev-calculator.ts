@@ -37,12 +37,16 @@ export function isDcCharger(connectorTypes: EvConnectorType[]): boolean {
   return connectorTypes.some((c) => DC_CONNECTOR_TYPES.has(c));
 }
 
+export function isClosedCharger(charger: Pick<EvCharger, "status">): boolean {
+  return charger.status === "temporarily_closed" || charger.status === "permanently_closed";
+}
+
 export function isCompatible( 
   vehicleConnectors: EvConnectorType[],
   chargerConnectors: EvConnectorType[],
 ): boolean {
   const vehicleSet = new Set(vehicleConnectors);
-  return chargerConnectors.some((c) => vehicleSet.has(c));
+  return chargerConnectors.some((c) => c !== "OTHER" && vehicleSet.has(c));
 }
 
 export function calcEnergyKwh(distanceKm: number, car: EvCar): number {

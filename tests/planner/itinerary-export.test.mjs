@@ -11,7 +11,7 @@ registerHooks({ resolve(specifier, context, next) {
 } });
 
 const exportDir = "../../app/feature/planner/planId/_components/itinerary/export";
-const { buildItineraryTable, formatTableTime } = await import(`${exportDir}/itinerary-table.ts`);
+const { buildItineraryTable, formatChargeDetail, formatTableTime } = await import(`${exportDir}/itinerary-table.ts`);
 const { toSheetRows } = await import(`${exportDir}/itinerary-sheet.ts`);
 const { toCsv, toCsvCell } = await import(`${exportDir}/itinerary-csv.ts`);
 const { createItineraryWorkbook, columnLetter, tintHex } = await import(`${exportDir}/itinerary-xlsx.ts`);
@@ -36,6 +36,7 @@ test("each day lists its start, places and charging stops in order, then its end
     ["end", "Riva Hotel"],
   ]);
   assert.equal(first.rows[3].chargeDetail, "About 45 min, charge to 80%");
+  assert.equal(formatChargeDetail({ evCharger:{ estimatedChargeMinutes:18, chargingDurationMinutes:17.6, plannedDepartureSocPct:71.25 } }), "About 18 min, charge to 71%");
 });
 
 test("days are ordered by date and saved lists are not exported", () => {

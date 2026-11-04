@@ -5,6 +5,7 @@ import { AlertTriangle, Check, Navigation, PlugZap, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import type { EvCharger } from "../constants/types";
+import { isClosedCharger } from "../garage/ev-calculator";
 import { ConnectorChips } from "./connector-chips";
 import { getAvailabilityLabel } from "./ev-station-formatters";
 
@@ -59,7 +60,8 @@ export function EvStationListCard({
   onAdd,
   onSelect,
 }: EvStationListCardProps) {
-  const addDisabled = isAdded || !isCompatible || !canAdd;
+  const closed = isClosedCharger(charger);
+  const addDisabled = closed || isAdded || !isCompatible || !canAdd;
   const address = charger.address ?? charger.location.address;
 
   return (
@@ -98,10 +100,11 @@ export function EvStationListCard({
               {address}
             </span>
           ) : null}
+          {closed ? <span className="mt-1.5 block text-xs font-semibold text-warning">Station closed</span> : null}
           {!isCompatible ? (
             <span className="mt-1.5 inline-flex items-center gap-1 rounded-sm bg-warning/10 px-1.5 py-0.5 text-xs font-semibold text-warning">
               <AlertTriangle className="size-3" aria-hidden="true" />
-              Connector mismatch
+              No confirmed connector match
             </span>
           ) : null}
         </span>
@@ -113,8 +116,8 @@ export function EvStationListCard({
         onClick={onAdd}
         className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-sm bg-primary px-3 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
         aria-label={
-          !isCompatible
-            ? `${charger.name} is not compatible`
+          closed ? `${charger.name} is closed` : !isCompatible
+            ? `${charger.name} has no confirmed compatible connector`
             : isAdded
               ? `${charger.name} added`
               : `Add ${charger.name}`
@@ -127,7 +130,7 @@ export function EvStationListCard({
         ) : (
           <Zap className="size-3.5" aria-hidden="true" />
         )}
-        <span>{!isCompatible ? "No match" : isAdded ? "Added" : "Add"}</span>
+        <span>{closed ? "Closed" : !isCompatible ? "No match" : isAdded ? "Added" : "Add"}</span>
       </button>
     </article>
   );

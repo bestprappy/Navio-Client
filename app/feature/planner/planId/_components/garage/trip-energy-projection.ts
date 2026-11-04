@@ -20,7 +20,8 @@ export function chargingEventForCar(details: PlaceItemEvChargerDetails, car: EvC
   return {
     targetSocPct: details.targetBatteryPct ?? details.plannedDepartureSocPct ?? null,
     durationMinutes: details.chargingDurationMinutes ?? (details.estimatedChargeMinutes !== null && details.estimatedChargeMinutes >= 0 ? details.estimatedChargeMinutes : null),
-    compatible: matching.length > 0 ? true : details.connectorTypes.includes("OTHER") || car.connectorTypes.includes("OTHER") ? null : false,
+    // No listed connectors means the provider did not say, which is not the same as none fitting.
+    compatible: matching.length > 0 ? true : details.connectorTypes.length === 0 || details.connectorTypes.includes("OTHER") || car.connectorTypes.includes("OTHER") ? null : false,
     effectivePowerKw: positive(details.maxKw) && powers.length ? Math.min(details.maxKw, Math.max(...powers)) : null,
   };
 }

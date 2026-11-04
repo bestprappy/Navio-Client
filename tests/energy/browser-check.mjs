@@ -1,5 +1,6 @@
 // Synthetic authenticated APIs; never reads or writes a real account.
 import assert from "node:assert/strict";
+import { encode } from "next-auth/jwt";
 import { savedVehicleFixture } from "../garage/data.ts";
 import { registerHooks } from "node:module";
 registerHooks({resolve(specifier,context,next){return next(context.parentURL?.includes("/Navio/client/") && !context.parentURL?.includes("/node_modules/") && specifier.startsWith(".") && !/\.(?:[cm]?js|tsx?|json)$/.test(specifier) ? `${specifier}.ts` : specifier,context);}});
@@ -14,11 +15,20 @@ vehicle.consumptionKwhPer100km=null;
 const place=(id,lng)=>({id,type:"place",placeId:id,name:`Energy stop ${id}`,address:"Thailand",lat:13.75,lng});
 let snapshot={blocks:[{id:"day-1",kind:"itinerary",title:"Day 1",date:"2026-09-23",colorId:"teal",items:[place("a",100.5),place("b",100.6),place("c",100.7)]}],budget:{currency:"THB",amount:0,expenses:[]},energyState:{initialSocPct:90,vehicleSnapshot:snapshotTripVehicle(vehicle)},version:1,savedAt:stamp,capabilities:["day-destinations","charge-targets","day-anchors","trip-energy-v1","observed-soc-v1"]};
 const trip={id,displayName:"Canonical energy test",title:"Canonical energy test",destinationId:"bangkok",destinationName:"Bangkok",destinationCountry:"Thailand",destinationCountryCode:"TH",destinationCity:"Bangkok",destinationRegion:"Bangkok",destinationLat:13.75,destinationLng:100.5,startDate:"2026-09-23",endDate:"2026-09-23",visibility:"PRIVATE",createdAt:stamp,updatedAt:stamp};
-snapshot.capabilities.push("trip-garage-v1");
+snapshot.capabilities.push("trip-garage-v1", "trip-vehicles-v1");
 const secondId="a2000000-0000-4000-8000-000000000024";
 let secondSnapshot={...structuredClone(snapshot),energyState:null};
+// The planner is protected by the server proxy; mocking /api/auth/session alone
+// cannot authenticate the initial page navigation.
+const secret=process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+assert.ok(secret,"Set AUTH_SECRET to the local test server's secret (for example with --env-file=.env.local).");
 const browser=await chromium.launch({channel:"chrome",headless:true});
 const context=await browser.newContext({viewport:{width:1440,height:1000}});
+const sessionCookie=await encode({secret,salt:"authjs.session-token",token:{
+  sub:"22222222-2222-4222-8222-222222222222",name:"Energy test",accessToken:"test-only",
+  accessTokenExpiresAt:Math.floor(Date.now()/1000)+3600,
+}});
+await context.addCookies([{name:"authjs.session-token",value:sessionCookie,url:origin,httpOnly:true,sameSite:"Lax"}]);
 const errors=[],garageWrites=[],writes=[];
 await context.route(`${origin}/api/**`,async route=>{
   const req=route.request(),path=new URL(req.url()).pathname;
@@ -88,7 +98,41 @@ try {
   assert.equal(snapshot.energyState.vehicleSnapshot.vehicleId,vehicle.id);
   assert.deepEqual(garageWrites,[]);
   assert.ok(writes.length>=3);
+  // Exercise the real charging control and its precise autosave contract.
+  vehicle.consumptionKwhPer100km=20;
+  vehicle.energyProfile={...vehicle.energyProfile,modelKind:"CONSUMPTION",selectionMode:"USER_OVERRIDE",
+    consumptionKwhPer100km:20,consumptionSource:"USER_OBSERVED",usableBatteryCapacityKwh:50,capacityBasis:"USABLE"};
+  snapshot.energyState={...snapshot.energyState,initialSocPct:30,vehicleSnapshot:snapshotTripVehicle(vehicle)};
+  snapshot.capabilities.push("precise-charging-v1");
+  snapshot.version++;
+  snapshot.blocks[0].items=[place("a",100.5),{...place("charging",100.6),placeId:"ev-charger:test",name:"Energy charging stop",
+    evCharger:{connectorTypes:["CCS2"],maxKw:50,totalConnectors:2,availableConnectors:null,priceText:null,
+      openingHoursSummary:null,estimatedChargeMinutes:17,chargingDurationMinutes:17.475,
+      plannedDepartureSocPct:55.125,operatorName:null}},place("c",100.7)];
+  await page.goto(`${origin}/planner/${id}`);
+  const target=page.getByRole("slider",{name:"Target battery at Energy charging stop"});
+  await target.waitFor();
+  assert.equal(await target.inputValue(),"55");
+  await target.fill("80");
+  await eventually(()=>snapshot.blocks[0].items[1].evCharger.targetBatteryPct===80,"charging target did not autosave");
+  assert.equal(snapshot.blocks[0].items[1].evCharger.plannedDepartureSocPct,null);
+  assert.ok(Math.abs(snapshot.blocks[0].items[1].evCharger.chargingDurationMinutes-32.4)<1e-8);
+  await page.reload();
+  await target.waitFor();
+  assert.equal(await target.inputValue(),"80");
+  for(const connector of ["CHADEMO","OTHER"]){
+    snapshot.blocks[0].items[1].evCharger.connectorTypes=[connector];snapshot.version++;
+    await page.reload();await target.waitFor();
+    const chargingCard=page.locator("article").filter({has:page.getByRole("heading",{name:"Energy charging stop",exact:true})}).first();
+    if(connector==="OTHER") {
+      await chargingCard.getByText(/Connector compatibility is unconfirmed/).waitFor();
+      assert.equal(await chargingCard.getByText(/Leave with/).count(),0);
+    } else {
+      await chargingCard.getByText(/None of this station/).waitFor();
+      await chargingCard.getByText("Leave with 26%",{exact:true}).waitFor();
+    }
+  }
   assert.deepEqual(errors,[]);
-  console.log("PASS: saved trip starting SoC, checkpoint save/reload/clear, immutable snapshot after garage refresh, no garage writes, responsive themes.");
+  console.log("PASS: saved trip SoC/checkpoints, immutable vehicle selection, garage isolation, responsive themes, precise charging target save/reload, incompatible and unknown plugs.");
 } catch(error){console.error(errors);console.error({writes,snapshot});console.error(await page.evaluate(()=>Object.entries(localStorage)));console.error((await page.locator("body").innerText()).slice(0,5000));throw error;}
 finally{await browser.close();}

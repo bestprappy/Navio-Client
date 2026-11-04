@@ -27,8 +27,7 @@ import {
 import { useTripRoutes } from "../routes/trip-route-query";
 import { getItemInsertionIndex } from "../block/item-insertion";
 import {
-  DEFAULT_EV_STATION_RADIUS_METERS,
-  fetchEvChargersNear,
+  searchEvChargerAnchors,
   sampleRoutePolyline,
 } from "./ev-station-api";
 
@@ -95,16 +94,7 @@ export function useEvStationSearch({
       const intermediateAnchors = sampleRoutePolyline(localSegments, blockId, 30);
       const allAnchors = [...localAnchors, ...intermediateAnchors];
 
-      const chargersByAnchor = await Promise.all(
-        allAnchors.map(async (anchor) => ({
-          place: anchor,
-          chargers: await fetchEvChargersNear(
-            anchor.lat,
-            anchor.lng,
-            DEFAULT_EV_STATION_RADIUS_METERS,
-          ),
-        })),
-      );
+      const { results: chargersByAnchor, partialFailure } = await searchEvChargerAnchors(allAnchors);
 
       if (!isCurrentRequest()) return;
       const results = buildEvChargerResults(chargersByAnchor, blockId, beforeItemId).sort(
@@ -125,11 +115,12 @@ export function useEvStationSearch({
       );
 
       setEvChargerResults(results);
+      if (partialFailure) setEvChargerError("Some route areas could not be searched. Showing the stations found; try again for fuller coverage.");
 
       const firstCharger = results[0]?.charger;
       if (firstCharger) {
         selectEvCharger(firstCharger.id);
-      } else {
+      } else if (!partialFailure) {
         setEvChargerError("No EV stations found near this block yet.");
       }
     } catch (error) {

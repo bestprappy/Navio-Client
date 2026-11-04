@@ -11,6 +11,19 @@ const isUsingMock = process.env.NEXT_PUBLIC_PLACE_DATA_SOURCE === "mock";
 
 export const DEFAULT_EV_STATION_RADIUS_METERS = 10_000;
 
+type StationSearchAnchor = { id: string; lat: number; lng: number };
+
+/** A failed area must not erase stations successfully found elsewhere on the route. */
+export async function searchEvChargerAnchors(anchors: StationSearchAnchor[]) {
+  const settled = await Promise.allSettled(anchors.map(async place => ({
+    place, chargers: await fetchEvChargersNear(place.lat, place.lng),
+  })));
+  const results = settled.flatMap(result => result.status === "fulfilled" ? [result.value] : []);
+  const failure = settled.find(result => result.status === "rejected");
+  if (failure?.status === "rejected" && results.length === 0) throw failure.reason;
+  return { results, partialFailure: failure !== undefined };
+}
+
 export async function fetchEvChargersNear(
   lat: number,
   lng: number,

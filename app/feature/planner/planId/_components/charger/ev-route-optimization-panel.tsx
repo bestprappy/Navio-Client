@@ -16,7 +16,6 @@ import {
   isPersistedTripId,
   PlannerApiError,
   previewTripEvOptimization,
-  type EvOptimizationOperation,
   type EvOptimizationPreview,
   type EvOptimizationRequestPayload,
 } from "@/app/feature/planner/_components/planner-api";
@@ -24,6 +23,8 @@ import { Button } from "@/components/ui/button";
 
 import type { EvCar } from "../constants/vehicle.types";
 import { arrivalReservePctAtom } from "../garage/garage.atoms";
+import { formatMinutes } from "../garage/garage-formatters";
+import { describeOperation, operationKey } from "./ev-optimization-format";
 import { applyPlannerServerSnapshotAtom, tripBlocksAtom, tripBudgetAtom, tripCurrencyAtom, tripExpensesAtom } from "../overview/trip-builder.atoms";
 
 const optimizationBudgetAtom = atom(get => ({
@@ -42,20 +43,6 @@ type PreviewState = {
   payload: EvOptimizationRequestPayload;
   key: string;
 };
-
-function describeOperation(operation: EvOptimizationOperation): string {
-  const chargerName = operation.charger?.name ?? "charger stop";
-  switch (operation.type) {
-    case "ADD_CHARGER":
-      return `Add ${chargerName} (${operation.estimatedChargeMinutes} min)`;
-    case "REPLACE_CHARGER":
-      return `Replace the unlocked stop with ${chargerName}`;
-    case "REMOVE_CHARGER":
-      return "Remove an unnecessary unlocked charger";
-    case "UPDATE_CHARGER":
-      return `Refresh ${chargerName} and its charging estimate`;
-  }
-}
 
 function getMutationError(error: unknown): string {
   if (error instanceof PlannerApiError && error.status === 409) {
@@ -214,7 +201,7 @@ export function EvRouteOptimizationPanel({
         {previewMutation.isPending ? "Checking the route..." : isAuthenticated ? "Plan charging stops" : "Sign in to plan charging stops"}
       </Button>
 
-      {vehicle && !canAutomaticallyPlan(vehicle) && <p className="mt-2 text-xs text-muted-foreground">Rated-range previews are provisional and cannot apply automatic chargers. Legacy estimates need confirmation in vehicle settings before automatic application.</p>}
+      {vehicle && !canAutomaticallyPlan(vehicle) && <p className="mt-2 text-xs text-muted-foreground">Automatic charging requires known usable battery capacity and a confirmed consumption model. Rated-range previews cannot apply chargers. Review the energy selection in vehicle settings.</p>}
       {!vehicle ? (
         <p className="mt-2 text-xs text-muted-foreground">
           Select an EV from your garage first.
@@ -248,8 +235,8 @@ export function EvRouteOptimizationPanel({
           </p>
           {operations.length > 0 ? (
             <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
-              {operations.map((operation) => (
-                <li key={`${operation.type}-${operation.sequence}`}>
+              {operations.map((operation, index) => (
+                <li key={operationKey(operation, index)}>
                   {describeOperation(operation)}
                 </li>
               ))}
@@ -258,7 +245,7 @@ export function EvRouteOptimizationPanel({
           <p className="mt-2 text-xs text-muted-foreground">
             {currentPreview.data.finalSocPct === null ? "Final battery unavailable" : `Finish at ${currentPreview.data.finalSocPct.toFixed(1)}% battery`}
             {currentPreview.data.totalChargingMinutes > 0
-              ? ` · ${currentPreview.data.totalChargingMinutes} min charging`
+              ? ` · ${formatMinutes(currentPreview.data.totalChargingMinutes)} charging`
               : ""}
           </p>
           {currentPreview.data.warnings.map((warning) => (

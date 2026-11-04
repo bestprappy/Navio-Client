@@ -75,8 +75,23 @@ test("suitable direct default keeps consumption evidence separate from rated ran
 test("legacy consumption requires confirmation before automatic planning", () => {
   const mapped = plannerCar(savedVehicleFixture);
   assert.equal(canAutomaticallyPlan(mapped), false);
-  assert.equal(canAutomaticallyPlan({ ...mapped, legacyConsumptionConfirmed: true }), true);
+  assert.equal(canAutomaticallyPlan({ ...mapped, legacyConsumptionConfirmed: true }), false, "confirmation cannot supply missing usable capacity");
+  assert.equal(canAutomaticallyPlan({ ...mapped, legacyConsumptionConfirmed: true,
+    energyProfile: {...mapped.energyProfile, usableBatteryCapacityKwh:58} }), true);
   assert.equal(canAutomaticallyPlan({ ...mapped, legacyConsumptionConfirmed: true, consumptionKwhPer100km: 0 }), false);
+});
+
+test("automatic application eligibility matches the saved-trip server requirements", () => {
+  const profile = defaultEnergyProfile(directCatalog(), null);
+  const car = {...plannerCar(savedVehicleFixture), consumptionKwhPer100km:15.2, energyProfile:profile};
+  assert.equal(canAutomaticallyPlan(car), true);
+  for (const patch of [{usableBatteryCapacityKwh:null}, {usableBatteryCapacityKwh:0},
+    {consumptionSource:"UNKNOWN"}, {consumptionMeasurementBasis:"WALL_SIDE"}, {sourceUrl:null},
+    {sourceUrl:"http://example.com/specification"}]) {
+    assert.equal(canAutomaticallyPlan({...car,energyProfile:{...profile,...patch}}), false, JSON.stringify(patch));
+  }
+  assert.equal(canAutomaticallyPlan({...car,energyProfile:{...profile,selectionMode:"USER_OVERRIDE",consumptionSource:"USER_OBSERVED"}}), true);
+  assert.equal(canAutomaticallyPlan({...car,energyProfile:{...profile,selectionMode:"USER_OVERRIDE",consumptionSource:"UNKNOWN"}}), false);
 });
 
 test("account catalogue command preserves the returned range profile on reload and in planner state", async () => {

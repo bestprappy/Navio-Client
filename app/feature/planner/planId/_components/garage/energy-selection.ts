@@ -1,6 +1,8 @@
 import type { EvCar } from "../constants/vehicle.types";
 import type { CatalogVehicle, SavedVehicle, VehicleEnergyProfile } from "./vehicle-api";
 
+const positive = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
+
 /** Catalogue evidence is field-specific; rated range never creates consumption. */
 export function defaultEnergyProfile(catalog: CatalogVehicle | null, rangeKm: number | null, ratedRangeOnly = false): VehicleEnergyProfile {
   const profile = catalog?.energyProfile;
@@ -28,10 +30,17 @@ export function energySelectionDescription(profile: VehicleEnergyProfile): strin
 }
 
 export function canAutomaticallyPlan(car: EvCar | null): boolean {
-  if (!car || !(car.consumptionKwhPer100km > 0)) return false;
+  if (!car || !positive(car.consumptionKwhPer100km)) return false;
   const profile = car.energyProfile;
-  if (!profile || profile.selectionMode === "LEGACY_UNCONFIRMED") return car.legacyConsumptionConfirmed === true;
-  return profile.modelKind === "CONSUMPTION";
+  if (!profile || profile.modelKind !== "CONSUMPTION" || !positive(profile.consumptionKwhPer100km)
+    || !positive(profile.usableBatteryCapacityKwh)) return false;
+  switch (profile.selectionMode) {
+    case "LEGACY_UNCONFIRMED": return car.legacyConsumptionConfirmed === true;
+    case "USER_OVERRIDE": return profile.consumptionSource === "USER_OBSERVED";
+    case "CATALOG_DEFAULT": return ["MANUFACTURER_REPORTED", "REGULATORY_REPORTED"].includes(profile.consumptionSource)
+      && profile.consumptionMeasurementBasis === "BATTERY_SIDE" && profile.sourceUrl?.startsWith("https://") === true;
+    default: return false;
+  }
 }
 
 export function isLegacyVehicle(vehicle: SavedVehicle): boolean {

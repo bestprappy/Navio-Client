@@ -129,12 +129,15 @@ export function formatTableDate(date: string): string {
   return isValid(parsed) ? format(parsed, "EEE, MMM d") : "";
 }
 
-function formatChargeDetail(item: PlaceItem): string | null {
+export function formatChargeDetail(item: Pick<PlaceItem, "evCharger">): string | null {
   const charger = item.evCharger;
   if (!charger) return null;
+  // Planned stops carry their target and precise duration in the optimizer's fields.
+  const minutes = charger.chargingDurationMinutes ?? charger.estimatedChargeMinutes;
+  const target = charger.targetBatteryPct ?? charger.plannedDepartureSocPct;
   const parts = [
-    charger.estimatedChargeMinutes ? `About ${Math.round(charger.estimatedChargeMinutes)} min` : null,
-    charger.targetBatteryPct ? `charge to ${Math.round(charger.targetBatteryPct)}%` : null,
+    minutes ? `About ${Math.round(minutes)} min` : null,
+    target ? `charge to ${Math.round(target)}%` : null,
   ].filter((part): part is string => part !== null);
   return parts.length ? parts.join(", ") : null;
 }

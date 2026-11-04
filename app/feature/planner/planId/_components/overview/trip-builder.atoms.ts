@@ -1,7 +1,7 @@
 import { atom, type SetStateAction } from "jotai";
 import { activeVehicleAtom } from "../garage/garage.atoms";
 import { getVehicleCar } from "../constants/vehicle.data";
-import { isCompatible } from "../garage/ev-calculator";
+import { isClosedCharger, isCompatible } from "../garage/ev-calculator";
 import {
   findDayStopForAnchor,
   getDayEdgeStops,
@@ -1513,7 +1513,7 @@ export const addSelectedPlaceToTripAtom = atom(null, (get, set) => {
 export const addEvChargerToBlockAtom = atom(
   null,
   (get, set, payload: AddEvChargerToBlockPayload) => {
-    if (get(plannerReadOnlyAtom)) return;
+    if (get(plannerReadOnlyAtom) || isClosedCharger(payload.charger)) return;
     const chargerPlaceId = getChargerPlaceId(payload.charger.id);
     const targetBlock = get(tripBlocksAtom).find(
       (block) => block.id === payload.blockId,

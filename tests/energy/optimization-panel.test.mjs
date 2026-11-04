@@ -32,6 +32,8 @@ function harness() {
     "../garage/energy-selection": { canAutomaticallyPlan:() => true },
     "../garage/trip-energy-state": { tripEnergyStateAtom:energyAtom },
     "../garage/garage.atoms": { arrivalReservePctAtom:reserveAtom },
+    "../garage/garage-formatters": { formatMinutes:minutes => `${minutes} min` },
+    "./ev-optimization-format": { describeOperation:operation => operation.type, operationKey:(_operation, index) => String(index) },
     "../overview/trip-builder.atoms": atoms,
     "@/app/feature/planner/_components/optimization-state": {
       optimizationStateKey:(...parts) => JSON.stringify(parts),

@@ -15,6 +15,18 @@ function startInsertion(store, beforeItemId = "stop-21") {
   store.set(atoms.startPlaceSearchAtom, { blockId: longDay.id, beforeItemId, result: searchedPlace });
 }
 
+test("closed stations cannot be inserted as usable charging stops", () => {
+  for (const status of ["temporarily_closed", "permanently_closed"]) {
+    const store=createStore();
+    store.set(atoms.tripBlocksAtom,[longDay]);
+    const before=store.get(atoms.tripBlocksAtom);
+    assert.equal(store.set(atoms.addEvChargerToBlockAtom, {
+      blockId:longDay.id,beforeItemId:"stop-21",charger:{...charger,status},
+    }),undefined);
+    assert.equal(store.get(atoms.tripBlocksAtom),before);
+  }
+});
+
 test("a searched place goes between stops 20 and 21 in a 50-place day", () => {
   const store = createStore();
   store.set(atoms.tripBlocksAtom, [longDay, secondDay]);

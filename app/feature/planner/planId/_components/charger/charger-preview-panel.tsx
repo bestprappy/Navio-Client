@@ -5,6 +5,7 @@ import { AlertTriangle, BatteryCharging, MapPin, Star, X, Zap } from "lucide-rea
 import { Button } from "@/components/ui/button";
 
 import type { EvChargerMapResult } from "../overview/trip-builder.atoms";
+import { isClosedCharger } from "../garage/ev-calculator";
 import { getOpeningHoursSummary } from "./ev-station-formatters";
 import { StationOpeningHours } from "./station-opening-hours";
 
@@ -30,6 +31,7 @@ export function ChargerPreviewPanel({
   onClose,
 }: ChargerPreviewPanelProps) {
   const { charger, distanceKm } = result;
+  const closed = isClosedCharger(charger);
   const openingHours = getOpeningHoursSummary(charger.openingHours);
   const availability =
     charger.availableConnectors === null
@@ -54,10 +56,11 @@ export function ChargerPreviewPanel({
               Stale
             </span>
           ) : null}
+          {closed ? <span className="rounded-sm bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">Station closed</span> : null}
           {!isCompatible ? (
             <span className="inline-flex items-center gap-1 rounded-sm bg-warning/10 px-2 py-1 text-xs font-semibold text-warning">
               <AlertTriangle className="size-3.5" aria-hidden="true" />
-              Connector mismatch
+              No confirmed connector match
             </span>
           ) : null}
         </div>
@@ -129,12 +132,12 @@ export function ChargerPreviewPanel({
           size="sm"
           className="rounded-sm"
           onClick={onAddToTrip}
-          disabled={isAdded || !isCompatible || !canAddToTrip}
+          disabled={closed || isAdded || !isCompatible || !canAddToTrip}
         >
-          {!isCompatible ? (
+          {closed ? "Station closed" : !isCompatible ? (
             <>
               <AlertTriangle className="size-3.5" aria-hidden="true" />
-              Not compatible
+              No confirmed match
             </>
           ) : isAdded ? (
             "Added"

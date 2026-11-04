@@ -32,6 +32,8 @@ function clampPct(value: number | null): number | null {
 }
 
 export function RouteEstimate({
+  predictedBelowReserve = false,
+  infeasible = false,
   startBatteryPct,
   endBatteryPct,
   distanceKm,
@@ -59,6 +61,13 @@ export function RouteEstimate({
   );
   const midRouteDip =
     lowest && lowest.id !== profile.at(-1)?.id && lowest.arrivalPct < reservePct ? lowest : null;
+  // An unreachable leg leaves no onward battery or chart, so without this it reads as missing data.
+  // Below reserve also needs its own line when a charge at that stop hides it from the end value.
+  const alert = infeasible
+    ? "The battery runs out before the end of this route. Add a charging stop or start with more charge."
+    : predictedBelowReserve && !midRouteDip && endLevel !== "critical"
+      ? `A stop on this route is reached below your ${reservePct}% reserve.`
+      : null;
 
   return (
     <section aria-label="Route estimate" className="@container/estimate min-w-0 rounded-md bg-card ring-1 ring-border">
@@ -99,9 +108,16 @@ export function RouteEstimate({
           </p>
         ) : null}
 
+        {alert ? (
+          <p role="alert" className="mt-3 flex items-start gap-2 rounded-sm bg-destructive/10 px-2.5 py-2 text-xs leading-relaxed text-destructive">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            <span>{alert}</span>
+          </p>
+        ) : null}
+
         {showChart ? (
           <BatteryRouteChart className="mt-4" points={profile} reservePct={reservePct} />
-        ) : endPct === null ? <p className="mt-3 text-sm text-muted-foreground">Battery prediction unavailable</p> : (
+        ) : infeasible ? null : endPct === null ? <p className="mt-3 text-sm text-muted-foreground">Battery prediction unavailable</p> : (
           <>
             <div
               className="relative mt-4 h-2 rounded-full bg-muted ring-1 ring-border ring-inset"

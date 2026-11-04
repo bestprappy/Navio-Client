@@ -32,8 +32,9 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
   const reservePct = useAtomValue(arrivalReservePctAtom);
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const projection = car && arrivalPct != null ? projectChargingStop(arrivalPct, details, car) : null;
-  const target = normalizeStationTargetPct(details.targetBatteryPct ?? projection?.departurePct);
+  const target = normalizeStationTargetPct(details.targetBatteryPct ?? details.plannedDepartureSocPct ?? projection?.departurePct);
   const arrival = projection?.arrivalPct != null ? Math.round(projection.arrivalPct) : null;
+  const departure = projection?.departurePct != null ? Math.round(projection.departurePct) : null;
   const targetTone = BATTERY_TONES[getBatteryTone(target, reservePct)];
 
   function updateTarget(value: number) {
@@ -83,7 +84,7 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
       {/* Solid fill: battery on arrival. Stripes: what this stop adds. The knob is the target, dragged with the native range input. */}
       <BatteryGauge
         value={arrival ?? 0}
-        chargeTo={target}
+        chargeTo={departure ?? arrival ?? 0}
         markerPct={target}
         reservePct={reservePct}
         className="rounded-lg has-focus-visible:ring-2 has-focus-visible:ring-ring has-focus-visible:ring-offset-2 has-focus-visible:ring-offset-card"
@@ -108,9 +109,9 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
           <span>
             Arrive with <span className="font-semibold tabular-nums text-foreground">{arrival}%</span>
           </span>
-          <span>
-            Leave with <span className="font-semibold tabular-nums text-foreground">{Math.max(target, arrival)}%</span>
-          </span>
+          {departure !== null && <span>
+            Leave with <span className="font-semibold tabular-nums text-foreground">{departure}%</span>
+          </span>}
         </div>
       )}
 
@@ -132,7 +133,9 @@ function ChargeEstimate({ car, projection, target }: { car: EvCar | null; projec
     return (
       <p className="flex items-start gap-2 text-sm font-medium text-warning">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        None of this station&apos;s plugs fit your EV.
+        {projection.reasons.includes("CONNECTOR_COMPATIBILITY_UNAVAILABLE")
+          ? "Connector compatibility is unconfirmed. Check this station's plugs before planning a charge."
+          : "None of this station's plugs fit your EV."}
       </p>
     );
   }
