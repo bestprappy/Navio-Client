@@ -34,7 +34,7 @@ export function useDayTimingActions(block: TripBlockData, startsFromAnchor: bool
   const readOnly = useAtomValue(plannerReadOnlyAtom);
   const applyDayTimes = useSetAtom(applyDayTimesAtom);
   const undoDayTimes = useSetAtom(undoDayTimesAtom);
-  const { schedule, travelMinutesByItemId, isWaitingForRoutes, isStale, hasCalculatedTimes } = useDaySchedule(block, startsFromAnchor);
+  const { schedule, travelMinutesByItemId, chargeMinutesByItemId, isWaitingForRoutes, isStale, hasCalculatedTimes } = useDaySchedule(block, startsFromAnchor);
   const [undo, setUndo] = useState<DayTimingUndo | null>(null);
   // A message describes the day as it was; any later change to the day retires it.
   const [notice, setNotice] = useState<{ text: string; items: TripBlockData["items"] | null } | null>(null);
@@ -51,8 +51,8 @@ export function useDayTimingActions(block: TripBlockData, startsFromAnchor: bool
   const fillNewStopTimes = useSetAtom(fillNewStopTimesAtom);
   const hasFillableNewStop = !readOnly && stops.some((stop) => isAwaitingTime(stop) && schedule.updates.has(stop.id));
   useEffect(() => {
-    if (hasFillableNewStop) fillNewStopTimes({ blockId: block.id, travelMinutesByItemId, startsFromAnchor });
-  }, [hasFillableNewStop, fillNewStopTimes, block.id, travelMinutesByItemId, startsFromAnchor]);
+    if (hasFillableNewStop) fillNewStopTimes({ blockId: block.id, travelMinutesByItemId, chargeMinutesByItemId, startsFromAnchor });
+  }, [hasFillableNewStop, fillNewStopTimes, block.id, travelMinutesByItemId, chargeMinutesByItemId, startsFromAnchor]);
 
   function announce(text: string) {
     // Actions update the store synchronously, so this is the day the message describes.
@@ -72,15 +72,15 @@ export function useDayTimingActions(block: TripBlockData, startsFromAnchor: bool
   }
 
   function calculate() {
-    handleResult(applyDayTimes({ blockId: block.id, mode: "keep-fixed", travelMinutesByItemId, startsFromAnchor }));
+    handleResult(applyDayTimes({ blockId: block.id, mode: "keep-fixed", travelMinutesByItemId, chargeMinutesByItemId, startsFromAnchor }));
   }
 
   /** "review" when edited times would be replaced and the review dialog opens. */
   function recalculateAll(): "review" | "applied" {
-    const { replaced } = calculateDaySchedule({ stops, travelMinutesByItemId, startsFromAnchor }, "replace-all");
+    const { replaced } = calculateDaySchedule({ stops, travelMinutesByItemId, chargeMinutesByItemId, startsFromAnchor }, "replace-all");
     // Nothing the traveller set would change, so there is nothing to confirm.
     if (!replaced.length) {
-      handleResult(applyDayTimes({ blockId: block.id, mode: "replace-all", travelMinutesByItemId, startsFromAnchor, confirmedReplaced: [] }));
+      handleResult(applyDayTimes({ blockId: block.id, mode: "replace-all", travelMinutesByItemId, chargeMinutesByItemId, startsFromAnchor, confirmedReplaced: [] }));
       return "applied";
     }
     setPreview({ replaced, changed: false });
@@ -89,7 +89,7 @@ export function useDayTimingActions(block: TripBlockData, startsFromAnchor: bool
 
   function confirmRecalculateAll() {
     if (!preview) return;
-    const result = applyDayTimes({ blockId: block.id, mode: "replace-all", travelMinutesByItemId, startsFromAnchor, confirmedReplaced: preview.replaced });
+    const result = applyDayTimes({ blockId: block.id, mode: "replace-all", travelMinutesByItemId, chargeMinutesByItemId, startsFromAnchor, confirmedReplaced: preview.replaced });
     if (result.status === "preview-changed") {
       setPreview({ replaced: result.replaced, changed: true });
       return;

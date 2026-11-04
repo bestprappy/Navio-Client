@@ -22,6 +22,7 @@ type ApplyDayTimesPayload = {
   blockId: string;
   mode: DayTimingMode;
   travelMinutesByItemId: ReadonlyMap<string, number | null>;
+  chargeMinutesByItemId?: ReadonlyMap<string, number | null>;
   startsFromAnchor: boolean;
   /** For replace-all: the fixed times the traveller agreed to replace. */
   confirmedReplaced?: readonly ReplacedTime[];
@@ -52,6 +53,7 @@ export const applyDayTimesAtom = atom(null, (get, set, payload: ApplyDayTimesPay
   const schedule = calculateDaySchedule({
     stops,
     travelMinutesByItemId: payload.travelMinutesByItemId,
+    chargeMinutesByItemId: payload.chargeMinutesByItemId,
     startsFromAnchor: payload.startsFromAnchor,
   }, payload.mode);
   if (payload.mode === "replace-all" && replacementKey(schedule.replaced) !== replacementKey(payload.confirmedReplaced ?? [])) {
@@ -91,6 +93,7 @@ export const fillNewStopTimesAtom = atom(null, (get, set, payload: Omit<ApplyDay
   const { updates } = calculateDaySchedule({
     stops,
     travelMinutesByItemId: payload.travelMinutesByItemId,
+    chargeMinutesByItemId: payload.chargeMinutesByItemId,
     startsFromAnchor: payload.startsFromAnchor,
   });
   let filled = false;

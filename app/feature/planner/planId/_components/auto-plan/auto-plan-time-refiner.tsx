@@ -13,11 +13,11 @@ import { refineAutoPlanTimesAtom } from "./auto-plan.atoms";
  */
 export function AutoPlanTimeRefiner({ block, startsFromAnchor }: { block: TripBlockData; startsFromAnchor: boolean }) {
   const refine = useSetAtom(refineAutoPlanTimesAtom);
-  const { travelMinutesByItemId, isWaitingForRoutes } = useDaySchedule(block, startsFromAnchor);
+  const { travelMinutesByItemId, chargeMinutesByItemId, isWaitingForRoutes } = useDaySchedule(block, startsFromAnchor);
 
   useEffect(() => {
-    if (!isWaitingForRoutes) refine({ blockId: block.id, travelMinutesByItemId, startsFromAnchor });
-  }, [isWaitingForRoutes, refine, block.id, travelMinutesByItemId, startsFromAnchor]);
+    if (!isWaitingForRoutes) refine({ blockId: block.id, travelMinutesByItemId, chargeMinutesByItemId, startsFromAnchor });
+  }, [isWaitingForRoutes, refine, block.id, travelMinutesByItemId, chargeMinutesByItemId, startsFromAnchor]);
 
   return null;
 }

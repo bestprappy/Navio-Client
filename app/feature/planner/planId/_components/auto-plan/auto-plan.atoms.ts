@@ -108,6 +108,7 @@ export const dismissDayAutoPlanAtom = atom(null, (_get, set, blockId: string) =>
 export const refineAutoPlanTimesAtom = atom(null, (get, set, payload: {
   blockId: string;
   travelMinutesByItemId: ReadonlyMap<string, number | null>;
+  chargeMinutesByItemId?: ReadonlyMap<string, number | null>;
   startsFromAnchor: boolean;
 }): boolean => {
   const pending = get(autoPlanRefineAtom)[payload.blockId];
@@ -119,6 +120,7 @@ export const refineAutoPlanTimesAtom = atom(null, (get, set, payload: {
   const { updates } = calculateDaySchedule({
     stops: block.items.filter(isPlaceItem),
     travelMinutesByItemId: payload.travelMinutesByItemId,
+    chargeMinutesByItemId: payload.chargeMinutesByItemId,
     startsFromAnchor: payload.startsFromAnchor,
   });
   let changed = false;

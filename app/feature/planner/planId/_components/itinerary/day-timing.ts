@@ -14,6 +14,8 @@ export type DayTimingInput = {
   stops: readonly PlaceItem[];
   /** Routed travel minutes into each stop. Missing or `null` means not known. */
   travelMinutesByItemId: ReadonlyMap<string, number | null>;
+  /** Projected charging at each stop: the figure "Takes" shows. A null is a charge it could not work out. */
+  chargeMinutesByItemId?: ReadonlyMap<string, number | null>;
   /** The first stop is reached from the day's start anchor rather than starting the day. */
   startsFromAnchor: boolean;
 };
@@ -69,9 +71,11 @@ export function isFixedTime(item: PlaceItem): boolean {
   return !isEvChargerPlaceItem(item) && parseClockMinute(item.time) !== null && item.timeSource !== "calculated";
 }
 
-function visitMinutes(item: PlaceItem): number | null {
+function visitMinutes(item: PlaceItem, projected?: ReadonlyMap<string, number | null>): number | null {
   if (isEvChargerPlaceItem(item)) {
-    const charge = item.evCharger?.chargingDurationMinutes ?? item.evCharger?.estimatedChargeMinutes;
+    // A saved duration goes stale as earlier legs change, and a manual stop's is only a rough guess from
+    // station speed, so it is the fallback for when the battery on arrival is not known.
+    const charge = projected?.get(item.id) ?? item.evCharger?.chargingDurationMinutes ?? item.evCharger?.estimatedChargeMinutes;
     return charge != null && Number.isFinite(charge) && charge >= 0 ? charge : null;
   }
   const start = parseClockMinute(item.time);
@@ -96,7 +100,7 @@ function dayStartMinute(input: DayTimingInput, isFixed: (item: PlaceItem) => boo
   let needed = 0;
   for (let index = 0; index <= firstFixed; index++) {
     const travel = travelInto(input, index);
-    const visit = index < firstFixed ? visitMinutes(input.stops[index]) : 0;
+    const visit = index < firstFixed ? visitMinutes(input.stops[index], input.chargeMinutesByItemId) : 0;
     if (travel === null || visit === null) return DEFAULT_DAY_START_MINUTE;
     needed += travel + visit;
   }
@@ -142,7 +146,7 @@ export function calculateDaySchedule(input: DayTimingInput, mode: DayTimingMode 
       cursor = null;
       return;
     }
-    const visit = visitMinutes(stop);
+    const visit = visitMinutes(stop, input.chargeMinutesByItemId);
     if (visit === null) {
       issues.push({ kind: "missing-duration", itemId: stop.id, name: stop.name });
       cursor = null;
