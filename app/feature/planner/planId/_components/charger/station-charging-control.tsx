@@ -11,7 +11,7 @@ import type { EvCar } from "../constants/vehicle.types";
 import { BatteryGauge } from "../garage/battery-gauge";
 import { activeEvCarAtom, arrivalReservePctAtom } from "../garage/garage.atoms";
 import { normalizeStationTargetPct } from "../garage/ev-calculator";
-import { projectCanonicalCharging as projectChargingStop, type StopBatteryProjection as ChargingStopProjection } from "../garage/trip-energy-projection";
+import { isStationReportedClosed, projectCanonicalCharging as projectChargingStop, type StopBatteryProjection as ChargingStopProjection } from "../garage/trip-energy-projection";
 import { BATTERY_TONES, formatMinutes, getBatteryTone } from "../garage/garage-formatters";
 import { updatePlaceItemAtom } from "../overview/trip-builder.atoms";
 
@@ -116,13 +116,13 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
       )}
 
       <div id={helpId}>
-        <ChargeEstimate car={car} projection={projection} target={target} />
+        <ChargeEstimate car={car} projection={projection} target={target} closed={isStationReportedClosed(details)} />
       </div>
     </div>
   );
 }
 
-function ChargeEstimate({ car, projection, target }: { car: EvCar | null; projection: ChargingStopProjection | null; target: number }) {
+function ChargeEstimate({ car, projection, target, closed }: { car: EvCar | null; projection: ChargingStopProjection | null; target: number; closed: boolean }) {
   if (!car) {
     return <p className="text-sm text-muted-foreground">Add your EV in My garage to estimate charging time.</p>;
   }
@@ -133,7 +133,9 @@ function ChargeEstimate({ car, projection, target }: { car: EvCar | null; projec
     return (
       <p className="flex items-start gap-2 text-sm font-medium text-warning">
         <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-        {projection.reasons.includes("CONNECTOR_COMPATIBILITY_UNAVAILABLE")
+        {closed
+          ? "This station is reported closed. Replace it, or check with the station before relying on it."
+          : projection.reasons.includes("CONNECTOR_COMPATIBILITY_UNAVAILABLE")
           ? "Connector compatibility is unconfirmed. Check this station's plugs before planning a charge."
           : "None of this station's plugs fit your EV."}
       </p>

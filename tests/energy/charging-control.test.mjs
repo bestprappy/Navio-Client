@@ -59,3 +59,9 @@ test("unknown connector compatibility is explained without asserting a mismatch"
   assert.match(html, /compatibility is unconfirmed/i);
   assert.doesNotMatch(html, /None of this station|Leave with/);
 });
+
+test("a stop reported closed says so instead of asking about its plugs", () => {
+  const html = render({...details,stationStatus:"permanently_closed"}, 30);
+  assert.match(html, /reported closed/i);
+  assert.doesNotMatch(html, /compatibility is unconfirmed/i);
+});

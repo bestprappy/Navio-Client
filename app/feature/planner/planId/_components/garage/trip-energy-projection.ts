@@ -13,16 +13,27 @@ export function energyModelForCar(car: EvCar): EnergyModel {
   };
 }
 const DC = new Set(["CCS1", "CCS2", "CHADEMO", "NACS", "GB_T"]);
+export function isStationReportedClosed(details: Pick<PlaceItemEvChargerDetails, "stationStatus">): boolean {
+  return details.stationStatus === "temporarily_closed" || details.stationStatus === "permanently_closed";
+}
 export function chargingEventForCar(details: PlaceItemEvChargerDetails, car: EvCar): ChargingEvent {
   const matching = details.connectorTypes.filter(c => c !== "OTHER" && car.connectorTypes.includes(c));
   const limits = car.chargingCapabilities ?? { acKw: car.chargingLimitsKnown === true ? car.maxAcKw : null, dcKw: car.chargingLimitsKnown === true ? car.maxDcKw : null };
-  const powers = matching.map(c => DC.has(c) ? limits.dcKw : limits.acKw).filter(positive);
+  // A station's top speed may belong to a plug this car cannot use, so it only speaks for a plug
+  // when that is the one type there. Otherwise speed comes per plug, or is unknown.
+  const perPlug = details.connectorPowerKw ?? {};
+  const onlyOneType = Object.keys(perPlug).length === 0 && new Set(details.connectorTypes.filter(c => c !== "OTHER")).size === 1;
+  const powers = matching.flatMap(c => {
+    const carLimit = DC.has(c) ? limits.dcKw : limits.acKw;
+    const plug = perPlug[c] ?? (onlyOneType ? details.maxKw : null);
+    return positive(carLimit) && positive(plug) ? [Math.min(carLimit, plug)] : [];
+  });
   return {
     targetSocPct: details.targetBatteryPct ?? details.plannedDepartureSocPct ?? null,
     durationMinutes: details.chargingDurationMinutes ?? (details.estimatedChargeMinutes !== null && details.estimatedChargeMinutes >= 0 ? details.estimatedChargeMinutes : null),
     // No listed connectors means the provider did not say, which is not the same as none fitting.
-    compatible: matching.length > 0 ? true : details.connectorTypes.length === 0 || details.connectorTypes.includes("OTHER") || car.connectorTypes.includes("OTHER") ? null : false,
-    effectivePowerKw: positive(details.maxKw) && powers.length ? Math.min(details.maxKw, Math.max(...powers)) : null,
+    compatible: isStationReportedClosed(details) ? null : matching.length > 0 ? true : details.connectorTypes.length === 0 || details.connectorTypes.includes("OTHER") || car.connectorTypes.includes("OTHER") ? null : false,
+    effectivePowerKw: powers.length ? Math.max(...powers) : null,
   };
 }
 export type StopBatteryProjection = EnergyResult & {

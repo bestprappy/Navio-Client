@@ -109,3 +109,28 @@ test("the route estimate names the unchecked day and never reports it as checked
   assert.match(html, /Day 2 doesn(&#x27;|')t start where the day before it ends, so its charge wasn(&#x27;|')t checked/);
   assert.doesNotMatch(html, /prediction unavailable/i);
 });
+
+const plugCar = { connectorTypes:["TYPE2"], chargingCapabilities:{acKw:43,dcKw:null} };
+const mixedStation = power => ({ connectorTypes:["CCS2","TYPE2"], maxKw:150, estimatedChargeMinutes:null, connectorPowerKw:power });
+
+test("charging speed comes from the plug that fits, not the station's fastest plug", () => {
+  assert.equal(projection.chargingEventForCar(mixedStation({ CCS2:150, TYPE2:22 }), plugCar).effectivePowerKw, 22);
+});
+
+test("a multi-plug stop saved without per-plug speeds is unknown rather than another plug's speed", () => {
+  assert.equal(projection.chargingEventForCar(mixedStation(undefined), plugCar).effectivePowerKw, null);
+  assert.equal(projection.chargingEventForCar(mixedStation({ CCS2:150 }), plugCar).effectivePowerKw, null);
+});
+
+test("a stop with one plug type can still use the station's top speed", () => {
+  const station = { connectorTypes:["TYPE2"], maxKw:22, estimatedChargeMinutes:null };
+  assert.equal(projection.chargingEventForCar(station, plugCar).effectivePowerKw, 22);
+});
+
+test("a stop reported closed gives no confirmed charge", () => {
+  const station = { connectorTypes:["TYPE2"], maxKw:22, estimatedChargeMinutes:null, targetBatteryPct:80, stationStatus:"temporarily_closed" };
+  assert.equal(projection.chargingEventForCar(station, plugCar).compatible, null);
+  assert.equal(projection.isStationReportedClosed(station), true);
+  assert.equal(projection.isStationReportedClosed({ ...station, stationStatus:"active" }), false);
+  assert.equal(projection.isStationReportedClosed({ ...station, stationStatus:undefined }), false);
+});

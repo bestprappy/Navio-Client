@@ -707,7 +707,11 @@ function isEvCharger(value: unknown): value is PlaceItemEvChargerDetails {
     (value.selectionSource === undefined ||
       value.selectionSource === "AUTO" ||
       value.selectionSource === "MANUAL") &&
-    isOptionalBoolean(value.locked)
+    isOptionalBoolean(value.locked) &&
+    (value.connectorPowerKw == null || (isRecord(value.connectorPowerKw) && Object.entries(value.connectorPowerKw).every(([plug, kw]) => isEvConnectorType(plug) && typeof kw === "number" && Number.isFinite(kw) && kw > 0))) &&
+    (value.stationStatus == null || value.stationStatus === "active" || value.stationStatus === "temporarily_closed" || value.stationStatus === "permanently_closed" || value.stationStatus === "unknown") &&
+    (value.statusSource == null || typeof value.statusSource === "string") &&
+    (value.statusCheckedAt == null || typeof value.statusCheckedAt === "string")
   );
 }
 

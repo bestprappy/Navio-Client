@@ -83,6 +83,9 @@ export type EvCharger = {
   confidenceScore: number;
   stale: boolean;
   imageUrl?: string | null;
+  /** Each plug's own top speed where the provider gives one. */
+  connectorPowerKw?: Partial<Record<EvConnectorType, number>>;
+  statusCheckedAt?: string | null;
 };
 
 export type EvChargerList = {
@@ -109,6 +112,10 @@ export type PlaceItemEvChargerDetails = {
   operatorName: string | null;
   selectionSource?: "AUTO" | "MANUAL";
   locked?: boolean;
+  connectorPowerKw?: Partial<Record<EvConnectorType, number>> | null;
+  stationStatus?: EvChargerStatus | null;
+  statusSource?: string | null;
+  statusCheckedAt?: string | null;
 };
 
 export type GetEvChargersNearParams = {

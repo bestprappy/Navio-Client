@@ -364,6 +364,10 @@ function evChargerToPlaceItem(
       operatorName: charger.operatorName,
       selectionSource,
       locked,
+      connectorPowerKw: charger.connectorPowerKw ?? null,
+      stationStatus: charger.status,
+      statusSource: charger.source,
+      statusCheckedAt: charger.statusCheckedAt ?? null,
     },
     isVisited: false,
   };
