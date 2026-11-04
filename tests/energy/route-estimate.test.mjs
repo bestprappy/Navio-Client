@@ -73,3 +73,39 @@ test("operations from different legs with the same sequence keep distinct list k
   ];
   assert.equal(new Set(operations.map(optimizationFormat.operationKey)).size, 3);
 });
+
+const gapCar = { connectorTypes:["CCS2"], chargingCapabilities:{acKw:7,dcKw:50}, energyProfile:{ modelKind:"RATED_RANGE", ratedRangeKm:100, consumptionKwhPer100km:null, usableBatteryCapacityKwh:null } };
+const gapStop = (id, lng, observed) => ({ type:"place", id, placeId:id, name:id, address:"", lat:13, lng, observedSocCheckpoint:observed });
+const gapDays = (dayTwoStart, observed) => [
+  { id:"d1", kind:"itinerary", date:"2026-09-01", title:"", colorId:"mint", items:[gapStop("a",100), gapStop("b",101)] },
+  { id:"d2", kind:"itinerary", date:"2026-09-02", title:"", colorId:"mint", items:[gapStop("c",dayTwoStart,observed), gapStop("d",106)] },
+];
+const gapSegments = [
+  { blockId:"d1", fromItemId:"a", toItemId:"b", distanceMeters:60000, status:"routed" },
+  { blockId:"d2", fromItemId:"c", toItemId:"d", distanceMeters:30000, status:"routed" },
+];
+
+test("a disconnected day is marked unchecked and no battery crosses the gap", () => {
+  const day = projection.projectCanonicalTrip(gapDays(105), gapSegments, gapCar, 80).days.get("d2");
+  assert.equal(day.startDisconnected, true);
+  assert.equal(day.finalBatteryPct, null);
+});
+
+test("the unchecked mark derives from the itinerary, so connecting the day rechecks the earlier plan", () => {
+  // 80% less 60 km leaves 20%; connected, the next 30 km arrives at -10%, which only shows once the gap is gone.
+  const day = projection.projectCanonicalTrip(gapDays(101), gapSegments, gapCar, 80).days.get("d2");
+  assert.equal(day.startDisconnected, false);
+  assert.equal(day.infeasible, true);
+});
+
+test("a reading at the first stop gives a disconnected day its own starting charge", () => {
+  const day = projection.projectCanonicalTrip(gapDays(105, { socPct:50 }), gapSegments, gapCar, 80).days.get("d2");
+  assert.equal(day.startDisconnected, false);
+  assert.equal(day.finalBatteryPct, 20);
+});
+
+test("the route estimate names the unchecked day and never reports it as checked or merely unavailable", () => {
+  const html = render({ startDisconnected:true, dayNumber:2, startBatteryPct:null, endBatteryPct:null });
+  assert.match(html, /Day 2 doesn(&#x27;|')t start where the day before it ends, so its charge wasn(&#x27;|')t checked/);
+  assert.doesNotMatch(html, /prediction unavailable/i);
+});

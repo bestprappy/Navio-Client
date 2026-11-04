@@ -14,6 +14,9 @@ import { BATTERY_TONES, formatDistanceKm, formatMinutes, getBatteryTone } from "
 type RouteEstimateProps = {
   predictedBelowReserve?: boolean;
   infeasible?: boolean;
+  /** Derived from the current itinerary, so it clears and rechecks as soon as the day is connected. */
+  startDisconnected?: boolean;
+  dayNumber?: number;
   startBatteryPct: number | null;
   endBatteryPct: number | null;
   distanceKm: number | null;
@@ -34,6 +37,8 @@ function clampPct(value: number | null): number | null {
 export function RouteEstimate({
   predictedBelowReserve = false,
   infeasible = false,
+  startDisconnected = false,
+  dayNumber,
   startBatteryPct,
   endBatteryPct,
   distanceKm,
@@ -108,6 +113,13 @@ export function RouteEstimate({
           </p>
         ) : null}
 
+        {startDisconnected ? (
+          <p className="mt-3 flex items-start gap-2 rounded-sm bg-warning/10 px-2.5 py-2 text-xs leading-relaxed text-warning">
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+            <span>{dayNumber ? `Day ${dayNumber}` : "This day"} doesn&apos;t start where the day before it ends, so its charge wasn&apos;t checked. Set where it starts, or record the battery level at its first stop.</span>
+          </p>
+        ) : null}
+
         {alert ? (
           <p role="alert" className="mt-3 flex items-start gap-2 rounded-sm bg-destructive/10 px-2.5 py-2 text-xs leading-relaxed text-destructive">
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
@@ -117,7 +129,7 @@ export function RouteEstimate({
 
         {showChart ? (
           <BatteryRouteChart className="mt-4" points={profile} reservePct={reservePct} />
-        ) : infeasible ? null : endPct === null ? <p className="mt-3 text-sm text-muted-foreground">Battery prediction unavailable</p> : (
+        ) : infeasible || startDisconnected ? null : endPct === null ? <p className="mt-3 text-sm text-muted-foreground">Battery prediction unavailable</p> : (
           <>
             <div
               className="relative mt-4 h-2 rounded-full bg-muted ring-1 ring-border ring-inset"

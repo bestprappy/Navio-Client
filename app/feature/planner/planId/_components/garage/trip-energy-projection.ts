@@ -45,6 +45,8 @@ export type CanonicalDayProjection = {
   profile: DayBatteryPoint[];
   startBatteryPct: number | null; finalBatteryPct: number | null;
   predictedBelowReserve: boolean; infeasible: boolean;
+  /** Starts away from where the previous day ended, with no reading to give it a charge of its own. */
+  startDisconnected: boolean;
   distanceKm: number | null; energyKwh: number | null; chargeMinutes: number | null;
   chargeEnergyKwh: number | null; compatibleStops: number; incompatibleStops: number;
   batteryByItemId: Map<string, StopBatteryProjection>;
@@ -58,6 +60,7 @@ export function projectCanonicalTrip(blocks: TripBlockData[], segments: RouteSeg
   const anchors = resolveDayAnchors(blocks);
   const byEndpoints = new Map(segments.map(s => [`${s.blockId}:${s.fromItemId}:${s.toItemId}`, s]));
   const events: EnergyStop[] = [];
+  const disconnectedDayIds = new Set<string>();
   let previousPosition: {lat:number;lng:number} | undefined;
   for (const day of days) {
     const items = new Map(day.items.filter(isPlaceItem).map(i => [i.id, i]));
@@ -73,6 +76,7 @@ export function projectCanonicalTrip(blocks: TripBlockData[], segments: RouteSeg
       const segment=index ? byEndpoints.get(`${day.id}:${points[index-1].id}:${point.id}`) : undefined;
       const discontinuity=index===0 && previousPosition && (Math.abs(previousPosition.lat-point.lat)>1e-6 || Math.abs(previousPosition.lng-point.lng)>1e-6);
       // A train or walking leg moves the traveller, not the car: it costs the battery nothing.
+      if(discontinuity && items.get(point.id)?.observedSocCheckpoint?.socPct==null) disconnectedDayIds.add(day.id);
       const carless=index>0 && !!segment && getSegmentTravelMode(segment)!=="drive";
       const distanceKm=carless || (index===0 && !discontinuity) ? 0 : segment?.distanceMeters == null ? null : segment.distanceMeters/1000;
       events.push({ id:point.id,dayId:day.id,distanceKm,distanceQuality:distanceKm===null ? "UNAVAILABLE" : !carless && segment?.status==="fallback" ? "FALLBACK" : "ROUTED",
@@ -98,6 +102,7 @@ export function projectCanonicalTrip(blocks: TripBlockData[], segments: RouteSeg
     }
     projections.set(day.id,{profile,startBatteryPct:start,finalBatteryPct:forward,
       predictedBelowReserve:states.some(r=>r.predictedArrivalReserveStatus==="BELOW_RESERVE"),infeasible:states.some(r=>r.predictedLegFeasibility==="INFEASIBLE"),
+      startDisconnected:disconnectedDayIds.has(day.id),
       distanceKm:sum(dayEvents.map(e=>e.distanceKm)),energyKwh:sum(states.map(r=>r.nominalEnergyKwh)),
       chargeEnergyKwh:sum(states.map(r=>r.chargeEnergyKwh)),chargeMinutes:sum(states.map(r=>r.nominalChargeMinutes)),
       compatibleStops:dayEvents.filter(e=>e.charging?.compatible===true).length,incompatibleStops:dayEvents.filter(e=>e.charging?.compatible===false).length,

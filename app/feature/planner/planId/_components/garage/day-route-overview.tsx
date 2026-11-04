@@ -61,6 +61,8 @@ export function DayRouteOverview({ blockId, blockIndex }: DayRouteOverviewProps)
       <RouteEstimate
         predictedBelowReserve={chargeStats.predictedBelowReserve}
         infeasible={chargeStats.infeasible}
+        startDisconnected={chargeStats.startDisconnected}
+        dayNumber={blockIndex + 1}
         startBatteryPct={batteryAtDayStart}
         endBatteryPct={batteryEndPct}
         distanceKm={chargeStats.distanceKm}
