@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SharedPlanCard } from "../shared-plan-card";
 import { ExplorePlansError, type ExplorePlan } from "../explore-plans-api";
+import {DiscoverySections} from "./discovery-sections";
 import { PlanSearchControls } from "./search-controls";
 import { requestText, synchronizeDraft } from "./search-draft";
 import { fetchPlanSearch } from "./search-api";
 import { groupPlanSearchPages,currentSearchAssist,planSearchPresentation,usefulSearchAlternatives,nextPlanSearchPage } from "./search-results";
 import {AlternativeSearches,SearchEmptyState} from './search-empty-state';
-import { durationDays, emptyPlanSearch, hasPlanSearch, parsePlanSearch, planSearchParams, type PlanSearchState } from "./search-state";
+import { durationDays, planSorts, emptyPlanSearch, hasPlanSearch, parsePlanSearch, planSearchParams, type PlanSearchState } from "./search-state";
 
 const grid="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3";
 function Cards({plans,reasons={}}:{plans:ExplorePlan[];reasons?:Record<string,string>}) {
@@ -22,7 +23,7 @@ function Cards({plans,reasons={}}:{plans:ExplorePlan[];reasons?:Record<string,st
  </div>)}</div>;
 }
 function Loading(){return <div role="status" aria-label="Searching shared plans" className={grid}>{[0,1,2].map(i=><div key={i} className="overflow-hidden rounded-2xl border border-border/60 bg-card"><Skeleton className="aspect-video rounded-none"/><div className="space-y-3 p-5"><Skeleton className="h-6 w-4/5"/><Skeleton className="h-4 w-2/3"/><Skeleton className="h-4 w-1/2"/></div></div>)}</div>;}
-export function SharedPlanSearch({children,knownPlans=[]}:{children:ReactNode;knownPlans?:ExplorePlan[]}) {
+export function SharedPlanSearch({knownPlans=[]}:{children?:ReactNode;knownPlans?:ExplorePlan[]}) {
  const queryClient=useQueryClient();
  const [catalogueNotice,setCatalogueNotice]=useState('');
  const params=useSearchParams(),serialized=params.toString();
@@ -75,11 +76,11 @@ export function SharedPlanSearch({children,knownPlans=[]}:{children:ReactNode;kn
  useEffect(()=>{if(search.isError&&search.error instanceof ExplorePlansError&&search.error.status===409){void queryClient.resetQueries({queryKey:['explore-plan-search',state],exact:true}).then(()=>setCatalogueNotice('Published plans have changed. Your results have been refreshed.'));}},[search.isError,search.error,queryClient,state]);
  return <div className="space-y-8 sm:space-y-10">
   <PlanSearchControls knownPlans={knownPlans} suggestionsUnavailable={search.isError} state={state} draft={draft} onDraft={setDraft} onChange={update} onSubmit={()=>update({...state,query:requestText(draft)})} onComposition={setComposing} suggestions={first} isUpdating={pendingInput||search.isFetching&&!search.isFetchingNextPage}/>
-  {!active?children:<div className="space-y-8 border-t border-border/60 pt-7 sm:space-y-10">
+  {!active?<DiscoverySections state={state}/>:<div className="space-y-8 border-t border-border/60 pt-7 sm:space-y-10">
    <div className="flex flex-wrap items-center justify-between gap-3">
     <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{pendingInput||search.isPending?"Searching shared plans…":first?`${matchingTotal} matching ${matchingTotal===1?"plan":"plans"}${textSearch?` · ${relatedTotal} relevant`:""}`:"Search shared plans"}</p>
     <div className="flex items-center gap-3">
-     <label className="flex items-center gap-2 text-xs text-muted-foreground">Sort by<select className="h-9 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-ring" value={state.sort} onChange={e=>update({...state,sort:e.target.value as PlanSearchState["sort"]})}><option value="relevance">Relevance</option><option value="recent">Recently shared</option><option value="trending">Most viewed</option></select></label>
+     <label className="flex items-center gap-2 text-xs text-muted-foreground">Sort by<select className="h-9 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-ring" value={state.sort} onChange={e=>update({...state,sort:e.target.value as PlanSearchState["sort"]})}>{planSorts.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
      <Button size="sm" variant="ghost" className="text-xs" onClick={clear}>Clear all</Button>
     </div>
    </div>
@@ -89,8 +90,8 @@ export function SharedPlanSearch({children,knownPlans=[]}:{children:ReactNode;kn
     :<>
      {first?.correction&&<p className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">Suggested wording:<Button variant="link" size="sm" className="h-auto px-1" onClick={()=>{setDraft(first.correction!);update({...state,query:first.correction!});}}>{first.correction}</Button></p>}
      {catalogueNotice&&<p className="text-sm text-muted-foreground">{catalogueNotice}</p>}
-     {assist?.blocked?<section className="rounded-2xl border border-border/70 bg-card p-6"><h2 className="text-lg font-semibold">Review your search</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">{first?.notice}</p><div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" onClick={edit}>Edit search</Button>{(state.country||state.duration)&&<Button variant="outline" onClick={()=>update({...state,country:'',duration:''})}>Clear filters</Button>}</div></section>
-     :presentation==='empty'?<SearchEmptyState query={state.query} hasFilters={!!(state.country||state.duration)} onEdit={edit} onClearFilters={()=>update({...state,country:'',duration:''})} onBrowse={clear}/>
+     {assist?.blocked?<section className="rounded-2xl border border-border/70 bg-card p-6"><h2 className="text-lg font-semibold">Review your search</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">{first?.notice}</p><div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" onClick={edit}>Edit search</Button>{(state.country||state.duration)&&<Button variant="outline" onClick={()=>update({...state,country:'',duration:'',collections:[],themes:[]})}>Clear filters</Button>}</div></section>
+     :presentation==='empty'?<SearchEmptyState query={state.query} hasFilters={!!(state.country||state.duration||state.collections?.length||state.themes?.length)} onEdit={edit} onClearFilters={()=>update({...state,country:'',duration:'',collections:[],themes:[]})} onBrowse={clear}/>
      :presentation==='alternatives'?<section className="rounded-2xl border border-border/70 bg-card px-5 py-6"><h2 className="text-xl font-semibold">Matching and relevant plans</h2><p className="mt-3 text-sm font-medium">No matching or relevant plans found.</p><p className="mt-1 text-sm text-muted-foreground">Explore an alternative search below.</p></section>:<section className="space-y-5" aria-labelledby="plan-matching-results">
       <div><h2 id="plan-matching-results" className="text-xl font-semibold tracking-tight">{textSearch?"Matching plans":"Search results"}</h2><p className="mt-1 text-sm text-muted-foreground">{textSearch?"The closest matches for your destination and travel interests.":"Shared plans matching your filters."}</p></div>
       {matching.length?<Cards plans={matching}/>:<div className="rounded-2xl border border-border/60 bg-card px-5 py-6 text-sm"><p className="font-medium">No matching plans found.</p><p className="mt-1 text-muted-foreground">{related.length?"You may find a useful alternative in the relevant plans below.":"Try a broader phrase or adjust your filters."}</p></div>}

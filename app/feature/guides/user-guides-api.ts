@@ -78,10 +78,10 @@ export const discoverGuides = (filter: GuideDiscoveryFilter, page = 0) =>
     `${PUBLIC}?${guideSearchParams(filter, page)}`,
     pageOf(publishedSummarySchema),
   );
-export async function readTravelerGuide(id: string) {
+export async function readTravelerGuide(id: string, source: "TRAVELER"|"CURATED"="TRAVELER") {
   const entry = await guideRequest(
-    `${PUBLIC}/${encodeURIComponent(id)}`,
-    publishedDetailSchema,
+    source==="CURATED"?`/api/guides/${encodeURIComponent(id)}`:`${PUBLIC}/${encodeURIComponent(id)}`,
+    source==="CURATED"?publishedDetailSchema.extend({author:authorSchema.default({displayName:"Navio"}),publishedAt:z.string().nullable().transform(value=>value??"")}):publishedDetailSchema,
   );
   return {
     guide: {

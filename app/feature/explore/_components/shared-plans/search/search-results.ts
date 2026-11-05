@@ -1,4 +1,6 @@
 import type { ExplorePlan } from '../explore-plans-api';
+import {ExplorePlansError} from '../explore-plans-api';
+export function shouldRefreshDiscovery(error:unknown){return error instanceof ExplorePlansError&&error.status===409;}
 import type { PlanSearchPage,SearchAssist } from './search-api';
 export function groupPlanSearchPages(pages: Partial<PlanSearchPage>[]) {
  const unique=(plans:ExplorePlan[])=>[...new Map(plans.map(plan=>[plan.token,plan])).values()];

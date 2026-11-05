@@ -6,6 +6,7 @@ import { useAtomValue, useSetAtom, useStore } from "jotai";
 
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
+import {SaveButton} from "@/app/feature/saved/save-button";
 import { Separator } from "@/components/ui/separator";
 
 import { tripBlocksAtom } from "../overview/trip-builder.atoms";
@@ -89,6 +90,7 @@ export function GuideBrowserPanel() {
         <p className="min-w-0 truncate text-xs text-muted-foreground">
           Adding to <span className="font-medium text-foreground">{dayLabel}</span>
         </p>
+          {/^[0-9a-f-]{36}$/i.test(guide.id)&&<SaveButton guide={{id:guide.id,source:"CURATED"}} trackOpen/>}
       </div>
 
       <article aria-labelledby="guide-title">

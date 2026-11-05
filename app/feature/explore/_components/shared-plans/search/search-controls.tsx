@@ -1,16 +1,16 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CalendarDays, ChevronDown, Globe2, MapPin, Route, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, CalendarDays, Globe2, MapPin, Route, Search, X } from "lucide-react";
 import { CountrySelect } from "../../../places/search-controls";
 import { countries } from "../../../places/search-state";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {PlanFilters,collectionOptions,themeOptions} from "./plan-filters";
 import { Button } from "@/components/ui/button";
 import { explorePlanPath, type ExplorePlan } from "../explore-plans-api";
 import { buildPlanSuggestions, knownPlanSuggestions,completePlanDestination } from "./search-suggestions";
 import {currentSearchAssist} from './search-results';
 import type { PlanSearchPage } from "./search-api";
-import { durationDays, type DurationUnit, type PlanSearchState } from "./search-state";
+import { hasPlanSearch, durationDays, emptyPlanSearch, planSorts, type DurationUnit, type PlanSearchState } from "./search-state";
 
 const control="flex h-11 w-full min-w-0 items-center gap-2 rounded-xl border border-border/70 bg-card px-3 text-sm outline-none transition-colors hover:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring";
 function Highlight({text,query}:{text:string;query:string}) {
@@ -79,11 +79,12 @@ export function PlanSearchControls({knownPlans=[],suggestionsUnavailable=false,s
      <button type="button" onClick={()=>{setOpen(false);setActive(-1);onSubmit();}} className="flex min-h-11 w-full items-center gap-3 border-t border-border/60 px-4 py-3 text-left text-sm hover:bg-muted/60"><Search className="size-4 shrink-0"/><span className="truncate">Search for {"\u201c"}{draft.trim()}{"\u201d"}</span></button>
     </div>}
    </div>
-   <div><span className="mb-2 block text-xs font-medium text-muted-foreground">Interests</span><Popover><PopoverTrigger className={control}><SlidersHorizontal className="size-4 shrink-0 text-muted-foreground"/><span>Filters</span><ChevronDown className="ml-auto size-3.5 text-muted-foreground"/></PopoverTrigger><PopoverContent align="end" className="w-72 rounded-2xl p-4"><p className="text-sm font-medium">Keyword filters</p><p className="mt-1 text-xs leading-5 text-muted-foreground">A preview of upcoming filters. These do not change results yet.</p><div className="mt-3 flex flex-wrap gap-2" aria-label="Filter design preview">{["Food & culture","Scenic routes","EV trips","City breaks"].map(label=><span key={label} aria-disabled="true" className="rounded-full border border-dashed border-border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">{label}</span>)}</div></PopoverContent></Popover></div>
+   <PlanFilters state={state} onChange={onChange}/>
    <div><label htmlFor={`${id}-duration`} className="mb-2 block text-xs font-medium text-muted-foreground">Trip duration</label><div className={`${control} pr-1 ${durationInvalid?"border-destructive":""}`}><CalendarDays className="size-4 shrink-0 text-muted-foreground"/><input id={`${id}-duration`} aria-describedby={`${id}-duration-help`} aria-invalid={durationInvalid} inputMode="numeric" maxLength={8} value={state.duration} onChange={event=>onChange({...state,duration:event.target.value})} placeholder="Any" className="h-full min-w-0 flex-1 bg-transparent outline-none"/><select aria-label="Duration unit" className="h-9 max-w-24 rounded-lg border-0 bg-muted/50 px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring" value={state.unit} onChange={event=>onChange({...state,unit:event.target.value as DurationUnit})}><option value="days">Days</option><option value="months">Months</option><option value="years">Years</option></select></div>
     <p id={`${id}-duration-help`} className={`mt-1.5 text-[11px] leading-4 ${durationInvalid?"text-destructive":"text-muted-foreground"}`}>{durationInvalid?"Enter a whole duration between 1 and 36,500 days.":state.unit==="days"?"Match the exact number of itinerary days.":state.unit==="months"?"1 month = 30 itinerary days.":"1 year = 365 itinerary days."}</p>
    </div>
   </div>
-  {(state.country||state.duration)&&<div className="flex flex-wrap gap-2 text-xs">{countryName&&<Button variant="outline" size="sm" className="h-8 text-xs" onClick={()=>onChange({...state,country:""})}>{countryName}<X className="size-3"/><span className="sr-only">Remove country filter</span></Button>}{state.duration&&<Button variant="outline" size="sm" className="h-8 text-xs" onClick={()=>onChange({...state,duration:""})}>{state.duration} {state.unit}<X className="size-3"/><span className="sr-only">Remove duration filter</span></Button>}</div>}
+  {(state.country||state.duration||state.collections?.length||state.themes?.length||state.sort!=="relevance")&&<div className="flex flex-wrap items-center gap-2 text-xs">{state.sort!=="relevance"&&<span className="px-2 text-muted-foreground">Sorted by: {planSorts.find(([value])=>value===state.sort)?.[1]}</span>}{([...[...collectionOptions].map(([value,label])=>({key:"collections" as const,value,label})),...[...themeOptions].map(([value,label])=>({key:"themes" as const,value,label}))]).filter(option=>(state[option.key]??[]).includes(option.value)).map(option=><Button key={option.value} variant="outline" size="sm" className="h-8 text-xs" onClick={()=>onChange({...state,[option.key]:(state[option.key]??[]).filter(value=>value!==option.value)})}>{option.label}<X className="size-3"/><span className="sr-only">Remove filter</span></Button>)}{countryName&&<Button variant="outline" size="sm" className="h-8 text-xs" onClick={()=>onChange({...state,country:""})}>{countryName}<X className="size-3"/><span className="sr-only">Remove country filter</span></Button>}{state.duration&&<Button variant="outline" size="sm" className="h-8 text-xs" onClick={()=>onChange({...state,duration:""})}>{state.duration} {state.unit}<X className="size-3"/><span className="sr-only">Remove duration filter</span></Button>}</div>}
+  {!hasPlanSearch(state)&&(state.country||state.duration||state.collections?.length||state.sort!=="relevance")&&<Button variant="ghost" size="sm" className="h-8 text-xs" onClick={()=>onChange({...emptyPlanSearch})}>Clear all</Button>}
  </div>;
 }

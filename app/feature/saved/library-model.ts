@@ -1,4 +1,11 @@
 export const savedTabs = ['recents','all','plans','guides','places','trash'] as const;
+export type GuideBookmark={id:string;source:'TRAVELER'|'CURATED'};
+export function guideIdentity(id:string,source:GuideBookmark['source']){return `guide:${source.toLowerCase()}:${id}`;}
+export function savedGuidePath(identity:string){
+ const match=/^guide:(traveler|curated):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(identity);
+ if(!match)throw new Error('This saved guide is unavailable.');
+ return `/explore/guides/${match[2]}${match[1].toLowerCase()==='curated'?'?source=curated':''}`;
+}
 export function clampSavedPage(page:number,total:number){return Math.min(page,Math.max(0,Math.ceil(total/24)-1));}
 export type SavedTab=typeof savedTabs[number];
 export type SavedSearch={tab:SavedTab;search:string;sort:'NEWEST'|'OLDEST'|'NAME'|'OPENED';page:number;country:string;city:string;source:string;category:string;savedAfter:string;openedAfter:string};

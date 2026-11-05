@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import {SaveButton} from "../saved/save-button";
 import { useSetAtom } from "jotai";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ExternalLink } from "lucide-react";
@@ -26,10 +27,10 @@ import { readTravelerGuide, travelerGuideKeys } from "./user-guides-api";
 import { GuideAuthor } from "./guide-author";
 import { GuideReadingHero } from "./guide-reading-hero";
 
-export function GuideReader({ guideId }: { guideId: string }) {
+export function GuideReader({ guideId,source="TRAVELER" }: { guideId: string;source?:"TRAVELER"|"CURATED" }) {
   const result = useQuery({
-    queryKey: [...travelerGuideKeys, "detail", guideId],
-    queryFn: () => readTravelerGuide(guideId),
+    queryKey: [...travelerGuideKeys, "detail", guideId,source],
+    queryFn: () => readTravelerGuide(guideId,source),
     staleTime: 0,
   });
   if (result.isPending)
@@ -62,12 +63,12 @@ export function GuideReader({ guideId }: { guideId: string }) {
         </div>
       </div>
     );
-  return <LoadedGuideReader key={result.data.guide.id} {...result.data} />;
+  return <LoadedGuideReader key={`${source}:${result.data.guide.id}`} source={source} {...result.data} />;
 }
 function LoadedGuideReader({
   guide,
-  author,
-}: Awaited<ReturnType<typeof readTravelerGuide>>) {
+  author,source,
+}: Awaited<ReturnType<typeof readTravelerGuide>> & {source:"TRAVELER"|"CURATED"}) {
   const blocks = useMemo(() => guideReadingBlocks(guide), [guide]);
   const places = useMemo(
     () => blocks.filter((block) => block.kind === "place"),
@@ -104,7 +105,7 @@ function LoadedGuideReader({
             </Link>
             <p className="min-w-0 truncate text-sm text-muted-foreground">
               {guide.name}
-            </p>
+            </p><div className="ml-auto shrink-0"><SaveButton guide={{id:guide.id,source}} trackOpen/></div>
           </div>
           <article aria-labelledby="guide-title" className="min-w-0 pb-16">
             <GuideReadingHero

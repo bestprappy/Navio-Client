@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {SaveButton} from "../saved/save-button";
 import { BookOpen, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GuideCoverPhoto } from "../admin/_components/guides/guide-cover-photo";
@@ -19,7 +20,7 @@ export function TravelerGuideCard({
   const isPlanner = layout === "planner";
 
   return (
-    <Link
+    <article className="relative h-full min-w-0"><Link
       href={`/explore/guides/${guide.id}`}
       className={cn(
         "group flex h-full min-w-0 flex-col outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
@@ -66,7 +67,7 @@ export function TravelerGuideCard({
           </span>
         </div>
       </div>
-    </Link>
+    </Link><div className="absolute right-3 top-3"><SaveButton guide={{id:guide.id,source:"TRAVELER"}}/></div></article>
   );
 }
 

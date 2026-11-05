@@ -19,8 +19,10 @@ export const planSearchPageSchema = z.object({
 });
 export type PlanSearchPage = z.infer<typeof planSearchPageSchema>;
 export type PlanDestinationSuggestion = PlanSearchPage["destinations"][number];
-export async function fetchPlanSearch(state: PlanSearchState, page: number, signal?: AbortSignal,catalogueRevision?:string): Promise<PlanSearchPage> {
- const params=new URLSearchParams({term:state.query.trim(),country:state.country,page:String(page),size:"12",sort:state.sort});
+export async function fetchPlanSearch(state: PlanSearchState, page: number, signal?: AbortSignal,catalogueRevision?:string,pageSize=12): Promise<PlanSearchPage> {
+ const params=new URLSearchParams({term:state.query.trim(),country:state.country,page:String(page),size:String(pageSize),sort:state.sort});
+ if(state.collections?.length)params.set('collections',state.collections.join(','));
+ if(state.themes?.length)params.set('themes',state.themes.join(','));
  const days=durationDays(state.duration,state.unit);if(days!==null) params.set("days",String(days));
  if(page>0&&catalogueRevision)params.set('catalogueRevision',catalogueRevision);
  const response=await fetch(`/api/shared-plans/search?${params}`,{signal,cache:"no-store",headers:{Accept:"application/json"}});
