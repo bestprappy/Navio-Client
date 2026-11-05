@@ -13,7 +13,7 @@ export function durationDays(value: string, unit: DurationUnit): number | null {
 export function parsePlanSearch(params: URLSearchParams): PlanSearchState {
  const country = (params.get("planCountry") || "").toUpperCase();
  const unit = params.get("planDurationUnit"); const sort = params.get("planSort");
- return { query: (params.get("planQuery") ?? (params.get("tab") !== "guides" && params.get("tab") !== "places" ? params.get("term") : "") ?? "").slice(0,100),
+ return { query: (params.get("planQuery") ?? (params.get("tab") !== "guides" && params.get("tab") !== "places" ? params.get("term") : "") ?? ""),
  country: countries.some(c => c.code === country) ? country : "", duration: (params.get("planDuration") || "").slice(0,8),
  unit: unit === "months" || unit === "years" ? unit : "days", sort: sort === "recent" || sort === "trending" ? sort : "relevance" };
 }

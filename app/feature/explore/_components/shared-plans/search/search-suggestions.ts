@@ -74,3 +74,13 @@ export function knownPlanSuggestions(text:string,state:PlanSearchState,plans:Exp
  return {matching:matching.sort(rank).slice(0,4),related:related.sort(rank).slice(0,4)};
 }
 export function matchKnownPlans(text:string,state:PlanSearchState,plans:ExplorePlan[]){return knownPlanSuggestions(text,state,plans).matching;}
+/** Complete only the destination fragment; never discard event/activity modifiers. */
+export function completePlanDestination(text:string,label:string){
+ if(mentions(text,label))return text;
+ const parts=text.trimEnd().split(/\s+/),name=normalizeTravelText(label);
+ for(let start=0;start<parts.length;start++){
+  const fragment=normalizeTravelText(parts.slice(start).join(' '));
+  if(fragment.length>=2&&name.startsWith(fragment))return [...parts.slice(0,start),label].join(' ');
+ }
+ return text.trim()?text:label;
+}
