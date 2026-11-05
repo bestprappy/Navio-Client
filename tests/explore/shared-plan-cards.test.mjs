@@ -54,6 +54,13 @@ const { SharedPlansSection }=await import("../../app/feature/explore/_components
 const { TRENDING_PAGE_SIZE }=await import("../../app/feature/explore/_components/shared-plans/explore-plans-api.ts");
 const { planCoverReference }=await import("../../app/feature/explore/_components/shared-plans/plan-cover.tsx");
 const { PlanEngagement }=await import("../../app/feature/explore/_components/shared-plans/plan-engagement.tsx");
+
+test('cards show real rating aggregates and never fabricate a rated state',()=>{
+ const html=renderToStaticMarkup(React.createElement(PlanEngagement,{ratingAverage:4.25,ratingCount:8}));
+ assert.match(html,/4.3 \(8\)/);assert.doesNotMatch(html,/Not rated yet/);
+ const empty=renderToStaticMarkup(React.createElement(PlanEngagement,{ratingAverage:null,ratingCount:0}));
+ assert.match(empty,/Not rated yet/);
+});
 test("Trending renders six real cards and a load-more control",()=>{
  const plans=Array.from({length:6},(_,index)=>explorePlanSchema.parse({...raw,token:`plan-${index}`}));
  const html=renderToStaticMarkup(React.createElement(SharedPlansSection,{kind:"trending",plans,total:31,isLoading:false,isError:false,isFetchingMore:false,hasMore:true,loadMoreFailed:false,onLoadMore(){},onRetry(){}}));
@@ -76,7 +83,7 @@ test("detail distinguishes successful copies from distinct travelers",()=>{
 test("public detail reads only valid aggregate counts and drops engagement for unlisted links", async()=>{
  const {readSharedPlanResponse}=await import("../../app/feature/planner/_components/share/publication-api.ts");
  const response={plan:{sanitizerVersion:1,dayCount:1,days:[]},listedInExplore:true,engagement:{viewCount:12,copyCount:8,uniqueCopierCount:3,privateCopierIds:["never public"]}};
- assert.deepEqual(readSharedPlanResponse(response).engagement,{viewCount:12,copyCount:8,uniqueCopierCount:3});
+ assert.deepEqual(readSharedPlanResponse(response).engagement,{viewCount:12,copyCount:8,uniqueCopierCount:3,ratingAverage:null,ratingCount:undefined,commentCount:undefined});
  assert.equal(readSharedPlanResponse({...response,listedInExplore:false}).engagement,undefined);
  assert.equal(readSharedPlanResponse({...response,engagement:{copyCount:-1}}).engagement.copyCount,undefined);
 });

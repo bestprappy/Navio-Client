@@ -122,6 +122,9 @@ export type PublicPlanSnapshot = {
 };
 
 export type SharedPlanEngagement = {
+  ratingAverage?: number | null;
+  ratingCount?: number;
+  commentCount?: number;
   viewCount?: number;
   copyCount?: number;
   uniqueCopierCount?: number;
@@ -277,6 +280,9 @@ export function readSharedPlanResponse(value: unknown): SharedPlan {
       viewCount: readEngagementCount(value.engagement.viewCount),
       copyCount: readEngagementCount(value.engagement.copyCount),
       uniqueCopierCount: readEngagementCount(value.engagement.uniqueCopierCount),
+      ratingCount: readEngagementCount(value.engagement.ratingCount),
+      commentCount: readEngagementCount(value.engagement.commentCount),
+      ratingAverage: typeof value.engagement.ratingAverage==='number'&&value.engagement.ratingAverage>=1&&value.engagement.ratingAverage<=5?value.engagement.ratingAverage:null,
     }} : {}),
   };
 }

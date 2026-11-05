@@ -5,10 +5,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {SaveButton} from "@/app/feature/saved/save-button";
 import Link from "next/link";
 import { createStore, Provider, useAtomValue, useSetAtom } from "jotai";
-import { ArrowLeft, CalendarDays, CarFront, ChevronDown, Compass, MapPin, MessageSquarePlus, Share2, Zap } from "lucide-react";
+import { ArrowLeft, CalendarDays, CarFront, ChevronDown, Compass, MapPin, MessageSquarePlus, Zap } from "lucide-react";
 import { PlanCover } from "@/app/feature/explore/_components/shared-plans/plan-cover";
 import { PlanAuthorLink } from "@/components/social/plan-author-link";
-import { PlanEngagement } from "@/app/feature/explore/_components/shared-plans/plan-engagement";
+import { ReaderEngagement } from "../feedback/reader-engagement";
+import { SharePlanButton } from "../share-plan-button";
 import { GoogleAttribution } from "@/app/feature/explore/places/google-attribution";
 import { CopySharedPlanButton } from "@/app/feature/explore/_components/shared-plans/copy-shared-plan-button";
 import { PlannerWorkspace } from "../../../planId/_components/layout/planner-workspace";
@@ -23,7 +24,7 @@ import { ReaderIntroduction } from "./reader-introduction";
 import { ReaderRelated } from "./reader-related";
 import { ReaderMap } from "./reader-map";
 import { ReaderRoutesProvider } from "./reader-routes";
-import { PreviewAction, ReaderSection } from "./reader-ui";
+import { ReaderSection } from "./reader-ui";
 
 export type SharedReaderProps = { shared:SharedPlan;token?:string;backLink?:{href:string;label:string};presentation?:ReaderPresentation };
 export function SharedReader(props: SharedReaderProps) {
@@ -98,7 +99,7 @@ function ReaderWorkspace({shared,token,backLink}:SharedReaderProps) {
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold tabular-nums" style={{background:dayColor.value,color:dayColor.foreground}}>{activeDay.label.replace("Day ","").padStart(2,"0")}</span>
           <span className="min-w-0"><span className="block truncate text-xs font-semibold">{activeDay.title||activeDay.label}</span><span className="block truncate text-[10px] text-muted-foreground">{readerDateLabel(activeDay.date)||"Dates not shared"} · {activeDay.stops.length} stops</span></span>
         </button>}
-        <div className="order-2 flex shrink-0 justify-self-end gap-2 @lg/planner:order-3 @lg/planner:col-start-3"><SaveButton token={token} className="size-9" trackOpen /><PreviewAction label="Share plan"><Share2 className="size-3.5" /></PreviewAction></div>
+        <div className="order-2 flex shrink-0 justify-self-end gap-2 @lg/planner:order-3 @lg/planner:col-start-3"><SaveButton token={token} className="size-9" trackOpen />{token&&<SharePlanButton token={token}/>}</div>
       </nav>
       <div className="px-5 @lg/planner:px-7">
         {/* The owner's note comes first, before the plan's details. */}
@@ -107,14 +108,14 @@ function ReaderWorkspace({shared,token,backLink}:SharedReaderProps) {
           <div className="flex flex-wrap items-center justify-between gap-3"><PlanAuthorLink token={token} name={shared.authorName} size="default" /><span className="text-[11px] text-muted-foreground">View-only trip plan</span></div>
 
           {readerDateLabel(shared.plan.startDate)&&<p className="flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays className="size-3.5" />{readerDateLabel(shared.plan.startDate)}{shared.plan.endDate&&shared.plan.endDate!==shared.plan.startDate&&readerDateLabel(shared.plan.endDate)&&` – ${readerDateLabel(shared.plan.endDate)}`}</p>}
-          {shared.listedInExplore&&<div className="rounded-xl border border-border/60 bg-card/60 p-3.5"><PlanEngagement {...shared.engagement} detail /></div>}
+          {shared.listedInExplore&&<div className="rounded-xl border border-border/60 bg-card/60 p-3.5"><ReaderEngagement token={token} listed={shared.listedInExplore} fallback={shared.engagement}/></div>}
           {token&&<div className="flex flex-wrap items-start gap-2"><CopySharedPlanButton token={token} startDate={shared.plan.startDate??shared.plan.days?.find(day=>day.date)?.date} hasUnlocatedStops={model.days.some(g=>g.stops.some(s=>!s.located))} />{shared.listedInExplore&&<Link href={`/community/create?${new URLSearchParams({plan:token})}`} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border bg-card px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><MessageSquarePlus className="size-4" aria-hidden="true" />Discuss in Community</Link>}</div>}
         </section>
         {model.lists.length>0&&<ReaderSection id="reader-lists" eyebrow="Ideas beyond the itinerary" title="My List">{model.lists.map(group=><ReaderGroupSection key={group.id} group={group} />)}</ReaderSection>}
         {presentation?.vehicles?.length?<ReaderSection id="reader-garage" eyebrow="Made for the road" title="Garage"><div className="space-y-3">{presentation.vehicles.map(vehicle=><article key={vehicle.id} className="flex items-start gap-4 rounded-2xl border border-border/60 bg-card p-4"><span className="rounded-xl bg-primary/8 p-3"><CarFront className="size-7 text-primary" /></span><div className="min-w-0 flex-1"><p className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{vehicle.source==="catalog"?"Navio catalogue":"Custom vehicle"}</p><h3 className="mt-1 font-semibold">{vehicle.name}</h3><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">{vehicle.batteryKwh&&<span>{vehicle.batteryKwh} kWh battery</span>}{vehicle.rangeKm&&<span>{vehicle.rangeKm} km reference range</span>}{vehicle.initialSocPct!=null&&<span>{vehicle.initialSocPct}% starting charge</span>}{vehicle.maxAcKw!=null&&<span>AC {vehicle.maxAcKw} kW</span>}{vehicle.maxDcKw!=null&&<span>DC {vehicle.maxDcKw} kW</span>}{vehicle.active&&<span className="font-medium text-primary">Selected in plan</span>}</div><p className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary"><Zap className="size-3.5" />{vehicle.connectors.join(" · ")||"Connector information not shared"}</p></div></article>)}</div><p className="text-xs leading-5 text-muted-foreground">Vehicle specifications are a planning reference. Actual range and charging availability can vary.</p></ReaderSection>:null}
         <ReaderItinerary />
         {shared.plan.budget&&<ReaderSection id="reader-budget" title="Trip budget"><details className="rounded-2xl border border-border/60 bg-card p-4"><summary className="flex cursor-pointer list-none items-center justify-between gap-3"><span className="text-sm text-muted-foreground">Budget shared by the owner</span><strong className="text-lg font-semibold">{shared.plan.budget.amount.toLocaleString()} {shared.plan.budget.currency}</strong></summary><ul className="mt-4 divide-y divide-border/60 text-sm">{shared.plan.budget.expenses?.map((expense,i)=><li key={i} className="flex justify-between gap-3 py-2"><span className="text-muted-foreground">{expense.label}</span><span>{expense.amount.toLocaleString()} {shared.plan.budget!.currency}</span></li>)}</ul></details></ReaderSection>}
-        <ReaderFeedback />
+        <ReaderFeedback token={token} listed={shared.listedInExplore}/>
         {showRelated&&<ReaderRelated token={token??"reader-design-preview"} plan={shared.plan} />}
         <footer className="flex items-center justify-between gap-3 border-t border-border/60 py-6 text-[10px] text-muted-foreground"><span>Shared by a traveler. Make it your own.</span><GoogleAttribution /></footer>
       </div>

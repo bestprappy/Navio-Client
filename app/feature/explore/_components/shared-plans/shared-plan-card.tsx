@@ -97,7 +97,7 @@ export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "til
           <SharedPlanCardActions token={plan.token} />
         </div>
         <div className="border-t border-border/60 pt-3">
-          <PlanEngagement viewCount={plan.viewCount} copyCount={plan.copyCount} />
+          <PlanEngagement viewCount={plan.viewCount} copyCount={plan.copyCount} ratingAverage={plan.ratingAverage} ratingCount={plan.ratingCount} />
         </div>
       </div>
     </article>
