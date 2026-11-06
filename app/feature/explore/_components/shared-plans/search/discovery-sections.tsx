@@ -12,7 +12,7 @@ const sections=[
  {id:'recent',title:'Recently shared',description:'Fresh itineraries shared by travelers.',sort:'recent',collection:''},
  {id:'popular',title:'All-time popular',description:'The most copied trips, followed by the most viewed.',sort:'popular',collection:''},
  {id:'seasonal',title:'Seasonal trips',description:'For this time of year, based on shared travel dates—not a weather forecast.',sort:'trending',collection:'seasonal'},
- {id:'events',title:'Event trips',description:'Trips themed around ongoing or upcoming Christmas, New Year and Western Easter periods.',sort:'trending',collection:'events'},
+ {id:'events',title:'Event trips',description:'Trips themed around celebrations with verified dates, during ongoing or upcoming event periods.',sort:'trending',collection:'events'},
 ] as const;
 function DiscoverySection({section,state}:{section:typeof sections[number];state:PlanSearchState}){
  const client=useQueryClient(),[notice,setNotice]=useState('');
