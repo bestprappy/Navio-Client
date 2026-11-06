@@ -1,3 +1,4 @@
+import {parsePlanSort} from "@/app/feature/explore/_components/shared-plans/search/search-state";
 import { NextRequest, NextResponse } from "next/server";
 import { planSearchPageSchema } from "@/app/feature/explore/_components/shared-plans/search/search-api";
 /** Anonymous read-only search; never forwards credentials, tokens or arbitrary upstream paths. */
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest): Promise<Response> {
  const collections=input.get('collections')??'',themes=input.get('themes')??'';
  const validList=(raw:string,allowed:string[])=>raw.length<=100&&(!raw||raw.split(',').every(value=>allowed.includes(value)));
  const revision=input.get('catalogueRevision');
- if(!validList(collections,["seasonal","events","trending"])||!validList(themes,["nature","food","culture","ev"])||Array.from(term).length>256 || revision!==null&&!/^[a-f0-9]{64}$/.test(revision) || country && !/^[A-Z]{2}$/.test(country) || !/^\d+$/.test(page) || Number(page)>500 || !/^\d+$/.test(size) || Number(size)<1 || Number(size)>48 || days!==null && (!/^\d+$/.test(days)||Number(days)<1||Number(days)>36500) || !["relevance","recent","trending","popular","views","rating","discussed"].includes(sort))
+ if(!validList(collections,["seasonal","events","trending"])||!validList(themes,["nature","food","culture","ev"])||Array.from(term).length>256 || revision!==null&&!/^[a-f0-9]{64}$/.test(revision) || country && !/^[A-Z]{2}$/.test(country) || !/^\d+$/.test(page) || Number(page)>500 || !/^\d+$/.test(size) || Number(size)<1 || Number(size)>48 || days!==null && (!/^\d+$/.test(days)||Number(days)<1||Number(days)>36500) || parsePlanSort(sort)===null)
   return NextResponse.json({message:"Invalid search parameters"},{status:400,headers:{"Cache-Control":"no-store"}});
  if(!process.env.NAVIO_API_BASE_URL) return NextResponse.json({message:"Search unavailable"},{status:503,headers:{"Cache-Control":"no-store"}});
  try {

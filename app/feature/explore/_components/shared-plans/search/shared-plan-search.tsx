@@ -13,7 +13,7 @@ import { requestText, synchronizeDraft } from "./search-draft";
 import { fetchPlanSearch } from "./search-api";
 import { groupPlanSearchPages,currentSearchAssist,planSearchPresentation,usefulSearchAlternatives,nextPlanSearchPage } from "./search-results";
 import {AlternativeSearches,SearchEmptyState} from './search-empty-state';
-import { durationDays, planSorts, emptyPlanSearch, hasPlanSearch, parsePlanSearch, planSearchParams, type PlanSearchState } from "./search-state";
+import { durationDays, planSortLabel, emptyPlanSearch, hasPlanSearch, parsePlanSearch, planSearchParams, type PlanSearchState } from "./search-state";
 
 const grid="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3";
 function Cards({plans,reasons={}}:{plans:ExplorePlan[];reasons?:Record<string,string>}) {
@@ -80,7 +80,7 @@ export function SharedPlanSearch({knownPlans=[]}:{children?:ReactNode;knownPlans
    <div className="flex flex-wrap items-center justify-between gap-3">
     <p role="status" aria-live="polite" className="text-sm text-muted-foreground">{pendingInput||search.isPending?"Searching shared plans…":first?`${matchingTotal} matching ${matchingTotal===1?"plan":"plans"}${textSearch?` · ${relatedTotal} relevant`:""}`:"Search shared plans"}</p>
     <div className="flex items-center gap-3">
-     <label className="flex items-center gap-2 text-xs text-muted-foreground">Sort by<select className="h-9 rounded-lg border border-border bg-card px-2 text-xs text-foreground focus-visible:outline-2 focus-visible:outline-ring" value={state.sort} onChange={e=>update({...state,sort:e.target.value as PlanSearchState["sort"]})}>{planSorts.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+     <p className="max-w-72 text-xs leading-5 text-muted-foreground">Sort by: <span className="text-foreground">{planSortLabel(state.sort)}</span></p>
      <Button size="sm" variant="ghost" className="text-xs" onClick={clear}>Clear all</Button>
     </div>
    </div>
