@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {CommunitySavePost} from "./community-save-post";
 import { useRouter } from "next/navigation";
 import { ExternalLink, MessageCircle } from "lucide-react";
 
@@ -31,6 +32,7 @@ type CommunityPostCardProps = {
   /** "group" leads with the community (feeds); "author" leads with the poster (inside a community). */
   metaVariant?: "group" | "author";
   showJoinAction?: boolean;
+  onSavedRemoved?:()=>void;
 };
 
 export function linkHost(url: string) {
@@ -46,6 +48,7 @@ export function CommunityPostCard({
   group,
   metaVariant = "group",
   showJoinAction = true,
+  onSavedRemoved,
 }: CommunityPostCardProps) {
   const router = useRouter();
   const { identity } = useCommunityIdentity();
@@ -198,6 +201,7 @@ export function CommunityPostCard({
           </span>
         </button>
         {postHref ? <CommunitySharePill href={postHref} /> : null}
+        <CommunitySavePost post={post} onRemoved={onSavedRemoved}/>
       </div>
     </article>
   );

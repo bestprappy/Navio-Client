@@ -4,6 +4,7 @@ import type { CommunityPost, CommunityComment } from "./data";
 
 const optionalText = z.string().nullable().transform((value) => value ?? undefined);
 export const postSchema = z.object({
+  saved: z.boolean().default(false),
   id: z.string().uuid(), groupId: z.string().uuid(), groupSlug: z.string().min(1),
   groupName: z.string(), groupIconMediaId: z.string().uuid().nullish(), authorId: z.string().uuid(), title: z.string(), body: z.string(),
   createdAt: z.string().datetime(), updatedAt: z.string().datetime(), upvotes: z.number().int(),

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {AccountMenu} from "@/components/profile/account-menu";
 import { LogOut } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
@@ -111,11 +112,7 @@ export function AuthActions({
         className,
       )}
     >
-      <Link
-        href="/settings/profile"
-        title="Profile settings"
-        onClick={onNavigate}
-        aria-label={`Open profile settings for ${userLabel}`}
+      <AccountMenu username={profileQuery.data?.username} onNavigate={onNavigate}
         className={cn(
           "flex min-w-0 items-center gap-2 rounded-lg p-1 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           mobile && "rounded-lg border border-border p-3",
@@ -135,7 +132,7 @@ export function AuthActions({
             {userLabel}
           </span>
         ) : null}
-      </Link>
+      </AccountMenu>
       <Button
         type="button"
         variant={mobile ? "outline" : "ghost"}

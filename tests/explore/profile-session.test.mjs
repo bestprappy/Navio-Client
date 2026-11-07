@@ -46,7 +46,7 @@ for (const Component of [AuthActions, ProfileMenu]) {
         .find({ queryKey: ["current-user-profile", "owner"] }).options.enabled,
       true,
     );
-    assert.match(html, /href="\/settings\/profile"/);
+    assert.match(html, /aria-label="Open account menu"/);
     client.clear();
   });
   test(`${Component.name} stops profile calls and offers sign-in when token refresh fails`, () => {

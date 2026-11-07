@@ -204,3 +204,7 @@ test("a guide written for a country infers that country when autocomplete suppli
   assert.equal(guide.country, "Japan");
   assert.equal(guide.countryCode, "JP");
 });
+
+test("public profile guide search sends the account author separately from destination filters",()=>{
+ const params=guideSearchParams({author:"123-account",country:"Japan"},0);assert.equal(params.get("author"),"123-account");assert.equal(params.get("country"),"Japan");
+});

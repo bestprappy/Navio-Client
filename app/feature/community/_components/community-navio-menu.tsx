@@ -8,10 +8,10 @@ import { NAVIO_MENU, isNavioNavActive } from '../community-navigation';
 
 export function CommunityNavioMenu() {
   const pathname = usePathname();
-  return <nav aria-label="Navio navigation" className="border-b border-sidebar-border px-3 pt-4 pb-3">
+  return <nav aria-label="Navio navigation" className="mx-3 mt-4 rounded-2xl border border-sidebar-border/70 bg-card/45 p-2">
     <Accordion defaultValue={[]}>
       <AccordionItem value="navio-menu" className="border-none">
-        <AccordionTrigger className="min-h-10 px-3 text-xs font-semibold text-muted-foreground hover:bg-muted hover:no-underline">
+        <AccordionTrigger className="min-h-10 px-3 text-sm font-bold text-foreground hover:bg-muted hover:no-underline">
           Navio menu
         </AccordionTrigger>
         <AccordionContent className="pb-0 [&_a]:no-underline">

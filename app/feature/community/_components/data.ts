@@ -69,6 +69,7 @@ export type CommunityGroupProfile = {
 };
 
 export type CommunityPost = {
+  saved?: boolean;
   groupSlug?: string;
   groupName?: string;
   groupIconUrl?: string;

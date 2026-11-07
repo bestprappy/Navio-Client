@@ -1,4 +1,5 @@
-import { CircleHelp, Compass, Flame, Home, LayoutDashboard, MessageCircle, UsersRound } from 'lucide-react';
+import {SearchCompass} from "@/components/icons/search-compass";
+import { CircleHelp, Compass, Flame, Home, LayoutDashboard, MessageCircle } from 'lucide-react';
 
 export const NAVIO_MENU = [
   { title: 'Home', href: '/', icon: Home },
@@ -11,7 +12,7 @@ export const NAVIO_MENU = [
 export const COMMUNITY_NAV = [
   { title: 'Home', href: '/community', icon: Home },
   { title: 'Popular', href: '/community/popular', icon: Flame },
-  { title: 'Explore', href: '/community/discovery', icon: UsersRound },
+  { title: 'Explore', href: '/community/discovery', icon: SearchCompass },
 ] as const;
 
 export function isNavioNavActive(pathname: string, href: string) {

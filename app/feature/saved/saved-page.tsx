@@ -6,6 +6,9 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
 import {Bookmark,BookOpen,Clock3,Compass,Filter,FolderHeart,RotateCcw,Search,Trash2,X} from 'lucide-react';
 import {SourcePlanLink} from './source-plan-links';
 import {ReaderStopPhoto} from '@/app/feature/planner/_components/share/reader/reader-ui';
+import {SavedNavigation} from './saved-navigation';
+import {SavedCommunityPage} from './saved-community-page';
+import {SavedSort} from './saved-sort';
 import {SavedLayout} from './saved-layout';
 import {Button} from '@/components/ui/button';
 import {useRequireAuth} from '@/hooks/use-require-auth';
@@ -15,15 +18,16 @@ import {PlanCover} from '@/app/feature/explore/_components/shared-plans/plan-cov
 import {CopySharedPlanButton} from '@/app/feature/explore/_components/shared-plans/copy-shared-plan-button';
 import {GuideCoverPhoto} from '../admin/_components/guides/guide-cover-photo';
 import {SavedContentError,savedPlanReference,suggestSaved,checkSource,libraryKey,listSaved,openSaved,purgeSaved,recentlyOpened,removeSaved,restoreSaved,type SavedItem} from './library-api';
-import {savedGuidePath,clampSavedPage,parseSavedSearch,savedSearchParams,savedTabs,type SavedSearch} from './library-model';
+import {savedGuidePath,clampSavedPage,parseSavedSearch,savedSearchParams,type SavedSearch} from './library-model';
 
 const field='h-10 w-full min-w-0 rounded-xl border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 const labels={recents:'Recents',all:'All',plans:'Plans',guides:'Guides',places:'Places',trash:'Recently Deleted'};
-export function SavedPage(){
+export function SavedPage(){const params=useSearchParams();return params.get('section')==='community'?<SavedCommunityPage key={params.toString()}/>:<SavedExplorePage/>;}
+function SavedExplorePage(){
  const params=useSearchParams(),router=useRouter();const state=parseSavedSearch(params);const [draft,setDraft]=useState<string|null>(null);const [advanced,setAdvanced]=useState(false);
  const {isAuthenticated,isAuthenticationLoading,requireAuth}=useRequireAuth();const {data:session}=useSession();const client=useQueryClient();const user=session?.user?.id;
  const [unavailable,setUnavailable]=useState<string[]>([]);const [notice,setNotice]=useState('');const [undo,setUndo]=useState<string|null>(null);
- const update=(next:Partial<SavedSearch>)=>{setDraft(null);router.replace(`/saved?${savedSearchParams({...state,...next,page:next.page??0})}`,{scroll:false});};
+ const update=(next:Partial<SavedSearch>)=>{setDraft(null);const target=savedSearchParams({...state,...next,page:next.page??0});for(const key of ['communityQ','communitySort','view','vote']){const value=params.get(key);if(value)target.set(key,value);}router.replace(`/saved?${target}`,{scroll:false});};
  const suggestionId=useId();const [suggestionText,setSuggestionText]=useState('');
  useEffect(()=>{const timer=setTimeout(()=>setSuggestionText(draft??''),250);return()=>clearTimeout(timer);},[draft]);
  const suggestions=useQuery({queryKey:[...libraryKey(user),'suggestions',suggestionText],queryFn:({signal})=>suggestSaved(suggestionText,signal),enabled:isAuthenticated&&state.tab!=='trash'&&suggestionText.trim().length>=2,staleTime:15000});
@@ -48,15 +52,14 @@ export function SavedPage(){
  useEffect(()=>{if(query.data&&!query.isFetching){const page=clampSavedPage(state.page,query.data.total);if(page!==state.page)router.replace(`/saved?${savedSearchParams({...state,page})}`,{scroll:false});}},[query.data,query.isFetching,state,router]);
  function grid(items:SavedItem[]){return <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">{items.map(item=><SavedCard key={item.id} item={item} unavailable={unavailable.includes(item.id)} trash={state.tab==='trash'} pending={action.isPending} onAction={kind=>action.mutate({kind,item})}/>)}</div>;}
  return <SavedLayout header={
-  <header className="mb-7 flex items-start justify-between gap-5"><div><p className="mb-2 flex items-center gap-2 text-xs font-medium tracking-widest text-primary uppercase"><FolderHeart className="size-4"/>Your travel collection</p><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Saved</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Places worth keeping. Plans worth coming back to.</p></div>{isAuthenticated&&query.data&&<div className="shrink-0 rounded-2xl border border-border/60 bg-card px-4 py-3 text-right text-xs leading-6 text-muted-foreground"><p>{query.data.plans} / 50 plans</p><p>{query.data.guides} / 50 guides</p><p>{query.data.places} places</p></div>}</header>} navigation={
-  <nav aria-label="Saved collections" className="flex gap-1 overflow-x-auto md:flex-col md:overflow-x-visible">{savedTabs.map(tab=><button type="button" key={tab} aria-current={state.tab===tab?'page':undefined} onClick={()=>update({tab})} className={cn('min-h-10 shrink-0 rounded-full px-4 text-left text-sm transition-colors md:w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',state.tab===tab?'bg-foreground text-background':'text-muted-foreground hover:bg-muted')}>{labels[tab]}</button>)}<span className="flex shrink-0 items-center px-4 py-3 text-xs leading-5 text-muted-foreground/70 md:mt-2 md:border-t md:border-border/60" title="Custom categories are planned for later">Custom categories ? Later</span></nav>}>
+  <header className="mb-7 flex items-start justify-between gap-5"><div><p className="mb-2 flex items-center gap-2 text-xs font-medium tracking-widest text-primary uppercase"><FolderHeart className="size-4"/>Your travel collection</p><h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Saved</h1><p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">Places worth keeping. Plans worth coming back to.</p></div>{isAuthenticated&&query.data&&<div className="shrink-0 rounded-2xl border border-border/60 bg-card px-4 py-3 text-right text-xs leading-6 text-muted-foreground"><p>{query.data.plans} / 50 plans</p><p>{query.data.guides} / 50 guides</p><p>{query.data.places} places</p></div>}</header>} navigation={<SavedNavigation/>}>
   <>
   <section aria-label="Search saved content" className="mb-7 rounded-2xl border border-border/60 bg-card p-4 sm:p-5">
    <form className="flex flex-wrap items-end gap-3" onSubmit={e=>{e.preventDefault();update({search:draft??state.search});}}>
     <label className="min-w-48 flex-1 text-xs font-medium">{state.tab==='trash'?'Search Recently Deleted':recents||state.tab==='recents'?'Search all saved content':`Search ${labels[state.tab].toLowerCase()}`}<span className="relative mt-2 block"><Search className="absolute top-3 left-3 size-4 text-muted-foreground"/><input type="search" list={suggestionId} maxLength={200} className={cn(field,'pl-9')} value={draft??state.search} placeholder="Name, destination, author or place type" onChange={e=>setDraft(e.target.value)}/></span></label>
     <Button type="submit" className="h-10 rounded-xl">Search</Button>
     <Button type="button" variant="outline" className="h-10 rounded-xl" aria-expanded={advanced} aria-controls="saved-filters" onClick={()=>setAdvanced(!advanced)}><Filter className="size-4"/>Filters{filtered&&<span className="size-1.5 rounded-full bg-primary"/>}</Button>
-    <label className="text-xs font-medium">Sort by<select className={cn(field,'mt-2 w-auto')} value={state.sort} onChange={e=>update({sort:e.target.value as SavedSearch['sort']})}><option value="NEWEST">Newest saved</option><option value="OLDEST">Oldest saved</option><option value="NAME">Name</option><option value="OPENED">Recently opened</option></select></label>
+    <SavedSort value={state.sort} options={[{value:'NEWEST',label:'Newest saved'},{value:'OLDEST',label:'Oldest saved'},{value:'NAME',label:'Name'},{value:'OPENED',label:'Recently opened'}]} onChange={sort=>update({sort:sort as SavedSearch['sort']})}/>
    </form><datalist id={suggestionId}>{suggestions.data?.items.map(item=><option key={item.id} value={item.name}>{[item.city,item.country].filter(Boolean).join(", ")}</option>)}</datalist>
    {advanced&&<div id="saved-filters" className="mt-5 grid gap-4 border-t border-border/60 pt-5 sm:grid-cols-2 lg:grid-cols-3">
     {(['country','city','category'] as const).map(key=><label key={key} className="text-xs font-medium">{{country:'Countries',city:'Cities',category:'Place types'}[key]}<input className={cn(field,'mt-2')} defaultValue={state[key]} key={`${key}:${state[key]}`} placeholder="Any · separate choices with commas" onBlur={e=>{if(e.target.value!==state[key])update({[key]:e.target.value});}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>)}

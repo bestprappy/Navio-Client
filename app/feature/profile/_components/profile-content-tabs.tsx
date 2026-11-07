@@ -1,8 +1,10 @@
 "use client";
 
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, Map as MapIcon, Pin, PinOff } from "lucide-react";
+import { BookOpen, FileText, Map as MapIcon, Pin, PinOff } from "lucide-react";
 import Link from "next/link";
+import {discoverGuides} from "@/app/feature/guides/user-guides-api";
+import {TravelerGuideCard} from "@/app/feature/guides/guide-card";
 
 import { CommunityPostCard } from "@/app/feature/community/_components/community-post-card";
 import { SharedPlanCard } from "@/app/feature/explore/_components/shared-plans/shared-plan-card";
@@ -26,6 +28,7 @@ export function ProfileContentTabs({ accountId, name, isOwner }: ProfileContentT
       <TabsList variant="line" className="h-10 border-b border-border w-full justify-start rounded-none">
         <TabsTrigger value="posts" className="h-10 px-3"><FileText aria-hidden="true" />Posts</TabsTrigger>
         <TabsTrigger value="plans" className="h-10 px-3"><MapIcon aria-hidden="true" />Shared plans</TabsTrigger>
+        <TabsTrigger value="guides" className="h-10 px-3"><BookOpen aria-hidden="true"/>Guides</TabsTrigger>
       </TabsList>
       <TabsContent value="posts" className="pt-4">
         <PostsTab accountId={accountId} name={name} isOwner={isOwner} />
@@ -33,6 +36,7 @@ export function ProfileContentTabs({ accountId, name, isOwner }: ProfileContentT
       <TabsContent value="plans" className="pt-4">
         <PlansTab accountId={accountId} name={name} isOwner={isOwner} />
       </TabsContent>
+      <TabsContent value="guides" className="pt-4"><GuidesTab accountId={accountId} name={name} isOwner={isOwner}/></TabsContent>
     </Tabs>
   );
 }
@@ -174,4 +178,14 @@ function PlansTab({ accountId, name, isOwner }: ProfileContentTabsProps) {
       ) : null}
     </div>
   );
+}
+
+function GuidesTab({accountId,name,isOwner}:ProfileContentTabsProps){
+ const guides=useInfiniteQuery({queryKey:["public-profile-guides",accountId],queryFn:({pageParam})=>discoverGuides({author:accountId,size:12},pageParam),initialPageParam:0,
+  getNextPageParam:last=>last.number+1>=last.totalPages?undefined:last.number+1});
+ const rows=guides.data?.pages.flatMap(page=>page.content)??[];
+ if(guides.isPending||guides.error||rows.length===0)return <TabState loading={guides.isPending} error={guides.error} onRetry={()=>void guides.refetch()} empty={!guides.isPending&&!guides.error&&rows.length===0}
+  emptyText={isOwner?"Your published guides will appear here.":`${name} hasn't published any guides yet.`}/>;
+ return <><div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">{rows.map(guide=><TravelerGuideCard key={guide.id} guide={guide}/>)}</div>
+  {guides.hasNextPage&&<Button variant="outline" className="mt-5" disabled={guides.isFetchingNextPage} onClick={()=>void guides.fetchNextPage()}>Show more guides</Button>}</>;
 }

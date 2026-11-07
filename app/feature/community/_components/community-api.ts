@@ -162,7 +162,7 @@ export async function communityRequest<T>(
   schema: z.ZodType<T>,
   init?: { method: string; body?: unknown },
   signal?: AbortSignal,
-  resource: "groups" | "posts" = "groups",
+  resource: "groups" | "posts" | "social" = "groups",
 ): Promise<T> {
   try {
     const multipart = init?.body instanceof FormData;

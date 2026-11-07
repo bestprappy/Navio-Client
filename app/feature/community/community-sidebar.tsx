@@ -38,7 +38,7 @@ export function CommunitySidebar() {
     <aside className="hidden min-h-0 w-64 shrink-0 flex-col overflow-y-auto overscroll-y-contain border-r border-sidebar-border bg-sidebar md:flex">
       <CommunityNavioMenu />
       <nav aria-label="Community navigation" className="flex min-h-max flex-1 flex-col gap-1 px-3 py-4">
-        <h2 className="px-3 pb-1 text-xs font-semibold text-muted-foreground">Community menu</h2>
+        <h2 className="px-3 pb-1 text-sm font-bold text-foreground">Community menu</h2>
         {COMMUNITY_NAV.map(({ title, href, icon: Icon }) => {
           const active = isCommunityNavActive(pathname, href);
           return (
@@ -61,7 +61,7 @@ export function CommunitySidebar() {
 
         <div className="my-3 h-px bg-sidebar-border" />
 
-        <h2 className="px-3 pb-1 text-xs font-semibold text-muted-foreground">Your communities</h2>
+        <h2 className="px-3 pb-1 text-sm font-bold text-foreground">Your communities</h2>
         <button
           type="button"
           onClick={() => requireAuth(() => openCreate(true))}

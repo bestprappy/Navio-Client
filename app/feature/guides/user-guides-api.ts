@@ -45,6 +45,7 @@ const publishedDetailSchema = z.object({
 });
 export type PublishedGuideSummary = z.infer<typeof publishedSummarySchema>;
 export type GuideDiscoveryFilter = {
+  author?:string;
   term?: string;
   cities?: readonly string[];
   country?: string;
@@ -60,6 +61,7 @@ export function guideSearchParams(
     page: String(page),
     size: String(filter.size ?? 12),
   });
+  if (filter.author) params.set("author",filter.author);
   if (filter.term?.trim()) params.set("term", filter.term.trim());
   if (filter.country?.trim()) params.set("country", filter.country.trim());
   for (const city of filter.cities ?? []) params.append("city", city);

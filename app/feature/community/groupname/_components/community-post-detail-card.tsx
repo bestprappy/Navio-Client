@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {CommunitySavePost,useRecordCommunityVisit} from "../../_components/community-save-post";
 import { ArrowLeft, ExternalLink, MessageCircle } from "lucide-react";
 
 import { CommunityFlairBadge } from "../../_components/community-flair-badge";
@@ -31,6 +32,7 @@ type CommunityPostDetailCardProps = {
 };
 
 export function CommunityPostDetailCard({ post, group }: CommunityPostDetailCardProps) {
+  useRecordCommunityVisit(post.id);
   const { identity } = useCommunityIdentity();
   const author = useCommunityUserProfile(post.authorId);
   const flair = post.flairId
@@ -125,6 +127,7 @@ export function CommunityPostDetailCard({ post, group }: CommunityPostDetailCard
           <span className="sr-only">{post.commentCount === 1 ? "comment" : "comments"}</span>
         </a>
         <CommunitySharePill href={getCommunityPostHref({ name: group.name, slug: groupSlug }, post)} />
+        <CommunitySavePost post={post}/>
       </div>
     </article>
   );

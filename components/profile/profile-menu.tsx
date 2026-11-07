@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {AccountMenu} from "./account-menu";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { UserRound } from "lucide-react";
@@ -29,13 +30,7 @@ export function ProfileMenu({ compact = false, wrapName = false, onNavigate }: P
     : session?.user?.image;
   const initials = name.trim().split(/\s+/).map((word) => word[0]).slice(0, 2).join("").toUpperCase();
 
-  return (
-    <Link
-      href={!isAuthenticated ? "/sign-in" : profile.data?.username ? `/u/${encodeURIComponent(profile.data.username)}` : "/settings/profile"}
-      onClick={onNavigate}
-      aria-label={isAuthenticated ? "Open profile" : "Sign in"}
-      className={cn("flex h-auto min-w-0 items-center gap-2 rounded-md p-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring", !compact && "flex-1 justify-start text-left")}
-    >
+  const content = <>
         {/* Keyed so removing a photo remounts the root and its fallback shows again. */}
         <Avatar key={picture ?? "none"} size="lg">
           {picture && <AvatarImage src={picture} alt="" />}
@@ -50,6 +45,8 @@ export function ProfileMenu({ compact = false, wrapName = false, onNavigate }: P
           </span>
           <span className={cn("block truncate text-xs font-normal text-muted-foreground", wrapName && "leading-snug")}>{isAuthenticated ? "View profile" : "Sign in to plan trips"}</span>
         </span>}
-    </Link>
-  );
+    </>;
+  const className=cn("flex h-auto min-w-0 items-center gap-2 rounded-md p-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring", !compact && "flex-1 justify-start text-left");
+  return isAuthenticated ? <AccountMenu username={profile.data?.username} className={className} onNavigate={onNavigate}>{content}</AccountMenu>
+    : <Link href="/sign-in" onClick={onNavigate} className={className}>{content}</Link>;
 }

@@ -87,7 +87,7 @@ export function BeforeYouGoSection() {
               </div>
             )}
             {note?.type === "note" && (
-              <div className="max-w-prose text-sm leading-7">
+              <div className={readOnly ? "max-w-prose text-sm leading-7" : "rounded-2xl border border-border/60 bg-card p-4 text-sm leading-7 shadow-sm sm:p-5"}>
                 {readOnly
                   ? <PlaceNotesPreview value={note.content} interactive clamped={false} />
                   : <NoteEditor value={note.content} onChange={updateNote} label="Before you go note" placeholder="Tell readers about your trip. Add headings, helpful tips, links or a list..." />}

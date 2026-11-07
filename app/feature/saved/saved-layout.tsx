@@ -30,7 +30,7 @@ export function SavedLayout({ header, navigation, children }: {
       <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12">
         {header}
         <div className="grid items-start gap-6 md:grid-cols-[11rem_minmax(0,1fr)] lg:grid-cols-[12rem_minmax(0,1fr)] lg:gap-8">
-          <aside className="sticky top-[calc(var(--saved-navbar-height)+1rem)] z-20 max-h-[calc(100dvh-var(--saved-navbar-height)-2rem)] self-start overflow-y-auto rounded-2xl border border-border/60 bg-card p-2">
+          <aside className="md:sticky md:top-[calc(var(--saved-navbar-height)+1rem)] z-20 md:max-h-[calc(100dvh-var(--saved-navbar-height)-2rem)] self-start overflow-y-auto rounded-2xl border border-border/60 bg-card p-2">
             {navigation}
           </aside>
           <div className="min-w-0">{children}</div>
