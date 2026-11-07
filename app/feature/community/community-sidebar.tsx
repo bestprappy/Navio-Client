@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useSetAtom } from "jotai";
-import { ArrowLeft, Compass, Flame, Home, Plus } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 
 import { LAST_NON_COMMUNITY_PATH_KEY } from "@/components/navigation-history";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,18 +13,10 @@ import { cn } from "@/lib/utils";
 import { createCommunityOpenAtom } from "./_components/community-atoms";
 import { useCommunityGroups, useCommunityIdentity } from "./_components/community-group-queries";
 import { CommunityIcon, communityHandle } from "./_components/community-identity";
+import { CommunityNavioMenu } from "./_components/community-navio-menu";
+import { COMMUNITY_NAV, isCommunityNavActive } from "./community-navigation";
 
-export const COMMUNITY_NAV = [
-  { title: "Home", href: "/community", icon: Home },
-  { title: "Popular", href: "/community/popular", icon: Flame },
-  { title: "Explore", href: "/community/discovery", icon: Compass },
-] as const;
-
-/** Which top-level feed a path belongs to; community and post pages highlight nothing. */
-export function isCommunityNavActive(pathname: string, href: string) {
-  if (href === "/community") return pathname === "/community";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+export { COMMUNITY_NAV, isCommunityNavActive } from "./community-navigation";
 
 const ROW =
   "flex min-h-10 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -44,7 +36,9 @@ export function CommunitySidebar() {
 
   return (
     <aside className="hidden min-h-0 w-64 shrink-0 flex-col overflow-y-auto overscroll-y-contain border-r border-sidebar-border bg-sidebar md:flex">
+      <CommunityNavioMenu />
       <nav aria-label="Community navigation" className="flex min-h-max flex-1 flex-col gap-1 px-3 py-4">
+        <h2 className="px-3 pb-1 text-xs font-semibold text-muted-foreground">Community menu</h2>
         {COMMUNITY_NAV.map(({ title, href, icon: Icon }) => {
           const active = isCommunityNavActive(pathname, href);
           return (

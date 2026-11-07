@@ -64,7 +64,7 @@ export function BeforeYouGoSection() {
                 <Trash2 className="size-4" aria-hidden="true" />
               </Button>
             ) : (
-              <Button type="button" variant="outline" size="sm" className="mr-6 rounded-full" onClick={add}>
+              <Button type="button" variant="outline" size="sm" className="shrink-0 rounded-full" onClick={add}>
                 <Plus className="size-3.5" aria-hidden="true" />
                 Add note
               </Button>
