@@ -6,6 +6,7 @@ export const searchAssistSchema=z.object({schemaVersion:z.literal(1),conceptVers
 export type SearchAssist=z.infer<typeof searchAssistSchema>;
 export type SearchSuggestion=z.infer<typeof searchSuggestionSchema>;
 export const planSearchPageSchema = z.object({
+ discoveryLabels:z.record(z.string(),z.enum(['trending','popular','recent'])).optional(),
  searchAssist:searchAssistSchema.nullable().optional(),
  querySuggestions:z.array(z.object({text:z.string(),source:z.enum(["catalogue","vocabulary"])})).optional(), notice:z.string().nullable().optional(),
  content: z.array(explorePlanSchema), recommendations: z.array(explorePlanSchema),
