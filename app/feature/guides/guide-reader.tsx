@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {SaveButton} from "../saved/save-button";
 import { useSetAtom } from "jotai";
@@ -69,6 +69,17 @@ function LoadedGuideReader({
   guide,
   author,source,
 }: Awaited<ReturnType<typeof readTravelerGuide>> & {source:"TRAVELER"|"CURATED"}) {
+  useEffect(()=>{
+    // Count only the first visible read, including tabs opened in the background.
+    let recorded=false;
+    const record=()=>{
+      if(recorded||document.visibilityState!=='visible')return;
+      recorded=true;
+      void fetch(`/api/traveler-guides/discovery/${source}/${encodeURIComponent(guide.id)}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>undefined);
+    };
+    record();document.addEventListener('visibilitychange',record);
+    return()=>document.removeEventListener('visibilitychange',record);
+  },[guide.id,source]);
   const blocks = useMemo(() => guideReadingBlocks(guide), [guide]);
   const places = useMemo(
     () => blocks.filter((block) => block.kind === "place"),

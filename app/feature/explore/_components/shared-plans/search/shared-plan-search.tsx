@@ -11,8 +11,8 @@ import {DiscoverySections} from "./discovery-sections";
 import { PlanSearchControls } from "./search-controls";
 import { requestText, synchronizeDraft } from "./search-draft";
 import { fetchPlanSearch } from "./search-api";
-import { groupPlanSearchPages,currentSearchAssist,planSearchPresentation,usefulSearchAlternatives,nextPlanSearchPage } from "./search-results";
-import {AlternativeSearches,SearchEmptyState} from './search-empty-state';
+import { groupPlanSearchPages,planSearchPresentation,nextPlanSearchPage } from "./search-results";
+import {SearchEmptyState} from './search-empty-state';
 import { durationDays, planSortLabel, emptyPlanSearch, hasPlanSearch, parsePlanSearch, planSearchParams, type PlanSearchState } from "./search-state";
 
 const grid="grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3";
@@ -64,14 +64,12 @@ export function SharedPlanSearch({knownPlans=[]}:{children?:ReactNode;knownPlans
   staleTime:0,retry:(count,error)=>count<1&&!(error instanceof ExplorePlansError&&error.status<500)
  });
  const first=search.data?.pages[0];
- const assist=currentSearchAssist(first,state);
- const alternatives=usefulSearchAlternatives(assist);
+
  const {matching,related,reasons}=useMemo(()=>groupPlanSearchPages(search.data?.pages??[]),[search.data]);
  const pendingInput=composing||requestText(draft)!==requestText(state.query),textSearch=!!state.query.trim();
- const presentation=planSearchPresentation(first,alternatives.length,pendingInput||search.isPending);
+ const presentation=planSearchPresentation(first,0,pendingInput||search.isPending);
  const matchingTotal=first?.matchingTotal??first?.matchedCount??0,relatedTotal=first?.relatedTotal??0;
  function clear(){setDraft("");update({...emptyPlanSearch});}
- function choose(query:string){setDraft(query);update({...state,query});}
  function edit(){document.querySelector<HTMLInputElement>('input[role="combobox"]')?.focus();}
  useEffect(()=>{if(search.isError&&search.error instanceof ExplorePlansError&&search.error.status===409){void queryClient.resetQueries({queryKey:['explore-plan-search',state],exact:true}).then(()=>setCatalogueNotice('Published plans have changed. Your results have been refreshed.'));}},[search.isError,search.error,queryClient,state]);
  return <div className="space-y-8 sm:space-y-10">
@@ -88,21 +86,17 @@ export function SharedPlanSearch({knownPlans=[]}:{children?:ReactNode;knownPlans
     :presentation==='loading'?<Loading/>
     :search.isError&&!search.isFetchNextPageError?<div role="alert" className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border/60 bg-card p-6"><p className="text-sm">{search.error.message}</p><Button variant="outline" size="sm" onClick={()=>void search.refetch()}><RefreshCw className="size-4"/>Try again</Button></div>
     :<>
-     {first?.correction&&<p className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">Suggested wording:<Button variant="link" size="sm" className="h-auto px-1" onClick={()=>{setDraft(first.correction!);update({...state,query:first.correction!});}}>{first.correction}</Button></p>}
      {catalogueNotice&&<p className="text-sm text-muted-foreground">{catalogueNotice}</p>}
-     {assist?.blocked?<section className="rounded-2xl border border-border/70 bg-card p-6"><h2 className="text-lg font-semibold">Review your search</h2><p className="mt-2 text-sm leading-6 text-muted-foreground">{first?.notice}</p><div className="mt-4 flex flex-wrap gap-2"><Button variant="outline" onClick={edit}>Edit search</Button>{(state.country||state.duration)&&<Button variant="outline" onClick={()=>update({...state,country:'',duration:'',collections:[],themes:[]})}>Clear filters</Button>}</div></section>
-     :presentation==='empty'?<SearchEmptyState query={state.query} hasFilters={!!(state.country||state.duration||state.collections?.length||state.themes?.length)} onEdit={edit} onClearFilters={()=>update({...state,country:'',duration:'',collections:[],themes:[]})} onBrowse={clear}/>
-     :presentation==='alternatives'?<section className="rounded-2xl border border-border/70 bg-card px-5 py-6"><h2 className="text-xl font-semibold">Matching and relevant plans</h2><p className="mt-3 text-sm font-medium">No matching or relevant plans found.</p><p className="mt-1 text-sm text-muted-foreground">Explore an alternative search below.</p></section>:<section className="space-y-5" aria-labelledby="plan-matching-results">
+     {presentation==='empty'?<SearchEmptyState query={state.query} hasFilters={!!(state.country||state.duration||state.collections?.length||state.themes?.length)} onEdit={edit} onClearFilters={()=>update({...state,country:'',duration:'',collections:[],themes:[]})} onBrowse={clear}/>
+     :<section className="space-y-5" aria-labelledby="plan-matching-results">
       <div><h2 id="plan-matching-results" className="text-xl font-semibold tracking-tight">{textSearch?"Matching plans":"Search results"}</h2><p className="mt-1 text-sm text-muted-foreground">{textSearch?"The closest matches for your destination and travel interests.":"Shared plans matching your filters."}</p></div>
       {matching.length?<Cards plans={matching}/>:<div className="rounded-2xl border border-border/60 bg-card px-5 py-6 text-sm"><p className="font-medium">No matching plans found.</p><p className="mt-1 text-muted-foreground">{related.length?"You may find a useful alternative in the relevant plans below.":"Try a broader phrase or adjust your filters."}</p></div>}
      </section>}
-     {first?.notice&&!assist?.blocked&&<p className="rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground">{first.notice}</p>}
-     {assist?.interpretation&&<p className="text-xs text-muted-foreground">Interests: {assist.interpretation}</p>}
-     {textSearch&&relatedTotal>0&&!assist?.blocked&&<section className="space-y-5 border-t border-border/60 pt-8" aria-labelledby="plan-related-results">
+     {first?.notice&&<p className="rounded-xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground">{first.notice}</p>}
+     {textSearch&&relatedTotal>0&&<section className="space-y-5 border-t border-border/60 pt-8" aria-labelledby="plan-related-results">
       <div><h2 id="plan-related-results" className="text-xl font-semibold tracking-tight">Relevant plans</h2><p className="mt-1 text-sm text-muted-foreground">Broader alternatives connected to your search. Selected filters still apply.</p></div>
       {related.length?<Cards plans={related} reasons={reasons}/>:<p className="rounded-2xl border border-border/60 bg-card px-5 py-6 text-sm text-muted-foreground">{first?.related===undefined?"Relevant search is not available on this server yet.":"No relevant plans found. Try another destination or travel interest."}</p>}
      </section>}
-     <AlternativeSearches items={alternatives} onSelect={choose}/>
      {(search.hasNextPage||search.isFetchNextPageError)&&<div className="flex flex-col items-center gap-2 pt-2"><Button variant="outline" disabled={search.isFetchingNextPage} onClick={()=>void search.fetchNextPage()}>{search.isFetchingNextPage&&<Loader2 className="size-4 animate-spin"/>}{search.isFetchingNextPage?"Loading…":search.isFetchNextPageError?"Try loading more again":"Load more plans"}</Button>{search.isFetchNextPageError&&<p role="alert" className="text-xs text-destructive">More results could not be loaded. Your current results are still here.</p>}</div>}
     </>}
   </div>}
