@@ -16,7 +16,7 @@ export type ReadingBlock =
       colorId: GuideCategory["colorId"];
     };
 
-/** Preserve the authored text and empty sections, and number only resolved place cards. */
+/** Preserve authored prose, hide empty published sections, and number resolved places. */
 export function guideReadingBlocks(guide: Guide): ReadingBlock[] {
   let number = 0;
   let category: GuideCategory | null = null;
@@ -46,5 +46,16 @@ export function guideReadingBlocks(guide: Guide): ReadingBlock[] {
     if (block.kind === "section") section = block;
     else if (block.kind === "place" && section) section.placeCount++;
   }
-  return blocks;
+  // Editor-created headings can exist before any content is written. Keep prose-only
+  // sections, but do not publish their empty scaffolding or navigation anchors.
+  const visible = blocks.filter(block => block.kind !== "text" ||
+    block.markdown.replace(/<[^>]*>/g, "").replace(/&nbsp;|&#160;|\u00a0/g, " ").trim().length > 0 ||
+    /!\[[^\]]*\]\(|<(?:img|video|iframe)\b/i.test(block.markdown));
+  return visible.filter((block, index) => {
+    if (block.kind !== "section" || block.placeCount > 0) return true;
+    for (let next = index + 1; next < visible.length && visible[next].kind !== "section"; next++) {
+      if (visible[next].kind === "text") return true;
+    }
+    return false;
+  });
 }

@@ -116,7 +116,7 @@ test("malformed public pages are rejected instead of rendering unvalidated cards
   );
   await assert.rejects(() => discoverGuides({}), /cannot read/);
 });
-test("reading preserves prose and empty headings and numbers only resolved places", () => {
+test("reading preserves prose, omits empty headings and numbers only resolved places", () => {
   const guide = createGuide({
     id: "reader",
     now: "2026-10-13T00:00:00Z",
@@ -152,11 +152,11 @@ test("reading preserves prose and empty headings and numbers only resolved place
   const blocks = guideReadingBlocks(guide);
   assert.deepEqual(
     blocks.map((block) => block.kind),
-    ["text", "section", "place", "text", "section"],
+    ["text", "section", "place", "text"],
   );
   assert.equal(blocks[2].number, 1);
   assert.equal(blocks[1].placeCount, 1);
-  assert.equal(blocks[4].placeCount, 0);
+  assert.equal(blocks.some(block => block.kind === "section" && block.id === "eat"), false);
   assert.equal(blocks[3].markdown, "Walk to the river.");
 });
 
@@ -208,3 +208,12 @@ test("a guide written for a country infers that country when autocomplete suppli
 test("public profile guide search sends the account author separately from destination filters",()=>{
  const params=guideSearchParams({author:"123-account",country:"Japan"},0);assert.equal(params.get("author"),"123-account");assert.equal(params.get("country"),"Japan");
 });
+
+ test("reading hides empty middle sections and keeps authored text-only sections",()=>{
+ const guide=createGuide({id:"empty",now:"2026-11-12T00:00:00Z",country:"Japan",destination:{provider:"GOOGLE",providerPlaceId:"tokyo",name:"Tokyo",lat:0,lng:0}});
+ guide.body=[placeListMarkdown("visit"),"<p><br></p>",placeListMarkdown("eat"),"A useful introduction without place cards."].join("\n\n");
+ const blocks=guideReadingBlocks(guide);
+ assert.deepEqual(blocks.filter(b=>b.kind==='section').map(b=>b.id),['eat']);
+ assert.ok(blocks.some(b=>b.kind==='text'&&b.markdown.includes('useful introduction')));
+ assert.ok(!blocks.some(b=>b.kind==='text'&&b.markdown==='<p><br></p>'));
+ });
