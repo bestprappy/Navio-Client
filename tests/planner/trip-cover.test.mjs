@@ -42,7 +42,7 @@ test("an unlisted city falls back to a photo from its own country, never another
 });
 
 test("a country without a bundled photo gets none", () => {
-  assert.equal(destinationCountryCover({ city: "Kuala Lumpur", country: "Malaysia" }), undefined);
+  assert.equal(destinationCountryCover({ city: "Uncatalogued city", country: "Uncatalogued country" }), undefined);
   assert.equal(destinationCountryCover({}), undefined);
 });
 
@@ -75,7 +75,7 @@ test("without an upload the banner shows the credited destination photo", () => 
 });
 
 test("a destination without a photo falls back to the brand gradient only", () => {
-  const html = render({ planId: TRIP_ID, destinationName: "Kuala Lumpur", destinationCountry: "Malaysia" });
+  const html = render({ planId: TRIP_ID, destinationName: "Uncatalogued destination", destinationCountry: "Uncatalogued country" });
   assert.match(html, /var\(--brand-gradient\)/);
   assert.doesNotMatch(html, /<img/);
   assert.doesNotMatch(html, /Photo:/);
