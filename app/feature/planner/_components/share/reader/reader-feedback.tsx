@@ -17,8 +17,8 @@ export function ReaderFeedback({token,listed=false}:{token?:string;listed?:boole
       <FeedbackRating key={identity} token={token} summary={data} signedIn={!!user} onSaved={refresh}/>
       {!user&&<div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-muted/40 p-4"><p className="text-sm text-muted-foreground">Sign in to rate this {kind} or join the conversation.</p><Button size="sm" onClick={()=>void signIn('keycloak',{redirectTo:window.location.href})}>Sign in</Button></div>}
       <div className="space-y-5 rounded-2xl border border-border/60 bg-card p-5"><h3 className="font-semibold">Questions & thoughts <span className="font-normal text-muted-foreground">({data.commentCount})</span></h3>
-        {user&&<FeedbackComposer key={identity} token={token} name={user.name} onSaved={refresh}/>}
-        <FeedbackComments key={identity} token={token} identity={identity} signedIn={!!user} name={user?.name} refresh={refresh}/>
+        {user&&<FeedbackComposer key={`composer:${identity}`} token={token} name={user.name} onSaved={refresh}/>}
+        <FeedbackComments key={`comments:${identity}`} token={token} identity={identity} signedIn={!!user} name={user?.name} refresh={refresh}/>
       </div>
       {(data.publisher||data.canModerate)&&<FeedbackReports token={token} identity={identity} refresh={refresh}/>}</>}
   </ReaderSection>;

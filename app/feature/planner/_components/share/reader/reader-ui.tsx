@@ -2,12 +2,12 @@
 /* Provider photos are live, credited and never sent through the image optimizer. */
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { ImageIcon, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { readPlace, safeExternalUrl } from "@/app/feature/explore/places/places-api";
-import { planCoverReference } from "@/app/feature/explore/_components/shared-plans/plan-cover";
+import { safeExternalUrl } from "@/app/feature/explore/places/places-api";
+import { usePlaceDetails } from "../../../planId/_components/place/use-place-details";
+import { readerPlaceData } from "./reader-place-data";
 import { PLAN_DESTINATION_COVERS } from "@/app/feature/explore/_components/shared-plans/plan-cover.data";
 import { PlaceNotesPreview } from "../../../planId/_components/block/items/place-notes";
 import type { PublicItem } from "../publication-api";
@@ -47,10 +47,9 @@ export function ReaderNotes({ value, label = "From the planner", plain=false, pr
     </ReaderDisclosure>
   </div>;
 }
-export function useReaderPlace(item: PublicItem, enabled = true) {
-  const reference = item.type === "charger" ? null : planCoverReference(item.placeId);
-  return useQuery({ queryKey: ["discovery-place", reference], queryFn: ({ signal }) => readPlace(reference!, signal),
-    enabled: Boolean(reference) && enabled, staleTime: 60_000, gcTime: 0, retry: 1, retryOnMount: false });
+export function useReaderPlace(item: PublicItem, enabled = true, includePhoto = true) {
+  const query = usePlaceDetails(item.type === "charger" ? "" : item.placeId ?? "", { enabled, includePhoto });
+  return { ...query, data: query.data ? readerPlaceData(query.data) : undefined };
 }
 export function ReaderStopPhoto({ item, className, onSelect }: { item: PublicItem; className?: string; onSelect?: () => void }) {
   const ref = useRef<HTMLDivElement>(null);

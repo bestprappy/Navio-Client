@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { APIProvider, useMap } from "@vis.gl/react-google-maps";
 import { MapPinned } from "lucide-react";
 import { AppearanceGoogleMap } from "@/components/map/appearance-google-map";
@@ -9,8 +9,7 @@ import { NumberedMapPin } from "@/components/map/numbered-map-pin";
 import { getTripBlockColorById } from "../planner/planId/_components/constants/trip-block-colors";
 import type { Guide } from "../admin/_components/guides/guide-model";
 import type { ReadingBlock } from "./guide-reading-model";
-import { PlacePreviewPanel } from "../planner/planId/_components/place/place-preview-panel";
-import { usePlaceDetails } from "../planner/planId/_components/place/use-place-details";
+import { ReaderLocationPanel } from "../planner/_components/share/reader/reader-place-panel";
 
 type PlaceBlock = Extract<ReadingBlock, { kind: "place" }>;
 type Props = {
@@ -19,29 +18,33 @@ type Props = {
   selected: string | null;
   onSelect: (id: string) => void;
   onClose: () => void;
+  onReveal: (id: string) => void;
 };
 
 export function GuideReaderMap(props: Props) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  if (!apiKey)
-    return (
+  const [zoomSequence, setZoomSequence] = useState(0);
+  const index = props.places.findIndex(block => block.place.id === props.selected);
+  const block = props.places[index];
+  const place = block?.place;
+  return <div className="relative size-full overflow-hidden">
+    {apiKey ? <APIProvider apiKey={apiKey}><ReaderMap {...props} zoomSequence={zoomSequence} /></APIProvider> :
       <div className="flex h-full items-center justify-center gap-2 bg-muted p-6 text-sm text-muted-foreground">
         <MapPinned aria-hidden="true" className="size-5" />
         Open a place&apos;s location link to view it on a map.
-      </div>
-    );
-  return (
-    <APIProvider apiKey={apiKey}>
-      <ReaderMap {...props} />
-    </APIProvider>
-  );
+      </div>}
+    {place && <ReaderLocationPanel key={place.id} item={{type:"place",placeId:place.id,name:place.name,address:place.address,lat:place.lat,lng:place.lng}}
+      category={place.category} located index={index} total={props.places.length} groupLabel="Guide places"
+      onPrevious={() => props.onSelect(props.places[index - 1].place.id)} onNext={() => props.onSelect(props.places[index + 1].place.id)}
+      onZoom={() => setZoomSequence(value => value + 1)} onClose={props.onClose} onReveal={() => props.onReveal(place.id)}
+      revealLabel="View in guide" contextLabel="In this guide"
+      context={<><h3 className="font-semibold">{props.guide.name}</h3><p className="text-sm text-muted-foreground">{place.name} · Place {block.number}</p>
+        {place.tags.length > 0 && <ul className="flex flex-wrap gap-2">{place.tags.map(tag => <li key={tag} className="rounded-full bg-muted px-3 py-1 text-xs">{tag}</li>)}</ul>}
+        <p className="text-xs leading-5 text-muted-foreground">Read the author’s explanation and recommendations beside this place in the guide.</p></>} />}
+  </div>;
 }
-function ReaderMap({ guide, places, selected, onSelect, onClose }: Props) {
+function ReaderMap({ guide, places, selected, onSelect, zoomSequence }: Props & {zoomSequence:number}) {
   const map = useMap();
-  const selectedIndex = places.findIndex((block) => block.place.id === selected);
-  const selectedPlace = places[selectedIndex]?.place;
-  const details = usePlaceDetails(selectedPlace?.id ?? "");
-  const live = details.data;
   useEffect(() => {
     if (!map) return;
     let frame: number | null = null;
@@ -72,7 +75,7 @@ function ReaderMap({ guide, places, selected, onSelect, onClose }: Props) {
       observer.disconnect();
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
-  }, [map, places, selected]);
+  }, [map, places, selected, zoomSequence]);
   useEffect(() => {
     const place = places.find((block) => block.place.id === selected)?.place;
     if (!map || !place) return;
@@ -107,31 +110,6 @@ function ReaderMap({ guide, places, selected, onSelect, onClose }: Props) {
         </AppearanceGoogleMarker>
       ))}
     </AppearanceGoogleMap>
-    {selectedPlace ? (
-      <PlacePreviewPanel
-        place={{
-          name: selectedPlace.name,
-          address: selectedPlace.address || live?.address || "",
-          category: live?.category ?? selectedPlace.category,
-          primaryType: live?.primaryType ?? selectedPlace.primaryType,
-          description: live?.description,
-          imageUrl: live?.imageUrl,
-          rating: live?.rating,
-          reviewCount: live?.reviewCount,
-          openingHours: live?.openingHours,
-          phone: live?.phone,
-          website: live?.website,
-        }}
-        currentIndex={selectedIndex}
-        total={places.length}
-        isAdded={false}
-        showAddAction={false}
-        isLoadingDetails={details.isPending && details.fetchStatus === "fetching"}
-        onPrevious={() => onSelect(places[(selectedIndex - 1 + places.length) % places.length].place.id)}
-        onNext={() => onSelect(places[(selectedIndex + 1) % places.length].place.id)}
-        onClose={onClose}
-      />
-    ) : null}
     </div>
   );
 }

@@ -13,8 +13,8 @@ export default async function TravelerGuidePage({
   const { guideId } = await params;const source=(await searchParams).source==="curated"?"CURATED":"TRAVELER";
   if (!GUIDE_ID_PATTERN.test(guideId)) notFound();
   return (
-    <div className="flex h-dvh flex-col overflow-hidden">
-      <Navbar />
+    <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden">
+      <div className="max-h-[70dvh] shrink-0 overflow-y-auto"><Navbar /></div>
       <main className="min-h-0 min-w-0 flex-1 overflow-hidden bg-background">
         <ExploreErrorBoundary fallbackTitle="Guide unavailable">
           <GuideReader guideId={guideId} source={source}/>

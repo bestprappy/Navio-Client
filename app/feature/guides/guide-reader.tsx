@@ -81,14 +81,15 @@ function LoadedGuideReader({
   );
   const [selected, setSelected] = useState<string | null>(null);
   const setView = useSetAtom(guideReaderViewAtom);
+  function reveal(id: string) {
+    const panel = document.getElementById("guide-reading-panel");
+    const target = document.getElementById(id);
+    if (panel && target) panel.scrollBy({ top: target.getBoundingClientRect().top - panel.getBoundingClientRect().top - 64, behavior: "auto" });
+  }
   function select(id: string, source: "text" | "map" = "text") {
     setSelected(id);
     if (source === "map" && window.matchMedia("(min-width: 64rem)").matches) {
-      window.requestAnimationFrame(() =>
-        document
-          .getElementById(`reading-place-${id}`)
-          ?.scrollIntoView({ block: "nearest", behavior: "auto" }),
-      );
+      window.requestAnimationFrame(() => reveal(`reading-place-${id}`));
     } else if (source === "text" && window.matchMedia("(max-width: 63.999rem)").matches) {
       setView("map");
     }
@@ -127,7 +128,7 @@ function LoadedGuideReader({
                 {sections.length ? (
                   <nav aria-label={`${guide.name} guide sections`} className="flex flex-wrap gap-2">
                     {sections.map((section) => (
-                      <Button key={section.elementId} type="button" variant="outline" size="sm" className="max-w-full rounded-full whitespace-normal text-left" onClick={() => document.getElementById(section.elementId)?.scrollIntoView({ block: "start" })}>
+                      <Button key={section.elementId} type="button" variant="outline" size="sm" className="max-w-full rounded-full whitespace-normal text-left" onClick={() => reveal(section.elementId)}>
                         {section.category ? <CategoryIcon category={section.category} className="size-4 shrink-0" /> : null}
                         {section.category?.name ?? "Places"}
                       </Button>
@@ -213,6 +214,7 @@ function LoadedGuideReader({
             selected={selected}
             onSelect={(id) => select(id, "map")}
             onClose={() => setSelected(null)}
+            onReveal={(id) => {setView("guide");window.requestAnimationFrame(() => reveal(`reading-place-${id}`));}}
           />
         </PlannerErrorBoundary>
       }

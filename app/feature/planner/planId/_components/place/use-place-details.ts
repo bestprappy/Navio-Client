@@ -47,15 +47,15 @@ export function reuseCachedDetailsWithPhoto(
  * @param includePhoto pass `false` when the caller already holds a photo or never shows one:
  * a photo is a separately billed Google request.
  */
-export function usePlaceDetails(placeId: string, { includePhoto = true }: { includePhoto?: boolean } = {}) {
+export function usePlaceDetails(placeId: string, { includePhoto = true, enabled = true }: { includePhoto?: boolean; enabled?: boolean } = {}) {
   const reference = getPlaceReference(placeId);
   const queryClient = useQueryClient();
 
   return useQuery({
     queryKey: placeDetailsQueryKey(reference, includePhoto),
-    queryFn: () => fetchPlaceDetail(reference!.providerPlaceId, reference!.provider, { includePhoto }),
+    queryFn: ({ signal }) => fetchPlaceDetail(reference!.providerPlaceId, reference!.provider, { includePhoto, signal }),
     ...(includePhoto ? {} : reuseCachedDetailsWithPhoto(queryClient, reference)),
-    enabled: reference !== null,
+    enabled: reference !== null && enabled,
     staleTime: 5 * 60_000,
     retry: 1,
     retryOnMount: false,

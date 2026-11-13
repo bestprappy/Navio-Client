@@ -6,7 +6,7 @@ assert.ok(['localhost','127.0.0.1'].includes(new URL(origin).hostname));
 const output=process.env.NAVIO_GUIDE_SCREENSHOTS??'.next/guide-engagement';
 await fs.mkdir(output,{recursive:true});
 const browser=await chromium.launch({headless:true,channel:'chrome'});
-const checks=[],errors=[],requests=[];
+const checks=[],errors=[],requests=[],keyErrors=[];
 async function run(signedIn,viewport={width:1440,height:1000},dark=false){
  const context=await browser.newContext({viewport,colorScheme:dark?'dark':'light',reducedMotion:'reduce'});
  let total=12,myRating=null,comments=[],attempts=0,failFirst=!signedIn;
@@ -16,6 +16,7 @@ async function run(signedIn,viewport={width:1440,height:1000},dark=false){
   if(!['localhost','127.0.0.1'].includes(u.hostname))return route.abort();
   if(p==='/api/auth/session')return route.fulfill({json:signedIn?{user:{id:'22222222-2222-4222-8222-222222222222',name:'Reader'},expires:'2099-01-01T00:00:00Z'}:{}});
   if(p==='/api/users/me')return route.fulfill({json:{id:'22222222-2222-4222-8222-222222222222',displayName:'Reader',email:'reader@example.com'}});
+  if(p==='/api/notifications/unread-count')return route.fulfill({json:{unreadCount:0}});
   if(p.endsWith('/view')){attempts++;requests.push(request.postDataJSON());if(failFirst){failFirst=false;return route.fulfill({status:503,json:{message:'Try again'}});}total++;return route.fulfill({status:204});}
   if(p.includes('/feedback')){
    if(p.endsWith('/rating')){myRating=request.method()==='DELETE'?null:request.postDataJSON().score;return route.fulfill({json:{}});}
@@ -26,7 +27,7 @@ async function run(signedIn,viewport={width:1440,height:1000},dark=false){
   if(p.startsWith('/api/'))return route.fulfill({json:{items:[],content:[],plans:0,guides:0,places:0,total:0,totalElements:0,totalPages:0,last:true,number:0}});
   return route.continue();
  });
- const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
+ const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('console',message=>{if(/same key|unique.*key/i.test(message.text()))keyErrors.push(message.text());});
  await page.goto(origin+'/explore/guides/'+id);
  await page.getByRole('heading',{name:'Reader engagement check',exact:true}).waitFor();
  const stats=page.getByLabel('Guide readership and rating');await stats.getByText('12 total views',{exact:true}).waitFor();
@@ -51,4 +52,4 @@ async function run(signedIn,viewport={width:1440,height:1000},dark=false){
  checks.push('A new page opening increments total while unique account count stays unchanged');
  await context.close();
 }
-try{await run(false);await run(true);await run(false,{width:390,height:844},true);assert.equal(requests[0].readId,requests[1].readId);assert.notEqual(requests[1].readId,requests[2].readId);assert.deepEqual(errors,[]);await fs.writeFile(`${output}/results.json`,JSON.stringify({passed:true,checks,errors,readRequests:requests.length},null,2));console.log(JSON.stringify({passed:true,checks:checks.length,errors}));}finally{await browser.close();}
+try{await run(false);await run(true);await run(false,{width:390,height:844},true);assert.equal(requests[0].readId,requests[1].readId);assert.notEqual(requests[1].readId,requests[2].readId);assert.deepEqual(errors,[]);assert.deepEqual(keyErrors,[], 'Signed-in feedback must have distinct sibling keys');await fs.writeFile(`${output}/results.json`,JSON.stringify({passed:true,checks,errors,readRequests:requests.length},null,2));console.log(JSON.stringify({passed:true,checks:checks.length,errors}));}finally{await browser.close();}
