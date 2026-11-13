@@ -2,7 +2,7 @@ import {countries,seasons} from '../../explore/places/search-state';
 import {requestText} from '../../explore/_components/shared-plans/search/search-draft';
 export const guideCollections=[['trending','Trending'],['popular','Most popular'],['seasonal','Seasonal'],['scenic','Scenic escapes'],['food','Food & cafés'],['sweets','Sweet spots'],['relax','Slow escapes'],['night','After dark'],['nature','Nature lovers']] as const;
 export const guideInterests=[['architecture','Architecture'],['museums','Museums'],['street-food','Street food'],['hiking','Hiking'],['beaches','Beaches'],['shopping','Shopping']] as const;
-export const guideSorts=[['relevance','Recommended'],['trending','Trending'],['popular','Most popular'],['views','Most viewed'],['recent','Recently published'],['updated','Recently updated']] as const;
+export const guideSorts=[['relevance','Recommended'],['trending','Trending'],['popular','Most popular'],['views','Most viewed'],['rating','Highest rated'],['reviews','Most ratings'],['recent','Recently published'],['updated','Recently updated']] as const;
 export type GuideSearchState={query:string;country:string;time:string;sort:string;collections:string[];interests:string[]};
 export const emptyGuideSearch:GuideSearchState={query:'',country:'',time:'any',sort:'relevance',collections:[],interests:[]};
 const selected=(raw:string|null,options:readonly (readonly [string,string])[])=>[...new Set((raw??'').split(',').filter(value=>options.some(([key])=>key===value)))];
