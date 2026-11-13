@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import {SaveButton} from "../saved/save-button";
-import { BookOpen, Eye, MapPin, Share2 } from "lucide-react";
+import { BookOpen, Eye, MapPin, Share2, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { GuideCoverPhoto } from "../admin/_components/guides/guide-cover-photo";
 import type { GuideSummary } from "../admin/_components/guides/guides-api";
@@ -16,7 +16,7 @@ export function TravelerGuideCard({
   guide,
   layout = "default",
 }: {
-  guide: PublishedGuideSummary & {source?:"TRAVELER"|"CURATED";viewCount?:number;collections?:string[];discoveryLabel?:string|null};
+  guide: PublishedGuideSummary & {source?:"TRAVELER"|"CURATED";viewCount?:number;ratingAverage?:number|null;ratingCount?:number;collections?:string[];discoveryLabel?:string|null};
   layout?: "default" | "planner" | "discovery";
 }) {
   if(layout==='discovery')return <DiscoveryGuideCard guide={guide}/>;
@@ -101,7 +101,7 @@ export function YourGuideCard({ guide }: { guide: GuideSummary }) {
   );
 }
 
-function DiscoveryGuideCard({guide}:{guide:PublishedGuideSummary & {source?:"TRAVELER"|"CURATED";viewCount?:number;collections?:string[];discoveryLabel?:string|null}}){
+function DiscoveryGuideCard({guide}:{guide:PublishedGuideSummary & {source?:"TRAVELER"|"CURATED";viewCount?:number;ratingAverage?:number|null;ratingCount?:number;collections?:string[];discoveryLabel?:string|null}}){
  const source=guide.source??'TRAVELER',href=`/explore/guides/${guide.id}${source==='CURATED'?'?source=curated':''}`;
  async function share(){try{const url=new URL(href,window.location.origin).href;if(navigator.share)await navigator.share({title:guide.name,url});else{await navigator.clipboard.writeText(url);toast.success('Guide link copied');}}catch(error){if(!(error instanceof DOMException&&error.name==='AbortError'))toast.error('The link could not be shared. Please try again.');}}
  return <article className="group relative flex h-full min-w-0 flex-col overflow-hidden rounded-[1.6rem] border border-border/70 bg-card shadow-sm transition-[border-color,box-shadow] hover:border-primary/30 hover:shadow-md motion-reduce:transition-none">
@@ -114,7 +114,7 @@ function DiscoveryGuideCard({guide}:{guide:PublishedGuideSummary & {source?:"TRA
    <p className="line-clamp-2 min-h-12 text-sm leading-6 text-muted-foreground">{guide.description||'Discover the places and practical advice collected in this guide.'}</p>
    <div className="flex flex-wrap gap-1.5">{guide.categories.slice(0,2).map(category=><span key={category.id} className="max-w-full truncate rounded-full bg-muted/70 px-2.5 py-1 text-[11px] text-muted-foreground">{category.name}</span>)}</div>
    <div className="mt-auto flex items-center gap-2 border-t border-border/60 pt-4 text-xs text-muted-foreground"><div className="min-w-0 flex-1"><GuideAuthor author={guide.author}/></div><Button variant="ghost" size="icon-sm" aria-label={`Share ${guide.name}`} onClick={()=>void share()}><Share2 aria-hidden="true" className="size-4"/></Button><SaveButton guide={{id:guide.id,source}} className="size-9 shrink-0"/></div>
-   <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1.5"><Eye aria-hidden="true" className="size-3.5"/>{(guide.viewCount??0).toLocaleString()} views</span>{guide.discoveryLabel&&<span>{guide.discoveryLabel==='trending'?'Trending':guide.discoveryLabel==='popular'?'Popular pick':'Recently published'}</span>}</div>
+   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1.5"><Eye aria-hidden="true" className="size-3.5"/>{(guide.viewCount??0).toLocaleString()} views</span><span className="inline-flex items-center gap-1.5"><Star className="size-3.5 text-rating" aria-hidden="true"/>{guide.ratingAverage?`${guide.ratingAverage.toFixed(1)} (${guide.ratingCount??0})`:'Not rated yet'}</span>{guide.discoveryLabel&&<span className="text-[11px] text-muted-foreground">{guide.discoveryLabel==='trending'?'Trending':guide.discoveryLabel==='popular'?'Popular pick':'Recently published'}</span>}</div>
   </div>
  </article>;
 }

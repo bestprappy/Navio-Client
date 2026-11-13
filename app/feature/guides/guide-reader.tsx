@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import {GuideEngagement} from './guide-engagement';
+import {ReaderFeedback} from '../planner/_components/share/reader/reader-feedback';
 import {SaveButton} from "../saved/save-button";
 import { useSetAtom } from "jotai";
 import { useQuery } from "@tanstack/react-query";
@@ -69,17 +71,6 @@ function LoadedGuideReader({
   guide,
   author,source,
 }: Awaited<ReturnType<typeof readTravelerGuide>> & {source:"TRAVELER"|"CURATED"}) {
-  useEffect(()=>{
-    // Count only the first visible read, including tabs opened in the background.
-    let recorded=false;
-    const record=()=>{
-      if(recorded||document.visibilityState!=='visible')return;
-      recorded=true;
-      void fetch(`/api/traveler-guides/discovery/${source}/${encodeURIComponent(guide.id)}/view`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}).catch(()=>undefined);
-    };
-    record();document.addEventListener('visibilitychange',record);
-    return()=>document.removeEventListener('visibilitychange',record);
-  },[guide.id,source]);
   const blocks = useMemo(() => guideReadingBlocks(guide), [guide]);
   const places = useMemo(
     () => blocks.filter((block) => block.kind === "place"),
@@ -126,6 +117,7 @@ function LoadedGuideReader({
               author={<GuideAuthor author={author} onMedia />}
             />
             <div className="space-y-8 px-4 pt-5 sm:px-5">
+              <GuideEngagement key={`${source}:${guide.id}`} source={source} id={guide.id}/>
               <div className="space-y-4">
                 {guide.description ? (
                   <p className="max-w-prose whitespace-pre-wrap text-base leading-7 text-muted-foreground">
@@ -205,6 +197,7 @@ function LoadedGuideReader({
                   );
                 })}
               </div>
+              <ReaderFeedback token={`guide:${source}:${guide.id}`} listed/>
             </div>
           </article>
         </>
