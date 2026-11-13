@@ -28,16 +28,28 @@ test("older feeds render a bundled matching photo immediately without a provider
 });
 test("every catalog cover is a bundled real image with credit and license, without cross-country city matching",async()=>{
  const {PLAN_DESTINATION_COVERS,destinationPlanCover}=await import("../../app/feature/explore/_components/shared-plans/plan-cover.data.ts");
- assert.equal(PLAN_DESTINATION_COVERS.length,30);
+ assert.ok(PLAN_DESTINATION_COVERS.length>=61);
  for(const cover of PLAN_DESTINATION_COVERS){
   assert.ok((await stat(new URL(`../../public${cover.src}`,import.meta.url))).size>1000);
   assert.match(cover.sourceUrl,/^https:\/\/commons.wikimedia.org\/wiki\/File:/);
   assert.ok(cover.author && cover.license && cover.licenseUrl);
-  assert.equal(destinationPlanCover({destinationCity:cover.city,destinationCountry:cover.country,highlights:[]}),cover);
+  assert.equal(destinationPlanCover({title:'variant' in cover?`Kyoto ${cover.variant} journey`:'',destinationCity:cover.city,destinationCountry:cover.country,highlights:[]}),cover);
  }
  assert.equal(destinationPlanCover({destinationCity:"Taipei City",destinationCountry:"Taiwan",highlights:[]})?.city,"Taipei");
  assert.equal(destinationPlanCover({destinationCity:"Sydney",destinationCountry:"Canada",highlights:[]}),undefined);
  assert.equal(destinationPlanCover({destinationCity:"Unknown",destinationCountry:"",highlights:[]}),undefined);
+ assert.equal(destinationPlanCover({destinationCity:"Sydney",destinationCountry:"Canada",highlights:["Sydney Opera House"]}),undefined);
+});
+
+test('new destinations have immediate local cover fallbacks and Kyoto seasons are visually distinct',async()=>{
+ const {destinationPlanCover}=await import('../../app/feature/explore/_components/shared-plans/plan-cover.data.ts');
+ for(const [city,country] of [['Wellington','New Zealand'],['Cape Town','South Africa'],['Marrakesh','Morocco'],['Bangkok','Thailand'],['Pak Nam','Thailand'],['Thani','Thailand'],['George Town','Malaysia'],['Québec City','Canada'],['Kanazawa','Japan']]) {
+  const cover=destinationPlanCover({destinationCity:city,destinationCountry:country,highlights:[]});
+  assert.ok(cover,`${city} needs a local photograph`);
+ }
+ const spring=destinationPlanCover({title:'Kyoto Spring: Blossoms, Canals and Temple Gardens',destinationCity:'Kyoto',destinationCountry:'Japan',highlights:[]});
+ const autumn=destinationPlanCover({title:'Kyoto Autumn: Maple Gardens and Riverside Evenings',destinationCity:'Kyoto',destinationCountry:'Japan',highlights:[]});
+ assert.notEqual(spring.src,autumn.src);assert.match(spring.subject,/Philosopher/);assert.match(autumn.subject,/Eikan/);
 });
 test("compact plan card states duration, stops and genuine engagement with an honest unrated state",()=>{
  const html=renderToStaticMarkup(React.createElement(SharedPlanCard,{plan:explorePlanSchema.parse(raw)}));
