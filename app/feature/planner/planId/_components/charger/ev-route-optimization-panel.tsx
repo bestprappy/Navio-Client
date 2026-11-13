@@ -173,7 +173,7 @@ export function EvRouteOptimizationPanel({
   }
 
   return (
-    <div className="mt-4 border-t border-primary/15 pt-3">
+    <div className="mt-4 border-t border-primary/15 pt-3" data-tour="planner.ev-optimize">
       <div className="flex items-center gap-2">
         <Route className="size-4 text-primary" aria-hidden="true" />
         <div>

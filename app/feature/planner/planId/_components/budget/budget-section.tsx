@@ -1,6 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { PlannerSectionTips } from "../tour/planner-section-tips";
+import { PLANNER_BUDGET_TOUR } from "../tour/data";
+
 import {
   Coins,
   Info,
@@ -25,6 +28,8 @@ import { BudgetSettingsModal } from "./budget-settings-modal";
 import { BreakdownModal } from "./breakdown-modal";
 import { plannerReadOnlyAtom } from "../overview/trip-builder.atoms";
 
+const BUDGET_SECTION_TOURS = [PLANNER_BUDGET_TOUR];
+
 export function BudgetSection() {
   const b = useBudget();
   const readOnly = useAtomValue(plannerReadOnlyAtom);
@@ -32,7 +37,10 @@ export function BudgetSection() {
   return (
     <section className="px-4 pb-12 pt-2">
       <div data-tour="planner.budget" className="mb-5 flex items-center justify-between pl-4">
-        <h2 className="text-2xl font-bold text-foreground">Budgeting</h2>
+        <div className="flex items-center gap-1">
+          <h2 className="text-2xl font-bold text-foreground">Budgeting</h2>
+          <PlannerSectionTips section="Budgeting" tours={BUDGET_SECTION_TOURS} />
+        </div>
         {!readOnly && <Button
           type="button"
           size="lg"
@@ -44,7 +52,7 @@ export function BudgetSection() {
         </Button>}
       </div>
 
-      <div className="mx-2 rounded-sm bg-card border p-5">
+      <div className="mx-2 rounded-sm bg-card border p-5" data-tour="planner.budget-card">
         <div className="grid min-w-0 gap-5 @min-[32rem]/planner:grid-cols-[minmax(0,1fr)_12rem]">
           <div>
             <div className="flex items-end justify-between gap-4">
@@ -98,7 +106,7 @@ export function BudgetSection() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2" data-tour="planner.budget-actions">
             <BudgetSideAction
               icon={<ListChecks className="size-4" aria-hidden="true" />}
               label="View breakdown"

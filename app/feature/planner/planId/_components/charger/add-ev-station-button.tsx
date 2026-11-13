@@ -144,6 +144,7 @@ export function AddEvStationButton(props: AddEvStationButtonProps) {
   const { canSearch, isLoadingEvChargers, openStationList } = useEvStationSearch(props);
   return (
     <Button
+      data-tour="planner.add-ev-station"
       type="button"
       variant="outline"
       size="lg"

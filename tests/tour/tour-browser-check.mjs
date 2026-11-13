@@ -223,6 +223,127 @@ try {
     await context.close();
   });
 
+  const plannerSeen = { [STORAGE_KEY]: JSON.stringify({ planner: { status: "completed", version: 1, at: now } }) };
+  const dayMenuOpen = (page) => page.evaluate(() => {
+    const trigger = document.querySelector("[data-tour='planner.day-options']");
+    return trigger?.getAttribute("aria-expanded") === "true" || trigger?.hasAttribute("data-popup-open") === true;
+  });
+
+  await check("planner: Show tips lists every planner tour, and a tour opens and closes the day menu itself", async () => {
+    const { context, page, errors } = await open(browser, { path: `/planner/${TRIP_ID}`, storage: plannerSeen });
+    const tips = page.getByRole("button", { name: "Show tips for this page: Trip planner" });
+    await tips.waitFor({ timeout: 30000 });
+    await page.waitForTimeout(1200);
+    assert.equal(await popover(page).count(), 0, "planner overview restarted although seen");
+    await tips.click();
+    const items = page.getByRole("menuitem");
+    await items.first().waitFor();
+    const labels = (await items.allTextContents()).map((text) => text.trim());
+    assert.equal(labels.length, 8, `expected 8 tours, got ${labels.join(" | ")}`);
+    assert.ok(labels[0].startsWith("Trip planner"));
+    await page.screenshot({ path: shot("planner-tips-menu-light") });
+    await page.getByRole("menuitem", { name: /Days and timing/ }).click();
+
+    const steps = [];
+    let previousCount = "";
+    for (let guard = 0; guard < 8; guard += 1) {
+      await title(page).waitFor();
+      // Wait for the step to change; menu steps can take a moment to resolve.
+      await page.waitForFunction((before) => document.querySelector(".navio-tour-count")?.textContent !== before, previousCount);
+      previousCount = await page.locator(".navio-tour-count").textContent();
+      await page.waitForTimeout(400);
+      const target = await activeTarget(page);
+      steps.push({ title: (await title(page).textContent())?.trim(), target, menuOpen: await dayMenuOpen(page) });
+      if (target === "planner.day-color") await page.screenshot({ path: shot("planner-days-color-light") });
+      const next = page.locator(".driver-popover-next-btn");
+      const last = (await next.textContent())?.trim() === "Done";
+      await next.click();
+      if (last) break;
+    }
+    await popover(page).waitFor({ state: "detached" });
+    console.log("days tour:", steps.map((s) => `${s.title} [${s.target ?? "centred"}${s.menuOpen ? ", menu open" : ""}]`).join(" | "));
+    const color = steps.find((s) => s.target === "planner.day-color");
+    assert.ok(color?.menuOpen, "day menu was not open for the colour step");
+    assert.equal(steps.find((s) => s.target === "planner.day-header")?.menuOpen, false, "day menu open too early");
+    assert.ok(steps.some((s) => s.title === "Calculate times"), "times step missing (fallback expected for an empty day)");
+    await page.waitForTimeout(300);
+    assert.equal(await dayMenuOpen(page), false, "day menu left open after the tour");
+    assert.equal((await records(page))["planner-days"]?.status, "completed");
+
+    await tips.click();
+    await page.getByRole("menuitem", { name: /Days and timing\s*,\s*finished/ }).waitFor({ timeout: 5000 });
+    await page.screenshot({ path: shot("planner-tips-after-finish-light") });
+    await page.keyboard.press("Escape");
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  await check("planner: the Itinerary ? offers its four tours and points at the real add buttons", async () => {
+    const { context, page, errors } = await open(browser, { path: `/planner/${TRIP_ID}`, storage: plannerSeen });
+    const sectionTips = page.getByRole("button", { name: "Tips for Itinerary" });
+    await sectionTips.waitFor({ timeout: 30000 });
+    await page.waitForTimeout(800);
+    await sectionTips.click();
+    const labels = (await page.getByRole("menuitem").allTextContents()).map((text) => text.trim());
+    assert.equal(labels.length, 4, labels.join(" | "));
+    assert.deepEqual(labels.map((text) => text.split(/(?<=[a-z])(?=[A-Z])/)[0]), ["Days and timing", "Auto plan", "Notes and checklists", "Share and export"]);
+    await page.getByRole("menuitem", { name: /Notes and checklists/ }).click();
+    const steps = await walk(page, { screenshotAt: { 2: "planner-notes-light" } });
+    console.log("notes tour:", steps.map((s) => `${s.count} ${s.title} [${s.target ?? "centred"}]`).join(" | "));
+    assert.deepEqual(steps.map((s) => s.target), ["planner.day-actions", "planner.add-note", "planner.add-checklist", "planner.add-section"]);
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  await check("planner: My garage ? offers EV and charging tours; charging explains how to open the charger list", async () => {
+    const { context, page, errors } = await open(browser, { path: `/planner/${TRIP_ID}`, theme: "dark", storage: plannerSeen });
+    const garageTips = page.getByRole("button", { name: "Tips for My garage" });
+    await garageTips.waitFor({ timeout: 30000 });
+    await page.waitForTimeout(800);
+    await garageTips.click();
+    await page.getByRole("menuitem", { name: /Charging stops/ }).click();
+    await title(page).waitFor();
+    await page.waitForTimeout(500);
+    assert.equal(await title(page).textContent(), "Open the charger list");
+    assert.equal(await activeTarget(page), "planner.add-ev-station");
+    assert.equal(await page.locator(".navio-tour-count").textContent(), "1 of 1");
+    await page.screenshot({ path: shot("planner-charging-fallback-dark") });
+    await page.locator(".driver-popover-next-btn").click();
+    await popover(page).waitFor({ state: "detached" });
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  await check("planner: Escape during a step inside the day menu closes the menu with the tour", async () => {
+    const { context, page } = await open(browser, { path: `/planner/${TRIP_ID}`, storage: plannerSeen });
+    const sectionTips = page.getByRole("button", { name: "Tips for Itinerary" });
+    await sectionTips.waitFor({ timeout: 30000 });
+    await page.waitForTimeout(800);
+    await sectionTips.click();
+    await page.getByRole("menuitem", { name: /Auto plan/ }).click();
+    await title(page).waitFor();
+    await page.waitForTimeout(500);
+    await page.locator(".driver-popover-next-btn").click();
+    await page.waitForFunction(() => document.querySelector(".driver-active-element")?.getAttribute("data-tour") === "planner.auto-plan-action");
+    assert.equal(await dayMenuOpen(page), true);
+    await page.waitForTimeout(700);
+    // Settled: the spotlight sits on Auto plan and its tip is showing.
+    const spotlit = await page.evaluate(() => {
+      const target = document.querySelector("[data-tour='planner.auto-plan-action']").getBoundingClientRect();
+      const tip = document.querySelector("#driver-popover-content")?.getBoundingClientRect();
+      return { tipVisible: Boolean(tip && tip.width > 0), gap: tip ? Math.round(Math.abs(tip.top + tip.height / 2 - (target.top + target.height / 2))) : null };
+    });
+    assert.ok(spotlit.tipVisible, "auto plan tip not shown");
+    assert.ok(spotlit.gap !== null && spotlit.gap < 160, `tip is far from Auto plan: ${spotlit.gap}px`);
+    await page.screenshot({ path: shot("planner-auto-plan-light") });
+    await page.keyboard.press("Escape");
+    await popover(page).waitFor({ state: "detached" });
+    await page.waitForTimeout(300);
+    assert.equal(await dayMenuOpen(page), false, "day menu stayed open");
+    assert.equal((await records(page))["planner-auto-plan"]?.status, "dismissed");
+    await context.close();
+  });
+
   await check("planner: does not auto-start while the itinerary table covers the plan", async () => {
     const { context, page } = await open(browser, { path: `/planner/${TRIP_ID}?view=table` });
     await page.waitForTimeout(6000);
@@ -237,6 +358,7 @@ try {
     assert.equal(await popover(page).count(), 0, "tour started over the map");
     await page.getByRole("button", { name: "Open navigation" }).click();
     await page.getByRole("button", { name: /Show tips for this page/ }).click();
+    await page.getByRole("menuitem", { name: /^Trip planner/ }).click();
     await title(page).waitFor();
     assert.equal(await page.getByRole("button", { name: "Itinerary", pressed: true }).count(), 1);
     await page.locator(".driver-popover-next-btn").click();

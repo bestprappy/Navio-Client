@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { PlannerSectionTips } from "../tour/planner-section-tips";
+import { PLANNER_CHARGING_TOUR, PLANNER_EV_TOUR } from "../tour/data";
+
 import { AlertTriangle, Plus } from "lucide-react";
 import { useAtom, useAtomValue } from "jotai";
 
@@ -24,6 +27,8 @@ import { GarageEmptyState } from "./garage-empty-state";
 import { VehicleUsageOverview } from "./vehicle-usage-overview";
 import { VehicleSettingsForm } from "./vehicle-settings-form";
 import { useGarage } from "./garage-provider";
+
+const GARAGE_SECTION_TOURS = [PLANNER_EV_TOUR, PLANNER_CHARGING_TOUR];
 
 export function GarageSection() {
   const vehicles = useAtomValue(userVehiclesAtom);
@@ -60,7 +65,10 @@ export function GarageSection() {
     <section aria-label="Trip vehicles" className="@container/garage min-w-0 px-4 py-6">
       <div data-tour="planner.garage" className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">My garage</h2>
+          <div className="flex items-center gap-1">
+            <h2 className="text-2xl font-bold text-foreground">My garage</h2>
+            <PlannerSectionTips section="My garage" tours={GARAGE_SECTION_TOURS} />
+          </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Pick the EV you&apos;re driving and the planner estimates battery and charging for every day.
           </p>
@@ -74,6 +82,7 @@ export function GarageSection() {
             className="gap-2"
             disabled={addVehicleDisabled}
             onClick={openAddVehicle}
+            data-tour="planner.add-vehicle"
           >
             <Plus className="size-4" aria-hidden="true" />
             Add vehicle
@@ -88,7 +97,7 @@ export function GarageSection() {
       {showEmptyState ? (
         <GarageEmptyState disabled={addVehicleDisabled} onAddVehicle={openAddVehicle} />
       ) : featuredVehicle && featuredCar ? (
-        <div className="mx-1 grid min-w-0 gap-3">
+        <div className="mx-1 grid min-w-0 gap-3" data-tour="planner.vehicle">
           <VehicleCard
             vehicle={featuredVehicle}
             car={featuredCar}
@@ -119,7 +128,7 @@ export function GarageSection() {
       {vehicles.length >= 25 && <p className="mt-3 text-sm text-muted-foreground">Your garage is full (25 vehicles). Remove a vehicle to add another.</p>}
 
       {activeVehicle && activeEvCar && (
-        <div className="mx-1 mt-6">
+        <div className="mx-1 mt-6" data-tour="planner.ev-usage">
           <VehicleUsageOverview
             car={activeEvCar}
             vehicle={activeVehicle}

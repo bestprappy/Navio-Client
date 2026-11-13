@@ -10,7 +10,7 @@ import { useTripMetadata } from "@/app/feature/planner/_components/use-trip-meta
 import { plannerMobileViewAtom } from "../layout/planner-workspace";
 import { useItineraryView } from "../itinerary/table/use-itinerary-view";
 import { plannerReadOnlyAtom, tripBlocksAtom } from "../overview/trip-builder.atoms";
-import { PLANNER_TOUR } from "./data";
+import { PLANNER_FEATURE_TOURS, PLANNER_TOUR } from "./data";
 
 /** Matches planner-workspace.module.css: below this width a phone shows one pane at a time. */
 const SPLIT_VIEW_QUERY = "(min-width: 64rem)";
@@ -52,5 +52,13 @@ export function PlannerTour({ planId }: { planId?: string }) {
     setMobileView("itinerary");
   }, [setItineraryView, setMobileView]);
 
-  return <PageTour tour={PLANNER_TOUR} ready={ready} eligible={eligible} prepare={prepare} />;
+  return (
+    <>
+      <PageTour tour={PLANNER_TOUR} ready={ready} eligible={eligible} prepare={prepare} />
+      {/* Feature tours never start by themselves; Show tips and each section's "?" offer them. */}
+      {PLANNER_FEATURE_TOURS.map((tour) => (
+        <PageTour key={tour.id} tour={tour} ready={ready} eligible={eligible} autoStart={false} prepare={prepare} />
+      ))}
+    </>
+  );
 }

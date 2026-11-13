@@ -53,3 +53,33 @@ export function fallbackFocusTarget(): HTMLElement | null {
   }
   return document.querySelector<HTMLElement>("main");
 }
+
+/** True when a menu or popover trigger reports its popup as open. */
+export function isTriggerOpen(trigger: Element): boolean {
+  return trigger.getAttribute("aria-expanded") === "true" || trigger.hasAttribute("data-popup-open");
+}
+
+/**
+ * Opens or closes a menu by pressing its trigger, the same way a person would.
+ * Only used for triggers that reveal controls; never for actions.
+ */
+export function setTriggerOpen(trigger: Element, open: boolean): void {
+  if (isTriggerOpen(trigger) === open || !(trigger instanceof HTMLElement)) return;
+  trigger.click();
+}
+
+/** Resolves with the visible target once it appears, or null after the timeout. */
+export function waitForTourTarget(target: string, timeoutMs = 1500): Promise<Element | null> {
+  const found = findVisibleTourTarget(target);
+  if (found) return Promise.resolve(found);
+  return new Promise((resolve) => {
+    const started = performance.now();
+    const poll = () => {
+      const element = findVisibleTourTarget(target);
+      if (element) resolve(element);
+      else if (performance.now() - started >= timeoutMs) resolve(null);
+      else requestAnimationFrame(poll);
+    };
+    requestAnimationFrame(poll);
+  });
+}

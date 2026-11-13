@@ -107,7 +107,7 @@ export function BlockOptionsPopover({ block }: BlockOptionsPopoverProps) {
         </PopoverHeader>
 
         {canAutoPlan ? (
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="overflow-hidden rounded-lg border border-border" data-tour="planner.auto-plan-action">
             <BlockOptionAction
               icon={<Waypoints />}
               title="Auto plan"
@@ -125,7 +125,7 @@ export function BlockOptionsPopover({ block }: BlockOptionsPopoverProps) {
           </div>
         ) : null}
 
-        <div className="space-y-2">
+        <div className="space-y-2" data-tour="planner.day-color">
           <p className="text-xs font-semibold text-muted-foreground">
             Change color
           </p>
@@ -136,7 +136,7 @@ export function BlockOptionsPopover({ block }: BlockOptionsPopoverProps) {
           />
         </div>
 
-        {showTimes ? <DayTimesSection timing={timing} onReviewOpen={() => setIsOpen(false)} /> : null}
+        {showTimes ? <div data-tour="planner.day-times"><DayTimesSection timing={timing} onReviewOpen={() => setIsOpen(false)} /></div> : null}
 
         {isConfirming ? (
           <div className="space-y-2 rounded-sm border border-destructive/30 bg-destructive/5 p-3">

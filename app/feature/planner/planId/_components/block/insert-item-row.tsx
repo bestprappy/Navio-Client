@@ -57,6 +57,7 @@ export function InsertItemRow({ blockId, beforeItemId, afterItemId, label, open,
         <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger
             ref={triggerRef}
+            data-tour="planner.add-item"
             aria-label={`Add an item here: ${label.toLowerCase()}`}
             title={label}
             className={styles.trigger}

@@ -114,6 +114,7 @@ function DayAnchorRailRoot({
   return (
     <DayAnchorRailContext.Provider value={value}>
       <div
+        data-tour="planner.day-anchors"
         className={cn(
           "min-w-0 rounded-xl border border-border/60 bg-gradient-to-b from-card to-secondary/30 p-3",
           "shadow-xs transition-shadow hover:shadow-sm",

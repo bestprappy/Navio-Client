@@ -1,5 +1,16 @@
 /** Every first-time tour Navio ships. Add an id here before adding a tour. */
-export const TOUR_IDS = ["dashboard", "planner", "community"] as const;
+export const TOUR_IDS = [
+  "dashboard",
+  "planner",
+  "community",
+  "planner-days",
+  "planner-auto-plan",
+  "planner-notes",
+  "planner-ev",
+  "planner-charging",
+  "planner-budget",
+  "planner-share",
+] as const;
 export type TourId = (typeof TOUR_IDS)[number];
 
 export type TourSide = "top" | "right" | "bottom" | "left";
@@ -17,6 +28,22 @@ export type TourStep = {
   align?: TourAlign;
   /** Skip this step for signed-out visitors (the control needs an account). */
   requiresAuth?: boolean;
+  /**
+   * `data-tour` value of a menu or panel trigger to press before this step,
+   * because the target lives inside it. The tour closes it again afterwards.
+   * Tours only open things; they never press anything that changes the trip.
+   */
+  opens?: string;
+  /**
+   * Skip this step while this `data-tour` control is on screen. Pairs two
+   * steps: one for when a feature is set up, one pointing at how to set it up.
+   */
+  unless?: string;
+  /**
+   * Shown centred instead when the target is not on screen, usually because
+   * the feature needs something first (places in a day, a car in the garage).
+   */
+  fallback?: { title: string; description: string };
 };
 
 export type TourDefinition = {
@@ -26,8 +53,10 @@ export type TourDefinition = {
    * it again. Copy fixes do not count.
    */
   version: number;
-  /** Plain name used in the Help button's accessible label. */
+  /** Plain name used in the Help button's accessible label and the tips menu. */
   label: string;
+  /** One short line for the tips menu, saying what the tour teaches. */
+  summary?: string;
   steps: readonly TourStep[];
 };
 

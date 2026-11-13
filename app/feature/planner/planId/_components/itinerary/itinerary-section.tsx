@@ -1,6 +1,8 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
+import { PlannerSectionTips } from "../tour/planner-section-tips";
+import { ITINERARY_SECTION_TOURS } from "../tour/data";
 import { useParams } from "next/navigation";
 import { useTripMetadata, useUpdateTripMetadata } from "../../../_components/use-trip-metadata";
 import { DayDestinationPicker } from "./day-destination-picker";
@@ -158,12 +160,15 @@ export function ItinerarySection({
       <Accordion defaultValue={["itinerary"]}>
         <AccordionItem value="itinerary" className="border-none">
           <div data-tour="planner.itinerary" className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <AccordionTrigger
-              iconSide="left"
-              className="items-center py-0 text-2xl font-bold text-foreground hover:text-primary hover:no-underline"
-            >
-              Itinerary
-            </AccordionTrigger>
+            <div className="flex min-w-0 items-center gap-1">
+              <AccordionTrigger
+                iconSide="left"
+                className="items-center py-0 text-2xl font-bold text-foreground hover:text-primary hover:no-underline"
+              >
+                Itinerary
+              </AccordionTrigger>
+              <PlannerSectionTips section="Itinerary" tours={ITINERARY_SECTION_TOURS} />
+            </div>
 
             {readOnly ? (
               tripDateLabel && (
@@ -237,7 +242,7 @@ export function ItinerarySection({
               ) : (
                 <>
                   <div className="border-b border-border/60 pb-4">
-                    <div className="flex min-w-0 items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center justify-between gap-2" data-tour="planner.itinerary-toolbar">
                     <ItineraryViewSwitch />
                     <div className="flex shrink-0 items-center gap-1">
                     {dayView === "all" && <button

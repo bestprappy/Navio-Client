@@ -36,7 +36,7 @@ export function GarageEmptyState({ disabled, onAddVehicle }: GarageEmptyStatePro
           charge along the way.
         </PlannerEmptyState.Description>
         <PlannerEmptyState.Action>
-          <Button type="button" size="lg" className="gap-2" disabled={disabled} onClick={onAddVehicle}>
+          <Button type="button" size="lg" className="gap-2" disabled={disabled} onClick={onAddVehicle} data-tour="planner.add-vehicle">
             <Plus className="size-4" aria-hidden="true" />
             Add vehicle
           </Button>

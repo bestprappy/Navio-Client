@@ -5,6 +5,7 @@ import { test } from "node:test";
 import {
   canAutoStartTour,
   countTargets,
+  countTeachingSteps,
   hasSeenTour,
   MIN_TOUR_TARGETS,
   resolveTourSteps,
@@ -73,6 +74,54 @@ test("steps that need an account are skipped for signed-out visitors even when t
   });
   assert.equal(steps.some((entry) => entry.step.title === "Notifications"), false);
   assert.equal(countTargets(steps), MIN_TOUR_TARGETS);
+});
+
+const featureTour = {
+  id: "planner-days",
+  version: 1,
+  label: "Days and timing",
+  steps: [
+    { target: "planner.day-header", title: "Days", description: "One block per day" },
+    { target: "planner.day-color", opens: "planner.day-options", title: "Colour", description: "Inside the day menu" },
+    { target: "planner.day-times", title: "Times", description: "Needs places", fallback: { title: "Calculate times", description: "Add a place first" } },
+    { target: "planner.missing", title: "Gone", description: "No menu and nothing to say" },
+  ],
+};
+
+test("a step inside a closed menu is kept when the menu's trigger is on screen", () => {
+  const steps = resolveTourSteps(featureTour, { isAuthenticated: true, findTarget: onScreen("planner.day-header", "planner.day-options") });
+  assert.deepEqual(steps.map((entry) => entry.mode), ["target", "deferred", "fallback"]);
+  assert.equal(countTargets(steps), 2);
+});
+
+test("a step whose menu trigger is missing too is dropped unless it can explain what to do", () => {
+  const steps = resolveTourSteps(featureTour, { isAuthenticated: true, findTarget: onScreen() });
+  assert.deepEqual(steps.map((entry) => entry.step.title), ["Times"]);
+  assert.equal(steps[0].mode, "fallback");
+  assert.equal(countTargets(steps), 0);
+  assert.equal(countTeachingSteps(steps), 1);
+});
+
+test("an unless step stands in for a feature only until that feature is on screen", () => {
+  const pair = {
+    id: "planner-charging",
+    version: 1,
+    label: "Charging stops",
+    steps: [
+      { target: "planner.add-ev-station", unless: "planner.ev-preferences", title: "Open the charger list", description: "Set-up step" },
+      { target: "planner.ev-preferences", title: "Charging preferences", description: "Panel step" },
+    ],
+  };
+  const closed = resolveTourSteps(pair, { isAuthenticated: true, findTarget: onScreen("planner.add-ev-station") });
+  assert.deepEqual(closed.map((entry) => entry.step.title), ["Open the charger list"]);
+  const open = resolveTourSteps(pair, { isAuthenticated: true, findTarget: onScreen("planner.add-ev-station", "planner.ev-preferences") });
+  assert.deepEqual(open.map((entry) => entry.step.title), ["Charging preferences"]);
+});
+
+test("a lone welcome card does not count as something to teach", () => {
+  const steps = resolveTourSteps(tour, { isAuthenticated: true, findTarget: onScreen() });
+  assert.deepEqual(steps.map((entry) => entry.mode), ["centred"]);
+  assert.equal(countTeachingSteps(steps), 0);
 });
 
 test("auto-start happens only when the page is ready, the viewer is eligible and the tour is unseen", () => {

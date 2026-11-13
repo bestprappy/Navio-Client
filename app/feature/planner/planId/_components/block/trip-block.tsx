@@ -125,7 +125,7 @@ function TripBlockTitle() {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" data-tour={isListBlock ? undefined : "planner.day-header"}>
       <div className="min-w-0 flex-1">
         {shouldShowListEditor ? (
           <Textarea
@@ -208,8 +208,10 @@ function TripBlockActions({
   const reveal = useRevealPlanCard();
 
   return (
-    <div className="mx-0 mt-5 space-y-3">
-      <AddPlaceInput blockId={block.id} searchBias={placeSearchBias} />
+    <div className="mx-0 mt-5 space-y-3" data-tour={block.kind === "list" ? undefined : "planner.day-actions"}>
+      <div data-tour={block.kind === "list" ? undefined : "planner.add-stop"}>
+        <AddPlaceInput blockId={block.id} searchBias={placeSearchBias} />
+      </div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2 [&_button]:h-auto [&_button]:min-h-11 [&_button]:whitespace-normal [&_button]:px-2 [&_button]:py-2 [&_button]:leading-snug">
         <Button
           type="button"
@@ -217,6 +219,7 @@ function TripBlockActions({
           size="lg"
           className="h-11 min-w-0 w-full rounded-lg border-note/30 bg-note/10 text-note hover:bg-note/20 hover:text-note dark:border-note/30 dark:bg-note/10 dark:hover:bg-note/20"
           onClick={() => addNoteToBlock({ blockId: block.id })}
+          data-tour="planner.add-note"
         >
           <FileText className="size-4" aria-hidden="true" />
           Add a note
@@ -227,6 +230,7 @@ function TripBlockActions({
           size="lg"
           className="h-11 min-w-0 w-full rounded-lg border-checklist/30 bg-checklist/10 text-checklist hover:bg-checklist/20 hover:text-checklist dark:border-checklist/30 dark:bg-checklist/10 dark:hover:bg-checklist/20"
           onClick={() => addChecklistToBlock({ blockId: block.id })}
+          data-tour="planner.add-checklist"
         >
           <CheckSquare className="size-4" aria-hidden="true" />
           Add checklist
@@ -242,6 +246,7 @@ function TripBlockActions({
             size="lg"
             className="h-11 min-w-0 w-full rounded-lg"
             title="Split a long day, or start the part of the day spent in another city"
+            data-tour="planner.add-section"
             onClick={() => {
               const id = addSectionToBlock({ blockId: block.id });
               if (id) reveal(block.id, id);

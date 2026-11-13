@@ -35,6 +35,10 @@ import { useTripCharging } from "../garage/use-trip-charging";
 import { EvStationListCard } from "./ev-station-list-card";
 import { getItemInsertionIndex } from "../block/item-insertion";
 import { EvRouteOptimizationPanel } from "./ev-route-optimization-panel";
+import { PlannerSectionTips } from "../tour/planner-section-tips";
+import { PLANNER_CHARGING_TOUR } from "../tour/data";
+
+const CHARGING_SECTION_TOURS = [PLANNER_CHARGING_TOUR];
 import { filterEvChargers } from "./ev-station-api";
 
 type EvStationSidePanelProps = {
@@ -133,7 +137,9 @@ export function EvStationSidePanel({
       ariaLabel="EV station picker"
       onBack={onClose}
     >
-      <PlannerSidePanel.Header />
+      <PlannerSidePanel.Header>
+        <PlannerSectionTips section="EV charging" tours={CHARGING_SECTION_TOURS} />
+      </PlannerSidePanel.Header>
 
       <PlannerSidePanel.Body>
         <div className="border-b border-border bg-card px-4 py-4">
@@ -152,12 +158,14 @@ export function EvStationSidePanel({
             />
           </div>
 
-          <div className="mt-3 rounded-sm border border-primary/25 bg-primary/5 p-3">
+          <div className="mt-3 rounded-sm border border-primary/25 bg-primary/5 p-3" data-tour="planner.ev-preferences">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
               Charging preferences
             </p>
-            <ArrivalReserveControl className="mt-2" disabled={!activeEvCar} />
-            <div className="mt-4">
+            <div data-tour="planner.ev-reserve">
+              <ArrivalReserveControl className="mt-2" disabled={!activeEvCar} />
+            </div>
+            <div className="mt-4" data-tour="planner.ev-charge-target">
               <div className="flex items-end justify-between gap-3">
                 <div className="min-w-0">
                   <label
@@ -203,7 +211,7 @@ export function EvStationSidePanel({
           </div>
         </div>
 
-        <section aria-label="Nearby EV stations" className="px-4 py-4">
+        <section aria-label="Nearby EV stations" className="px-4 py-4" data-tour="planner.ev-stations">
           <label className="mb-4 flex items-center gap-2 text-sm font-medium">
             <Checkbox checked={compatibleOnly} onCheckedChange={setCompatibleOnly} />
             Show only compatible
