@@ -23,6 +23,7 @@ import { TripHero } from "./_components/overview/trip-hero";
 import { TripInfoCard } from "./_components/overview/trip-info-card";
 import { PlannerSidePanelHost } from "./_components/layout/planner-side-panel-host";
 import { PlannerMap } from "./planner-map";
+import { PlannerTour } from "./_components/tour/planner-tour";
 
 type PlannerDetailProps = {
   planId?: string;
@@ -111,6 +112,7 @@ export function PlannerDetail({
         templatePlanId={templatePlanId}
       />
       <RecentPlanSidebarSync planId={planId} />
+      <PlannerTour planId={planId} />
       <PublishedGuides />
       <DayNavSidebar />
       <RouteStopTracker />

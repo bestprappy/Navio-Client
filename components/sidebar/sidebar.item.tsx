@@ -17,6 +17,8 @@ type SidebarItemProps = {
   isActive?: boolean;
   collapsed?: boolean;
   onClick?: MouseEventHandler<HTMLAnchorElement>;
+  /** `data-tour` value when a first-time tour points at this row. */
+  tourTarget?: string;
 };
 
 export default function SidebarItem({
@@ -29,11 +31,13 @@ export default function SidebarItem({
   onClick,
   title,
   collapsed = false,
+  tourTarget,
 }: SidebarItemProps) {
   return (
     <Link
       href={href}
       data-active={isActive ? "true" : "false"}
+      data-tour={tourTarget}
       aria-label={accessibleLabel ?? (collapsed ? title : undefined)}
       onClick={onClick}
       aria-current={isActive ? "page" : undefined}

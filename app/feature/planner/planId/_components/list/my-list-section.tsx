@@ -71,7 +71,7 @@ export function MyListSection({
     <section className="px-4 py-4">
       <Accordion defaultValue={["my-list"]}>
         <AccordionItem value="my-list" className="border-none">
-          <div className="mb-6 flex items-center justify-between">
+          <div data-tour="planner.my-list" className="mb-6 flex items-center justify-between">
             <AccordionTrigger
               iconSide="left"
               className="items-center py-0 text-2xl font-bold text-foreground hover:text-primary hover:no-underline"

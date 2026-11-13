@@ -17,6 +17,8 @@ import {
 import { TripDashboardSkeleton } from "./_components/dashboard/trip-dashboard.skeleton";
 import { listTrips } from "./_components/planner-api";
 import { PlannerErrorBoundary } from "./_components/planner-error-boundary";
+import { DASHBOARD_TOUR } from "./_components/dashboard/tour/data";
+import { PageTour } from "@/components/tour/page-tour";
 
 const TRIP_PAGE_SIZE = 30;
 
@@ -33,6 +35,9 @@ export function PlannerHomeView() {
     staleTime: 30_000,
     retry: 1,
   });
+
+  // The dashboard tour is for signed-in travellers, once their trips have loaded.
+  const tour = <PageTour tour={DASHBOARD_TOUR} ready={isAuthenticated && tripsQuery.isSuccess} eligible={isAuthenticated} />;
 
   if (isAuthenticationLoading) return <TripDashboardSkeleton />;
   if (!isAuthenticated) return <PlannerErrorBoundary><TripDashboardView trips={[]} /></PlannerErrorBoundary>;
@@ -62,6 +67,7 @@ export function PlannerHomeView() {
       fallbackTitle="We could not display your trips"
       fallbackDescription="Refresh the page, or start a new trip to keep planning."
     >
+      {tour}
       <TripDashboardView trips={trips} />
     </PlannerErrorBoundary>
   );

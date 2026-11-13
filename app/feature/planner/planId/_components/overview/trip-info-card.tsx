@@ -41,6 +41,7 @@ export function TripInfoCard({
             tripId={planId}
             tripTitle={metadata.data?.title ?? destinationName}
             redirectTo="/dashboard"
+            tourTarget="planner.trip-options"
           />
         )}
       </div>

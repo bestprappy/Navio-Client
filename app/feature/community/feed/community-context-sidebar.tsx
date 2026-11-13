@@ -24,7 +24,7 @@ export function CommunityContextSidebar({ groups, isLoading, isError, onRetry }:
 
   return (
     <aside aria-label="Communities" className="flex flex-col gap-4">
-      <section className="overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/70">
+      <section data-tour="community.popular-groups" className="overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/70">
         <h2 className="px-4 pb-2 pt-4 text-sm font-bold text-foreground">Popular communities</h2>
         {isLoading ? (
           <div role="status" className="flex flex-col gap-3 px-4 pb-4">

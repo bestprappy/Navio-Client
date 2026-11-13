@@ -57,7 +57,7 @@ function TripDashboardHeader() {
         <h1 className="text-3xl font-bold tracking-tight text-foreground">{firstName ? `Welcome back, ${firstName}` : "Your next adventure starts here"}</h1>
         <p className="text-sm text-muted-foreground">Your trips, fresh ideas, and a little inspiration for the road ahead.</p>
       </div>
-      <Link href={PLANNER_SETUP_HREF} className={cn(buttonVariants({ size: "lg" }), "w-fit shrink-0 rounded-full px-5")}>
+      <Link href={PLANNER_SETUP_HREF} data-tour="dashboard.new-trip" className={cn(buttonVariants({ size: "lg" }), "w-fit shrink-0 rounded-full px-5")}>
         <Plus aria-hidden="true" className="size-4" />Plan a new trip
       </Link>
     </header>
@@ -67,7 +67,7 @@ function TripDashboardHeader() {
 function TripDashboardUpcoming() {
   const { upcomingTrips } = useTripDashboardContext();
   return (
-    <section aria-labelledby="upcoming-trips-title" className="space-y-4">
+    <section aria-labelledby="upcoming-trips-title" data-tour="dashboard.trips" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 id="upcoming-trips-title" className="text-lg font-semibold">Upcoming trips <span className="ml-2 rounded-full bg-secondary px-2 py-1 text-xs text-secondary-foreground">{upcomingTrips.length}</span></h2>
@@ -102,7 +102,7 @@ function TripDashboardExplore() {
   return (
     <section aria-labelledby="explore-plans-title" className="min-w-0">
       <div className="min-w-0 space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div data-tour="dashboard.explore" className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <p className="flex items-center gap-2 text-xs font-semibold tracking-wide text-primary uppercase"><Compass aria-hidden="true" className="size-4" />Explore plans</p>
             <h2 id="explore-plans-title" className="text-xl font-semibold">{matchingPlans.length ? `For your ${destination} trip` : "Find inspiration for your next trip"}</h2>

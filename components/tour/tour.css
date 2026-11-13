@@ -1,0 +1,317 @@
+/*
+ * Navio skin for Driver.js tours. Every colour comes from globals.css tokens,
+ * so light and dark themes follow automatically. Selectors are prefixed with
+ * `body` to win over driver.css regardless of stylesheet order.
+ */
+
+body .driver-popover.navio-tour {
+  --tour-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-sizing: border-box;
+  min-width: min(17rem, calc(100vw - 2rem));
+  max-width: min(22rem, calc(100vw - 2rem));
+  padding: 1.25rem 1.25rem 1rem;
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  border-radius: var(--radius-xl);
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--brand-paper) 55%, transparent),
+    0 2px 6px color-mix(in oklab, var(--scrim) 14%, transparent),
+    0 18px 40px -12px color-mix(in oklab, var(--scrim) 42%, transparent);
+  animation: navio-tour-in 220ms var(--tour-ease) both;
+}
+
+.dark body .driver-popover.navio-tour,
+body.dark .driver-popover.navio-tour {
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--brand-paper) 8%, transparent),
+    0 18px 44px -10px color-mix(in oklab, var(--scrim) 80%, transparent);
+}
+
+body .driver-popover.navio-tour--centered {
+  max-width: min(24rem, calc(100vw - 2rem));
+  padding: 1.5rem 1.5rem 1.125rem;
+}
+
+/* Text */
+
+body .navio-tour .driver-popover-title {
+  margin: 0;
+  padding-right: 2rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.375;
+  letter-spacing: -0.01em;
+  color: var(--popover-foreground);
+}
+
+body .navio-tour--centered .driver-popover-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+body .navio-tour .driver-popover-description {
+  margin-top: 0.375rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+
+/* Close */
+
+body .navio-tour .driver-popover-close-btn {
+  all: unset;
+  box-sizing: border-box;
+  position: absolute;
+  top: 0.625rem;
+  right: 0.625rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--radius-md);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+body .navio-tour .driver-popover-close-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+body .navio-tour .driver-popover-close-btn:hover {
+  background-color: var(--muted);
+  color: var(--foreground);
+}
+
+body .navio-tour .driver-popover-close-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  color: var(--foreground);
+}
+
+/* Footer: route progress on the left, actions on the right */
+
+body .navio-tour .driver-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+body .navio-tour .driver-popover-progress-text {
+  display: none !important;
+}
+
+.navio-tour-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+}
+
+.navio-tour-route {
+  --tour-dot: 0.5rem;
+  position: relative;
+  flex: none;
+  width: calc(var(--tour-stops, 5) * 0.75rem);
+  max-width: 6rem;
+  height: 0.75rem;
+}
+
+.navio-tour-route-line {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--tour-dot) / 2);
+  right: calc(var(--tour-dot) / 2);
+  height: 2px;
+  border-radius: 999px;
+  background-color: var(--border);
+  transform: translateY(-50%);
+  overflow: hidden;
+}
+
+.navio-tour-route-line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: var(--primary);
+  transform-origin: left center;
+  transform: scaleX(var(--tour-progress, 0));
+  transition: transform 380ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.navio-tour-route-stop {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--tour-dot) / 2 + var(--stop-position) * (100% - var(--tour-dot)));
+  width: var(--tour-dot);
+  height: var(--tour-dot);
+  border-radius: 999px;
+  background-color: var(--popover);
+  box-shadow: inset 0 0 0 1.5px var(--border);
+  transform: translate(-50%, -50%);
+  transition: background-color 200ms ease 180ms, box-shadow 200ms ease 180ms;
+}
+
+.navio-tour-route-stop[data-state="visited"] {
+  background-color: var(--primary);
+  box-shadow: none;
+}
+
+.navio-tour-route-stop[data-state="current"] {
+  background-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 28%, transparent);
+  animation: navio-tour-stop-arrive 320ms cubic-bezier(0.2, 0.8, 0.2, 1) 200ms both;
+}
+
+.navio-tour-count {
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.33;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+body .navio-tour .driver-popover-navigation-btns {
+  display: flex;
+  flex-grow: 0;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+body .navio-tour .driver-popover-navigation-btns button + button {
+  margin-left: 0;
+}
+
+body .navio-tour .driver-popover-footer-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 2.25rem;
+  padding: 0 1rem;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1;
+  text-shadow: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+body .navio-tour .driver-popover-prev-btn {
+  background-color: transparent;
+  color: var(--foreground);
+}
+
+body .navio-tour .driver-popover-prev-btn:hover {
+  background-color: var(--muted);
+}
+
+body .navio-tour .driver-popover-next-btn {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--brand-paper) 25%, transparent),
+    0 1px 2px color-mix(in oklab, var(--scrim) 20%, transparent);
+}
+
+body .navio-tour .driver-popover-next-btn:hover {
+  background-color: color-mix(in oklab, var(--primary) 88%, var(--foreground));
+}
+
+body .navio-tour .driver-popover-footer-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Arrow: Driver.js draws it with borders; colour only the side that points. */
+
+body .navio-tour .driver-popover-arrow {
+  border: 7px solid transparent;
+}
+
+body .navio-tour .driver-popover-arrow-side-left {
+  border-left-color: var(--popover);
+}
+
+body .navio-tour .driver-popover-arrow-side-right {
+  border-right-color: var(--popover);
+}
+
+body .navio-tour .driver-popover-arrow-side-top {
+  border-top-color: var(--popover);
+}
+
+body .navio-tour .driver-popover-arrow-side-bottom {
+  border-bottom-color: var(--popover);
+}
+
+body .navio-tour .driver-popover-arrow-side-center,
+body .navio-tour .driver-popover-arrow-none,
+body .navio-tour .driver-popover-arrow-side-over {
+  display: none;
+}
+
+/* One ring that leaves the highlighted control as the spotlight lands on it. */
+
+.navio-tour-pulse {
+  animation: navio-tour-pulse 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 240ms 1 both;
+}
+
+@keyframes navio-tour-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes navio-tour-stop-arrive {
+  from {
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes navio-tour-pulse {
+  from {
+    outline: 2px solid var(--primary);
+    outline-offset: 0;
+  }
+  to {
+    outline: 2px solid transparent;
+    outline-offset: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .driver-popover.navio-tour,
+  .navio-tour-route-stop[data-state="current"],
+  .navio-tour-pulse {
+    animation: none;
+  }
+
+  .navio-tour-route-line::after,
+  .navio-tour-route-stop {
+    transition: none;
+  }
+}

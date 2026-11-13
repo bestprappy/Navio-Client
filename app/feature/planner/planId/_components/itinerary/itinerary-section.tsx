@@ -157,7 +157,7 @@ export function ItinerarySection({
     <section className="px-4 py-4 ">
       <Accordion defaultValue={["itinerary"]}>
         <AccordionItem value="itinerary" className="border-none">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div data-tour="planner.itinerary" className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <AccordionTrigger
               iconSide="left"
               className="items-center py-0 text-2xl font-bold text-foreground hover:text-primary hover:no-underline"

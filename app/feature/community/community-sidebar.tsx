@@ -38,6 +38,7 @@ export function CommunitySidebar() {
     <aside className="hidden min-h-0 w-64 shrink-0 flex-col overflow-y-auto overscroll-y-contain border-r border-sidebar-border bg-sidebar md:flex">
       <CommunityNavioMenu />
       <nav aria-label="Community navigation" className="flex min-h-max flex-1 flex-col gap-1 px-3 py-4">
+        <div data-tour="community.sections" className="flex flex-col gap-1">
         <h2 className="px-3 pb-1 text-sm font-bold text-foreground">Community menu</h2>
         {COMMUNITY_NAV.map(({ title, href, icon: Icon }) => {
           const active = isCommunityNavActive(pathname, href);
@@ -58,6 +59,7 @@ export function CommunitySidebar() {
             </Link>
           );
         })}
+        </div>
 
         <div className="my-3 h-px bg-sidebar-border" />
 
@@ -65,6 +67,7 @@ export function CommunitySidebar() {
         <button
           type="button"
           onClick={() => requireAuth(() => openCreate(true))}
+          data-tour="community.create-group"
           className={cn(ROW, "text-foreground hover:bg-muted")}
         >
           <span className="flex size-6 items-center justify-center rounded-full bg-primary/12 text-primary">

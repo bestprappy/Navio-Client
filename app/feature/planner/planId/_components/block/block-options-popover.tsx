@@ -79,6 +79,7 @@ export function BlockOptionsPopover({ block }: BlockOptionsPopoverProps) {
       <PopoverTrigger
         ref={triggerRef}
         type="button"
+        data-tour={block.kind === "list" ? undefined : "planner.day-options"}
         aria-label={flagTimes ? `${label}, times need updating` : label}
         title={flagTimes ? "Times need updating" : undefined}
         onClick={stopHeaderToggle}

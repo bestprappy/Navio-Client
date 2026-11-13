@@ -31,7 +31,7 @@ export function BudgetSection() {
 
   return (
     <section className="px-4 pb-12 pt-2">
-      <div className="mb-5 flex items-center justify-between pl-4">
+      <div data-tour="planner.budget" className="mb-5 flex items-center justify-between pl-4">
         <h2 className="text-2xl font-bold text-foreground">Budgeting</h2>
         {!readOnly && <Button
           type="button"

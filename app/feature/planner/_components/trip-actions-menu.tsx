@@ -31,9 +31,11 @@ type TripActionsMenuProps = {
   /** Where to go once the trip is gone; omit when the list the trip lives in simply refreshes. */
   redirectTo?: string;
   className?: string;
+  /** `data-tour` value when a first-time tour points at this menu. */
+  tourTarget?: string;
 };
 
-export function TripActionsMenu({ tripId, tripTitle, redirectTo, className }: TripActionsMenuProps) {
+export function TripActionsMenu({ tripId, tripTitle, redirectTo, className, tourTarget }: TripActionsMenuProps) {
   const router = useRouter();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -67,6 +69,7 @@ export function TripActionsMenu({ tripId, tripTitle, redirectTo, className }: Tr
               className={cn("shrink-0 rounded-full text-muted-foreground hover:text-foreground", className)}
               aria-label={`Trip options for ${tripTitle}`}
               title="Trip options"
+              data-tour={tourTarget}
             />
           }
         >

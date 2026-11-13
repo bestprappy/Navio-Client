@@ -58,7 +58,7 @@ export function GarageSection() {
 
   return (
     <section aria-label="Trip vehicles" className="@container/garage min-w-0 px-4 py-6">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div data-tour="planner.garage" className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold text-foreground">My garage</h2>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -17,6 +17,8 @@ import { useCommunityFeed, useCommunityGroups } from "./_components/community-qu
 import { useCommunityIdentity } from "./_components/community-group-queries";
 import { Button } from "@/components/ui/button";
 import { EmptyFeed } from "./_components/community-empty-state";
+import { COMMUNITY_TOUR } from "./_components/tour/data";
+import { PageTour } from "@/components/tour/page-tour";
 
 /**
  * Home shows posts from the viewer's communities; Popular shows every
@@ -67,6 +69,7 @@ export function CommunityPage({ variant = "home" }: { variant?: "home" | "popula
 
   return (
     <CommunityErrorBoundary>
+      <PageTour tour={COMMUNITY_TOUR} ready={!feed.isLoading && !groupsQuery.isLoading} />
       <CommunityWorkspace>
         <CommunityWorkspace.Content>
           {!home ? (

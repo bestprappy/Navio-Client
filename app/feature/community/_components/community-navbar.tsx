@@ -14,6 +14,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRequireAuth } from "@/hooks/use-require-auth";
+import { TourHelpButton } from "@/components/tour/tour-help-button";
 import { cn } from "@/lib/utils";
 
 export function CommunityNavbar() {
@@ -42,7 +43,7 @@ export function CommunityNavbar() {
         </Link>
 
         <div className="order-last flex min-w-0 basis-full justify-center sm:order-none sm:flex-1 sm:basis-auto">
-          <div className="relative w-full max-w-xl">
+          <div className="relative w-full max-w-xl" data-tour="community.search">
             <Search
               className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
               aria-hidden="true"
@@ -77,17 +78,19 @@ export function CommunityNavbar() {
             variant="ghost"
             className="h-10 rounded-full px-3 font-semibold"
             aria-label="Create post"
+            data-tour="community.create-post"
           >
             <Plus className="size-5" aria-hidden="true" />
             <span className="hidden sm:inline">Create</span>
           </Button>
+          <TourHelpButton variant="icon" />
           <SavedLink />
           <ThemeToggle />
           <AuthActions compact />
         </div>
       </div>
 
-      <nav aria-label="Community sections" className="flex gap-1 overflow-x-auto px-3 pb-2 md:hidden">
+      <nav aria-label="Community sections" data-tour="community.sections" className="flex gap-1 overflow-x-auto px-3 pb-2 md:hidden">
         {COMMUNITY_NAV.map(({ href, title, icon: Icon }) => {
           const active = isCommunityNavActive(pathname, href);
           return (
@@ -109,6 +112,7 @@ export function CommunityNavbar() {
           type="button"
           onClick={() => requireAuth(() => openCreate(true))}
           aria-label="Create a community"
+          data-tour="community.create-group"
           className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Plus className="size-3.5" aria-hidden="true" />

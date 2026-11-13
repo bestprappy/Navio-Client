@@ -15,15 +15,18 @@ type SidebarMenuProps = {
   title: string;
   children: ReactNode;
   collapsed?: boolean;
+  /** `data-tour` value when a first-time tour points at this group. */
+  tourTarget?: string;
 };
 
 export default function SidebarMenu({
   title,
   children,
   collapsed = false,
+  tourTarget,
 }: SidebarMenuProps) {
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" data-tour={tourTarget}>
       {!collapsed && (
         <h3 className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {title}
@@ -104,7 +107,7 @@ export function SidebarTripsMenu({
   collapsed,
 }: SidebarTripsMenuProps) {
   return (
-    <SidebarMenu title="Trips" collapsed={collapsed}>
+    <SidebarMenu title="Trips" collapsed={collapsed} tourTarget="sidebar.trips">
       {children}
     </SidebarMenu>
   );

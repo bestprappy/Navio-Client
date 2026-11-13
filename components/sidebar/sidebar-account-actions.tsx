@@ -8,6 +8,7 @@ import { Bell, LogIn, LogOut, Settings } from "lucide-react";
 import { NotificationCountBadge, notificationsLabel } from "@/components/notifications/notification-count-badge";
 import { useUnreadCount } from "@/hooks/use-social";
 
+import { TourHelpButton } from "@/components/tour/tour-help-button";
 import { cn } from "@/lib/utils";
 import { SidebarAppearance } from "./sidebar-appearance";
 import SidebarItem from "./sidebar.item";
@@ -35,8 +36,10 @@ export function SidebarAccountActions({ collapsed, onNavigate }: SidebarAccountA
       {status === "authenticated" ? (
         <SidebarItem title="Notifications" accessibleLabel={notificationsLabel(unread)} href="/notifications"
           badge={unread > 0 ? <NotificationCountBadge count={unread} size={collapsed ? "sm" : "default"} /> : undefined}
-          icon={<Bell className="size-5" />} isActive={pathName === "/notifications"} collapsed={collapsed} onClick={onNavigate} />
+          icon={<Bell className="size-5" />} isActive={pathName === "/notifications"} collapsed={collapsed} onClick={onNavigate}
+          tourTarget="sidebar.notifications" />
       ) : null}
+      <TourHelpButton collapsed={collapsed} onStart={onNavigate} />
       <SidebarItem title="Settings" href="/settings/profile" icon={<Settings className="size-5" />}
         isActive={pathName === "/settings" || pathName.startsWith("/settings/")}
         collapsed={collapsed} onClick={onNavigate} />
