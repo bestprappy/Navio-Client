@@ -34,13 +34,13 @@ export function SidebarAccountActions({ collapsed, onNavigate }: SidebarAccountA
   return (
     <nav aria-label="Account" className="mt-3 flex shrink-0 flex-col gap-1 border-t border-border/50 pt-3">
       {status === "authenticated" ? (
-        <SidebarItem title="Notifications" accessibleLabel={notificationsLabel(unread)} href="/notifications"
+        <SidebarItem variant="action" title="Notifications" accessibleLabel={notificationsLabel(unread)} href="/notifications"
           badge={unread > 0 ? <NotificationCountBadge count={unread} size={collapsed ? "sm" : "default"} /> : undefined}
           icon={<Bell className="size-5" />} isActive={pathName === "/notifications"} collapsed={collapsed} onClick={onNavigate}
           tourTarget="sidebar.notifications" />
       ) : null}
       <TourHelpButton collapsed={collapsed} onStart={onNavigate} />
-      <SidebarItem title="Settings" href="/settings/profile" icon={<Settings className="size-5" />}
+      <SidebarItem variant="action" title="Settings" href="/settings/profile" icon={<Settings className="size-5" />}
         isActive={pathName === "/settings" || pathName.startsWith("/settings/")}
         collapsed={collapsed} onClick={onNavigate} />
       <SidebarAppearance collapsed={collapsed} className={actionClassName} />
@@ -52,7 +52,7 @@ export function SidebarAccountActions({ collapsed, onNavigate }: SidebarAccountA
           {!collapsed && (logout.isPending ? "Logging out…" : "Log out")}
         </button>
       ) : status === "unauthenticated" ? (
-        <SidebarItem title="Sign in" href="/sign-in" icon={<LogIn className="size-5" />} collapsed={collapsed} onClick={onNavigate} />
+        <SidebarItem variant="action" title="Sign in" href="/sign-in" icon={<LogIn className="size-5" />} collapsed={collapsed} onClick={onNavigate} />
       ) : null}
       {logout.isError && <p role="alert" className="px-2 text-xs text-destructive">Could not log out. Please try again.</p>}
     </nav>

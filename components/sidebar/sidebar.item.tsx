@@ -16,6 +16,7 @@ type SidebarItemProps = {
   iconClassName?: string;
   isActive?: boolean;
   collapsed?: boolean;
+  variant?: "navigation" | "action";
   onClick?: MouseEventHandler<HTMLAnchorElement>;
   /** `data-tour` value when a first-time tour points at this row. */
   tourTarget?: string;
@@ -31,6 +32,7 @@ export default function SidebarItem({
   onClick,
   title,
   collapsed = false,
+  variant = "navigation",
   tourTarget,
 }: SidebarItemProps) {
   return (
@@ -43,22 +45,30 @@ export default function SidebarItem({
       aria-current={isActive ? "page" : undefined}
       title={collapsed ? (accessibleLabel ?? title) : undefined}
       className={cn(
-        "group relative isolate flex min-h-11 w-full items-center rounded-xl text-sm font-medium transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/45",
-        collapsed ? "justify-center px-1" : "gap-2.5 overflow-hidden px-3",
+        "relative flex min-h-11 w-full items-center text-sm font-medium",
+        variant === "action"
+          ? "rounded-md transition-colors focus-visible:outline-2 focus-visible:outline-ring"
+          : "group isolate rounded-xl transition-[background-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/45",
+        collapsed
+          ? cn("justify-center", variant === "action" ? "px-0" : "px-1")
+          : cn("overflow-hidden px-3", variant === "action" ? "gap-3" : "gap-2.5"),
         isActive
           ? "bg-sidebar-accent/90 font-semibold text-sidebar-accent-foreground"
-          : "text-muted-foreground hover:bg-sidebar-accent/55 hover:text-foreground",
+          : cn("text-muted-foreground hover:text-foreground", variant === "action" ? "hover:bg-muted" : "hover:bg-sidebar-accent/55"),
       )}
     >
       {icon ? (
         <span
           className={cn(
-            "relative flex size-8 shrink-0 items-center justify-center rounded-lg transition-[background-color,color]",
+            "relative flex shrink-0 items-center justify-center",
+            variant === "action" ? "size-5" : "size-8 rounded-lg transition-[background-color,color]",
             iconClassName
               ? iconClassName
-              : isActive
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground group-hover:bg-background/70 group-hover:text-foreground",
+              : variant === "navigation"
+                ? isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground group-hover:bg-background/70 group-hover:text-foreground"
+                : undefined,
           )}
         >
           {icon}
