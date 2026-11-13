@@ -57,6 +57,8 @@ export type TripResponse = {
   destinationLng: number | null;
   destinationCountry: string | null;
   visibility: string;
+  /** The owner's uploaded banner photo; absent or null means the destination photo is shown. */
+  coverMediaId?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -603,6 +605,7 @@ export function isTripResponse(value: unknown): value is TripResponse {
     isNullableNumber(value.destinationLng) &&
     isNullableString(value.destinationCountry) &&
     typeof value.visibility === "string" &&
+    (value.coverMediaId === undefined || isNullableString(value.coverMediaId)) &&
     typeof value.createdAt === "string" &&
     typeof value.updatedAt === "string"
   );

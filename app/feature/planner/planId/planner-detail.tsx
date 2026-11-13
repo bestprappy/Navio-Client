@@ -56,7 +56,13 @@ export function PlannerDetail({
   return (
     <GarageProvider key={planId}>
     <PlannerWorkspace itinerary={<GuideDrawerSwitch>
-          <TripHero destinationName={tripDestinationName} />
+          <TripHero
+            planId={planId}
+            destinationName={tripDestinationName}
+            destinationCity={metadata.data?.destinationCity}
+            destinationCountry={metadata.data?.destinationCountry ?? country}
+            coverMediaId={metadata.data?.coverMediaId}
+          />
           <TripInfoCard
             planId={planId}
             destinationName={tripDestinationName}

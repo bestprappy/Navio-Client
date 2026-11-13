@@ -378,3 +378,21 @@ export function destinationPlanCover(plan: Pick<ExplorePlan, "destinationCity" |
     ?? PLAN_DESTINATION_COVERS.find(cover => normalize(cover.country) === country
       && (normalize(cover.city) === city || cover.aliases.some(alias => normalize(alias) === city)));
 }
+
+export type DestinationCover = (typeof PLAN_DESTINATION_COVERS)[number];
+
+/**
+ * The best attributed photo for a trip destination: the city's own photo when
+ * there is one, otherwise the first photo from the same country. A destination
+ * that is itself a country ("Taiwan") therefore still gets a picture.
+ */
+export function destinationCountryCover(destination: { city?: string | null; country?: string | null; name?: string | null }): DestinationCover | undefined {
+  const country = normalize(destination.country);
+  const names = [destination.city, destination.name].map(normalize).filter(Boolean);
+  const matchesCountry = (cover: DestinationCover) => country !== "" && normalize(cover.country) === country;
+  const matchesName = (cover: DestinationCover) =>
+    names.some(name => name === normalize(cover.city) || cover.aliases.some(alias => normalize(alias) === name));
+  return PLAN_DESTINATION_COVERS.find(cover => matchesCountry(cover) && matchesName(cover))
+    ?? PLAN_DESTINATION_COVERS.find(matchesCountry)
+    ?? PLAN_DESTINATION_COVERS.find(cover => names.some(name => name === normalize(cover.country)));
+}
