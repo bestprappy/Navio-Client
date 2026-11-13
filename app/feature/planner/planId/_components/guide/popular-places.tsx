@@ -90,10 +90,10 @@ export function PopularPlaces({ blockId, destination }: { blockId: string; desti
 
   return (
     <section aria-labelledby={titleId} className="min-w-0">
-      <Carousel opts={{ align: "start", dragFree: true }} aria-label={`Popular places in ${guide.name}`}>
+      <Carousel opts={{ align: "start", dragFree: true }} aria-label={`Places we recommend in ${guide.name}`}>
         <div className="mb-2 flex items-center justify-between gap-2">
           <h4 id={titleId} className="text-sm font-semibold text-foreground">
-            Popular places in {guide.name}
+            Places we recommend in {guide.name}
           </h4>
           <div className="flex items-center gap-1">
             <CarouselPrevious className={ARROW_CLASS} />
@@ -104,7 +104,7 @@ export function PopularPlaces({ blockId, destination }: { blockId: string; desti
               variant="ghost"
               size="sm"
               className="text-primary"
-              aria-label={`Browse all popular places in ${guide.name}`}
+              aria-label={`Browse all recommended places in ${guide.name}`}
               onClick={() => openBrowser({ guideId: guide.id, blockId })}
             >
               Browse all

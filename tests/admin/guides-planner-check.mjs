@@ -80,9 +80,9 @@ try {
   page.on("pageerror", (error) => errors.push(error.message));
 
   await page.goto(`${base}/planner/${planId}?destinationName=Bangkok&from=2026-10-13&to=2026-10-13&lat=13.75&lng=100.53`, { waitUntil: "domcontentloaded", timeout: 120_000 });
-  const popular = page.getByRole("region", { name: "Popular places in Bangkok" }).or(page.getByRole("heading", { name: "Popular places in Bangkok" }));
+  const popular = page.getByRole("region", { name: "Places we recommend in Bangkok" }).or(page.getByRole("heading", { name: "Places we recommend in Bangkok" }));
   await popular.first().waitFor({ timeout: 90_000 });
-  await page.getByRole("button", { name: "Browse all popular places in Bangkok" }).click();
+  await page.getByRole("button", { name: "Browse all recommended places in Bangkok" }).click();
 
   await page.getByRole("heading", { name: "Bangkok", level: 1 }).waitFor();
   await page.getByText("By the Navio team").waitFor();
