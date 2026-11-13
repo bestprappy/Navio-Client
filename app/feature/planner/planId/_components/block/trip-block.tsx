@@ -39,6 +39,7 @@ import { BlockOptionsPopover } from "./block-options-popover";
 import { SortableBlockItems } from "./sortable-block-items";
 import { DaySavedPlacesPicker } from "../list/saved-places-section";
 import { useRevealPlanCard } from "../itinerary/use-reveal-plan-card";
+import { PlaceRecommendationsRow } from "../place/place-recommendations-row";
 
 type TripBlockContextValue = {
   block: TripBlockData;
@@ -212,6 +213,7 @@ function TripBlockActions({
       <div data-tour={block.kind === "list" ? undefined : "planner.add-stop"}>
         <AddPlaceInput blockId={block.id} searchBias={placeSearchBias} />
       </div>
+      {block.kind === "itinerary" && placeSearchBias && <PlaceRecommendationsRow blockId={block.id} searchBias={placeSearchBias} />}
       <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-2 [&_button]:h-auto [&_button]:min-h-11 [&_button]:whitespace-normal [&_button]:px-2 [&_button]:py-2 [&_button]:leading-snug">
         <Button
           type="button"

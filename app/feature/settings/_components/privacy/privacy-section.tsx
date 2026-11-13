@@ -15,6 +15,7 @@ import { getSocialSettings, listBlocked, socialKeys, updateSocialSettings } from
 import type { ConnectionsVisibility } from "@/lib/validations/social";
 import { SettingSwitch } from "../setting-switch";
 import { SettingsGroup, SettingsHeader } from "../settings-section";
+import { PlacePopularitySetting } from "./place-popularity-setting";
 
 const VISIBILITY: { id: ConnectionsVisibility; label: string; description: string }[] = [
   { id: "everyone", label: "Everyone on Navio", description: "Any signed-in traveller can open your lists." },
@@ -50,6 +51,8 @@ export function PrivacySection() {
             ))}
           </ul>
         </SettingsGroup>
+
+        <PlacePopularitySetting />
 
         <SettingsGroup title="Travel preferences" description="Your interests and travel pace from Settings > Profile.">
           {profile.data ? (
