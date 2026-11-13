@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
 import { fetchPlaceDetail } from "./place-api";
-import type { PlaceProvider } from "../constants/types";
+import type { PlaceProvider, PlaceSearchResult } from "../constants/types";
 
 export function getPlaceReference(placeId: string) {
   const match = /^(GOOGLE|MAPBOX):(.+)$/.exec(placeId);
@@ -19,12 +19,42 @@ export function getPlaceReference(placeId: string) {
   return null;
 }
 
-export function usePlaceDetails(placeId: string) {
+/** Lookups with and without a photo answer differently, so they are cached apart. */
+export function placeDetailsQueryKey(
+  reference: ReturnType<typeof getPlaceReference>,
+  includePhoto: boolean,
+) {
+  const key = ["place-details", reference?.provider, reference?.providerPlaceId];
+  return includePhoto ? key : [...key, "without-photo"];
+}
+
+/**
+ * Lets a lookup without a photo start from one already cached with a photo, so it makes no new
+ * Google call. Never the reverse: a result without a photo cannot serve a card that needs one.
+ */
+export function reuseCachedDetailsWithPhoto(
+  queryClient: QueryClient,
+  reference: ReturnType<typeof getPlaceReference>,
+) {
+  const key = placeDetailsQueryKey(reference, true);
+  return {
+    initialData: () => queryClient.getQueryData<PlaceSearchResult>(key),
+    initialDataUpdatedAt: () => queryClient.getQueryState(key)?.dataUpdatedAt,
+  };
+}
+
+/**
+ * @param includePhoto pass `false` when the caller already holds a photo or never shows one:
+ * a photo is a separately billed Google request.
+ */
+export function usePlaceDetails(placeId: string, { includePhoto = true }: { includePhoto?: boolean } = {}) {
   const reference = getPlaceReference(placeId);
+  const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: ["place-details", reference?.provider, reference?.providerPlaceId],
-    queryFn: () => fetchPlaceDetail(reference!.providerPlaceId, reference!.provider),
+    queryKey: placeDetailsQueryKey(reference, includePhoto),
+    queryFn: () => fetchPlaceDetail(reference!.providerPlaceId, reference!.provider, { includePhoto }),
+    ...(includePhoto ? {} : reuseCachedDetailsWithPhoto(queryClient, reference)),
     enabled: reference !== null,
     staleTime: 5 * 60_000,
     retry: 1,

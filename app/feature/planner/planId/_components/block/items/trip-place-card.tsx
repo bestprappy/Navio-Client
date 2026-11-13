@@ -129,7 +129,9 @@ export function TripPlaceCard({
   const isEvCharger = isEvChargerPlaceItem(item);
   // Explore saves a minimal place reference. Reuse the same query as opening
   // hours to complete its visual fields without rewriting saved trip data.
-  const placeDetails = usePlaceDetails(isEvCharger ? "" : item.placeId);
+  // A saved photo already shows on the card, so looking up hours and ratings need not buy another.
+  const needsPhoto = !item.imageUrl;
+  const placeDetails = usePlaceDetails(isEvCharger ? "" : item.placeId, { includePhoto: needsPhoto });
   const blockColor = getTripBlockColorById(blockColorId);
   const markerStyle: CSSProperties = {
     backgroundColor: blockColor.value,
@@ -327,7 +329,7 @@ export function TripPlaceCard({
             colorId={blockColorId}
           />
 
-          <PlaceOpeningHours placeId={item.placeId} />
+          <PlaceOpeningHours placeId={item.placeId} includePhoto={needsPhoto} />
 
           {!readOnly && <ObservedSocControl blockId={blockId} itemId={item.id} value={item.observedSocCheckpoint?.socPct} />}
 
