@@ -3,8 +3,9 @@
 import { StationOpeningHours } from "../charger/station-opening-hours";
 import { usePlaceDetails } from "./use-place-details";
 
-export function PlaceOpeningHours({ placeId }: { placeId: string }) {
-  const details = usePlaceDetails(placeId);
+/** Pass the same `includePhoto` as the card around it, so the two share one lookup. */
+export function PlaceOpeningHours({ placeId, includePhoto = true }: { placeId: string; includePhoto?: boolean }) {
+  const details = usePlaceDetails(placeId, { includePhoto });
 
   return (
     <div className="border-t border-border/70 px-4 py-3" aria-busy={details.isFetching}>

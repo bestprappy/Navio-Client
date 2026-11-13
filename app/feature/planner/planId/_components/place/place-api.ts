@@ -238,11 +238,16 @@ async function liveFetchDetail(
   provider: PlaceProvider,
   sessionToken?: string,
   signal?: AbortSignal,
+  includePhoto = true,
 ): Promise<PlaceSearchResult> {
   const params = new URLSearchParams({ provider });
 
   if (sessionToken) {
     params.set("sessionToken", sessionToken);
+  }
+
+  if (!includePhoto) {
+    params.set("includePhoto", "false");
   }
 
   const encodedId = encodeURIComponent(providerPlaceId);
@@ -351,7 +356,8 @@ export async function fetchPlaceAutocomplete(
 export async function fetchPlaceDetail(
   providerPlaceId: string,
   provider: PlaceProvider,
-  options?: { sessionToken?: string; signal?: AbortSignal },
+  /** `includePhoto: false` skips Google's separately billed photo request. */
+  options?: { sessionToken?: string; signal?: AbortSignal; includePhoto?: boolean },
 ): Promise<PlaceSearchResult> {
   if (isUsingMock) {
     const result = mockFetchDetail(providerPlaceId);
@@ -363,7 +369,7 @@ export async function fetchPlaceDetail(
     return result;
   }
 
-  return liveFetchDetail(providerPlaceId, provider, options?.sessionToken, options?.signal);
+  return liveFetchDetail(providerPlaceId, provider, options?.sessionToken, options?.signal, options?.includePhoto);
 }
 
 export async function fetchPlaceSearch(

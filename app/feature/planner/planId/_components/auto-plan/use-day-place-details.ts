@@ -1,11 +1,11 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 
 import { isEvChargerPlaceItem, isPlaceItem, type PlaceSearchResult, type TripBlockItem } from "../constants/types";
 import { fetchPlaceDetail } from "../place/place-api";
-import { getPlaceReference } from "../place/use-place-details";
+import { getPlaceReference, placeDetailsQueryKey, reuseCachedDetailsWithPhoto } from "../place/use-place-details";
 
 const DETAIL_TIMEOUT_MS = 15_000;
 
@@ -17,19 +17,22 @@ export type DayPlaceDetails = {
 };
 
 /**
- * Opening hours and types for the day's places, from the same cache the place cards use.
+ * Opening hours and types for the day's places. Planning shows no photos, so it never pays for one.
  * A failed lookup is not an error for the plan: that place just has unknown hours.
  */
 export function useDayPlaceDetails(items: readonly TripBlockItem[]): DayPlaceDetails {
   const places = useMemo(() => items.filter(isPlaceItem).filter((item) => !isEvChargerPlaceItem(item)), [items]);
+  const queryClient = useQueryClient();
   const results = useQueries({
     queries: places.map((place) => {
       const reference = getPlaceReference(place.placeId);
       return {
-        queryKey: ["place-details", reference?.provider, reference?.providerPlaceId],
+        queryKey: placeDetailsQueryKey(reference, false),
         queryFn: ({ signal }: { signal: AbortSignal }) => fetchPlaceDetail(reference!.providerPlaceId, reference!.provider, {
+          includePhoto: false,
           signal: AbortSignal.any([signal, AbortSignal.timeout(DETAIL_TIMEOUT_MS)]),
         }),
+        ...reuseCachedDetailsWithPhoto(queryClient, reference),
         enabled: reference !== null,
         staleTime: 5 * 60_000,
         retry: 1,
