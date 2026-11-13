@@ -35,7 +35,7 @@ export const PLAN_DESTINATION_COVERS = [
     "src": "/images/plan-covers/monterey.webp",
     "objectPosition": "50% 50%",
     "subject": "Pigeon Point Lighthouse",
-    "author": "Frank Schulenburg (1969\u2013)",
+    "author": "Frank Schulenburg (1969–)",
     "sourceUrl": "https://commons.wikimedia.org/wiki/File:Pigeon_Point_Lighthouse_%282016%29.jpg",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
@@ -54,7 +54,7 @@ export const PLAN_DESTINATION_COVERS = [
   },
   {
     "city": "Istanbul",
-    "country": "T\u00fcrkiye",
+    "country": "Türkiye",
     "aliases": [],
     "src": "/images/plan-covers/istanbul.webp",
     "objectPosition": "50% 50%",
@@ -118,7 +118,7 @@ export const PLAN_DESTINATION_COVERS = [
     "aliases": [],
     "src": "/images/plan-covers/barcelona.webp",
     "objectPosition": "50% 0%",
-    "subject": "Sagrada Fam\u00edlia",
+    "subject": "Sagrada Família",
     "author": "Canaan",
     "sourceUrl": "https://commons.wikimedia.org/wiki/File:SF_maig_2_cropped.jpg",
     "license": "CC BY-SA 4.0",
@@ -155,7 +155,7 @@ export const PLAN_DESTINATION_COVERS = [
     "src": "/images/plan-covers/krong-siem-reap.webp",
     "objectPosition": "50% 50%",
     "subject": "Angkor Wat",
-    "author": "Bj\u00f8rn Christian T\u00f8rrissen",
+    "author": "Bjørn Christian Tørrissen",
     "sourceUrl": "https://commons.wikimedia.org/wiki/File:Angkor_Wat.jpg",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
@@ -167,7 +167,7 @@ export const PLAN_DESTINATION_COVERS = [
     "src": "/images/plan-covers/luang-prabang.webp",
     "objectPosition": "50% 50%",
     "subject": "Luang Prabang",
-    "author": "\u677e\u5ca1\u660e\u82b3",
+    "author": "松岡明芳",
     "sourceUrl": "https://commons.wikimedia.org/wiki/File:Phou_si_Luang_Prabang_Laos_%E3%83%97%E3%83%BC%E3%82%B7%E3%83%BC%E3%81%AE%E4%B8%98_%E3%83%A9%E3%82%AA%E3%82%B9%E3%83%BB%E3%83%AB%E3%82%A2%E3%83%B3%E3%83%97%E3%83%A9%E3%83%90%E3%83%BC%E3%83%B3_DSCF6777.jpg",
     "license": "CC BY-SA 3.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
@@ -178,7 +178,7 @@ export const PLAN_DESTINATION_COVERS = [
     "aliases": [],
     "src": "/images/plan-covers/hanoi.webp",
     "objectPosition": "50% 50%",
-    "subject": "Ho\u00e0n Ki\u1ebfm Lake",
+    "subject": "Hoàn Kiếm Lake",
     "author": "Cyril Doussin from London, United Kingdom",
     "sourceUrl": "https://commons.wikimedia.org/wiki/File:Thap_Rua.jpg",
     "license": "CC BY-SA 2.0",
@@ -239,7 +239,7 @@ export const PLAN_DESTINATION_COVERS = [
     "src": "/images/plan-covers/seoul.webp",
     "objectPosition": "50% 50%",
     "subject": "Gyeongbokgung",
-    "author": "\uc11c\uc6b8\uad00\uad11 \uc544\uce74\uc774\ube0c",
+    "author": "서울관광 아카이브",
     "sourceUrl": "https://commons.wikimedia.org/wiki/File:%EA%B4%91%ED%99%94%EB%AC%B8_%EC%9B%94%EB%8C%80.jpg",
     "license": "KOGL Type 1",
     "licenseUrl": "https://www.kogl.or.kr/info/licenseType1.do"
@@ -286,7 +286,7 @@ export const PLAN_DESTINATION_COVERS = [
     "aliases": [],
     "src": "/images/plan-covers/tokyo.webp",
     "objectPosition": "50% 50%",
-    "subject": "Sens\u014d-ji",
+    "subject": "Sensō-ji",
     "author": "Akonnchiroll",
     "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sensoji_2023.jpg",
     "license": "CC0",
@@ -331,7 +331,9 @@ export const PLAN_DESTINATION_COVERS = [
   {
     "city": "Ao Nang",
     "country": "Thailand",
-    "aliases": [],
+    "aliases": [
+      "Pak Nam"
+    ],
     "src": "/images/plan-covers/ao-nang.webp",
     "objectPosition": "50% 50%",
     "subject": "Ao Nang",
@@ -363,6 +365,380 @@ export const PLAN_DESTINATION_COVERS = [
     "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E0%B9%80%E0%B8%88%E0%B8%94%E0%B8%B5%E0%B8%A2%E0%B9%8C%E0%B8%AB%E0%B8%A5%E0%B8%A7%E0%B8%87.jpg",
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+  },
+  {
+    "city": "Wellington",
+    "country": "New Zealand",
+    "aliases": [],
+    "src": "/images/plan-covers/wellington.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Wellington",
+    "author": "russellstreet",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Seddon_Statue_in_Parliament_Grounds.jpg",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
+  },
+  {
+    "city": "Cape Town",
+    "country": "South Africa",
+    "aliases": [],
+    "src": "/images/plan-covers/cape-town.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Cape Town",
+    "author": "Der Berzerker from Washington, DC, USA",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Camps_bay_(53460319478)_(cropped).jpg",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
+  },
+  {
+    "city": "Marrakesh",
+    "country": "Morocco",
+    "aliases": [],
+    "src": "/images/plan-covers/marrakesh.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Marrakesh",
+    "author": "YoTuT from United States",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Marrakech,_Morocco_(5421595453)_(5).jpg",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+  },
+  {
+    "city": "Buenos Aires",
+    "country": "Argentina",
+    "aliases": [],
+    "src": "/images/plan-covers/buenos-aires.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Buenos Aires",
+    "author": "Deensel",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Puerto_Madero,_Buenos_Aires_(40689219792)_(cropped).jpg",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+  },
+  {
+    "city": "Mexico City",
+    "country": "Mexico",
+    "aliases": [],
+    "src": "/images/plan-covers/mexico-city.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Mexico City",
+    "author": "Gobierno CDMX",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Sobrevuelos_CDMX_HJ2A4913_(25514321687)_(cropped).jpg",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en"
+  },
+  {
+    "city": "Québec City",
+    "country": "Canada",
+    "aliases": [],
+    "src": "/images/plan-covers/quebec-city.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Quebec City",
+    "author": "Quintin Soloviev",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Quebec_City_skyline_from_L%C3%A9vis.jpg",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "city": "Budapest",
+    "country": "Hungary",
+    "aliases": [],
+    "src": "/images/plan-covers/budapest.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Budapest",
+    "author": "Visions of Domino",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:View_from_Gell%C3%A9rt_Hill_to_the_Danube,_Hungary_-_Budapest_(28493220635).jpg",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+  },
+  {
+    "city": "Salzburg",
+    "country": "Austria",
+    "aliases": [],
+    "src": "/images/plan-covers/salzburg.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Salzburg",
+    "author": "Jorge Franganillo",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Salzburg_(48489551981).jpg",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+  },
+  {
+    "city": "Prague",
+    "country": "Czechia",
+    "aliases": [],
+    "src": "/images/plan-covers/prague.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Prague",
+    "author": "Moyan Brenn from Italy",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Prague_(6365119737).jpg",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+  },
+  {
+    "city": "Copenhagen",
+    "country": "Denmark",
+    "aliases": [],
+    "src": "/images/plan-covers/copenhagen.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Copenhagen",
+    "author": "Moahim",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:2018_-_Christiansborg_from_the_Marble_Bridge.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "city": "Porto",
+    "country": "Portugal",
+    "aliases": [],
+    "src": "/images/plan-covers/porto.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Porto",
+    "author": "Diego Delso",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Puente_Don_Luis_I,_Oporto,_Portugal,_2012-05-09,_DD_13.JPG",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "city": "Lisbon",
+    "country": "Portugal",
+    "aliases": [],
+    "src": "/images/plan-covers/lisbon.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Lisbon",
+    "author": "Vitor Oliveira from Torres Vedras, PORTUGAL",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Lisboa_-_Portugal_(52597836992).jpg",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0"
+  },
+  {
+    "city": "Chengdu",
+    "country": "China",
+    "aliases": [],
+    "src": "/images/plan-covers/chengdu.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Chengdu",
+    "author": "FISU",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E9%9B%AA%E5%B1%B1%E4%B8%8B%E7%9A%84%E6%88%90%E9%83%BD%E5%B8%82%E5%A4%A9%E9%99%85%E7%BA%BF_Chengdu_skyline_with_snow_capped_mountains.jpg",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "city": "Jeonju-si",
+    "country": "South Korea",
+    "aliases": [],
+    "src": "/images/plan-covers/jeonju-si.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Jeonju",
+    "author": "Bernard Gagnon",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Jeonju_Hanok_Maeul_01.jpg",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en"
+  },
+  {
+    "city": "Tainan City",
+    "country": "Taiwan",
+    "aliases": [],
+    "src": "/images/plan-covers/tainan-city.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Tainan",
+    "author": "Mersh",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Downtown_Tainan(2012)_(cropped).jpg",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "city": "Da Nang",
+    "country": "Vietnam",
+    "aliases": [],
+    "src": "/images/plan-covers/da-nang.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Da Nang",
+    "author": "Somerset999",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Dragon_Bridge,_Da_Nang_during_day_-_20230819_(cropped).jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "city": "George Town",
+    "country": "Malaysia",
+    "aliases": [],
+    "src": "/images/plan-covers/george-town.webp",
+    "objectPosition": "50% 50%",
+    "subject": "George Town, Penang",
+    "author": "HundenvonPenang",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Skyline_of_George_Town,_Penang_at_night_Nov2024-29-17.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "city": "Rayong",
+    "country": "Thailand",
+    "aliases": [],
+    "src": "/images/plan-covers/rayong.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Rayong",
+    "author": "Андрей Бобровский",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Chakphong,_Klaeng_District,_Rayong,_Thailand_-_panoramio_-_%D0%90%D0%BD%D0%B4%D1%80%D0%B5%D0%B9_%D0%91%D0%BE%D0%B1%D1%80%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D0%B9.jpg",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "city": "Phuket",
+    "country": "Thailand",
+    "aliases": [],
+    "src": "/images/plan-covers/phuket.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Phuket (city)",
+    "author": "Myinternationalwikipedia",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Phuket_City.jpg",
+    "license": "CC0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/deed.en"
+  },
+  {
+    "city": "Kanchanaburi",
+    "country": "Thailand",
+    "aliases": [],
+    "src": "/images/plan-covers/kanchanaburi.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Kanchanaburi",
+    "author": "Bjoertvedt",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kanchanaburi_city_gate.JPG",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "city": "Thani",
+    "country": "Thailand",
+    "aliases": [],
+    "src": "/images/plan-covers/thani.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Sukhothai Historical Park",
+    "author": "Khunkay",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Wat_srichum_03.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0"
+  },
+  {
+    "city": "Phra Nakhon Si Ayutthaya",
+    "country": "Thailand",
+    "aliases": [],
+    "src": "/images/plan-covers/phra-nakhon-si-ayutthaya.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Wat Mahathat (Ayutthaya)",
+    "author": "Chainwit.",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:2025-02-03_Wat_Maha_That_(Ayutthaya)_%E0%B8%A7%E0%B8%B1%E0%B8%94%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%98%E0%B8%B2%E0%B8%95%E0%B8%B8_%E0%B8%AD%E0%B8%A2%E0%B8%B8%E0%B8%98%E0%B8%A2%E0%B8%B2_-_img_15.jpg",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0"
+  },
+  {
+    "city": "Bangkok",
+    "country": "Thailand",
+    "aliases": [],
+    "src": "/images/plan-covers/bangkok.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Bangkok",
+    "author": "Ninara from Helsinki, Finland",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:4Y1A1159_Bangkok_(33536795515).jpg",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+  },
+  {
+    "city": "Kanazawa",
+    "country": "Japan",
+    "aliases": [],
+    "src": "/images/plan-covers/kanazawa.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Kanazawa",
+    "author": "金沢市",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:%E6%9C%9B%E6%B9%96%E5%8F%B0%EF%BC%92.jpg",
+    "license": "CC BY 2.1 jp",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.1/jp/deed.en"
+  },
+  {
+    "city": "Strasbourg",
+    "country": "France",
+    "aliases": [],
+    "src": "/images/plan-covers/strasbourg.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Strasbourg",
+    "author": "Jonathan Martz",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Strasbourg_Cathedral.jpg",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "city": "Vienna",
+    "country": "Austria",
+    "aliases": [],
+    "src": "/images/plan-covers/vienna.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Vienna",
+    "author": "Superbass",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Schoenbrunn_philharmoniker_2012.jpg",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "city": "Edinburgh",
+    "country": "United Kingdom",
+    "aliases": [],
+    "src": "/images/plan-covers/edinburgh.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Edinburgh",
+    "author": "Andrew Colin",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Skyline_of_Edinburgh.jpg",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+  },
+  {
+    "city": "Lucerne",
+    "country": "Switzerland",
+    "aliases": [],
+    "src": "/images/plan-covers/lucerne.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Lucerne",
+    "author": "Валерий Дед",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:L%C3%B6wendenkmal_-_panoramio.jpg",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0"
+  },
+  {
+    "city": "Bled",
+    "country": "Slovenia",
+    "aliases": [],
+    "src": "/images/plan-covers/bled.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Lake Bled",
+    "author": "Canadianhockey91",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Lake_Bled_from_the_Mountain.jpg",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0"
+  },
+  {
+    "city": "Kyoto",
+    "country": "Japan",
+    "aliases": [],
+    "src": "/images/plan-covers/kyoto-spring.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Philosopher's Walk",
+    "author": "The original uploader was Sdalu at English Wikipedia.",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Path_of_philosophy.jpg",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+    "variant": "spring"
+  },
+  {
+    "city": "Kyoto",
+    "country": "Japan",
+    "aliases": [],
+    "src": "/images/plan-covers/kyoto-autumn.webp",
+    "objectPosition": "50% 50%",
+    "subject": "Eikan-dō Zenrin-ji",
+    "author": "Tomomarusan",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Eikando_Zenrinji-temple_Tahoto.JPG",
+    "license": "CC BY 2.5",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.5",
+    "variant": "autumn"
   }
 ] as const;
 
@@ -370,13 +746,18 @@ function normalize(value: string | null | undefined): string {
   return (value ?? "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
-export function destinationPlanCover(plan: Pick<ExplorePlan, "destinationCity" | "destinationCountry" | "highlights">) {
+export function destinationPlanCover(plan: Pick<ExplorePlan, "destinationCity" | "destinationCountry" | "highlights"> & Partial<Pick<ExplorePlan, "title">>) {
   const country = normalize(plan.destinationCountry);
   const city = normalize(plan.destinationCity);
   const highlights = new Set(plan.highlights.map(normalize));
-  return PLAN_DESTINATION_COVERS.find(cover => highlights.has(normalize(cover.subject)))
-    ?? PLAN_DESTINATION_COVERS.find(cover => normalize(cover.country) === country
-      && (normalize(cover.city) === city || cover.aliases.some(alias => normalize(alias) === city)));
+  const local = PLAN_DESTINATION_COVERS.filter(cover => normalize(cover.country) === country);
+  const destinationMatches = (cover: typeof PLAN_DESTINATION_COVERS[number]) =>
+    normalize(cover.city) === city || cover.aliases.some(alias => normalize(alias) === city);
+  const title = (plan.title ?? "").toLowerCase();
+  return local.find(cover => "variant" in cover && destinationMatches(cover)
+      && title.split(/[^a-z]+/).includes(cover.variant))
+    ?? local.find(cover => !("variant" in cover) && highlights.has(normalize(cover.subject)))
+    ?? local.find(cover => !("variant" in cover) && destinationMatches(cover));
 }
 
 export type DestinationCover = (typeof PLAN_DESTINATION_COVERS)[number];
