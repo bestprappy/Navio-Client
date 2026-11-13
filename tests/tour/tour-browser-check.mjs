@@ -89,7 +89,9 @@ async function walk(page, { screenshotAt = {} } = {}) {
 
 const browser = await chromium.launch({ channel: process.env.NAVIO_BROWSER_CHANNEL ?? "chrome", headless: true });
 const results = [];
+const only = process.env.NAVIO_TOUR_ONLY;
 const check = async (name, run) => {
+  if (only && !name.includes(only)) return;
   try { await run(); results.push(`ok   ${name}`); }
   catch (error) { results.push(`FAIL ${name}: ${error.message.slice(0, 900)}`); process.exitCode = 1; }
 };
@@ -137,6 +139,20 @@ try {
     await context.close();
   });
 
+  await check("dashboard: clicking the close button ends the tour and records it as dismissed", async () => {
+    const { context, page, errors } = await open(browser, { path: "/dashboard" });
+    await title(page).waitFor({ timeout: 15000 });
+    await page.waitForTimeout(450);
+    await page.locator(".driver-popover-next-btn").click();
+    await page.waitForTimeout(600);
+    await page.getByRole("button", { name: "Close tips" }).click();
+    await popover(page).waitFor({ state: "detached", timeout: 3000 });
+    assert.equal(await page.locator(".driver-overlay").count(), 0, "overlay stayed after closing");
+    assert.equal((await records(page)).dashboard?.status, "dismissed");
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
   await check("dashboard: leaving mid-tour records nothing so it is offered again", async () => {
     const { context, page } = await open(browser, { path: "/dashboard" });
     await title(page).waitFor({ timeout: 15000 });
@@ -171,6 +187,38 @@ try {
     // Next's dev overlay lists console errors from the mocked 404 APIs; it is present with or without a tour.
     const dialogs = await page.locator("[role='dialog']:not(#driver-popover-content):not([data-nextjs-dialog])").evaluateAll((nodes) => nodes.map((node) => node.outerHTML.slice(0, 160)));
     assert.deepEqual(dialogs, [], "the tour opened a dialog");
+    assert.deepEqual(errors, []);
+    await context.close();
+  });
+
+  await check("planner: the spotlight follows its control when content above grows or the panel scrolls", async () => {
+    const { context, page, errors } = await open(browser, { path: `/planner/${TRIP_ID}` });
+    await title(page).waitFor({ timeout: 30000 });
+    await page.waitForTimeout(450);
+    await page.locator(".driver-popover-next-btn").click();
+    await page.waitForFunction(() => document.querySelector(".driver-active-element")?.getAttribute("data-tour") === "planner.my-list");
+    await page.waitForTimeout(700);
+    // Popover sits below the header; this gap is what must survive layout changes.
+    const gap = () => page.evaluate(() => {
+      const target = document.querySelector("[data-tour='planner.my-list']").getBoundingClientRect();
+      const tip = document.querySelector("#driver-popover-content").getBoundingClientRect();
+      return Math.round(tip.top - target.bottom);
+    });
+    const before = await gap();
+    // The garage loading its battery charts late, simulated: 140px appears above My List.
+    await page.evaluate(() => {
+      const spacer = document.createElement("div");
+      spacer.style.height = "140px";
+      document.querySelector("[data-tour='planner.my-list']").closest("section").before(spacer);
+    });
+    await page.waitForTimeout(300);
+    const afterGrowth = await gap();
+    await page.evaluate(() => document.getElementById("planner-scroll-panel").scrollBy(0, 90));
+    await page.waitForTimeout(300);
+    const afterScroll = await gap();
+    assert.ok(Math.abs(afterGrowth - before) <= 3, `tip drifted ${afterGrowth - before}px after content grew`);
+    assert.ok(Math.abs(afterScroll - before) <= 3, `tip drifted ${afterScroll - before}px after the panel scrolled`);
+    await page.screenshot({ path: shot("planner-follows-layout-light") });
     assert.deepEqual(errors, []);
     await context.close();
   });

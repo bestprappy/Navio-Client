@@ -68,6 +68,8 @@ body .navio-tour .driver-popover-close-btn {
   all: unset;
   box-sizing: border-box;
   position: absolute;
+  /* `all: unset` drops driver.css's z-index; without it the positioned title covers the button. */
+  z-index: 1;
   top: 0.625rem;
   right: 0.625rem;
   display: flex;

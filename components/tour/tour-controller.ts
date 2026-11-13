@@ -3,6 +3,7 @@ import { getDefaultStore } from "jotai";
 
 import { activeTourAtom } from "./tour.atoms";
 import { fallbackFocusTarget, findVisibleTourTarget, prefersReducedMotion } from "./tour-dom";
+import { createLayoutTracker } from "./tour-layout-tracker";
 import { decorateTourPopover } from "./tour-popover";
 import { countTargets, MIN_TOUR_TARGETS, resolveTourSteps, type ResolvedTourStep } from "./tour-policy";
 import type { TourDefinition, TourEndReason } from "./tour.types";
@@ -89,6 +90,10 @@ export async function startTour({ tour, isAuthenticated, opener, onEnd }: StartT
   const isDark = document.documentElement.classList.contains("dark");
   const total = steps.length;
   let previousIndex = 0;
+  // Re-measure when the page moves under the spotlight; paused while Driver.js animates between steps.
+  const layout = createLayoutTracker(() => {
+    if (instance.isActive()) instance.refresh();
+  });
 
   const instance = driverFactory({
     steps: steps.map(toDriveStep),
@@ -118,7 +123,9 @@ export async function startTour({ tour, isAuthenticated, opener, onEnd }: StartT
         if (popover.wrapper.isConnected) popover.nextButton.focus({ preventScroll: true });
       });
     },
+    onHighlightStarted: () => layout.pause(),
     onHighlighted: (element) => {
+      layout.track(element ?? null);
       if (!element || reducedMotion) return;
       element.classList.remove(PULSE_CLASS);
       // Restart the one-shot ring even when the same element is highlighted again.
@@ -140,6 +147,7 @@ export async function startTour({ tour, isAuthenticated, opener, onEnd }: StartT
   function finish(reason: TourEndReason | undefined) {
     if (finished) return;
     finished = true;
+    layout.stop();
     document.querySelectorAll(`.${PULSE_CLASS}`).forEach((element) => element.classList.remove(PULSE_CLASS));
     if (running?.instance === instance) running = null;
     store.set(activeTourAtom, null);
