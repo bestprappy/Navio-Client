@@ -119,3 +119,31 @@ test("the schema accepts the server's report and refuses a malformed one", () =>
   assert.equal(googleUsageSchema.safeParse({ ...valid, meters: [{ meter: "A", used: -1, limit: 1, lastCountedAt: null }] }).success, false);
   assert.equal(googleUsageSchema.safeParse({ ...valid, meters: undefined }).success, false);
 });
+
+test("with limits ignored a meter past its limit is over, not stopped", () => {
+  assert.equal(meterState(meter("A", 1020), onDay(20), true), "over");
+  assert.equal(meterState(meter("A", 950), onDay(20), true), "over");
+  assert.equal(meterState(meter("A", 475), onDay(11), true), "fast");
+});
+
+test("with limits ignored the summary says calls continue and are billed", () => {
+  assert.equal(
+    summarize([meter("PLACE_DETAILS", 1020), meter("ROUTES", 10, 4750)], true, true),
+    "Place details is past its free allowance, at 1,020 of 950. Calls continue and are billed.",
+  );
+  assert.equal(
+    summarize([meter("PLACE_DETAILS", 1020), meter("PLACE_PHOTOS", 951)], true, true),
+    "2 meters are past their free allowance. Calls continue and are billed.",
+  );
+  assert.equal(summarize([meter("PLACE_DETAILS", 10)], true, true), "Limits are ignored this month. Nothing has passed its free allowance yet.");
+});
+
+test("the schema reads the override time and treats an older server's missing field as none", () => {
+  const base = { ...onDay(9), limitsEnforced: true, placesDiscoveryEnabled: false, meters: [] };
+  assert.equal(googleUsageSchema.parse(base).limitsIgnoredSince, null);
+  assert.equal(googleUsageSchema.parse({ ...base, limitsIgnoredSince: null }).limitsIgnoredSince, null);
+  assert.equal(
+    googleUsageSchema.parse({ ...base, limitsIgnoredSince: "2026-11-14T15:00:00Z" }).limitsIgnoredSince,
+    "2026-11-14T15:00:00Z",
+  );
+});

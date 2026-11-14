@@ -33,6 +33,7 @@ const ROW_GRID = "grid grid-cols-[minmax(0,1fr)_auto] gap-x-6 px-5 md:grid-cols-
 
 const BAR_TONE: Record<MeterState, string> = {
   ok: "",
+  over: "[&_[data-slot=progress-indicator]]:bg-destructive",
   fast: "[&_[data-slot=progress-indicator]]:bg-warning",
   nearly: "[&_[data-slot=progress-indicator]]:bg-warning",
   reached: "[&_[data-slot=progress-indicator]]:bg-destructive",
@@ -78,10 +79,14 @@ function Root({
   );
 }
 
-function StateBadge({ state, runOut }: { state: MeterState; runOut: Date | null }) {
+function StateBadge({ state, runOut, limitsIgnored }: { state: MeterState; runOut: Date | null; limitsIgnored: boolean }) {
   if (state === "ok") return null;
   if (state === "reached") return <Badge variant="destructive">Limit reached</Badge>;
-  const label = state === "nearly" ? "Nearly used" : `Runs out around ${formatAdminDate(runOut!.toISOString())}`;
+  if (state === "over") return <Badge variant="destructive">Past free allowance, billed</Badge>;
+  const runOutDate = runOut ? formatAdminDate(runOut.toISOString()) : "";
+  const label = state === "nearly"
+    ? "Nearly used"
+    : limitsIgnored ? `Free allowance ends around ${runOutDate}` : `Runs out around ${runOutDate}`;
   return <Badge variant="outline" className="border-warning/50 bg-warning/10 text-warning">{label}</Badge>;
 }
 
@@ -90,15 +95,17 @@ function Row({ meter }: { meter: GoogleUsageMeter }) {
   const { name, limitEffect } = meterCopy(meter.meter);
   const percent = usagePercent(meter);
   // With limits off nothing stops at the limit, so no warning here would be true.
-  const state: MeterState = report.limitsEnforced ? meterState(meter, report) : "ok";
+  const limitsIgnored = report.limitsIgnoredSince !== null;
+  const state: MeterState = report.limitsEnforced ? meterState(meter, report, limitsIgnored) : "ok";
+  const stopsAtLimit = report.limitsEnforced && !limitsIgnored;
   const usedText = `${formatCount(meter.used)} of ${formatCount(meter.limit)} used`;
 
   return (
     <li className={ROW_GRID}>
       <div className="flex min-w-0 flex-col items-start gap-1 py-4">
         <span className="font-medium text-foreground">{name}</span>
-        {report.limitsEnforced && <span className="text-sm text-muted-foreground">At the limit, {limitEffect}.</span>}
-        <StateBadge state={state} runOut={projectedRunOut(meter, report)} />
+        {stopsAtLimit && <span className="text-sm text-muted-foreground">At the limit, {limitEffect}.</span>}
+        <StateBadge state={state} runOut={projectedRunOut(meter, report)} limitsIgnored={limitsIgnored} />
       </div>
       <div className="relative col-span-2 flex items-center pb-4 md:order-none md:col-span-1 md:pb-0 max-md:order-last">
         <Progress

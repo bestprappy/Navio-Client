@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ExternalLink, RotateCw, TriangleAlert } from "lucide-react";
+import { ExternalLink, RotateCw, ShieldOff, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button.variants";
@@ -13,6 +13,7 @@ import { formatAdminDateTime } from "../admin-format";
 import { AdminErrorState } from "../admin-query-state";
 import { fetchGoogleUsage, googleUsageKeys } from "./google-usage-api";
 import { metersByUrgency, monthPercent, summarize } from "./google-usage-model";
+import { LimitOverrideControl } from "./limit-override-control";
 import { UsageLedger } from "./usage-ledger";
 
 const REFRESH_MS = 60_000;
@@ -47,6 +48,7 @@ export function GoogleUsageWorkspace() {
   }
 
   const report = usage.data;
+  const limitsIgnored = report.limitsEnforced && report.limitsIgnoredSince !== null;
   return (
     <div className="flex flex-col gap-6">
       {!report.limitsEnforced && (
@@ -59,9 +61,19 @@ export function GoogleUsageWorkspace() {
         </div>
       )}
 
+      {limitsIgnored && (
+        <div role="status" className="flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm">
+          <ShieldOff className="size-5 shrink-0 text-warning" aria-hidden="true" />
+          <p className="text-foreground">
+            Limits are ignored until <time dateTime={report.resetsAt}>{formatAdminDateTime(report.resetsAt)}</time>.
+            Google calls keep working past the free allowance, and those calls are billed.
+          </p>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex max-w-2xl flex-col gap-1">
-          <p className="text-lg font-semibold text-foreground">{summarize(meters, report.limitsEnforced)}</p>
+          <p className="text-lg font-semibold text-foreground">{summarize(meters, report.limitsEnforced, limitsIgnored)}</p>
           <p className="text-sm text-muted-foreground">
             Counts restart on <time dateTime={report.resetsAt}>{formatAdminDateTime(report.resetsAt)}</time>.
             Updated <time dateTime={report.asOf}>{formatAdminDateTime(report.asOf)}</time>.
@@ -87,6 +99,8 @@ export function GoogleUsageWorkspace() {
           The line marks how far through the month it is. A bar past the line is using its allowance too fast to last.
         </p>
       </div>
+
+      {report.limitsEnforced && <LimitOverrideControl report={report} />}
 
       <section aria-labelledby="google-cloud-heading" className="flex flex-col gap-3 border-t border-border pt-6">
         <div className="flex max-w-2xl flex-col gap-1">

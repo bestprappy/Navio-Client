@@ -8,6 +8,8 @@ export const googleUsageSchema = z.object({
   asOf: z.string(),
   limitsEnforced: z.boolean(),
   placesDiscoveryEnabled: z.boolean(),
+  /** When an administrator let this month's calls continue past their limits. Older servers omit it. */
+  limitsIgnoredSince: z.string().nullable().optional().transform((value) => value ?? null),
   meters: z.array(z.object({
     meter: z.string(),
     used: z.number().int().nonnegative(),
@@ -18,7 +20,8 @@ export const googleUsageSchema = z.object({
 
 export type GoogleUsageReport = z.infer<typeof googleUsageSchema>;
 export type GoogleUsageMeter = GoogleUsageReport["meters"][number];
-export type MeterState = "reached" | "nearly" | "fast" | "ok";
+/** "over" is a meter past its limit while limits are ignored: calls continue and are billed. */
+export type MeterState = "over" | "reached" | "nearly" | "fast" | "ok";
 
 const NEARLY_USED_PERCENT = 80;
 const DAY_MS = 86_400_000;
@@ -74,8 +77,9 @@ export function projectedRunOut(
 export function meterState(
   meter: Pick<GoogleUsageMeter, "used" | "limit">,
   report: Pick<GoogleUsageReport, "monthStart" | "resetsAt" | "asOf">,
+  limitsIgnored = false,
 ): MeterState {
-  if (meter.used >= meter.limit) return "reached";
+  if (meter.used >= meter.limit) return limitsIgnored ? "over" : "reached";
   if (usagePercent(meter) >= NEARLY_USED_PERCENT) return "nearly";
   return projectedRunOut(meter, report) ? "fast" : "ok";
 }
@@ -88,10 +92,19 @@ export function metersByUrgency(meters: readonly GoogleUsageMeter[]): GoogleUsag
 const count = (value: number) => new Intl.NumberFormat("en").format(value);
 
 /** The page's one-line answer to "are we all right?". */
-export function summarize(meters: readonly GoogleUsageMeter[], limitsEnforced = true): string {
+export function summarize(meters: readonly GoogleUsageMeter[], limitsEnforced = true, limitsIgnored = false): string {
   // With limits off nothing stops, and the budget stops counting too, so no meter reading holds.
   if (!limitsEnforced) return "Google calls are not being counted right now.";
   const reached = meters.filter((meter) => meter.used >= meter.limit);
+  // Ignored limits still count every call, so the numbers hold; only "stops" would be false.
+  if (limitsIgnored) {
+    if (reached.length > 1) return `${reached.length} meters are past their free allowance. Calls continue and are billed.`;
+    if (reached.length === 1) {
+      const [over] = reached;
+      return `${meterCopy(over.meter).name} is past its free allowance, at ${count(over.used)} of ${count(over.limit)}. Calls continue and are billed.`;
+    }
+    return "Limits are ignored this month. Nothing has passed its free allowance yet.";
+  }
   if (reached.length > 1) return `${reached.length} limits have been reached this month.`;
   if (reached.length === 1) {
     const { name, limitEffect } = meterCopy(reached[0].meter);

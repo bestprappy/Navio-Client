@@ -39,8 +39,16 @@ async function open(browser, { theme = "light", width = 1280, height = 900, role
   await context.route("**/api/trips**", (route) => route.fulfill({ json: { content: [], totalElements: 0, totalPages: 0, number: 0 } }));
   await context.route("**/api/users/**", (route) => route.fulfill({ json: { id: sub, displayName: "Admin", email: "admin@example.com", status: "active", roles, preferences: {} } }));
   await context.route("**/api/palette-colors", (route) => route.fulfill({ json: [] }));
-  const calls = { usage: 0, google: 0 };
+  const calls = { usage: 0, google: 0, overrides: [] };
   await context.route("**/api/admin/google-usage", (route) => { calls.usage += 1; return respond(route, calls.usage); });
+  await context.route("**/api/admin/google-usage/limit-override", (route) => {
+    const { ignoreLimits } = route.request().postDataJSON();
+    calls.overrides.push({ method: route.request().method(), ignoreLimits });
+    return route.fulfill({ json: report({
+      limitsIgnoredSince: ignoreLimits ? "2026-11-10T05:00:00Z" : null,
+      meters: [{ meter: "PLACE_DETAILS", used: 1020, limit: 950, lastCountedAt: null }, { meter: "ROUTES", used: 318, limit: 4750, lastCountedAt: null }],
+    }) });
+  });
   await context.route(/googleapis\.com/, (route) => { calls.google += 1; return route.abort(); });
   const page = await context.newPage();
   const errors = [];
@@ -164,6 +172,75 @@ try {
     const focused = await page.evaluate(() => document.activeElement?.textContent ?? "");
     assert.match(focused, /API traffic/);
     await page.screenshot({ path: shot("focus"), clip: { x: 0, y: 0, width: 1280, height: 900 } });
+    await context.close();
+  });
+
+  await check("ignoring limits asks first, then says calls continue and are billed; restoring is one click", async () => {
+    const { context, page, errors, calls } = await open(browser, { respond: ok({
+      meters: [{ meter: "PLACE_DETAILS", used: 950, limit: 950, lastCountedAt: null }, { meter: "ROUTES", used: 318, limit: 4750, lastCountedAt: null }],
+    }) });
+    await page.getByText("Place details has reached its limit").waitFor();
+    await page.getByRole("button", { name: "Ignore limits this month" }).click();
+    const dialog = page.getByRole("dialog", { name: "Ignore Google limits until 1 Dec 2026?" });
+    await dialog.waitFor();
+    await page.screenshot({ path: shot("override-confirm") });
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+    await dialog.waitFor({ state: "hidden" });
+    assert.deepEqual(calls.overrides, []);
+
+    await page.getByRole("button", { name: "Ignore limits this month" }).click();
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "hidden" });
+    assert.deepEqual(calls.overrides, []);
+
+    await page.getByRole("button", { name: "Ignore limits this month" }).click();
+    await dialog.getByRole("button", { name: "Ignore limits", exact: true }).click();
+    await dialog.waitFor({ state: "hidden" });
+    await page.getByText("Place details is past its free allowance, at 1,020 of 950. Calls continue and are billed.").waitFor();
+    await page.getByText("Past free allowance, billed").waitFor();
+    await page.getByRole("status").filter({ hasText: "Limits are ignored until" }).waitFor();
+    assert.equal(await page.getByText("At the limit,").count(), 0);
+    assert.deepEqual(calls.overrides, [{ method: "PUT", ignoreLimits: true }]);
+    assert.ok(await noPageOverflow(page));
+    await page.screenshot({ path: shot("override-on"), fullPage: true });
+
+    await page.getByRole("button", { name: "Restore limits" }).click();
+    await page.getByRole("button", { name: "Ignore limits this month" }).waitFor();
+    assert.deepEqual(calls.overrides.at(-1), { method: "PUT", ignoreLimits: false });
+    assert.deepEqual(errors, []);
+    assert.equal(calls.google, 0);
+    await context.close();
+  });
+
+  await check("ignored limits read well in dark theme and at phone width", async () => {
+    const ignored = ok({ limitsIgnoredSince: "2026-11-10T05:00:00Z", meters: [{ meter: "PLACE_DETAILS", used: 1020, limit: 950, lastCountedAt: null }] });
+    for (const [theme, width] of [["dark", 1280], ["light", 375]]) {
+      const { context, page, errors } = await open(browser, { theme, width, height: 900, respond: ignored });
+      await page.getByRole("button", { name: "Restore limits" }).waitFor();
+      assert.ok(await noPageOverflow(page));
+      assert.deepEqual(errors, []);
+      await page.screenshot({ path: shot(`override-on-${theme}-${width}`), fullPage: true });
+      await context.close();
+    }
+  });
+
+  await check("a failed override keeps the dialog open and says why", async () => {
+    const { context, page } = await open(browser, { respond: ok() });
+    await context.route("**/api/admin/google-usage/limit-override", (route) =>
+      route.fulfill({ status: 503, json: { status: 503, message: "Mobility data is temporarily unavailable" } }));
+    await page.getByRole("button", { name: "Ignore limits this month" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("button", { name: "Ignore limits", exact: true }).click();
+    await dialog.getByRole("alert").waitFor();
+    assert.equal(await page.getByRole("button", { name: "Restore limits" }).count(), 0);
+    await page.screenshot({ path: shot("override-failed") });
+    await context.close();
+  });
+
+  await check("switched-off limits hide the override, since nothing would stop anyway", async () => {
+    const { context, page } = await open(browser, { respond: ok({ limitsEnforced: false }) });
+    await page.getByText("Limits are switched off.").waitFor();
+    assert.equal(await page.getByRole("button", { name: "Ignore limits this month" }).count(), 0);
     await context.close();
   });
 
