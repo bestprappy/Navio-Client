@@ -72,31 +72,37 @@ body .navio-tour .driver-popover-close-btn {
   z-index: 1;
   top: 0.625rem;
   right: 0.625rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Grid + zero line-height keeps the icon optically centred; driver.css's font metrics otherwise nudge it. */
+  display: grid;
+  place-items: center;
   width: 2rem;
   height: 2rem;
+  padding: 0;
+  line-height: 0;
+  font-size: 0;
   border-radius: var(--radius-md);
-  color: var(--muted-foreground);
+  color: var(--destructive);
   cursor: pointer;
   transition: background-color 150ms ease, color 150ms ease;
 }
 
 body .navio-tour .driver-popover-close-btn svg {
+  display: block;
+  flex: none;
   width: 1rem;
   height: 1rem;
+  margin: 0;
 }
 
 body .navio-tour .driver-popover-close-btn:hover {
-  background-color: var(--muted);
-  color: var(--foreground);
+  background-color: color-mix(in oklab, var(--destructive) 14%, transparent);
+  color: var(--destructive);
 }
 
 body .navio-tour .driver-popover-close-btn:focus-visible {
-  outline: 2px solid var(--ring);
+  outline: 2px solid var(--destructive);
   outline-offset: 2px;
-  color: var(--foreground);
+  color: var(--destructive);
 }
 
 /* Footer: route progress on the left, actions on the right */
