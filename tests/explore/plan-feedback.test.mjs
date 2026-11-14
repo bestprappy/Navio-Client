@@ -33,3 +33,12 @@ test('Answering a reply starts with the name of the traveler being answered',asy
  assert.equal(replyMention(null),'');
  assert.equal(replyMention('  '),'');
 });
+test('Comment authors carry a profile id when the service sends one, and older or malformed responses still render',async()=>{
+ const {feedbackCommentSchema}=await import('../../app/feature/planner/_components/share/feedback/feedback-api.ts');
+ const base={id:'00000000-0000-4000-8000-000000000001',parentId:null,authorName:'Mali',content:'Hi',deleted:false,createdAt:'2026-11-14T10:00:00Z',updatedAt:'2026-11-14T10:00:00Z',version:0,canEdit:false,canDelete:false,replyCount:0};
+ const author='00000000-0000-4000-8000-000000000901';
+ assert.equal(feedbackCommentSchema.parse({...base,authorId:author}).authorId,author);
+ assert.equal(feedbackCommentSchema.parse(base).authorId,undefined);
+ assert.equal(feedbackCommentSchema.parse({...base,authorId:'not-an-id'}).authorId,null);
+ assert.equal(feedbackCommentSchema.parse({...base,deleted:true,authorId:null}).authorId,null);
+});
