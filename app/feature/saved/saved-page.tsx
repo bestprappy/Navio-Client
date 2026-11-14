@@ -1,4 +1,5 @@
 "use client";
+import {favoritesKey} from './favorite-count';
 import {useEffect,useId,useState} from 'react';
 import {useRouter,useSearchParams} from 'next/navigation';
 import {useSession} from 'next-auth/react';
@@ -47,7 +48,7 @@ function SavedExplorePage(){
    else if(item.providerPlaceId&&!item.providerPlaceId.startsWith('MAPBOX:')&&!item.providerPlaceId.startsWith('ev-charger:'))router.push(`/explore/places/${encodeURIComponent(item.providerPlaceId.replace(/^GOOGLE:/i,''))}`);
    else window.location.assign(`https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`);
    return '';
- },onSuccess:async message=>{setNotice(message);await client.invalidateQueries({queryKey:libraryKey(user)});},onError:(e,args)=>{setNotice(e.message);if(args.kind==='open'&&args.item.type==='GUIDE'&&e instanceof SavedContentError&&e.status===404)setUnavailable(previous=>[...previous,args.item.id]);}});
+ },onSuccess:async message=>{setNotice(message);await Promise.all([client.invalidateQueries({queryKey:libraryKey(user)}),client.invalidateQueries({queryKey:favoritesKey})]);},onError:(e,args)=>{setNotice(e.message);if(args.kind==='open'&&args.item.type==='GUIDE'&&e instanceof SavedContentError&&e.status===404)setUnavailable(previous=>[...previous,args.item.id]);}});
  const rows=query.data?.items??[];
  useEffect(()=>{if(query.data&&!query.isFetching){const page=clampSavedPage(state.page,query.data.total);if(page!==state.page)router.replace(`/saved?${savedSearchParams({...state,page})}`,{scroll:false});}},[query.data,query.isFetching,state,router]);
  function grid(items:SavedItem[]){return <div className="grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">{items.map(item=><SavedCard key={item.id} item={item} unavailable={unavailable.includes(item.id)} trash={state.tab==='trash'} pending={action.isPending} onAction={kind=>action.mutate({kind,item})}/>)}</div>;}

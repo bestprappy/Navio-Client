@@ -2,7 +2,7 @@ import { z } from 'zod';
 import {feedbackPath} from './feedback-path';
 const count=z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 export const feedbackSummarySchema=z.object({ratingAverage:z.number().min(1).max(5).nullable(),ratingCount:count,
-  commentCount:count,myRating:z.number().int().min(1).max(5).nullable(),publisher:z.boolean(),canModerate:z.boolean().optional().default(false)});
+  viewCount:count.optional(),uniqueViewCount:count.optional(),commentCount:count,myRating:z.number().int().min(1).max(5).nullable(),publisher:z.boolean(),canModerate:z.boolean().optional().default(false)});
 export const feedbackCommentSchema=z.object({id:z.uuid(),parentId:z.uuid().nullable(),authorName:z.string().nullable(),content:z.string().nullable(),
   deleted:z.boolean(),createdAt:z.string(),updatedAt:z.string(),version:count,canEdit:z.boolean(),canDelete:z.boolean(),replyCount:count});
 export const commentPageSchema=z.object({content:z.array(feedbackCommentSchema),hasMore:z.boolean(),total:count,page:count});

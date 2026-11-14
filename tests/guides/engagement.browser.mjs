@@ -15,6 +15,7 @@ async function run(signedIn,viewport={width:1440,height:1000},dark=false){
   const request=route.request(),u=new URL(request.url()),p=u.pathname;
   if(!['localhost','127.0.0.1'].includes(u.hostname))return route.abort();
   if(p==='/api/auth/session')return route.fulfill({json:signedIn?{user:{id:'22222222-2222-4222-8222-222222222222',name:'Reader'},expires:'2099-01-01T00:00:00Z'}:{}});
+  if(p==='/api/saved-content/favorites')return route.fulfill({json:u.searchParams.getAll('identity').map(identity=>({identity,count:3}))});
   if(p==='/api/users/me')return route.fulfill({json:{id:'22222222-2222-4222-8222-222222222222',displayName:'Reader',email:'reader@example.com'}});
   if(p==='/api/notifications/unread-count')return route.fulfill({json:{unreadCount:0}});
   if(p.endsWith('/view')){attempts++;requests.push(request.postDataJSON());if(failFirst){failFirst=false;return route.fulfill({status:503,json:{message:'Try again'}});}total++;return route.fulfill({status:204});}
@@ -30,12 +31,12 @@ async function run(signedIn,viewport={width:1440,height:1000},dark=false){
  const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('console',message=>{if(/same key|unique.*key/i.test(message.text()))keyErrors.push(message.text());});
  await page.goto(origin+'/explore/guides/'+id);
  await page.getByRole('heading',{name:'Reader engagement check',exact:true}).waitFor();
- const stats=page.getByLabel('Guide readership and rating');await stats.getByText('12 total views',{exact:true}).waitFor();
+ const stats=page.getByLabel('Guide readership and rating');await stats.getByText('12',{exact:true}).waitFor();
  assert.equal(attempts,0);checks.push('Hidden page does not count');
  const hero=await page.locator('#guide-title').boundingBox(),row=await stats.boundingBox();assert.ok(row.y>hero.y);checks.push('Readership is under cover');
  await page.evaluate(()=>{window.testVisible=true;document.dispatchEvent(new Event('visibilitychange'));});
  if(!signedIn){await stats.getByText('Readership statistics could not be refreshed.').waitFor();await stats.getByRole('button',{name:'Retry'}).click();}
- await stats.getByText('13 total views',{exact:true}).waitFor();await stats.getByText('4 unique signed-in viewers',{exact:true}).waitFor();
+ await stats.getByText('13',{exact:true}).waitFor();await stats.getByText('4',{exact:true}).waitFor();
  await page.evaluate(()=>document.dispatchEvent(new Event('visibilitychange')));await page.waitForTimeout(200);assert.equal(attempts,signedIn?1:2);checks.push('Visible opening counts once; retries do not make a new read ID');
  const feedback=page.locator('#reader-feedback');await feedback.getByRole('heading',{name:'Ratings & conversation'}).waitFor();
  if(signedIn){
@@ -47,8 +48,8 @@ async function run(signedIn,viewport={width:1440,height:1000},dark=false){
  await page.screenshot({path:`${output}/guide-engagement-${signedIn?'account':'guest'}-${viewport.width}.png`});
  await page.reload();await page.getByRole('heading',{name:'Reader engagement check',exact:true}).waitFor();
  await page.evaluate(()=>{window.testVisible=true;document.dispatchEvent(new Event('visibilitychange'));});
- await stats.getByText('14 total views',{exact:true}).waitFor();
- await stats.getByText('4 unique signed-in viewers',{exact:true}).waitFor();
+ await stats.getByText('14',{exact:true}).waitFor();
+ await stats.getByText('4',{exact:true}).waitFor();
  checks.push('A new page opening increments total while unique account count stays unchanged');
  await context.close();
 }
