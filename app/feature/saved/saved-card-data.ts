@@ -1,14 +1,15 @@
 import {fetchExplorePlanSummary,type ExplorePlan} from "../explore/_components/shared-plans/explore-plans-api";
 import {readTravelerGuide,type PublishedGuideSummary} from "../guides/user-guides-api";
 import {countGuidePlaces} from "../admin/_components/guides/guide-model";
-import {feedbackRequest,feedbackSummarySchema} from "../planner/_components/share/feedback/feedback-api";
+import {z} from "zod";
+import {feedbackRequest} from "../planner/_components/share/feedback/feedback-api";
 import type {SavedItem} from "./library-api";
 
 type PublicGuide=Awaited<ReturnType<typeof readTravelerGuide>>;
 export function savedGuideSummary({guide,author}:PublicGuide,source:"CURATED"|"TRAVELER"):PublishedGuideSummary & {source:"CURATED"|"TRAVELER"}{
  return {id:guide.id,name:guide.name,country:guide.country,countryCode:guide.countryCode,destinationName:guide.destination.name,destinationProvider:guide.destination.provider,destinationPlaceId:guide.destination.providerPlaceId,description:guide.description,coverPlaceId:guide.coverPlaceId,placeCount:countGuidePlaces(guide),categories:[...guide.categories],author,publishedAt:guide.publishedAt??"",updatedAt:guide.updatedAt,source};
 }
-const metricsSchema=feedbackSummarySchema.pick({viewCount:true,ratingAverage:true,ratingCount:true});
+const metricsSchema=z.object({viewCount:z.number().int().nonnegative().optional(),ratingAverage:z.number().min(1).max(5).nullable(),ratingCount:z.number().int().nonnegative()});
 type GuideMetrics={viewCount?:number;ratingAverage?:number|null;ratingCount?:number};
 async function readGuideMetrics(id:string,source:"CURATED"|"TRAVELER",signal?:AbortSignal):Promise<GuideMetrics|undefined>{
  try{return metricsSchema.parse(await feedbackRequest(`guide:${source}:${id}`,"",{signal}));}
