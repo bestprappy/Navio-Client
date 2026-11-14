@@ -13,7 +13,7 @@ export function SavedLayout({header,navigation,children}:{header:ReactNode;navig
      <span className="flex items-center gap-2 font-semibold"><Bookmark className="size-4 text-primary"/>Saved</span>
      <button type="button" aria-label="Toggle saved navigation" aria-expanded={expanded} aria-controls="saved-navigation" onClick={()=>setExpanded(!expanded)} className="flex size-9 items-center justify-center rounded-lg hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring md:hidden"><ChevronDown className={expanded?'size-4 rotate-180':'size-4'}/></button>
     </div>
-    <div id="saved-navigation" className={`${expanded?'block':'hidden'} max-h-[45dvh] overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable] md:block md:max-h-none md:flex-1`}>{navigation}</div>
+    <div id="saved-navigation" onClick={event=>{if((event.target as HTMLElement).closest('a[href^="/saved"]'))setExpanded(false);}} className={`${expanded?'block':'hidden'} max-h-[45dvh] overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable] md:block md:max-h-none md:flex-1`}>{navigation}</div>
    </aside>
    <main id="saved-main" className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
     <div className="mx-auto w-full max-w-7xl px-5 py-7 sm:px-8 sm:py-10">{header}{children}</div>
