@@ -2,8 +2,9 @@ import {cataloguePlaces} from './catalogue.data';
 import type {DiscoveryItem} from './places-api';
 import type {PlaceSearchResult} from '../../planner/planId/_components/constants/types';
 export {cataloguePlaces};
-export const isCatalogueId=(id:string)=>id.startsWith('NAVIO:');
-export function findCataloguePlace(id:string){return cataloguePlaces.find(p=>p.id===id);}
+export function canonicalCatalogueId(id:string){try{for(let n=0;n<2&&id.includes('%');n++)id=decodeURIComponent(id);}catch{return id;}return id;}
+export const isCatalogueId=(id:string)=>canonicalCatalogueId(id).startsWith('NAVIO:');
+export function findCataloguePlace(id:string){return cataloguePlaces.find(p=>p.id===canonicalCatalogueId(id));}
 const normal=(s:string)=>s.normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 export function catalogueItem(id:string):DiscoveryItem|null{
  const p=findCataloguePlace(id);if(!p)return null;
