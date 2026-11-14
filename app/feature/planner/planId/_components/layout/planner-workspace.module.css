@@ -1,4 +1,6 @@
-.workspace { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; }
+/* clip, not hidden: a hidden box is still a scroll container, so scrollIntoView (tours, focus)
+   could scroll it and push the side panel's header out of view. */
+.workspace { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; overflow: clip; }
 .tabs { display: flex; gap: var(--space-sm); flex-shrink: 0; padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--border); background: var(--card); }
 .tabs button { display: flex; align-items: center; justify-content: center; gap: var(--space-sm); flex: 1; min-height: 2.75rem; border-radius: var(--radius-md); color: var(--muted-foreground); }
 .tabs button[aria-pressed="true"] { background: var(--secondary); color: var(--secondary-foreground); }

@@ -160,7 +160,7 @@ function PlannerSidePanelHeader({
   return (
     <header
       className={cn(
-        "flex min-h-14 items-center gap-3 border-b border-border bg-card px-4 py-3",
+        "flex min-h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 py-3",
         className,
       )}
     >
