@@ -4,6 +4,7 @@ import { Component, lazy, Suspense, useCallback, useLayoutEffect, useRef, useSta
 import { NotebookPen } from "lucide-react";
 import { useSetAtom } from "jotai";
 
+import { stripNoteFormatTags } from "@/components/block-editor/note-document";
 import { cn } from "@/lib/utils";
 
 import { updatePlaceItemAtom } from "../../overview/trip-builder.atoms";
@@ -21,7 +22,8 @@ const NOTES_ICON = <NotebookPen className="size-4" />;
 function PlainNotes({ value, placeholder }: { value: string; placeholder?: string }) {
   return (
     <p className="min-w-0 whitespace-pre-wrap wrap-break-word text-sm leading-6 text-foreground">
-      {value || <span className="text-muted-foreground">{placeholder}</span>}
+      {/* Shown while the renderer loads or if it fails, so Navio's own formatting tags are left out. */}
+      {stripNoteFormatTags(value) || <span className="text-muted-foreground">{placeholder}</span>}
     </p>
   );
 }

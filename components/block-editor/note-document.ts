@@ -99,3 +99,14 @@ export function emptyParagraph(): NoteNode {
 export function emptyNoteDocument(): NoteNode {
   return { type: "doc", content: [emptyParagraph()] };
 }
+
+// The exact formatting tags the note serializer writes; any other HTML is the author's own text.
+const NOTE_FORMAT_TAG = /<\/?(?:u|summary)>|<span data-color="[a-z]+">|<\/span>|<mark data-color="[a-z]+">|<\/mark>|<details(?:\s+open(?:="[^"]*")?)?\s*>|<\/details>|<br\s*\/?>/gi;
+
+/**
+ * A note's markdown without the formatting tags Navio writes, for showing it as
+ * plain text when the formatted renderer is unavailable. Cheap: no parsing.
+ */
+export function stripNoteFormatTags(markdown: string): string {
+  return markdown.replace(NOTE_FORMAT_TAG, "").replace(/\n{3,}/g, "\n\n").trim();
+}
