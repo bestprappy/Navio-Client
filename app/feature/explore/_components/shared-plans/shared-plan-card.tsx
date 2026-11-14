@@ -11,6 +11,7 @@ import {
 } from "./explore-plans-api";
 import { PlanAuthor } from "./plan-author";
 import { PlanCover } from "./plan-cover";
+import {FavoriteCount} from "@/app/feature/saved/favorite-count";
 import { PlanEngagement } from "./plan-engagement";
 import { SharedPlanCardActions } from "./shared-plan-card-actions";
 
@@ -97,8 +98,8 @@ export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "til
           <PlanAuthor name={plan.authorName} className="flex-1" />
           <SharedPlanCardActions token={plan.token} saveAction={saveAction} />
         </div>
-        <div className="border-t border-border/60 pt-3">
-          <PlanEngagement viewCount={plan.viewCount} copyCount={plan.copyCount} ratingAverage={plan.ratingAverage} ratingCount={plan.ratingCount} />
+        <div className="space-y-2 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+          <PlanEngagement favorite={<FavoriteCount identity={`plan:${plan.token}`}/>} viewCount={plan.viewCount} copyCount={plan.copyCount} ratingAverage={plan.ratingAverage} ratingCount={plan.ratingCount} />
         </div>
       </div>
     </article>

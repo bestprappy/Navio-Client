@@ -2,6 +2,8 @@
 
 import type {ReactNode} from "react";
 import Link from "next/link";
+import {FavoriteCount} from "../saved/favorite-count";
+import {guideIdentity} from "../saved/library-model";
 import {SaveButton} from "../saved/save-button";
 import { BookOpen, Eye, MapPin, Share2, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -117,7 +119,8 @@ function DiscoveryGuideCard({guide,saveAction}:{saveAction?:ReactNode;guide:Publ
    <p className="line-clamp-2 min-h-12 text-sm leading-6 text-muted-foreground">{guide.description||'Discover the places and practical advice collected in this guide.'}</p>
    <div className="flex flex-wrap gap-1.5">{guide.categories.slice(0,2).map(category=><span key={category.id} className="max-w-full truncate rounded-full bg-muted/70 px-2.5 py-1 text-[11px] text-muted-foreground">{category.name}</span>)}</div>
    <div className="mt-auto flex items-center gap-2 border-t border-border/60 pt-4 text-xs text-muted-foreground"><div className="min-w-0 flex-1"><GuideAuthor author={guide.author}/></div><Button variant="ghost" size="icon-sm" aria-label={`Share ${guide.name}`} onClick={()=>void share()}><Share2 aria-hidden="true" className="size-4"/></Button>{saveAction??<SaveButton guide={{id:guide.id,source}} className="size-9 shrink-0"/>}</div>
-   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1.5"><Eye aria-hidden="true" className="size-3.5"/>{guide.viewCount==null?'Views unavailable':`${guide.viewCount.toLocaleString()} views`}</span><span className="inline-flex items-center gap-1.5"><Star className="size-3.5 text-rating" aria-hidden="true"/>{guide.ratingAverage?`${guide.ratingAverage.toFixed(1)} (${guide.ratingCount??0})`:guide.ratingCount==null?'Rating unavailable':'Not rated yet'}</span>{guide.discoveryLabel&&<span className="text-[11px] text-muted-foreground">{guide.discoveryLabel==='trending'?'Trending':guide.discoveryLabel==='popular'?'Popular pick':'Recently published'}</span>}</div>
+   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span className="inline-flex items-center gap-1.5"><Eye aria-hidden="true" className="size-3.5"/>{guide.viewCount==null?'Views unavailable':`${guide.viewCount.toLocaleString()} views`}</span><span className="inline-flex items-center gap-1.5"><Star className="size-3.5 text-rating" aria-hidden="true"/>{guide.ratingAverage?`${guide.ratingAverage.toFixed(1)} (${guide.ratingCount??0})`:guide.ratingCount==null?'Rating unavailable':'Not rated yet'}</span><FavoriteCount identity={guideIdentity(guide.id,source)}/>{guide.discoveryLabel&&<span className="text-[11px] text-muted-foreground">{guide.discoveryLabel==='trending'?'Trending':guide.discoveryLabel==='popular'?'Popular pick':'Recently published'}</span>}</div>
+
   </div>
  </article>;
 }

@@ -1,3 +1,4 @@
+import type {ReactNode} from "react";
 import { Copy, Eye, Star, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -12,10 +13,10 @@ function count(value: number | null | undefined): string {
   return typeof value === "number" && Number.isFinite(value) && value >= 0
     ? new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value) : "\u2014";
 }
-export function PlanEngagement({ viewCount, copyCount, uniqueCopierCount, ratingAverage, ratingCount, detail = false }: PlanEngagementValues & { detail?: boolean }) {
+export function PlanEngagement({ viewCount, copyCount, uniqueCopierCount, ratingAverage, ratingCount, detail = false, favorite }: PlanEngagementValues & { detail?: boolean;favorite?:ReactNode }) {
   const rated=typeof ratingAverage==='number'&&Number.isFinite(ratingAverage)&&ratingAverage>=1&&ratingAverage<=5&&typeof ratingCount==='number'&&ratingCount>0;
   return (
-    <div aria-label="Plan activity" className={cn("grid items-center gap-x-3 gap-y-2 text-xs text-muted-foreground", detail ? "grid-cols-2" : "grid-cols-3")}>
+    <div aria-label="Plan activity" className={cn("grid items-center gap-x-3 gap-y-2 text-xs text-muted-foreground", detail||favorite ? "grid-cols-2" : "grid-cols-3")}>
       <span className="inline-flex min-w-0 items-center gap-1.5" title={viewCount == null ? "Views unavailable" : `${viewCount.toLocaleString("en")} public views`}>
         <Eye className="size-3.5 shrink-0" aria-hidden="true" />{count(viewCount)} views
       </span>
@@ -25,6 +26,7 @@ export function PlanEngagement({ viewCount, copyCount, uniqueCopierCount, rating
       <span className="inline-flex min-w-0 items-center gap-1.5" title={copyCount == null ? "Copy count unavailable" : `${copyCount.toLocaleString("en")} successful plan copies recorded`}>
         <Copy className="size-3.5 shrink-0" aria-hidden="true" />{count(copyCount)} {copyCount === 1 ? "copy" : "copies"}
       </span>
+      {favorite}
       {detail && <span className="inline-flex min-w-0 items-center gap-1.5" title="Distinct travelers who successfully copied this plan">
         <Users className="size-3.5 shrink-0" aria-hidden="true" />{count(uniqueCopierCount)} {uniqueCopierCount === 1 ? "traveler" : "travelers"}
       </span>}

@@ -1,8 +1,8 @@
 import "server-only";
 
-import { cookies } from "next/headers";
 
-import { VISITOR_COOKIE, isVisitorId } from "@/lib/visitor-id";
+
+
 import { readSharedPlanResponse, type SharedPlan } from "./publication-api";
 
 const UPSTREAM_TIMEOUT_MS = 15_000;
@@ -18,8 +18,7 @@ export type SharedPlanResult =
  *
  * <p>No credentials are attached and none are available here: the token in the
  * URL is the only thing that authorises this read, so the response cannot vary
- * with who is looking. The browser's visitor id (set by the proxy) goes along
- * only so the service counts each browser's view once. Nothing is cached — revoking a link has to take effect on
+ * with who is looking. Reader openings are recorded by a visible-page POST, never by this fetch. Nothing is cached — revoking a link has to take effect on
  * the next request, and a cached render would outlive the owner's decision.
  */
 export async function fetchSharedPlan(token: string): Promise<SharedPlanResult> {
@@ -41,12 +40,6 @@ export async function fetchSharedPlan(token: string): Promise<SharedPlanResult> 
   }
 
   const headers: Record<string, string> = { Accept: "application/json" };
-  try {
-    const visitorId = (await cookies()).get(VISITOR_COOKIE)?.value;
-    if (isVisitorId(visitorId)) headers["X-Navio-Visitor"] = visitorId;
-  } catch {
-    // Outside a request there is no browser to count; the plan is still served.
-  }
 
   try {
     const response = await fetch(upstreamUrl, {

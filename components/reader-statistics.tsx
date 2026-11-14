@@ -1,0 +1,8 @@
+import {Bookmark,Eye,Star,Users} from 'lucide-react';
+export type ReaderStatisticsValues={viewCount?:number|null;uniqueViewCount?:number|null;favoriteCount?:number;ratingAverage?:number|null;ratingCount?:number|null};
+export function ReaderStatistics({viewCount,uniqueViewCount,favoriteCount,ratingAverage,ratingCount}:ReaderStatisticsValues){
+ const number=(value:number|null|undefined)=>value==null?'\u2014':value.toLocaleString();
+ const rated=ratingAverage!=null&&(ratingCount??0)>0;
+ const metrics=[{label:'Total Views',value:number(viewCount),Icon:Eye,help:'All recorded reader openings, including repeat visits.'},{label:'Unique Visitors',value:number(uniqueViewCount),Icon:Users,help:'Signed-in accounts counted once each. Anonymous visits are excluded.'},{label:'Current Favorites',value:number(favoriteCount),Icon:Bookmark,help:'Accounts that currently have this publication saved.'},{label:'Rating',value:ratingCount==null?'\u2014':rated?`${ratingAverage!.toFixed(1)} / 5`:'Not rated yet',Icon:Star,help:rated?`${ratingCount} ratings`:'No ratings yet'}];
+ return <div aria-label="Readership and rating" className="grid grid-cols-2 gap-x-4 gap-y-4 rounded-2xl border border-border/60 bg-card px-4 py-4 sm:grid-cols-4" aria-live="polite">{metrics.map(({label,value,Icon,help})=><div key={label} className="min-w-0" title={help}><span className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><Icon aria-hidden="true" className="size-3.5 shrink-0"/>{label}</span>{label==='Rating'?<a href="#reader-feedback" className="mt-1 block text-sm font-semibold hover:text-primary">{value}</a>:<span className="mt-1 block text-sm font-semibold tabular-nums">{value}</span>}</div>)}</div>;
+}

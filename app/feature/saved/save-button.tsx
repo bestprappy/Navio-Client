@@ -1,4 +1,5 @@
 "use client";
+import {favoritesKey} from './favorite-count';
 import {useEffect,useRef,useState} from 'react';
 import {Bookmark,LoaderCircle} from 'lucide-react';
 import {useSession} from 'next-auth/react';
@@ -26,8 +27,8 @@ export function SaveButton({guide,place,token,sourceToken,className,trackOpen=fa
    if(state.data?.saved&&!needsSource){await removeSaved(state.data.id!);setUndoId(state.data.id);return 'Moved to Recently Deleted.';}
    if(place)await saveLocation(locationBookmark(place,sourceToken));else if(token)await savePlan(token);else if(guide)await saveGuide(guide);
    return needsSource?'Saved. Source plan added.':'Saved to your collection.';
- },onSuccess:async text=>{setMessage(text);await client.invalidateQueries({queryKey:libraryKey(user)});},onError:e=>setMessage(e instanceof Error?e.message:'Could not save. Please try again.')});
- const undo=useMutation({mutationFn:()=>restoreSaved(undoId!),onSuccess:async()=>{setUndoId(null);setMessage('Restored.');await client.invalidateQueries({queryKey:libraryKey(user)});},onError:e=>setMessage(e.message)});
+ },onSuccess:async text=>{setMessage(text);await Promise.all([client.invalidateQueries({queryKey:libraryKey(user)}),client.invalidateQueries({queryKey:favoritesKey})]);},onError:e=>setMessage(e instanceof Error?e.message:'Could not save. Please try again.')});
+ const undo=useMutation({mutationFn:()=>restoreSaved(undoId!),onSuccess:async()=>{setUndoId(null);setMessage('Restored.');await Promise.all([client.invalidateQueries({queryKey:libraryKey(user)}),client.invalidateQueries({queryKey:favoritesKey})]);},onError:e=>setMessage(e.message)});
  const label=needsSource?'Add this plan as a source':state.data?.saved?`Remove saved ${guide?'guide':place?'place':'plan'}`:`Save ${guide?'guide':place?'place':'plan'}`;
  const pending=mutation.isPending||undo.isPending;
  return <span className="relative inline-flex shrink-0">
