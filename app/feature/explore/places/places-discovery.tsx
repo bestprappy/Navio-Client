@@ -214,8 +214,8 @@ function EmptyPlaces({ retry, error }: { retry?: () => void; error?: string }) {
   );
 }
 const descriptions: Record<string, string> = {
-  popular: "Well-known places to start exploring.",
-  "hidden-gems": "Highly rated places with fewer reviews in this selection.",
+  popular: "Navio picks to start exploring. Editorial selection, not live popularity.",
+  "hidden-gems": "Smaller discoveries selected by Navio.",
   indoor: "Museums, galleries, and a little room to slow down.",
   scenic: "Gardens, viewpoints, and places with a different perspective.",
   food: "A taste of the neighborhood, from cafés to local tables.",
@@ -513,7 +513,7 @@ export function PlaceFeed({
               retry={() => void query.refetch()}
             />
           )}
-          {items.length > 0 && <GoogleAttribution />}
+          {items.length > 0 && <GoogleAttribution catalogue />}
         </>
       )}
     </section>
@@ -577,6 +577,7 @@ export function PlacesDiscovery() {
   return (
     <div className="space-y-8 sm:space-y-10">
       <DiscoveryPlanBanner />
+      <p className="rounded-xl border border-border/60 bg-card px-4 py-3 text-sm text-muted-foreground">Exhibition collection: Bangkok. Browse prepared places without live Places searches. Other countries will show no matches.</p>
       <PlaceSearchControls
         state={state}
         onChange={change}
@@ -640,7 +641,7 @@ export function PlacesDiscovery() {
           Place information from Google Maps. Selections are a starting point,
           not an exhaustive directory.
         </span>
-        <GoogleAttribution />
+        <GoogleAttribution catalogue />
       </footer>
     </div>
   );

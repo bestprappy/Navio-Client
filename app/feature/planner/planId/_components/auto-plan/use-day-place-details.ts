@@ -1,5 +1,6 @@
 "use client";
 
+import {catalogueDetail,type CataloguePlaceDetail} from "@/app/feature/explore/places/catalogue";
 import { useMemo } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 
@@ -11,7 +12,7 @@ const DETAIL_TIMEOUT_MS = 15_000;
 
 export type DayPlaceDetails = {
   /** Live details by item id; missing when the lookup failed or the place has no provider id. */
-  details: ReadonlyMap<string, PlaceSearchResult | undefined>;
+  details: ReadonlyMap<string, PlaceSearchResult | CataloguePlaceDetail | undefined>;
   isLoading: boolean;
   failedCount: number;
 };
@@ -28,10 +29,10 @@ export function useDayPlaceDetails(items: readonly TripBlockItem[]): DayPlaceDet
       const reference = getPlaceReference(place.placeId);
       return {
         queryKey: placeDetailsQueryKey(reference, false),
-        queryFn: ({ signal }: { signal: AbortSignal }) => fetchPlaceDetail(reference!.providerPlaceId, reference!.provider, {
+        queryFn: ({ signal }: { signal: AbortSignal }) => {if(reference?.provider==='CATALOGUE'){const detail=catalogueDetail(reference.providerPlaceId);if(!detail)throw new Error('Catalogue place unavailable.');return detail;}return fetchPlaceDetail(reference!.providerPlaceId, reference!.provider, {
           includePhoto: false,
           signal: AbortSignal.any([signal, AbortSignal.timeout(DETAIL_TIMEOUT_MS)]),
-        }),
+        });},
         ...reuseCachedDetailsWithPhoto(queryClient, reference),
         enabled: reference !== null,
         staleTime: 5 * 60_000,

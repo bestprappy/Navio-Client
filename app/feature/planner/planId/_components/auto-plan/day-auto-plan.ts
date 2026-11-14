@@ -88,7 +88,7 @@ export type DayAutoPlanInput = {
   items: readonly TripBlockItem[];
   date: string;
   /** Live place details by item id, for opening hours and type. */
-  details: ReadonlyMap<string, PlaceSearchResult | undefined>;
+  details: ReadonlyMap<string, Omit<PlaceSearchResult,"provider"> | undefined>;
   start: Point | null;
   end: Point | null;
   settings: AutoPlanSettings;
@@ -133,7 +133,7 @@ function setDuration(item: PlaceItem): number | null {
   return start !== null && end !== null && end - start >= 10 ? end - start : null;
 }
 
-export function classifyDayPlace(item: PlaceItem, detail: PlaceSearchResult | undefined, date: string): { role: AutoPlanRole; place: AutoPlanPlace } {
+export function classifyDayPlace(item: PlaceItem, detail: Omit<PlaceSearchResult,"provider"> | undefined, date: string): { role: AutoPlanRole; place: AutoPlanPlace } {
   const category = isEvChargerPlaceItem(item) ? "charging" : getPlaceTagCategory(detail?.primaryType ?? item.placeType, detail?.category ?? "");
   const kind: AutoPlanStopKind = category === "restaurant" ? "meal"
     : category === "cafe" || category === "bakery" ? "cafe"

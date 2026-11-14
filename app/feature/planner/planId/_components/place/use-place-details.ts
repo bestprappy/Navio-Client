@@ -2,10 +2,12 @@
 
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
+import {catalogueDetail,type CataloguePlaceDetail} from "@/app/feature/explore/places/catalogue";
 import { fetchPlaceDetail } from "./place-api";
 import type { PlaceProvider, PlaceSearchResult } from "../constants/types";
 
 export function getPlaceReference(placeId: string) {
+  if (placeId.startsWith("NAVIO:")) return {provider:"CATALOGUE" as const,providerPlaceId:placeId};
   const match = /^(GOOGLE|MAPBOX):(.+)$/.exec(placeId);
   if (match) {
     return { provider: match[1] as PlaceProvider, providerPlaceId: match[2] };
@@ -51,9 +53,12 @@ export function usePlaceDetails(placeId: string, { includePhoto = true, enabled 
   const reference = getPlaceReference(placeId);
   const queryClient = useQueryClient();
 
-  return useQuery({
+  return useQuery<PlaceSearchResult | CataloguePlaceDetail>({
     queryKey: placeDetailsQueryKey(reference, includePhoto),
-    queryFn: ({ signal }) => fetchPlaceDetail(reference!.providerPlaceId, reference!.provider, { includePhoto, signal }),
+    queryFn: ({ signal }) => {
+      if(reference?.provider==='CATALOGUE') {const detail=catalogueDetail(reference.providerPlaceId);if(!detail)throw new Error('Catalogue place unavailable.');return detail;}
+      return fetchPlaceDetail(reference!.providerPlaceId, reference!.provider as PlaceProvider, { includePhoto, signal });
+    },
     ...(includePhoto ? {} : reuseCachedDetailsWithPhoto(queryClient, reference)),
     enabled: reference !== null && enabled,
     staleTime: 5 * 60_000,

@@ -1,4 +1,1 @@
-import { proxyMobilityRequest } from "@/app/api/_lib/mobility-proxy";
-export async function GET(request: Request) {
-  return proxyMobilityRequest(request, `/v1/geo/places/discovery?${new URL(request.url).searchParams}`);
-}
+export function GET(){return Response.json({error:'Use catalogue discovery at /api/geo/places/explore.'},{status:410});}

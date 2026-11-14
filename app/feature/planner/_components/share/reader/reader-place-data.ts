@@ -1,8 +1,10 @@
+import {catalogueItem,isCatalogueId,type CataloguePlaceDetail} from "@/app/feature/explore/places/catalogue";
 import { safeExternalUrl, type DiscoveryItem } from '@/app/feature/explore/places/places-api';
 import type { PlaceSearchResult } from '../../../planId/_components/constants/types';
 
 /** Adapt the normal cached lookup, never the separately billed discovery/gallery reader. */
-export function readerPlaceData(detail: PlaceSearchResult): DiscoveryItem {
+export function readerPlaceData(detail: PlaceSearchResult | CataloguePlaceDetail): DiscoveryItem {
+  if(isCatalogueId(detail.providerPlaceId)){const item=catalogueItem(detail.providerPlaceId);if(item)return item;}
   const photoUrl = safeExternalUrl(detail.imageUrl);
   return {
     place: {

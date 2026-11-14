@@ -55,6 +55,8 @@ const placeSchema = z.object({
   }),
   photoUrl: z.string().nullish(),
   category: z.string().nullish(),
+  country: z.string().nullish(),
+  city: z.string().nullish(),
   description: z.string().nullish(),
   rating: z.number().nullish(),
   reviewCount: z.number().nullish(),
@@ -154,6 +156,7 @@ export async function readPlace(id: string, signal?: AbortSignal) {
 }
 export function safeExternalUrl(value?: string | null) {
   if (!value) return undefined;
+  if (/^\/images\/places-catalogue\/[0-9]+\.jpg$/.test(value)) return value;
   try {
     const url = new URL(value);
     return ["https:", "http:"].includes(url.protocol) ? url.href : undefined;

@@ -1,7 +1,2 @@
-import { proxyMobilityRequest } from "@/app/api/_lib/mobility-proxy";
-export async function GET(request: Request) {
-  return proxyMobilityRequest(
-    request,
-    `/v1/geo/places/explore/suggestions?${new URL(request.url).searchParams}`,
-  );
-}
+import {suggestCatalogue} from '@/app/feature/explore/places/catalogue';
+export function GET(request:Request){const p=new URL(request.url).searchParams;return Response.json(suggestCatalogue(p.get('query')??'',p.get('country')??''));}

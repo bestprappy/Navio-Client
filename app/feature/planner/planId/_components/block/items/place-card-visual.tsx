@@ -1,3 +1,4 @@
+import {CataloguePhotoCredit} from "@/app/feature/explore/places/catalogue-photo-credit";
 import Image from "next/image";
 import { Star } from "lucide-react";
 
@@ -55,6 +56,7 @@ export function PlaceCardVisual({
   return (
     <>
       {imageUrl ? (
+        <>
         <Image
           src={imageUrl}
           alt=""
@@ -63,6 +65,8 @@ export function PlaceCardVisual({
           unoptimized={unoptimized || isGooglePlacePhoto(imageUrl)}
           className="h-32 w-full object-cover"
         />
+        <CataloguePhotoCredit src={imageUrl}/>
+        </>
       ) : null}
       <div className="p-4">
         <div className="flex items-start gap-3">

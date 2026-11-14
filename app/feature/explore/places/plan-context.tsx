@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import {catalogueSavedLocation,isCatalogueId} from "./catalogue";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -106,7 +107,7 @@ export function AddPlaceToPlan({ placeId,savedLocation }: { placeId: string;save
     <AddPlaceToPlanAction
       key={`${ownerId}-${planId}-${placeId}`}
       placeId={placeId}
-      savedLocation={savedLocation}
+      savedLocation={catalogueSavedLocation(placeId)??savedLocation}
     />
   );
 }
@@ -169,6 +170,7 @@ function AddPlaceToPlanAction({ placeId,savedLocation }: { placeId: string;saved
       trip: TripResponse;
       listId?: string;
     }) => {
+      if(isCatalogueId(placeId)&&!catalogueSavedLocation(placeId))throw new Error("This catalogue place is unavailable.");
       const append = async (
         snapshot: Awaited<ReturnType<typeof getPlannerSnapshot>>,
       ) => {

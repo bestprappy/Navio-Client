@@ -3,6 +3,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import Link from "next/link";
+import {findCataloguePlace} from "./catalogue";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
@@ -80,6 +81,7 @@ function PhotoAttribution({
   );
 }
 function ReaderPhotos({ item }: { item: DiscoveryItem }) {
+  const catalogue=findCataloguePlace(item.place.providerPlaceId);
   const photos = readerPhotos(item);
   const [selected, setSelected] = useState<number | null>(null);
   if (!photos.length) return null;
@@ -126,7 +128,7 @@ function ReaderPhotos({ item }: { item: DiscoveryItem }) {
           </figure>
         ))}
       </div>
-      <GoogleAttribution />
+      <GoogleAttribution catalogue={!!catalogue} />
       <Dialog
         open={!!selectedPhoto}
         onOpenChange={(open) => {
@@ -191,7 +193,8 @@ export function PlaceReader({ placeId }: { placeId: string }) {
   const place = item.place;
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const website = safeExternalUrl(place.website);
-  const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${encodeURIComponent(place.providerPlaceId)}`;
+  const catalogue=findCataloguePlace(placeId);
+  const mapLink = catalogue?`https://www.google.com/maps/search/?api=1&query=${place.location.lat},${place.location.lng}`:`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.name)}&query_place_id=${encodeURIComponent(place.providerPlaceId)}`;
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-card px-4 py-2">
@@ -296,7 +299,7 @@ export function PlaceReader({ placeId }: { placeId: string }) {
                 )}
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Place information from Google Maps.
+                {catalogue?<><a href={catalogue.sourceUrl} target="_blank" rel="noreferrer" className="underline">Venue reference</a> ? Navio exhibition snapshot ? {catalogue.verifiedAt}. Map point is approximate; confirm entrance and visitor arrangements.</>:"Place information from Google Maps."}
               </p>
             </header>
             <DiscoveryPlanBanner />
@@ -383,7 +386,7 @@ export function PlaceReader({ placeId }: { placeId: string }) {
             {/* [DEFERRED][EXCLUDE_FROM_REPORT] PLACES_EDITORIAL - do not enable without a new request.
             <PlaceArticle key={`article:${placeId}`} item={item} />
             */}
-            <GoogleAttribution />
+            <GoogleAttribution catalogue={!!catalogue} />
           </div>
         </article>
         <div

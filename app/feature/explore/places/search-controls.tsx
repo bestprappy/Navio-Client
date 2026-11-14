@@ -382,7 +382,7 @@ function PlaceSearchInput({
               Finding suggestions…
             </p>
           )}
-          {(query.isError || query.data?.providerAvailable === false) && (
+          {query.isError && (
             <p className="px-3 py-2 text-xs text-muted-foreground">
               Place suggestions are unavailable. You can still search.
             </p>

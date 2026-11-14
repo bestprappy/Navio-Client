@@ -1,8 +1,2 @@
-import { proxyMobilityRequest } from "@/app/api/_lib/mobility-proxy";
-export async function GET(request: Request) {
-  return proxyMobilityRequest(
-    request,
-    `/v1/geo/places/explore?${new URL(request.url).searchParams}`,
-    { timeoutMs: 30_000 },
-  );
-}
+import {searchCatalogue} from '@/app/feature/explore/places/catalogue';
+export function GET(request:Request){try{return Response.json(searchCatalogue(new URL(request.url).searchParams));}catch{return Response.json({error:'Invalid catalogue cursor. Start the search again.'},{status:400});}}
