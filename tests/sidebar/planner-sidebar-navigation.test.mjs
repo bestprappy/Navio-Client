@@ -24,9 +24,9 @@ test("Discover renders Dashboard directly below Home", () => {
     : "";
 
   assert.match(html, />Discover</);
-  assert.deepEqual(hrefs(html), ["/", "/dashboard", "/explore", "/community", "/help"]);
+  assert.deepEqual(hrefs(html), ["/", "/dashboard", "/explore", "/community"]);
   assert.match(html, />Home</);
-  assert.match(html, />Help</);
+  assert.doesNotMatch(html, /href="\/help"/);
 });
 
 test("Trips retains saved-trip content without a duplicate Dashboard link", () => {

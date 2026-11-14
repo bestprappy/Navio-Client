@@ -22,7 +22,6 @@ const NAV_LINKS: NavLink[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Explore", href: "/explore" },
   { label: "Community", href: "/community" },
-  { label: "Help", href: "/help" },
 ];
 
 export function Navbar() {

@@ -4,7 +4,7 @@ import {test} from 'node:test';
 register(new URL('../support/typescript-loader.mjs',import.meta.url));
 const {NAVIO_MENU,COMMUNITY_NAV,isNavioNavActive,isCommunityNavActive}=await import('../../app/feature/community/community-navigation.ts');
 test('Navio links use the normal site destinations, separately from community feeds',()=>{
- assert.deepEqual(NAVIO_MENU.map(({title,href})=>[title,href]),[['Home','/'],['Dashboard','/dashboard'],['Explore','/explore'],['Community','/community'],['Help','/help']]);
+ assert.deepEqual(NAVIO_MENU.map(({title,href})=>[title,href]),[['Home','/'],['Dashboard','/dashboard'],['Explore','/explore'],['Community','/community']]);
  assert.deepEqual(COMMUNITY_NAV.map(({href})=>href),['/community','/community/popular','/community/discovery']);
  assert.notEqual(NAVIO_MENU.find(x=>x.title==='Explore').icon,COMMUNITY_NAV.find(x=>x.title==='Explore').icon);
 });

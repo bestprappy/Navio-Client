@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 import {
-  CircleHelp,
   Compass,
   House,
   LayoutDashboard,
@@ -82,14 +81,6 @@ export function PlannerDiscoverMenu({
         href="/community"
         icon={<MessageCircle className="size-5" />}
         isActive={isRouteActive("/community")}
-        onClick={onNavigate}
-        collapsed={collapsed}
-      />
-      <SidebarItem
-        title="Help"
-        href="/help"
-        icon={<CircleHelp className="size-5" />}
-        isActive={isRouteActive("/help")}
         onClick={onNavigate}
         collapsed={collapsed}
       />

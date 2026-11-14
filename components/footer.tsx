@@ -24,19 +24,12 @@ const FOOTER_SECTIONS: FooterSection[] = [
   {
     title: "Trips",
     links: [
-      { label: "Charging stops", href: "#features" },
-      { label: "How it works", href: "#how-it-works" },
+      { label: "Charging stops", href: "/#features" },
+      { label: "How it works", href: "/#how-it-works" },
       { label: "Shared routes", href: "/explore" },
     ],
   },
-  {
-    title: "Support",
-    links: [
-      { label: "Help", href: "/help" },
-      { label: "Status", href: "/status" },
-      { label: "Contact", href: "/contact" },
-    ],
-  },
+
 ];
 
 export function Footer() {
@@ -61,12 +54,12 @@ export function Footer() {
               <span className="text-lg font-extrabold">Navio</span>
             </Link>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
-              Practical EV trip planning with routes, chargers, notes, and
-              community knowledge in the same workspace.
+              Places, itineraries, budgets, and charging stops.
+              Bring your next trip together.
             </p>
           </div>
 
-          <div className="grid gap-8 sm:grid-cols-3">
+          <div className="grid gap-8 sm:grid-cols-2">
             {FOOTER_SECTIONS.map((section) => (
               <nav key={section.title} aria-label={`${section.title} links`}>
                 <h3 className="mb-4 text-xs font-semibold uppercase tracking-normal text-foreground/70">
@@ -90,8 +83,8 @@ export function Footer() {
         </div>
 
         <div className="mt-12 flex flex-col justify-between gap-3 border-t border-border/40 pt-6 text-sm text-muted-foreground sm:flex-row">
-          <p>(c) {new Date().getFullYear()} Navio. All rights reserved.</p>
-          <p>Designed for EV travel in Thailand.</p>
+          <p>© {new Date().getFullYear()} Navio. All rights reserved.</p>
+          <p>Make room for the trip.</p>
         </div>
       </div>
     </footer>
