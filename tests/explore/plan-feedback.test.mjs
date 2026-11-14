@@ -18,3 +18,18 @@ test('successful empty mutation responses are accepted and signals are forwarded
  await feedbackRequest('a/b','rating',{method:'DELETE',signal:controller.signal});
  assert.equal(captured.url,'/api/shared-plans/a%2Fb/feedback/rating');assert.equal(captured.init.signal,controller.signal);
 });
+test('Plan and Guide comments default to the oldest first and can be reversed without duplicates',async()=>{
+ const {orderFeedbackComments}=await import('../../app/feature/planner/_components/share/feedback/feedback-order.ts');
+ const a={id:'a',createdAt:'2026-11-14T10:00:00Z'},b={id:'b',createdAt:'2026-11-14T11:00:00Z'},c={id:'c',createdAt:'2026-11-14T12:00:00Z'};
+ // The service pages newest first, and a refetch can repeat a row across pages.
+ const pages=[c,b,b,a];
+ assert.deepEqual(orderFeedbackComments(pages,'oldest').map(row=>row.id),['a','b','c']);
+ assert.deepEqual(orderFeedbackComments(pages,'newest').map(row=>row.id),['c','b','a']);
+ assert.deepEqual(pages.map(row=>row.id),['c','b','b','a']);
+});
+test('Answering a reply starts with the name of the traveler being answered',async()=>{
+ const {replyMention}=await import('../../app/feature/planner/_components/share/feedback/feedback-order.ts');
+ assert.equal(replyMention(' Mali Chan '),'@Mali Chan ');
+ assert.equal(replyMention(null),'');
+ assert.equal(replyMention('  '),'');
+});

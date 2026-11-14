@@ -5,8 +5,6 @@ import {
   ArrowBigDown,
   ArrowBigUp,
   MessageCircle,
-  MoreHorizontal,
-  Minus,
   Pencil,
   Plus,
   Reply,
@@ -42,7 +40,16 @@ import { CommunityMembershipButton } from "../../_components/community-membershi
 import { CommunityQueryError } from "../../_components/community-query-state";
 import { CommunityCommentComposer } from "./community-comment-composer";
 import { CommentReactions } from "../../_components/community-reactions";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  CommentTreeAction,
+  CommentTreeAvatar,
+  CommentTreeBody,
+  CommentTreeBranch,
+  CommentTreeItem,
+  CommentTreeMenu,
+  CommentTreeMeta,
+  CommentSortToggle,
+} from "@/components/comment-tree/comment-tree";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -52,12 +59,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRequireAuth } from "@/hooks/use-require-auth";
@@ -362,17 +364,14 @@ function CommentToolbar({ comment }: { comment: CommunityCommentNode }) {
           onClick={() => castVote(downvoted ? 0 : -1)}
         />
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
+        <CommentTreeAction
+          pill
+          icon={<Reply className="size-3.5" aria-hidden="true" />}
           disabled={!canInteract}
           onClick={() => onReplyStart(comment.id)}
-          className="h-7 rounded-full px-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground"
         >
-          <Reply className="size-3.5" aria-hidden="true" />
           Reply
-        </Button>
+        </CommentTreeAction>
 
         <CommentReactions
           postId={comment.postId}
@@ -382,35 +381,20 @@ function CommentToolbar({ comment }: { comment: CommunityCommentNode }) {
         />
 
         {editable || removable ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-7 rounded-full text-muted-foreground"
-                  aria-label="More comment actions"
-                />
-              }
-            >
-              <MoreHorizontal aria-hidden="true" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-40">
-              {editable ? (
-                <DropdownMenuItem onClick={() => onEditStart(comment.id)}>
-                  <Pencil aria-hidden="true" />
-                  Edit
-                </DropdownMenuItem>
-              ) : null}
-              {removable ? (
-                <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
-                  <Trash2 aria-hidden="true" />
-                  Delete
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <CommentTreeMenu>
+          {editable ? (
+            <DropdownMenuItem onClick={() => onEditStart(comment.id)}>
+              <Pencil aria-hidden="true" />
+              Edit
+            </DropdownMenuItem>
+          ) : null}
+          {removable ? (
+            <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
+              <Trash2 aria-hidden="true" />
+              Delete
+            </DropdownMenuItem>
+          ) : null}
+          </CommentTreeMenu>
         ) : null}
       </div>
       {removable ? (
@@ -541,159 +525,84 @@ function CommentNode({
   const showInlineReplies = showReplies && (!depthLimitReached || threadContinued);
 
   return (
-    <article
+    <CommentTreeItem
       id={`comment-${comment.id}`}
-      className={cn(
-        "relative min-w-0",
-        level > 0 &&
-          !isLastSibling &&
-          "after:pointer-events-none after:absolute after:-left-7 after:top-0 after:bottom-0 after:border-l after:border-border after:content-['']",
-      )}
-    >
-      {level > 0 ? (
-        <svg
-          aria-hidden="true"
-          className="pointer-events-none absolute -left-7 -top-3 h-7 w-6 overflow-visible text-border"
-          viewBox="0 0 24 28"
-          fill="none"
-        >
-          <path d="M 0.5 0 V 11.5 Q 0.5 27.5 16.5 27.5 H 24" stroke="currentColor" />
-        </svg>
-      ) : null}
-      {/* Rail and elbows share x=16px: 44px reply indent minus 28px. */}
-      <div className={cn(
-        "relative flex min-w-0 gap-3",
-        showInlineReplies && "min-h-[58px] before:pointer-events-none before:absolute before:left-4 before:top-[58px] before:bottom-0 before:border-l before:border-border before:content-['']",
-      )}>
-        <div className="flex shrink-0 flex-col items-center">
-          <Avatar className="size-8">
-            {avatarUrl ? <AvatarImage src={avatarUrl} alt="" /> : null}
-            <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
-          </Avatar>
+      level={level}
+      isLastSibling={isLastSibling}
+      avatar={<CommentTreeAvatar initials={initials} imageUrl={avatarUrl} />}
+      collapse={
+        hasReplies
+          ? {
+              collapsed: isCollapsed,
+              onToggle: () => onToggleCollapse(comment.id),
+              controlsId: `replies-${comment.id}`,
+            }
+          : undefined
+      }
+      railVisible={showInlineReplies}
+      replies={
+        !hasReplies ? null : isCollapsed ? (
+          <CommentTreeAction onClick={() => onToggleCollapse(comment.id)}>
+            {comment.replies.length}{" "}
+            {comment.replies.length === 1 ? "reply" : "replies"}
+          </CommentTreeAction>
+        ) : depthLimitReached && !threadContinued ? (
+          <CommentTreeAction
+            icon={<MessageCircle className="size-3.5" aria-hidden="true" />}
+            onClick={() => onContinueThread(comment.id)}
+          >
+            Continue this thread
+          </CommentTreeAction>
+        ) : (
+          <div>
+            <CommentBranch nodes={visibleReplies} level={level + 1} />
 
-          {hasReplies ? (
-            <div className="mt-1.5 flex flex-1 flex-col items-center">
-              <button
-                type="button"
-                onClick={() => onToggleCollapse(comment.id)}
-                className="z-10 inline-flex size-4 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground shadow-xs transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                aria-expanded={!isCollapsed}
-                aria-controls={`replies-${comment.id}`}
-                aria-label={isCollapsed ? "Expand replies" : "Collapse replies"}
-              >
-                {isCollapsed ? (
-                  <Plus className="size-3" aria-hidden="true" />
-                ) : (
-                  <Minus className="size-3" aria-hidden="true" />
-                )}
-              </button>
-
-            </div>
-          ) : null}
-        </div>
-
-        <div className="min-w-0 flex-1 pb-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            {/* A removed comment no longer credits its author. */}
-            <span
-              className={cn(
-                "text-sm font-semibold",
-                comment.deleted ? "text-muted-foreground" : "text-foreground",
-              )}
-            >
-              {comment.deleted ? "[deleted]" : <ProfileLink username={username}>{name}</ProfileLink>}
-            </span>
-            <time
-              dateTime={comment.createdAt}
-              className="text-xs text-muted-foreground"
-            >
-              {formatRelativeTime(comment.createdAt)}
-            </time>
-            {comment.edited ? (
-              <span className="text-xs text-muted-foreground">(edited)</span>
-            ) : null}
-          </div>
-
-          {editing ? (
-            <div className="mt-2">
-              <CommentEditComposer comment={comment} />
-            </div>
-          ) : (
-            <p
-              className={cn(
-                "mt-1 max-w-full whitespace-pre-wrap break-words text-sm leading-6 [overflow-wrap:anywhere]",
-                comment.deleted
-                  ? "italic text-muted-foreground"
-                  : "text-foreground",
-              )}
-            >
-              {comment.deleted ? "Comment unavailable" : comment.body}
-            </p>
-          )}
-
-          {comment.deleted || editing ? null : (
-            <CommentToolbar comment={comment} />
-          )}
-
-          {replyComposerVisible ? (
-            <div className="mt-3">
-              <CommentReplyComposer comment={comment} />
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      {hasReplies ? (
-        <div className="ml-11 mt-3" id={`replies-${comment.id}`}>
-          {isCollapsed ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onToggleCollapse(comment.id)}
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-            >
-              {comment.replies.length}{" "}
-              {comment.replies.length === 1 ? "reply" : "replies"}
-            </Button>
-          ) : depthLimitReached && !threadContinued ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onContinueThread(comment.id)}
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <MessageCircle className="size-3.5" aria-hidden="true" />
-              Continue this thread
-            </Button>
-          ) : (
-            <div>
-              <CommentBranch nodes={visibleReplies} level={level + 1} />
-
-              {hiddenReplyCount > 0 ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
+            {hiddenReplyCount > 0 ? (
+              <div className="mt-3">
+                <CommentTreeAction
+                  icon={<Plus className="size-3.5" aria-hidden="true" />}
                   onClick={() =>
                     onShowMoreReplies(
                       comment.id,
                       visibleReplyCount + REPLY_INCREMENT,
                     )
                   }
-                  className="mt-3 h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                 >
-                  <Plus className="size-3.5" aria-hidden="true" />
                   View {hiddenReplyCount} more{" "}
                   {hiddenReplyCount === 1 ? "reply" : "replies"}
-                </Button>
-              ) : null}
-            </div>
-          )}
+                </CommentTreeAction>
+              </div>
+            ) : null}
+          </div>
+        )
+      }
+    >
+      <CommentTreeMeta
+        author={<ProfileLink username={username}>{name}</ProfileLink>}
+        createdAt={comment.createdAt}
+        timeLabel={formatRelativeTime(comment.createdAt)}
+        edited={Boolean(comment.edited)}
+        deleted={Boolean(comment.deleted)}
+      />
+
+      {editing ? (
+        <div className="mt-2">
+          <CommentEditComposer comment={comment} />
+        </div>
+      ) : (
+        <CommentTreeBody deleted={Boolean(comment.deleted)}>{comment.body}</CommentTreeBody>
+      )}
+
+      {comment.deleted || editing ? null : (
+        <CommentToolbar comment={comment} />
+      )}
+
+      {replyComposerVisible ? (
+        <div className="mt-3">
+          <CommentReplyComposer comment={comment} />
         </div>
       ) : null}
-    </article>
+    </CommentTreeItem>
   );
 }
 
@@ -705,7 +614,7 @@ function CommentBranch({
   level: number;
 }) {
   return (
-    <div className={cn("flex flex-col", level === 0 ? "gap-6" : "gap-3")}>
+    <CommentTreeBranch level={level}>
       {nodes.map((comment, index) => (
         <CommentNode
           key={comment.id}
@@ -714,7 +623,7 @@ function CommentBranch({
           isLastSibling={index === nodes.length - 1}
         />
       ))}
-    </div>
+    </CommentTreeBranch>
   );
 }
 
@@ -941,24 +850,11 @@ export function CommunityCommentThread({
       )}
 
       <div className="flex flex-wrap items-center gap-3">
-        <div role="group" aria-label="Sort comments" className="flex items-center gap-1">
-          {COMMENT_SORT_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={commentSort === option.value}
-              onClick={() => setCommentSort(option.value)}
-              className={cn(
-                "inline-flex h-8 items-center rounded-full px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                commentSort === option.value
-                  ? "bg-secondary text-secondary-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <CommentSortToggle
+          options={COMMENT_SORT_OPTIONS}
+          value={commentSort}
+          onChange={setCommentSort}
+        />
 
         <div className="relative w-full min-w-0 sm:w-auto sm:max-w-xs sm:flex-1">
           <label htmlFor={`comment-search-${post.id}`} className="sr-only">
