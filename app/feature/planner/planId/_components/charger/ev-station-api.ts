@@ -94,13 +94,31 @@ function isEvChargerApiResponse(value: unknown): value is EvChargerApiResponse {
   );
 }
 
-// Samples points along the actual road polyline every `intervalKm` km.
-// Uses real route geometry so intermediate anchors follow the road,
-// not a straight line that may cut across water or miss the highway.
+const MIN_ROUTE_SAMPLE_INTERVAL_KM = 4;
+const MAX_ROUTE_SAMPLE_INTERVAL_KM = 30;
+const TARGET_ROUTE_SAMPLES = 12;
+
+/**
+ * How far apart to search along a route. Each search returns only the 20 nearest stations,
+ * which in a dense city all sit within a kilometre or two of the point, so a fixed 30 km step
+ * leaves long stretches of a short city route unsearched. Short routes are sampled densely;
+ * long ones keep the 30 km step so the number of searches stays bounded.
+ */
+export function routeSampleIntervalKm(routeKm: number): number {
+  if (!Number.isFinite(routeKm) || routeKm <= 0) return MAX_ROUTE_SAMPLE_INTERVAL_KM;
+  return Math.min(
+    MAX_ROUTE_SAMPLE_INTERVAL_KM,
+    Math.max(MIN_ROUTE_SAMPLE_INTERVAL_KM, routeKm / TARGET_ROUTE_SAMPLES),
+  );
+}
+
+// Samples points along the actual road polyline, spaced by `routeSampleIntervalKm`
+// unless `intervalKm` is given. Uses real route geometry so intermediate anchors follow
+// the road, not a straight line that may cut across water or miss the highway.
 export function sampleRoutePolyline(
   segments: RouteSegment[],
   blockId: string,
-  intervalKm = 30,
+  intervalKm?: number,
 ): { id: string; lat: number; lng: number }[] {
   const blockSegments = segments.filter((s) => s.blockId === blockId);
   if (!blockSegments.length) return [];
@@ -116,6 +134,7 @@ export function sampleRoutePolyline(
     }
   }
 
+  const step = intervalKm ?? routeSampleIntervalKm(polylineLengthKm(allCoords));
   const samples: { id: string; lat: number; lng: number }[] = [];
   let sinceLastSampleKm = 0;
   let sampleIndex = 0;
@@ -127,8 +146,8 @@ export function sampleRoutePolyline(
     const currPoint = { lat: currCoord[1]!, lng: currCoord[0]! };
     let segRemaining = getDistanceKm(prevPoint, currPoint);
 
-    while (sinceLastSampleKm + segRemaining >= intervalKm) {
-      const needed = intervalKm - sinceLastSampleKm;
+    while (sinceLastSampleKm + segRemaining >= step) {
+      const needed = step - sinceLastSampleKm;
       const ratio = needed / segRemaining;
       const sampled = {
         lat: prevPoint.lat + ratio * (currPoint.lat - prevPoint.lat),
@@ -144,4 +163,14 @@ export function sampleRoutePolyline(
   }
 
   return samples;
+}
+
+function polylineLengthKm(coords: [number, number][]): number {
+  let total = 0;
+  for (let i = 1; i < coords.length; i++) {
+    const prev = coords[i - 1]!;
+    const curr = coords[i]!;
+    total += getDistanceKm({ lat: prev[1], lng: prev[0] }, { lat: curr[1], lng: curr[0] });
+  }
+  return total;
 }

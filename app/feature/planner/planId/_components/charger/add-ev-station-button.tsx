@@ -91,7 +91,7 @@ export function useEvStationSearch({
     try {
       const nextPlace = beforeItemId === undefined ? undefined : block.items.slice(index).find(isPlaceItem);
       const localSegments = beforeItemId === undefined ? routeSegments : routeSegments.filter((segment) => segment.toItemId === nextPlace?.id);
-      const intermediateAnchors = sampleRoutePolyline(localSegments, blockId, 30);
+      const intermediateAnchors = sampleRoutePolyline(localSegments, blockId);
       const allAnchors = [...localAnchors, ...intermediateAnchors];
 
       const { results: chargersByAnchor, partialFailure } = await searchEvChargerAnchors(allAnchors);
