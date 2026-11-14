@@ -61,25 +61,33 @@ export function PhotoCredit({ item }: { item: DiscoveryItem }) {
     </div>
   );
 }
-function PlaceCard({
+export function PlaceCard({
   item,
   context,
+  media,
+  actions,
+  href,
 }: {
   item: DiscoveryItem;
   context: string;
+  media?: ReactNode;
+  actions?: ReactNode;
+  href?: string;
 }) {
   const p = item.place;
   return (
     <article className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition-[border-color,box-shadow] duration-200 hover:border-foreground/20 hover:shadow-md motion-reduce:transition-none">
+      {media&&<div className="relative aspect-[4/3] overflow-hidden bg-muted">{media}</div>}
       <Link
-        href={`/explore/places/${encodeURIComponent(p.providerPlaceId)}?${context}`}
+        href={href??`/explore/places/${encodeURIComponent(p.providerPlaceId)}?${context}`}
+        data-saved-reader={href?true:undefined}
         onClick={(e) => {
           if (!e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey)
             sessionStorage.setItem("navio-places-return", p.providerPlaceId);
         }}
         className="block rounded-t-2xl outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
       >
-        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
+        {!media&&<div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <div className="absolute inset-0 flex items-center justify-center">
             <MapPin
               className="size-8 text-muted-foreground/40"
@@ -98,7 +106,7 @@ function PlaceCard({
               }}
             />
           )}
-        </div>
+        </div>}
         <div className="px-4 pt-4">
           <p className="mb-2 min-h-4 truncate text-[11px] font-medium text-muted-foreground">
             {p.category || "Place to explore"}
@@ -132,11 +140,11 @@ function PlaceCard({
         <div className="min-h-4">
           <PhotoCredit item={item} />
         </div>
-        <div className="flex items-center gap-3 border-t border-border/50 pt-3">
+        {actions??<><div className="flex items-center gap-3 border-t border-border/50 pt-3">
           <div className="min-w-0 flex-1"><AddPlaceToPlan placeId={p.providerPlaceId} /></div>
           <SaveButton place={p} />
         </div>
-        <SavedPlaceSources place={p} />
+        <SavedPlaceSources place={p} /></>}
       </div>
     </article>
   );

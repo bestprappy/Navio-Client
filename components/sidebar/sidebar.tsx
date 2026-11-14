@@ -266,7 +266,10 @@ export default function SidebarWrapper() {
         <Button variant="ghost" size="icon" onClick={() => setCollapsed((previous) => !previous)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="shrink-0 text-muted-foreground">{collapsed ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}</Button>
       </div>
 
+      <div className="shrink-0 border-b border-border/60 pb-3">
       <SavedLink label={!collapsed} onNavigate={() => setMobileOpen(false)} className={cn("mt-3 w-full text-sm", collapsed && "justify-center")} />
+
+      </div>
 
       {/* Nav */}
       <nav

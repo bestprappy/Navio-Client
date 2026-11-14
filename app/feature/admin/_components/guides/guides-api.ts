@@ -105,6 +105,7 @@ export async function guideRequest<T>(url: string, schema: z.ZodType<T> | null, 
       ...init,
     });
   } catch (error) {
+    if (init.signal?.aborted) throw error;
     console.error("Guide request failed before reaching Navio.", { component: "GuidesApi", url, method: init.method ?? "GET", error });
     throw new GuideApiError("Navio could not be reached. Check your connection; your changes are kept here.", 0, "network");
   }

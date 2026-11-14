@@ -1,41 +1,23 @@
 "use client";
+import {useState,type ReactNode} from "react";
+import {Bookmark,ChevronDown} from "lucide-react";
+import {Navbar} from "@/components/navbar";
 
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
-import { Navbar } from "@/components/navbar";
-
-/** Saved-page navigation follows the document without covering the global navbar. */
-export function SavedLayout({ header, navigation, children }: {
-  header: ReactNode;
-  navigation: ReactNode;
-  children: ReactNode;
-}) {
-  const root = useRef<HTMLDivElement>(null);
-  const navbar = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const element = navbar.current;
-    if (!element) return;
-    const measure = () => root.current?.style.setProperty(
-      "--saved-navbar-height", `${element.getBoundingClientRect().height}px`,
-    );
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div ref={root} style={{ "--saved-navbar-height": "4.0625rem" } as CSSProperties}>
-      <div ref={navbar} className="sticky top-0 z-50"><Navbar /></div>
-      <main className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-12">
-        {header}
-        <div className="grid items-start gap-6 md:grid-cols-[11rem_minmax(0,1fr)] lg:grid-cols-[12rem_minmax(0,1fr)] lg:gap-8">
-          <aside className="md:sticky md:top-[calc(var(--saved-navbar-height)+1rem)] z-20 md:max-h-[calc(100dvh-var(--saved-navbar-height)-2rem)] self-start overflow-y-auto rounded-2xl border border-border/60 bg-card p-2">
-            {navigation}
-          </aside>
-          <div className="min-w-0">{children}</div>
-        </div>
-      </main>
+export function SavedLayout({header,navigation,children}:{header:ReactNode;navigation:ReactNode;children:ReactNode}){
+ const [expanded,setExpanded]=useState(false);
+ return <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden bg-background">
+  <div className="relative z-50 shrink-0"><Navbar/></div>
+  <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+   <aside aria-label="Saved navigation" className="z-20 flex min-h-0 shrink-0 flex-col border-b border-border/60 bg-card md:w-56 md:border-r md:border-b-0 lg:w-60">
+    <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-5 py-4">
+     <span className="flex items-center gap-2 font-semibold"><Bookmark className="size-4 text-primary"/>Saved</span>
+     <button type="button" aria-label="Toggle saved navigation" aria-expanded={expanded} aria-controls="saved-navigation" onClick={()=>setExpanded(!expanded)} className="flex size-9 items-center justify-center rounded-lg hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring md:hidden"><ChevronDown className={expanded?'size-4 rotate-180':'size-4'}/></button>
     </div>
-  );
+    <div id="saved-navigation" className={`${expanded?'block':'hidden'} max-h-[45dvh] overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable] md:block md:max-h-none md:flex-1`}>{navigation}</div>
+   </aside>
+   <main id="saved-main" className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]">
+    <div className="mx-auto w-full max-w-7xl px-5 py-7 sm:px-8 sm:py-10">{header}{children}</div>
+   </main>
+  </div>
+ </div>;
 }
