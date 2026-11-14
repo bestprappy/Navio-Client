@@ -9,6 +9,7 @@ import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CommentSortToggle,CommentTreeAction,CommentTreeAvatar,CommentTreeBody,CommentTreeBranch,CommentTreeItem,CommentTreeMenu,CommentTreeMeta } from '@/components/comment-tree/comment-tree';
 import { formatRelativeTime } from '@/app/feature/community/_components/data';
+import { ProfileLink,useResolvedAuthor } from '@/components/social/profile-link';
 import { FeedbackComposer } from './feedback-composer';
 import { FEEDBACK_AUTO_LOADED_PAGES,FEEDBACK_COMMENT_ORDERS,orderFeedbackComments,replyMention,type FeedbackCommentOrder } from './feedback-order';
 import { commentPageSchema,feedbackRequest,reportSchema,type FeedbackComment } from './feedback-api';
@@ -72,6 +73,9 @@ function FeedbackCommentNode({comment,rootId,level,isLastSibling,...props}:Threa
   const [reported,setReported]=useState(false);
   const mutation=useMutation({mutationFn:(action:'delete'|'report')=>feedbackRequest(props.token,`comments/${comment.id}${action==='report'?'/reports':''}`,{
     method:action==='delete'?'DELETE':'POST',...(action==='report'?{body:JSON.stringify({reason})}:{})}),onSuccess:async(_,action)=>{if(action==='report')setReported(true);setMode(null);await props.refresh();}});
+  const profile=useResolvedAuthor(comment.deleted?null:comment.authorId);
+  // The stored name is what the author posted under; a loaded profile is current.
+  const authorName=profile.username?profile.name:comment.authorName||'Navio traveler';
   const repliesId=`feedback-replies-${comment.id}`;
   // Plan and Guide discussions are two levels deep: answering a reply joins its
   // root thread and starts with the @name of the reply being answered.
@@ -81,11 +85,11 @@ function FeedbackCommentNode({comment,rootId,level,isLastSibling,...props}:Threa
   const canReport=props.signedIn&&!comment.canEdit&&!comment.deleted;
   const hasMenu=comment.canEdit||comment.canDelete||canReport;
   return <CommentTreeItem id={`feedback-comment-${comment.id}`} level={level} isLastSibling={isLastSibling}
-    avatar={<CommentTreeAvatar initials={comment.deleted?'–':authorInitials(comment.authorName)}/>}
+    avatar={<CommentTreeAvatar name={authorName} initials={comment.deleted?'–':authorInitials(authorName)} imageUrl={comment.deleted?null:profile.avatarUrl} username={comment.deleted?null:profile.username}/>}
     collapse={hasReplies?{collapsed,onToggle:()=>setCollapsed(value=>!value),controlsId:repliesId}:undefined}
     railVisible={hasReplies&&!collapsed}
     replies={!hasReplies?null:collapsed?<CommentTreeAction expanded={false} controls={repliesId} onClick={()=>setCollapsed(false)}>{replyCountLabel(comment.replyCount)}</CommentTreeAction>:<FeedbackReplies {...props} parent={comment}/>}>
-    <CommentTreeMeta author={comment.authorName||'Navio traveler'} createdAt={comment.createdAt} timeLabel={formatRelativeTime(comment.createdAt)} edited={comment.version>0&&!comment.deleted} deleted={comment.deleted}/>
+    <CommentTreeMeta author={<ProfileLink username={profile.username}>{authorName}</ProfileLink>} createdAt={comment.createdAt} timeLabel={formatRelativeTime(comment.createdAt)} edited={comment.version>0&&!comment.deleted} deleted={comment.deleted}/>
     {editing?<div className="mt-2"><FeedbackComposer key={`edit-${comment.id}`} token={props.token} autoFocus editing={{id:comment.id,content:comment.content??'',version:comment.version}} onSaved={props.refresh} onCancel={()=>setMode(null)}/></div>:
       <CommentTreeBody deleted={comment.deleted}>{comment.content}</CommentTreeBody>}
     {!comment.deleted&&!editing&&(canReply||hasMenu)&&<div className="mt-2 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">

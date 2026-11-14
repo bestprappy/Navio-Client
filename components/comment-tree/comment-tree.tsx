@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Minus, MoreHorizontal, Plus } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ProfileLink } from "@/components/social/profile-link";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -126,18 +127,29 @@ export function CommentTreeBranch({
   );
 }
 
+/** Author photo; links to the author's public profile when their handle is known. */
 export function CommentTreeAvatar({
+  name,
   initials,
   imageUrl,
+  username = null,
 }: {
+  name: string;
   initials: string;
   imageUrl?: string | null;
+  username?: string | null;
 }) {
   return (
-    <Avatar className="size-8">
-      {imageUrl ? <AvatarImage src={imageUrl} alt="" /> : null}
-      <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
-    </Avatar>
+    <ProfileLink
+      username={username}
+      label={`${name}'s profile`}
+      className="shrink-0 rounded-full hover:no-underline"
+    >
+      <Avatar className="size-8">
+        {imageUrl ? <AvatarImage src={imageUrl} alt="" /> : null}
+        <AvatarFallback className="text-[11px]">{initials}</AvatarFallback>
+      </Avatar>
+    </ProfileLink>
   );
 }
 

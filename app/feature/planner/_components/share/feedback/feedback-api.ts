@@ -4,7 +4,9 @@ const count=z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 export const feedbackSummarySchema=z.object({ratingAverage:z.number().min(1).max(5).nullable(),ratingCount:count,
   viewCount:count.optional(),uniqueViewCount:count.optional(),commentCount:count,myRating:z.number().int().min(1).max(5).nullable(),publisher:z.boolean(),canModerate:z.boolean().optional().default(false)});
 export const feedbackCommentSchema=z.object({id:z.uuid(),parentId:z.uuid().nullable(),authorName:z.string().nullable(),content:z.string().nullable(),
-  deleted:z.boolean(),createdAt:z.string(),updatedAt:z.string(),version:count,canEdit:z.boolean(),canDelete:z.boolean(),replyCount:count});
+  deleted:z.boolean(),createdAt:z.string(),updatedAt:z.string(),version:count,canEdit:z.boolean(),canDelete:z.boolean(),replyCount:count,
+  /** Author's sign-in subject for profile links; absent from older services and removed comments. */
+  authorId:z.uuid().nullable().optional().catch(null)});
 export const commentPageSchema=z.object({content:z.array(feedbackCommentSchema),hasMore:z.boolean(),total:count,page:count});
 export const reportSchema=z.object({commentId:z.uuid(),content:z.string(),reportCount:count});
 export type FeedbackSummary=z.infer<typeof feedbackSummarySchema>;

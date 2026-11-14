@@ -529,7 +529,14 @@ function CommentNode({
       id={`comment-${comment.id}`}
       level={level}
       isLastSibling={isLastSibling}
-      avatar={<CommentTreeAvatar initials={initials} imageUrl={avatarUrl} />}
+      avatar={
+        <CommentTreeAvatar
+          name={name}
+          initials={initials}
+          imageUrl={avatarUrl}
+          username={comment.deleted ? null : username}
+        />
+      }
       collapse={
         hasReplies
           ? {
