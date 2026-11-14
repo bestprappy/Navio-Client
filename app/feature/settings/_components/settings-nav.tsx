@@ -1,5 +1,6 @@
 "use client";
 
+import {LogoutAction} from "@/components/profile/logout-action";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Bell, IdCard, Lock, ShieldCheck, UserRound, type LucideIcon } from "lucide-react";
@@ -53,6 +54,7 @@ export function SettingsNav() {
             </li>
           );
         })}
+        <li className="shrink-0 border-l border-border/60 pl-2 md:mt-2 md:border-t md:border-l-0 md:pt-2 md:pl-0"><LogoutAction/></li>
       </ul>
     </nav>
   );

@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
 import Link from "next/link";
 import { CalendarDays, MapPin, Zap } from "lucide-react";
 
@@ -16,6 +16,7 @@ import { SharedPlanCardActions } from "./shared-plan-card-actions";
 
 type SharedPlanCardProps = {
   plan: ExplorePlan;
+  saveAction?:ReactNode;
   /** "row" matches Explore's one-per-line view; "tile" its grid views. */
   layout?: "tile" | "row" | "planner";
 };
@@ -27,7 +28,7 @@ type SharedPlanCardProps = {
  * title, place, footer — so the feed reads as one list. What differs is the
  * duration, stop counts, real recorded activity and an explicit unrated state.
  */
-export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "tile" }: SharedPlanCardProps) {
+export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "tile", saveAction }: SharedPlanCardProps) {
   const href = explorePlanPath(plan.token);
   const destination = explorePlanDestination(plan);
   const highlights = plan.highlights.slice(0, 3).join(", ");
@@ -94,7 +95,7 @@ export const SharedPlanCard = memo(function SharedPlanCard({ plan, layout = "til
           )}
         >
           <PlanAuthor name={plan.authorName} className="flex-1" />
-          <SharedPlanCardActions token={plan.token} />
+          <SharedPlanCardActions token={plan.token} saveAction={saveAction} />
         </div>
         <div className="border-t border-border/60 pt-3">
           <PlanEngagement viewCount={plan.viewCount} copyCount={plan.copyCount} ratingAverage={plan.ratingAverage} ratingCount={plan.ratingCount} />

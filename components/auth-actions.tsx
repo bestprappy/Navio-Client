@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import {AccountMenu} from "@/components/profile/account-menu";
-import { LogOut } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -11,7 +10,6 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button.variants";
 import { currentUserProfileQueryKey, getMyProfile } from "@/lib/profile-api";
 import { cn } from "@/lib/utils";
@@ -133,19 +131,7 @@ export function AuthActions({
           </span>
         ) : null}
       </AccountMenu>
-      <Button
-        type="button"
-        variant={mobile ? "outline" : "ghost"}
-        size={mobile ? "default" : "icon"}
-        onClick={() => {
-          onNavigate?.();
-          void signOut({ redirectTo: "/" });
-        }}
-        aria-label="Sign out"
-      >
-        <LogOut aria-hidden="true" />
-        {mobile ? "Sign Out" : null}
-      </Button>
+
     </div>
   );
 }

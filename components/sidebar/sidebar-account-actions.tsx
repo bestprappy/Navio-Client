@@ -1,9 +1,8 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
-import { signOut, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
-import { Bell, LogIn, LogOut, Settings } from "lucide-react";
+import { Bell, LogIn, Settings } from "lucide-react";
 
 import { NotificationCountBadge, notificationsLabel } from "@/components/notifications/notification-count-badge";
 import { useUnreadCount } from "@/hooks/use-social";
@@ -22,10 +21,6 @@ export function SidebarAccountActions({ collapsed, onNavigate }: SidebarAccountA
   const pathName = usePathname();
   const { status } = useSession();
   const unread = useUnreadCount().data?.unreadCount ?? 0;
-  const logout = useMutation({
-    mutationFn: () => signOut({ redirectTo: "/" }),
-    onError: (error) => console.error("SidebarAccountActions: sign out failed", error),
-  });
   const actionClassName = cn(
     "flex min-h-11 w-full items-center rounded-md text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50",
     collapsed ? "justify-center px-0" : "gap-3 px-3",
@@ -44,17 +39,7 @@ export function SidebarAccountActions({ collapsed, onNavigate }: SidebarAccountA
         isActive={pathName === "/settings" || pathName.startsWith("/settings/")}
         collapsed={collapsed} onClick={onNavigate} />
       <SidebarAppearance collapsed={collapsed} className={actionClassName} />
-      {status === "authenticated" ? (
-        <button type="button" className={cn(actionClassName, "text-destructive hover:text-destructive")}
-          aria-label={logout.isPending ? "Logging out" : "Log out"} title={collapsed ? "Log out" : undefined}
-          disabled={logout.isPending} onClick={() => logout.mutate()}>
-          <LogOut className="size-5 shrink-0" aria-hidden="true" />
-          {!collapsed && (logout.isPending ? "Logging out…" : "Log out")}
-        </button>
-      ) : status === "unauthenticated" ? (
-        <SidebarItem variant="action" title="Sign in" href="/sign-in" icon={<LogIn className="size-5" />} collapsed={collapsed} onClick={onNavigate} />
-      ) : null}
-      {logout.isError && <p role="alert" className="px-2 text-xs text-destructive">Could not log out. Please try again.</p>}
+      {status === "unauthenticated" && <SidebarItem variant="action" title="Sign in" href="/sign-in" icon={<LogIn className="size-5" />} collapsed={collapsed} onClick={onNavigate} />}
     </nav>
   );
 }
