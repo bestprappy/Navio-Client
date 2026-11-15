@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useRef,useState} from 'react';
-type ReadState={id:string;identities:Set<string>};
-/** A visible opening owns one read ID; signing in attaches an account to that same read. */
+type ReadState={id:string;day:string;identities:Set<string>};
+/** Visible reads are retriable; the BFF deduplicates browser/day receipts. */
 export function usePublicationRead({url,identity,loading,onRecorded}:{url?:string;identity:string;loading:boolean;onRecorded:()=>Promise<unknown>}){
  const read=useRef<{url:string;state:ReadState}|null>(null),callback=useRef(onRecorded);
  const [failed,setFailed]=useState(false),[attempt,setAttempt]=useState(0);
@@ -10,7 +10,8 @@ export function usePublicationRead({url,identity,loading,onRecorded}:{url?:strin
   if(!url||loading)return;
   const record=()=>{
    if(document.visibilityState!=='visible')return;
-   if(read.current?.url!==url)read.current={url,state:{id:crypto.randomUUID(),identities:new Set()}};
+   const day=new Date().toISOString().slice(0,10);
+   if(read.current?.url!==url||read.current.state.day!==day)read.current={url,state:{id:crypto.randomUUID(),day,identities:new Set()}};
    const state=read.current.state;
    if(state.identities.has(identity))return;
    state.identities.add(identity);const current=state;

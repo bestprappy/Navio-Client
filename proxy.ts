@@ -5,7 +5,7 @@ import { getSignInHref } from "@/lib/auth-navigation";
 import {
   VISITOR_COOKIE,
   VISITOR_COOKIE_MAX_AGE_SECONDS,
-  isSharedPlanPath,
+  isPublicationReaderPath,
   isVisitorId,
 } from "@/lib/visitor-id";
 
@@ -21,9 +21,9 @@ const requireSignIn = auth((request) => {
 });
 
 /**
- * Gives a browser opening a shared plan its visitor id, so the plan's view is
- * counted once per browser. The id is also written onto this request, so the
- * very first render already carries it. Shared plans stay public: no sign-in.
+ * Gives a browser opening a public reader its visitor id, so each view is
+ * counted once per browser per UTC day. The id is also written onto this request, so the
+ * first visible view carries it. Readers stay public: no sign-in.
  */
 function withVisitorId(request: NextRequest) {
   if (isVisitorId(request.cookies.get(VISITOR_COOKIE)?.value)) {
@@ -48,7 +48,7 @@ function withVisitorId(request: NextRequest) {
 }
 
 export function proxy(request: NextRequest, event: NextFetchEvent) {
-  if (isSharedPlanPath(request.nextUrl.pathname)) {
+  if (isPublicationReaderPath(request.nextUrl.pathname)) {
     return withVisitorId(request);
   }
   // Auth.js types its wrapper for route handlers. In a proxy the second argument
@@ -57,5 +57,5 @@ export function proxy(request: NextRequest, event: NextFetchEvent) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/planner/:path*", "/community/create", "/admin", "/admin/:path*", "/settings", "/settings/:path*", "/u/:path*", "/people/:path*", "/notifications", "/explore/shared/:path*", "/share/plans/:path*"],
+  matcher: ["/dashboard/:path*", "/planner/:path*", "/community/create", "/admin", "/admin/:path*", "/settings", "/settings/:path*", "/u/:path*", "/people/:path*", "/notifications", "/explore/shared/:path*", "/share/plans/:path*", "/explore/guides/:path*"],
 };

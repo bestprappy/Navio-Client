@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { Navbar } from "@/components/navbar";
-import SidebarWrapper from "@/components/sidebar/sidebar";
+
 import { Button } from "@/components/ui/button";
 import { fetchSharedPlan } from "@/app/feature/planner/_components/share/shared-plan-request";
 import { SharedPlannerView } from "@/app/feature/planner/_components/share/shared-planner-view";
@@ -76,10 +76,10 @@ export default async function ExploreSharedPlanPage({
   const result = await loadSharedPlan(token);
 
   if (result.status === "ok" && result.plan.listedInExplore) {
-    // The planner's own frame: app sidebar, itinerary drawer and map.
+    // Match the Guide reader: navbar above, document and map contained below.
     return (
-      <div className="flex h-dvh flex-col overflow-hidden md:flex-row">
-        <SidebarWrapper />
+      <div className="fixed inset-0 flex min-h-0 flex-col overflow-hidden">
+        <div className="max-h-[70dvh] shrink-0 overflow-y-auto"><Navbar /></div>
         <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
           <SharedPlannerView
             shared={result.plan}

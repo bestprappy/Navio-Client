@@ -57,7 +57,7 @@ test("planner and dashboard URLs require authentication while public browsing st
 });
 
 test("shared plans stay public and give a new browser one lasting visitor id", () => {
-  for (const url of ["/explore/shared/public-token", "/share/plans/public-token"]) {
+  for (const url of ["/explore/shared/public-token", "/share/plans/public-token", "/explore/guides/11111111-1111-4111-8111-111111111111"]) {
     assert.equal(unstable_doesMiddlewareMatch({ config: routeProxy.config, nextConfig: {}, url }), true, url);
     const request = sharedPlanRequest(url);
     const response = routeProxy.proxy(request);
