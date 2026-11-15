@@ -94,7 +94,7 @@ export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle; car?: 
           {direct.modelKind !== "CONSUMPTION" && <p className="text-xs text-muted-foreground">Vehicle Default is unavailable: no suitable direct consumption specification.</p>}
         </div>
       </div>
-      {isLegacyVehicle(vehicle) && <p className="text-xs text-muted-foreground">Existing estimate: {vehicle.consumptionKwhPer100km ?? "unavailable"}{vehicle.consumptionKwhPer100km !== null ? " kWh/100 km" : ""}. Its source is unknown. It stays unchanged until you choose an energy model and save. Automatic charger application remains unavailable for an unconfirmed legacy estimate.</p>}
+      {isLegacyVehicle(vehicle) && <p className="text-xs text-muted-foreground">Existing estimate: {vehicle.consumptionKwhPer100km ?? "unavailable"}{vehicle.consumptionKwhPer100km !== null ? " kWh/100 km" : ""}. Its source is unknown. It stays unchanged until you choose an energy model and save.</p>}
       <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">{dirty ? "Save to apply nickname and consumption changes." : "Vehicle settings saved to your account."}</p><Button type="submit" disabled={!authenticated || !dirty || !valid || mutation.isPending || query.isError}>{mutation.isPending ? "Saving…" : "Save settings"}</Button></div>
     </form>
   );

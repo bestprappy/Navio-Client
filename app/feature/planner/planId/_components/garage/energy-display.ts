@@ -7,7 +7,7 @@ export function energyBasisLabel(car: EvCar): string {
   if (p.modelKind === "RATED_RANGE") {
     const standard = p.ratedRangeStandard === "NONE" ? "" : ` ${p.ratedRangeStandard}`;
     return p.ratedRangeKm == null ? "Rated-range basis unavailable"
-      : `NAVIO Estimate: based on ${p.ratedRangeKm} km${standard}. Provisional; automatic charger application unavailable.`;
+      : `NAVIO Estimate: based on ${p.ratedRangeKm} km${standard}. Real use varies with speed, load and weather.`;
   }
   if (p.modelKind !== "CONSUMPTION" || p.consumptionKwhPer100km == null) return "Consumption unavailable";
   const source = p.consumptionSource === "USER_OBSERVED" ? "User-observed average"

@@ -41,8 +41,8 @@ const COPY: Record<AutoAddBlocker, GuidanceCopy> = {
   },
   "energy-unconfirmed": {
     tone: "warning",
-    title: "Confirm your car's energy use",
-    body: "Auto Add needs your car's real consumption to predict the battery. In vehicle settings, set Energy Consumption to Custom, enter your average kWh/100 km, then save.",
+    title: "Choose how Navio estimates energy",
+    body: "Auto Add needs an energy estimate and a battery size to predict the battery. In vehicle settings, pick Vehicle Default, NAVIO Estimate or Custom, then save.",
     action: "Open vehicle settings",
   },
   "sign-in": {
@@ -52,8 +52,8 @@ const COPY: Record<AutoAddBlocker, GuidanceCopy> = {
   },
   satisfied: {
     tone: "info",
-    title: "No charging stops needed",
-    body: "Every stop on this day stays above your Battery Threshold, and the day ends above your Minimum Arrival Battery. Raise the threshold if you want to charge sooner.",
+    title: "No Auto Add slot on this day",
+    body: "This day doesn't need another charging stop: every stop stays above your Battery Threshold and the day ends above your Minimum Arrival Battery. Raise either setting to charge sooner.",
   },
   infeasible: {
     tone: "warning",

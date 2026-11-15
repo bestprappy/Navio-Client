@@ -28,7 +28,7 @@ export function DayAutomationActions({ blockId, dayNumber }: { blockId: string; 
       <Button variant="ghost" size="sm" onClick={() => setAction("auto")}>Charging settings</Button>
     </div>
     {undo && <Button variant="ghost" size="sm" disabled={JSON.stringify(blocks.find(b => b.id === blockId)) !== undo.after} onClick={() => { setBlocks(previous => previous.map(b => b.id === blockId ? undo.before : b)); setHistory(previous => { const next = { ...previous }; delete next[blockId]; return next; }); }}>Undo last change for this day</Button>}
-    {satisfied && <p className="mt-2 text-xs text-muted-foreground">No additional charging stops are needed for this day.</p>}
+    {satisfied && <p role="status" className="mt-2 text-xs text-muted-foreground">This day doesn&apos;t need any more charging stops, so there is no Auto Add slot left. Raise the Battery Threshold or Minimum Arrival Battery in Charging settings to charge sooner.</p>}
     <Dialog open={action !== null} onOpenChange={open => { if (!open) setAction(null); }}>
       <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
         <DialogTitle>{action === "optimize" ? "Optimize Route" : "Auto Add"} · Day {dayNumber}</DialogTitle>

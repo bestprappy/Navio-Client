@@ -72,7 +72,7 @@ export function CustomVehicleForm({ onSave, onCancel, pending, submitLabel = "Sa
           </Field>
         )} />
       </fieldset>
-      <p className="text-xs text-muted-foreground">Average consumption is optional. Without it, the reference range is used as a provisional rated-range model, with no derived consumption or automatic charger application. Measurement basis stays unknown. Leave an unknown charging limit blank; enter 0 only if charging is unsupported.</p>
+      <p className="text-xs text-muted-foreground">Average consumption is optional. Without it, the reference range is used as a NAVIO Estimate. Measurement basis stays unknown. Leave an unknown charging limit blank; enter 0 only if charging is unsupported.</p>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>Cancel</Button>
         <Button type="submit" disabled={pending}>{pending ? "Applying…" : submitLabel}</Button>

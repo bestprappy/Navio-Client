@@ -72,26 +72,26 @@ test("suitable direct default keeps consumption evidence separate from rated ran
   assert.equal(range.sourceUrl, null);
 });
 
-test("legacy consumption requires confirmation before automatic planning", () => {
+test("every energy choice that can predict the battery may plan charging", () => {
   const mapped = plannerCar(savedVehicleFixture);
-  assert.equal(canAutomaticallyPlan(mapped), false);
-  assert.equal(canAutomaticallyPlan({ ...mapped, legacyConsumptionConfirmed: true }), false, "confirmation cannot supply missing usable capacity");
-  assert.equal(canAutomaticallyPlan({ ...mapped, legacyConsumptionConfirmed: true,
-    energyProfile: {...mapped.energyProfile, usableBatteryCapacityKwh:58} }), true);
-  assert.equal(canAutomaticallyPlan({ ...mapped, legacyConsumptionConfirmed: true, consumptionKwhPer100km: 0 }), false);
+  assert.equal(canAutomaticallyPlan(mapped), true, "a legacy average uses the declared battery size");
+  assert.equal(canAutomaticallyPlan({ ...mapped, energyProfile: { ...mapped.energyProfile, consumptionKwhPer100km: null } }), false);
+  const profile = defaultEnergyProfile(directCatalog(), null);
+  const car = { ...mapped, consumptionKwhPer100km: 15.2, energyProfile: profile };
+  for (const patch of [{}, { consumptionSource: "UNKNOWN" }, { consumptionMeasurementBasis: "WALL_SIDE" }, { sourceUrl: null },
+    { selectionMode: "USER_OVERRIDE", consumptionSource: "USER_OBSERVED" }, { usableBatteryCapacityKwh: null }]) {
+    assert.equal(canAutomaticallyPlan({ ...car, energyProfile: { ...profile, ...patch } }), true, JSON.stringify(patch));
+  }
+  assert.equal(canAutomaticallyPlan({ ...car, batteryKwh: 0, energyProfile: { ...profile, usableBatteryCapacityKwh: null } }), false, "no battery size anywhere");
+  assert.equal(canAutomaticallyPlan({ ...car, energyProfile: { ...profile, modelKind: "UNAVAILABLE" } }), false);
 });
 
-test("automatic application eligibility matches the saved-trip server requirements", () => {
-  const profile = defaultEnergyProfile(directCatalog(), null);
-  const car = {...plannerCar(savedVehicleFixture), consumptionKwhPer100km:15.2, energyProfile:profile};
+test("a NAVIO Estimate plans charging from rated range", () => {
+  const range = defaultEnergyProfile(catalogFixture, null, true);
+  const car = { ...plannerCar(savedVehicleFixture), consumptionKwhPer100km: 0, energyProfile: range };
+  assert.equal(range.modelKind, "RATED_RANGE");
   assert.equal(canAutomaticallyPlan(car), true);
-  for (const patch of [{usableBatteryCapacityKwh:null}, {usableBatteryCapacityKwh:0},
-    {consumptionSource:"UNKNOWN"}, {consumptionMeasurementBasis:"WALL_SIDE"}, {sourceUrl:null},
-    {sourceUrl:"http://example.com/specification"}]) {
-    assert.equal(canAutomaticallyPlan({...car,energyProfile:{...profile,...patch}}), false, JSON.stringify(patch));
-  }
-  assert.equal(canAutomaticallyPlan({...car,energyProfile:{...profile,selectionMode:"USER_OVERRIDE",consumptionSource:"USER_OBSERVED"}}), true);
-  assert.equal(canAutomaticallyPlan({...car,energyProfile:{...profile,selectionMode:"USER_OVERRIDE",consumptionSource:"UNKNOWN"}}), false);
+  assert.equal(canAutomaticallyPlan({ ...car, energyProfile: { ...range, ratedRangeKm: null } }), false);
 });
 
 test("account catalogue command preserves the returned range profile on reload and in planner state", async () => {
@@ -111,5 +111,5 @@ test("account catalogue command preserves the returned range profile on reload a
   store.set(garageActiveIdSnapshotAtom, saved.id);
   assert.deepEqual(store.get(activeEvCarAtom).connectorTypes, catalogFixture.connectorTypes);
   assert.equal(store.get(calculationEvCarAtom), null);
-  assert.equal(canAutomaticallyPlan(store.get(activeEvCarAtom)), false);
+  assert.equal(canAutomaticallyPlan(store.get(activeEvCarAtom)), true, "NAVIO Estimate can plan charging");
 });
