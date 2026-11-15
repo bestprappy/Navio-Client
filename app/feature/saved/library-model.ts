@@ -21,3 +21,13 @@ export function savedSearchParams(s:SavedSearch){const p=new URLSearchParams();p
 export function placeIdentity(provider:string|null|undefined,lat:number,lng:number){if(provider?.trim()){const id=provider.trim();return /^GOOGLE:/i.test(id)?`google:${id.slice(7)}`:id.startsWith('ChIJ')?`google:${id}`:id;}return `coordinates:${lat.toFixed(6)},${lng.toFixed(6)}`;}
 export type BookmarkLocation={providerPlaceId?:string|null;name:string;address?:string|null;location:{lat:number;lng:number};category?:string|null;country?:string|null;city?:string|null};
 export function locationBookmark(p:BookmarkLocation,sourceToken?:string){return {providerPlaceId:p.providerPlaceId??null,name:p.name,address:p.address??null,lat:p.location.lat,lng:p.location.lng,category:p.category??null,country:p.country??null,city:p.city??null,sourceToken:sourceToken??null};}
+/** Where a saved place opens. Catalogue places use the local reader; provider places (Google and
+ * other non-Navio identities) open their free public Google Maps link, never a paid lookup and never
+ * the catalogue reader, which only knows NAVIO: places. */
+export function savedPlaceDestination(p:{providerPlaceId:string|null;name:string;lat:number|null;lng:number|null}):{href:string;external:boolean}{
+ const raw=p.providerPlaceId?.trim()??'';let id=raw;try{for(let n=0;n<2&&id.includes('%');n++)id=decodeURIComponent(id);}catch{id=raw;}
+ if(id.startsWith('NAVIO:'))return {href:`/explore/places/${encodeURIComponent(id)}`,external:false};
+ const google=id.replace(/^GOOGLE:/i,'');
+ if(google&&!/^(MAPBOX:|ev-charger:|SAVED:)/i.test(google))return {href:`https://www.google.com/maps/search/?${new URLSearchParams({api:'1',query:p.name,query_place_id:google})}`,external:true};
+ return {href:`https://www.google.com/maps/search/?api=1&query=${p.lat??0},${p.lng??0}`,external:true};
+}

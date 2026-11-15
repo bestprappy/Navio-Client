@@ -9,6 +9,7 @@ import {ReaderStopPhoto} from "../planner/_components/share/reader/reader-ui";
 import {AddPlaceToPlan} from "../explore/places/plan-context";
 import {Bookmark} from "lucide-react";
 import {SourcePlanLink} from "./source-plan-links";
+import {savedPlaceDestination} from "./library-model";
 import {loadSavedPublication} from "./saved-card-data";
 import {savedPlanReference,type SavedItem} from "./library-api";
 import {CopySharedPlanButton} from "../explore/_components/shared-plans/copy-shared-plan-button";
@@ -34,7 +35,7 @@ function SavedPlaceCard({item,saveAction}:{item:SavedItem;saveAction:ReactNode})
  const details=usePlaceDetails(item.providerPlaceId??"",{enabled:false});
   const place={providerPlaceId:item.providerPlaceId??`SAVED:${item.id}`,name:item.name,address:item.address,location:{lat:item.lat??0,lng:item.lng??0},category:item.category};
   const entry:DiscoveryItem={place:{...place,name:details.data?.name??place.name,address:details.data?.address||place.address,category:details.data?.category??place.category,rating:details.data?.rating,reviewCount:details.data?.reviewCount},photos:[],photoAttributions:[]};
-  const href=item.providerPlaceId&&!/^(MAPBOX:|ev-charger:)/i.test(item.providerPlaceId)?`/explore/places/${encodeURIComponent(item.providerPlaceId.replace(/^GOOGLE:/i,''))}`:`https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
+  const href=savedPlaceDestination(item).href;
   return <PlaceCard item={entry} context="" href={href} media={<ReaderStopPhoto item={{type:"place",placeId:item.providerPlaceId??undefined,name:item.name}} className="absolute inset-0 size-full"/>} actions={<><div className="flex items-center gap-3 border-t border-border/50 pt-3"><div className="min-w-0 flex-1">{item.lat!=null&&item.lng!=null&&<AddPlaceToPlan placeId={place.providerPlaceId} savedLocation={{name:item.name,address:item.address,lat:item.lat,lng:item.lng}}/>}</div>{saveAction}</div><div className="flex flex-wrap gap-2">{item.sources.map(source=><SourcePlanLink key={source.token} id={item.id} token={source.token} title={source.title} multiple={item.sources.length>1}/>)}</div></>}/>;
 
 }
