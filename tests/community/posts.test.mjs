@@ -22,7 +22,7 @@ test("post creation sends one multipart operation with unchanged file bytes",asy
     assert.equal(post.title,"Title"); assert.equal(post.groupSlug,"trips"); assert.equal(post.linkUrl,null);
     return Response.json(postFixture,{status:201});
   };
-  const post = await createPost("trips",{title:" Title ",body:"Text",linkUrl:""},null,null,new File([bytes],"picture.png",{type:"image/png"}));
+  const post = await createPost("trips",{title:" Title ",body:"Text",linkUrl:""},null,null,[new File([bytes],"picture.png",{type:"image/png"})]);
   assert.equal(post.id,postFixture.id);
 });
 
@@ -69,4 +69,43 @@ test("deleting a post still refreshes feeds but skips the deleted post and its c
 
 test("managed image URLs are mapped to the authenticated same-origin proxy",() => {
   assert.equal(postSchema.parse({...postFixture,imageUrl:`/v1/posts/${postFixture.id}/image`}).imageUrl,`/api/posts/${postFixture.id}/image`);
+});
+
+test("every picture is sent as a repeated file part in the chosen order",async () => {
+  globalThis.fetch = async (_url,options) => {
+    const parts = options.body.getAll("file");
+    assert.deepEqual(parts.map((part) => part.name),["cover.jpg","second.png","third.png"]);
+    return Response.json(postFixture,{status:201});
+  };
+  await createPost("trips",{title:"Gallery",body:"",linkUrl:""},null,null,[
+    new File([new Uint8Array([1])],"cover.jpg",{type:"image/jpeg"}),
+    new File([new Uint8Array([2])],"second.png",{type:"image/png"}),
+    new File([new Uint8Array([3])],"third.png",{type:"image/png"}),
+  ]);
+});
+
+test("a post without pictures is sent as JSON",async () => {
+  globalThis.fetch = async (_url,options) => {
+    assert.equal(options.body instanceof FormData,false);
+    return Response.json(postFixture,{status:201});
+  };
+  await createPost("trips",{title:"Words only",body:"",linkUrl:""},null,null,[]);
+});
+
+test("gallery URLs keep their order and go through the authenticated proxy",() => {
+  const base = `/v1/posts/${postFixture.id}`;
+  const post = postSchema.parse({...postFixture,imageUrl:`${base}/image`,imageUrls:[`${base}/images/0`,`${base}/images/1`,`${base}/images/2`]});
+  assert.deepEqual(post.imageUrls,[0,1,2].map((n) => `/api/posts/${postFixture.id}/images/${n}`));
+});
+
+test("responses from servers without galleries fall back to the single picture",() => {
+  const post = postSchema.parse({...postFixture,imageUrl:`/v1/posts/${postFixture.id}/image`});
+  assert.deepEqual(post.imageUrls,[`/api/posts/${postFixture.id}/image`]);
+  assert.deepEqual(postSchema.parse(postFixture).imageUrls,[]);
+});
+
+test("gallery URLs outside the post proxy are rejected",() => {
+  for (const url of ["https://evil.example/a.png",`/v1/posts/${postFixture.id}/images/../../admin`,`/v1/groups/x/images/0`]) {
+    assert.equal(postSchema.safeParse({...postFixture,imageUrls:[url]}).success,false);
+  }
 });

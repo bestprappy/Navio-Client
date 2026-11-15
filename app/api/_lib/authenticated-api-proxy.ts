@@ -16,10 +16,16 @@ const RESPONSE_HEADERS_TO_FORWARD = [
   "x-content-type-options",
 ] as const;
 
+type ProxyOptions = {
+  allowAnonymous?: boolean;
+  /** Largest multipart body this route forwards; defaults to the single-picture limit. */
+  maxUploadBytes?: number;
+};
+
 export async function proxyAuthenticatedApiRequest(
   request: Request,
   upstreamPath: string,
-  options: { allowAnonymous?: boolean } = {},
+  options: ProxyOptions = {},
 ): Promise<Response> {
   if (isCrossOriginMutation(request, process.env.AUTH_URL ?? process.env.NEXTAUTH_URL)) {
     return NextResponse.json({ message: "This request must come from Navio." }, { status: 403 });
@@ -32,7 +38,7 @@ export async function proxyAuthenticatedApiRequest(
 async function forwardAuthenticatedApiRequest(
   request: Request,
   upstreamPath: string,
-  options: { allowAnonymous?: boolean },
+  options: ProxyOptions,
   session: Session | null,
 ): Promise<Response> {
   if ((!session?.accessToken || session.error) && !options.allowAnonymous) {
@@ -85,7 +91,7 @@ async function forwardAuthenticatedApiRequest(
       headers,
       body: hasRequestBody
         ? contentType?.toLowerCase().startsWith("multipart/form-data")
-          ? await readUploadBody(request)
+          ? await readUploadBody(request, options.maxUploadBytes)
           : await request.arrayBuffer()
         : undefined,
       cache: "no-store",
@@ -105,7 +111,8 @@ async function forwardAuthenticatedApiRequest(
     });
   } catch (error) {
     if (error instanceof UploadTooLargeError) {
-      return NextResponse.json({ message: "Upload request must be at most 6 MiB." }, { status: 413 });
+      const limitMiB = Math.round(error.limitBytes / (1024 * 1024));
+      return NextResponse.json({ message: `Upload request must be at most ${limitMiB} MiB.` }, { status: 413 });
     }
     const timedOut =
       error instanceof Error &&
