@@ -3,6 +3,7 @@ import { dayAutomationHistoryAtom } from "./day-automation-history";
 import { ChargingPreferences } from "./charging-preferences";
 import { DayRouteOptimizer } from "./day-route-optimizer";
 import { AutoAddGuidance, type AutoAddBlocker } from "./auto-add-guidance";
+import { dayHasNoAutoAddSlot } from "./day-charging-need";
 import { useTripCharging } from "../garage/use-trip-charging";
 import { energyModelForCar } from "../garage/trip-energy-projection";
 import { canAutomaticallyPlan } from "../garage/energy-selection";
@@ -173,9 +174,8 @@ export function EvRouteOptimizationPanel({
 
   const charging = useTripCharging();
   const day = blockId ? charging?.days.get(blockId) : null;
-  const states = day ? [...day.batteryByItemId.values()] : [];
-  const known = states.length > 1 && states.every(state => state.rawPredictedArrivalSocPct != null && state.distanceQuality === "ROUTED");
-  const satisfied = known && states.slice(1).every(state => state.rawPredictedArrivalSocPct! >= reserveSocPct) && states.at(-1)!.rawPredictedArrivalSocPct! >= minimumArrivalSocPct;
+  const satisfied = dayHasNoAutoAddSlot(day, blocks.find(block => block.id === blockId),
+    { batteryThresholdPct: reserveSocPct, minimumArrivalPct: minimumArrivalSocPct });
   const canPreview = Boolean(tripId && payload && !satisfied);
   const operations = currentPreview?.data.operations ?? [];
   const canApply = Boolean(

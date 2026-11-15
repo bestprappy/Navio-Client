@@ -14,6 +14,7 @@ import { useTripRoutes } from "../routes/trip-route-query";
 import { type TripBlockData, isPlaceItem } from "../constants/types";
 import { dayOrderCandidates, meaningfulImprovement, movable, routeMetrics, routeScore, type RouteStrategy, type RouteMetrics } from "./day-route-optimization";
 import { fetchEvChargersNear } from "./ev-station-api";
+import { dayHasNoAutoAddSlot } from "./day-charging-need";
 
 type Proposal = { day: TripBlockData; key: string; before: RouteMetrics; after: RouteMetrics; arrival: number; changes: string[] };
 export function DayRouteOptimizer({ blockId }: { blockId: string | null }) {
@@ -72,7 +73,10 @@ export function DayRouteOptimizer({ blockId }: { blockId: string | null }) {
         const projection = proposedTrip.days.get(day.id);
         if ([...proposedTrip.days].some(([id, state]) => id !== day.id && state.infeasible && !originalProjection.days.get(id)?.infeasible)) continue;
         const states = projection ? [...projection.batteryByItemId.values()] : [];
-        if (!projection || projection.infeasible || projection.startDisconnected || states.length < 2 || states.slice(1).some(s => s.rawPredictedArrivalSocPct == null || s.rawPredictedArrivalSocPct < threshold || s.departureSocPct == null) || states.at(-1)!.rawPredictedArrivalSocPct! < arrival) continue;
+        const prefs = { batteryThresholdPct: threshold, minimumArrivalPct: arrival };
+        if (!projection || projection.infeasible || projection.startDisconnected || states.length < 2
+          || states.some(s => s.rawPredictedArrivalSocPct == null || s.departureSocPct == null)
+          || !dayHasNoAutoAddSlot(projection, candidate, prefs)) continue;
         const changes = candidate.items.flatMap((item, index) => {
           const original = day.items.find(i => i.id === item.id)!;
           if (isPlaceItem(item) && isPlaceItem(original) && item.placeId !== original.placeId) return [`Replace ${original.name} with ${item.name}; keep its charging target.`];

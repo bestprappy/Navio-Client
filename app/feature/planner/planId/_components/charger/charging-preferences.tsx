@@ -22,7 +22,7 @@ export function ChargingPreferences({ disabled = false }: { disabled?: boolean }
   return <details className="mt-3 rounded-sm border border-border bg-background p-3">
     <summary className="cursor-pointer text-sm font-medium focus-visible:outline-ring">Auto Add settings · {threshold}% / {arrival}%</summary>
     <div className="mt-4 space-y-4" data-tour="planner.ev-reserve">
-      <PercentageControl label="Battery Threshold" description="Automatically add a charging stop when your battery is predicted to fall below this level." value={threshold} onChange={setThreshold} disabled={disabled} />
+      <PercentageControl label="Battery Threshold" description="Add a charging stop before your battery is predicted to fall below this level at any stop on this day." value={threshold} onChange={setThreshold} disabled={disabled} />
       <PercentageControl label="Minimum Arrival Battery" description="Ensure your vehicle reaches the final destination of the selected day with at least this much battery remaining." value={arrival} onChange={setArrival} disabled={disabled} />
       <p data-tour="planner.ev-charge-target" className="text-xs text-muted-foreground">New stops charge to 100%. Adjust each stop individually after adding it. Compatible EV connectors are used.</p>
     </div>
