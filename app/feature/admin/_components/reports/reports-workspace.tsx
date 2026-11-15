@@ -5,7 +5,8 @@ import { useIsFetching, useQueries, useQueryClient } from "@tanstack/react-query
 import { RefreshCw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageTabs } from "@/components/page-tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 import { CommentReportQueue } from "./comment-report-queue";
@@ -52,22 +53,22 @@ export function ReportsWorkspace() {
         </Button>
       </div>
 
-      <Tabs value={source} onValueChange={(value) => setSource(value as ReportSource)} className="gap-4">
-        <TabsList aria-label="Report queue" className="h-auto w-full flex-wrap justify-start sm:w-fit">
+      <Tabs value={source} onValueChange={(value) => setSource(value as ReportSource)} className="gap-5">
+        <PageTabs.Bar aria-label="Report queue">
           {SOURCES.map((option, index) => {
             const open = counts[index]?.data;
             return (
-              <TabsTrigger key={option.id} value={option.id} className="h-9 flex-none px-3">
+              <PageTabs.Trigger key={option.id} value={option.id}>
                 {option.label}
                 {open ? (
-                  <span className="rounded-full bg-primary px-1.5 text-xs font-semibold tabular-nums text-primary-foreground">
+                  <span className="min-w-5 rounded-full bg-primary px-1.5 text-center text-xs leading-5 font-semibold tabular-nums text-primary-foreground">
                     {open}<span className="sr-only"> open</span>
                   </span>
                 ) : null}
-              </TabsTrigger>
+              </PageTabs.Trigger>
             );
           })}
-        </TabsList>
+        </PageTabs.Bar>
         <TabsContent value="community"><CommunityReportQueue /></TabsContent>
         <TabsContent value="plan"><CommentReportQueue source="plan" /></TabsContent>
         <TabsContent value="guide"><CommentReportQueue source="guide" /></TabsContent>

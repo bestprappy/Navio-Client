@@ -13,7 +13,13 @@ import { YourGuideCard } from "./guide-card";
 import { NewGuideDialog } from "./new-guide-dialog";
 import { listYourGuides } from "./user-guides-api";
 
-export function YourGuides({ preview = false }: { preview?: boolean }) {
+type YourGuidesProps = {
+  preview?: boolean;
+  /** Open the new-guide dialog on arrival. */
+  startNewGuide?: boolean;
+};
+
+export function YourGuides({ preview = false, startNewGuide = false }: YourGuidesProps) {
   const { data: session, status } = useSession();
   const [search, setSearch] = useState("");
   const term = useDeferredValue(search.trim());
@@ -51,7 +57,7 @@ export function YourGuides({ preview = false }: { preview?: boolean }) {
             Keep the places you know, and the tips you would pass on.
           </p>
         </div>
-        <NewGuideDialog />
+        <NewGuideDialog defaultOpen={startNewGuide} />
       </header>
       {!preview ? (
         <label className="relative block max-w-md">

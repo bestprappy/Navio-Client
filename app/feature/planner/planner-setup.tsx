@@ -138,7 +138,7 @@ export function PlannerSetupView() {
         <PlannerSetup.Actions
           primaryLabel="Start planning"
           secondaryLabel="Or write a new guide"
-          secondaryHref="/guides/new"
+          secondaryHref="/dashboard/guides?new=1"
         />
         <p className="text-center text-xs text-muted-foreground">
           By continuing you agree to our terms and privacy policy.

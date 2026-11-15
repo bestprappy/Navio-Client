@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useMemo, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { createStore, Provider, useAtomValue } from "jotai";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,10 +27,17 @@ import {
 } from "../admin/_components/guides/guide-model";
 import { userGuideWorkspace } from "./user-guides-api";
 
-export function NewGuideDialog() {
-  const [open, setOpen] = useState(false);
+export function NewGuideDialog({ defaultOpen = false }: { defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const router = useRouter();
+  const pathname = usePathname();
+  function changeOpen(next: boolean) {
+    setOpen(next);
+    // Opened from a `?new=1` link: drop the query on dismiss so a reload does not reopen it.
+    if (!next && defaultOpen) router.replace(pathname, { scroll: false });
+  }
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogTrigger render={<Button />}>
         <PenLine aria-hidden="true" />
         Write a guide
@@ -43,13 +50,13 @@ export function NewGuideDialog() {
             what makes them worth a visit.
           </DialogDescription>
         </DialogHeader>
-        {open ? <NewGuideForm onCancel={() => setOpen(false)} /> : null}
+        {open ? <NewGuideForm onCancel={() => changeOpen(false)} onCreated={() => setOpen(false)} /> : null}
       </DialogContent>
     </Dialog>
   );
 }
 
-function NewGuideForm({ onCancel }: { onCancel: () => void }) {
+function NewGuideForm({ onCancel, onCreated }: { onCancel: () => void; onCreated: () => void }) {
   const [store] = useState(createStore);
   const inputId = useId();
   const errorId = useId();
@@ -68,7 +75,7 @@ function NewGuideForm({ onCancel }: { onCancel: () => void }) {
     onSuccess: (guide) => {
       void queryClient.invalidateQueries({ queryKey: workspace.keys.list });
       router.push(`${workspace.home}/${guide.id}`);
-      onCancel();
+      onCreated();
     },
     onError: (error) => {
       console.error("Creating a user guide failed.", {

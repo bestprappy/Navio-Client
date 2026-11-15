@@ -35,9 +35,9 @@ export function CommunityReportQueue() {
   return (
     <div className="flex flex-col gap-4">
       <Tabs value={status} onValueChange={(value) => setStatus(value as CommunityStatus)}>
-        <TabsList aria-label="Report status">
+        <TabsList aria-label="Report status" className="h-9">
           {STATUSES.map((option) => (
-            <TabsTrigger key={option.id} value={option.id} className="px-4">{option.label}</TabsTrigger>
+            <TabsTrigger key={option.id} value={option.id} className="h-full flex-none px-3">{option.label}</TabsTrigger>
           ))}
         </TabsList>
       </Tabs>

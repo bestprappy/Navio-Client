@@ -11,7 +11,8 @@ import { SharedPlanCard } from "@/app/feature/explore/_components/shared-plans/s
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button.variants";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PageTabs } from "@/components/page-tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { listProfilePlans, listProfilePosts, setPlanPinned, setPostPinned, socialKeys } from "@/lib/social-api";
 import { cn } from "@/lib/utils";
 
@@ -25,18 +26,18 @@ type ProfileContentTabsProps = {
 export function ProfileContentTabs({ accountId, name, isOwner }: ProfileContentTabsProps) {
   return (
     <Tabs defaultValue="posts" className="mt-6">
-      <TabsList variant="line" className="h-10 border-b border-border w-full justify-start rounded-none">
-        <TabsTrigger value="posts" className="h-10 px-3"><FileText aria-hidden="true" />Posts</TabsTrigger>
-        <TabsTrigger value="plans" className="h-10 px-3"><MapIcon aria-hidden="true" />Shared plans</TabsTrigger>
-        <TabsTrigger value="guides" className="h-10 px-3"><BookOpen aria-hidden="true"/>Guides</TabsTrigger>
-      </TabsList>
-      <TabsContent value="posts" className="pt-4">
+      <PageTabs.Bar aria-label={`${name}'s content`}>
+        <PageTabs.Trigger value="posts"><FileText aria-hidden="true" />Posts</PageTabs.Trigger>
+        <PageTabs.Trigger value="plans"><MapIcon aria-hidden="true" />Shared plans</PageTabs.Trigger>
+        <PageTabs.Trigger value="guides"><BookOpen aria-hidden="true" />Guides</PageTabs.Trigger>
+      </PageTabs.Bar>
+      <TabsContent value="posts" className="pt-3">
         <PostsTab accountId={accountId} name={name} isOwner={isOwner} />
       </TabsContent>
-      <TabsContent value="plans" className="pt-4">
+      <TabsContent value="plans" className="pt-3">
         <PlansTab accountId={accountId} name={name} isOwner={isOwner} />
       </TabsContent>
-      <TabsContent value="guides" className="pt-4"><GuidesTab accountId={accountId} name={name} isOwner={isOwner}/></TabsContent>
+      <TabsContent value="guides" className="pt-3"><GuidesTab accountId={accountId} name={name} isOwner={isOwner}/></TabsContent>
     </Tabs>
   );
 }
