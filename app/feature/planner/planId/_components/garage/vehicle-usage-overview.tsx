@@ -9,7 +9,7 @@ import type { EvCar, UserVehicle } from "../constants/vehicle.types";
 import type { TripEvSummary } from "./ev-calculator";
 import { calcRangeKmForBatteryPct } from "./ev-calculator";
 import { BatteryGauge } from "./battery-gauge";
-import { arrivalReservePctAtom, startingBatteryPctAtom } from "./garage.atoms";
+import { lowBatteryPctAtom, startingBatteryPctAtom } from "./garage.atoms";
 
 import { BATTERY_TONES, formatDistanceKm, formatMinutes, getBatteryTone } from "./garage-formatters";
 import { energyAvailabilityLabel, energyBasisLabel } from "./energy-display";
@@ -41,7 +41,7 @@ export function VehicleUsageOverview({
   days,
 }: VehicleUsageOverviewProps) {
   const titleId = useId();
-  const plannerReservePct = useAtomValue(arrivalReservePctAtom);
+  const plannerReservePct = useAtomValue(lowBatteryPctAtom);
   const reservePct = reserveSocPct ?? plannerReservePct;
   const hasEstimate = tripSummary !== null;
   const plannerStartPct = useAtomValue(startingBatteryPctAtom);
@@ -125,10 +125,7 @@ function TripBattery({ startPct, endPct, showStart, reservePct }: { startPct: nu
   return (
     <div className="mt-4">
       {endPct !== null && <BatteryGauge value={endPct} previousValue={showStart ? startPct : undefined} reservePct={reservePct} />}
-      <div className="mt-2 flex flex-wrap justify-between gap-x-3 text-xs text-muted-foreground">
-        <span>Dashed line: {reservePct}% reserve</span>
-        {showStart && <span>Started at {startPct}%</span>}
-      </div>
+      {showStart && <p className="mt-2 text-xs text-muted-foreground">Started at {startPct}%</p>}
     </div>
   );
 }
@@ -156,9 +153,6 @@ function DailyBattery({ values, hasEstimate, reservePct }: { values: (number | n
         <h4 id={titleId} className="text-sm font-medium text-foreground">
           Battery at the end of each day
         </h4>
-        {hasEstimate && values.length > 0 && (
-          <p className="text-xs text-muted-foreground">Dashed line: {reservePct}% reserve</p>
-        )}
       </div>
 
       {!hasEstimate || values.length === 0 ? (
@@ -193,7 +187,7 @@ function DayBar({ day, value, shortLabel, reservePct }: { day: number; value: nu
       <span className="sr-only">
         Day {day}: {value === null ? "?" : Math.round(value)}%{tone.label ? `, ${tone.label.toLowerCase()}` : ""}
       </span>
-      {/* An upright battery per day: value on top, terminal nub, cell body with a reserve mark. */}
+      {/* An upright battery per day: value on top, terminal nub, cell body. */}
       <div className="flex flex-1 flex-col items-center" aria-hidden="true">
         <span className={cn("mb-1 text-xs font-semibold tabular-nums", tone.valueText)}>{value === null ? "?" : Math.round(value)}%</span>
         <span className="h-1 w-1/3 max-w-4 rounded-t-sm bg-foreground/25" />
@@ -202,10 +196,6 @@ function DayBar({ day, value, shortLabel, reservePct }: { day: number; value: nu
             <span
               className={cn("battery-fill-up absolute inset-x-0 bottom-0", tone.fill)}
               style={{ height: `${value === null ? 0 : Math.max(0, Math.min(100, value))}%` }}
-            />
-            <span
-              className="absolute -inset-x-1 border-t-2 border-dashed border-destructive"
-              style={{ bottom: `${reservePct}%` }}
             />
           </div>
         </div>

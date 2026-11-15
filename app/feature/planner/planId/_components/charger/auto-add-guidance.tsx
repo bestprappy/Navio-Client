@@ -52,13 +52,13 @@ const COPY: Record<AutoAddBlocker, GuidanceCopy> = {
   },
   satisfied: {
     tone: "info",
-    title: "No Auto Add slot on this day",
-    body: "This day doesn't need another charging stop: every itinerary stop stays above your Battery Threshold and the day ends above your Minimum Arrival Battery. Raise either setting to charge sooner.",
+    title: "This day has enough charge",
+    body: "Every stop on this day, including the last one, is reached above your threshold, so there is nothing to add. Raise the threshold to charge sooner.",
   },
   infeasible: {
     tone: "warning",
     title: "No workable charging plan found",
-    body: "No compatible charger within 20 km of the route keeps this day's stops above your Battery Threshold and its end above your Minimum Arrival Battery. Try lower settings, or add a charger from the list.",
+    body: "No compatible charger within 20 km of the route keeps this day's stops above your threshold. Try a lower threshold, or pick a charger from the list below.",
   },
 };
 

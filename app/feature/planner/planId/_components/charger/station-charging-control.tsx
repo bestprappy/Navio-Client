@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import type { PlaceItemEvChargerDetails } from "../constants/types";
 import type { EvCar } from "../constants/vehicle.types";
 import { BatteryGauge } from "../garage/battery-gauge";
-import { activeEvCarAtom, arrivalReservePctAtom } from "../garage/garage.atoms";
+import { activeEvCarAtom, lowBatteryPctAtom } from "../garage/garage.atoms";
 import { normalizeStationTargetPct } from "../garage/ev-calculator";
 import { isStationReportedClosed, projectCanonicalCharging as projectChargingStop, type StopBatteryProjection as ChargingStopProjection } from "../garage/trip-energy-projection";
 import { BATTERY_TONES, formatMinutes, getBatteryTone } from "../garage/garage-formatters";
@@ -29,7 +29,7 @@ export function StationChargingControl({ blockId, itemId, stationName, details, 
   const inputId = useId();
   const helpId = `${inputId}-help`;
   const car = useAtomValue(activeEvCarAtom);
-  const reservePct = useAtomValue(arrivalReservePctAtom);
+  const reservePct = useAtomValue(lowBatteryPctAtom);
   const updatePlaceItem = useSetAtom(updatePlaceItemAtom);
   const projection = car && arrivalPct != null ? projectChargingStop(arrivalPct, details, car) : null;
   const target = normalizeStationTargetPct(details.targetBatteryPct ?? details.plannedDepartureSocPct ?? projection?.departurePct);

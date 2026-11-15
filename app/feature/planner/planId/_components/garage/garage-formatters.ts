@@ -36,9 +36,14 @@ export function formatCheckedDate(value?: string): string | null {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
 
-/** Level bands: green from 50%, yellow from 26%, orange down to the arrival reserve, red below it. */
+/** Level bands: green from 50%, yellow from 26%, orange down to the critical level, red below it. */
 export const BATTERY_HIGH_PCT = 50;
 export const BATTERY_LOW_PCT = 25;
+/**
+ * Below this the battery reads as very low everywhere in the planner. Fixed on purpose: the Auto Add threshold
+ * only guides Auto Add. Matches Mobility's AutoAddArrivalPolicy.CHARGER_FLOOR_SOC_PCT.
+ */
+export const BATTERY_CRITICAL_PCT = 10;
 
 export type BatteryTone = "high" | "mid" | "low" | "critical";
 

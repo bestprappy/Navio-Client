@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 import { BatteryRouteChart } from "./battery-route-chart";
 import type { DayBatteryPoint } from "./ev-calculator";
-import { arrivalReservePctAtom } from "./garage.atoms";
+import { lowBatteryPctAtom } from "./garage.atoms";
 
 import { BATTERY_TONES, formatDistanceKm, formatMinutes, getBatteryTone } from "./garage-formatters";
 
@@ -49,11 +49,11 @@ export function RouteEstimate({
   incompatibleStops,
   profile = [],
 }: RouteEstimateProps) {
-  const reservePct = useAtomValue(arrivalReservePctAtom);
+  const lowPct = useAtomValue(lowBatteryPctAtom);
   const startPct = clampPct(startBatteryPct);
   const endPct = clampPct(endBatteryPct);
-  const startLevel = getBatteryTone(startPct, reservePct);
-  const endLevel = getBatteryTone(endPct, reservePct);
+  const startLevel = getBatteryTone(startPct, lowPct);
+  const endLevel = getBatteryTone(endPct, lowPct);
   const startTone = BATTERY_TONES[startLevel];
   const endTone = BATTERY_TONES[endLevel];
   const showChart = profile.length >= 2 && (profile.at(-1)?.distanceKm ?? 0) > 0;
@@ -65,13 +65,13 @@ export function RouteEstimate({
     null,
   );
   const midRouteDip =
-    lowest && lowest.id !== profile.at(-1)?.id && lowest.arrivalPct < reservePct ? lowest : null;
+    lowest && lowest.id !== profile.at(-1)?.id && lowest.arrivalPct < lowPct ? lowest : null;
   // An unreachable leg leaves no onward battery or chart, so without this it reads as missing data.
-  // Below reserve also needs its own line when a charge at that stop hides it from the end value.
+  // A very low arrival also needs its own line when a charge at that stop hides it from the end value.
   const alert = infeasible
     ? "The battery runs out before the end of this route. Add a charging stop or start with more charge."
     : predictedBelowReserve && !midRouteDip && endLevel !== "critical"
-      ? `A stop on this route is reached below your ${reservePct}% reserve.`
+      ? `A stop on this route is reached with under ${lowPct}% battery.`
       : null;
 
   return (
@@ -108,7 +108,7 @@ export function RouteEstimate({
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             <span>
               Arrives at <span className="font-semibold">{midRouteDip.name}</span> with{" "}
-              <span className="font-semibold tabular-nums">{Math.round(midRouteDip.arrivalPct)}%</span>, below your {reservePct}% reserve.
+              <span className="font-semibold tabular-nums">{Math.round(midRouteDip.arrivalPct)}%</span>, which is very low.
             </span>
           </p>
         ) : null}
@@ -128,7 +128,7 @@ export function RouteEstimate({
         ) : null}
 
         {showChart ? (
-          <BatteryRouteChart className="mt-4" points={profile} reservePct={reservePct} />
+          <BatteryRouteChart className="mt-4" points={profile} lowPct={lowPct} />
         ) : infeasible || startDisconnected ? null : endPct === null ? <p className="mt-3 text-sm text-muted-foreground">Battery prediction unavailable</p> : (
           <>
             <div
@@ -138,12 +138,10 @@ export function RouteEstimate({
               aria-valuenow={Math.round(endPct)}
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuetext={`${endPct.toFixed(0)}%${endTone.label ? `, ${endTone.label.toLowerCase()}` : ""}. Reserve ${reservePct}%.`}
+              aria-valuetext={`${endPct.toFixed(0)}%${endTone.label ? `, ${endTone.label.toLowerCase()}` : ""}.`}
             >
               <div className={cn("h-full rounded-full", endTone.fill)} style={{ width: `${endPct}%` }} />
-              <div className="absolute -inset-y-0.5 w-px bg-foreground/60" style={{ left: `${reservePct}%` }} />
             </div>
-            <p className="mt-1.5 text-xs text-muted-foreground">{reservePct}% reserve</p>
           </>
         )}
       </div>
@@ -173,7 +171,7 @@ export function RouteEstimate({
           How this is estimated
         </summary>
         <p className="mt-1.5 max-w-prose leading-relaxed text-muted-foreground">
-          Nominal predictions use the selected vehicle energy model and available road distance. Rated-range predictions are provisional. Charging time requires known usable capacity and compatible power; reserve is separate from energy consumption.
+          Nominal predictions use the selected vehicle energy model and available road distance. Rated-range predictions are provisional. Charging time requires known usable capacity and compatible power.
         </p>
       </details>
     </section>

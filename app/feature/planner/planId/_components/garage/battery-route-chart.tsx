@@ -10,7 +10,7 @@ import { formatDistanceKm } from "./garage-formatters";
 
 type BatteryRouteChartProps = {
   points: DayBatteryPoint[];
-  reservePct: number;
+  lowPct: number;
   className?: string;
 };
 
@@ -18,7 +18,7 @@ const HEIGHT = 144;
 const PAD = { top: 12, right: 12, bottom: 22, left: 36 };
 const Y_TICKS = [0, 50, 100];
 const LINE = "var(--battery-high)";
-const BELOW_RESERVE = "var(--battery-critical)";
+const VERY_LOW = "var(--battery-critical)";
 
 function useElementWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -37,8 +37,8 @@ function pct(value: number): string {
   return `${Math.round(value)}%`;
 }
 
-/** Battery across the day's road distance: charging stops are vertical jumps, the dashed line is the arrival reserve. */
-export function BatteryRouteChart({ points, reservePct, className }: BatteryRouteChartProps) {
+/** Battery across the day's road distance: charging stops are vertical jumps, very low arrivals are marked in red. */
+export function BatteryRouteChart({ points, lowPct, className }: BatteryRouteChartProps) {
   const titleId = useId();
   const [containerRef, width] = useElementWidth<HTMLDivElement>();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -98,25 +98,13 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
               {formatDistanceKm(totalKm)} km
             </text>
 
-            <line
-              x1={PAD.left} x2={width - PAD.right} y1={geometry.y(reservePct)} y2={geometry.y(reservePct)}
-              stroke={BELOW_RESERVE} strokeWidth={1.5} strokeDasharray="4 4"
-            />
-            {/* Label the line where it is, instead of a legend. Left end: low points rarely sit at the start of the day. */}
-            <text
-              x={PAD.left + 4} y={geometry.y(reservePct) + 13}
-              fill={BELOW_RESERVE} className="text-[11px] font-medium tabular-nums"
-            >
-              {reservePct}% reserve
-            </text>
-
             <path d={geometry.area} fill={LINE} fillOpacity={0.1} />
             <path d={geometry.line} fill="none" stroke={LINE} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
 
             {points.map((point) => {
               const cx = geometry.x(point.distanceKm);
               const arrivalY = geometry.y(point.arrivalPct);
-              const belowReserve = point.arrivalPct < reservePct;
+              const veryLow = point.arrivalPct < lowPct;
               const isActive = point.id === activeId;
               return (
                 <g key={point.id}>
@@ -138,7 +126,7 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
                       ) : null}
                     </>
                   ) : null}
-                  <circle cx={cx} cy={arrivalY} r={isActive ? 5.5 : 4} fill={belowReserve ? BELOW_RESERVE : LINE} stroke="var(--card)" strokeWidth={2} />
+                  <circle cx={cx} cy={arrivalY} r={isActive ? 5.5 : 4} fill={veryLow ? VERY_LOW : LINE} stroke="var(--card)" strokeWidth={2} />
                 </g>
               );
             })}
@@ -147,8 +135,8 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
               <line x1={geometry.x(active.distanceKm)} x2={geometry.x(active.distanceKm)} y1={PAD.top} y2={PAD.top + plotHeight} stroke="var(--muted-foreground)" strokeWidth={1} />
             )}
 
-            {/* The end value is the headline above the chart; only a below-reserve low point gets a label. */}
-            {lowest && last && lowest.id !== last.id && lowest.arrivalPct < reservePct && (
+            {/* The end value is the headline above the chart; only a very low point gets a label. */}
+            {lowest && last && lowest.id !== last.id && lowest.arrivalPct < lowPct && (
               <text x={geometry.x(lowest.distanceKm)} y={geometry.y(lowest.arrivalPct) + 16} textAnchor="middle" className="fill-foreground text-xs font-semibold tabular-nums">
                 {pct(lowest.arrivalPct)}
               </text>
@@ -161,7 +149,7 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
           <button
             key={point.id}
             type="button"
-            aria-label={`${point.name}, ${formatDistanceKm(point.distanceKm)} km: arrive ${pct(point.arrivalPct)}${point.isCharger ? `, leave ${pct(point.departurePct)}` : ""}${point.arrivalPct < reservePct ? ", below reserve" : ""}`}
+            aria-label={`${point.name}, ${formatDistanceKm(point.distanceKm)} km: arrive ${pct(point.arrivalPct)}${point.isCharger ? `, leave ${pct(point.departurePct)}` : ""}${point.arrivalPct < lowPct ? ", very low battery" : ""}`}
             className="absolute size-6 -translate-x-1/2 -translate-y-1/2 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring"
             style={{ left: geometry.x(point.distanceKm), top: geometry.y(point.arrivalPct) }}
             onPointerEnter={() => setActiveId(point.id)}
@@ -188,7 +176,7 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
               {formatDistanceKm(active.distanceKm)} km · arrive {pct(active.arrivalPct)}
               {active.isCharger ? ` · leave ${pct(active.departurePct)}` : ""}
             </p>
-            {active.arrivalPct < reservePct && <p className="font-medium text-destructive">Below reserve</p>}
+            {active.arrivalPct < lowPct && <p className="font-medium text-destructive">Very low battery</p>}
           </div>
         )}
       </div>
@@ -208,8 +196,8 @@ export function BatteryRouteChart({ points, reservePct, className }: BatteryRout
               <tr key={point.id} className="border-b border-border last:border-0">
                 <th scope="row" className="max-w-40 truncate py-1 pr-2 font-normal">{point.name}{point.isCharger ? " (charger)" : ""}</th>
                 <td className="py-1 pr-2 text-right">{formatDistanceKm(point.distanceKm)}</td>
-                <td className={cn("py-1 pr-2 text-right", point.arrivalPct < reservePct && "font-medium text-destructive")}>
-                  {pct(point.arrivalPct)}{point.arrivalPct < reservePct ? " (below reserve)" : ""}
+                <td className={cn("py-1 pr-2 text-right", point.arrivalPct < lowPct && "font-medium text-destructive")}>
+                  {pct(point.arrivalPct)}{point.arrivalPct < lowPct ? " (very low)" : ""}
                 </td>
                 <td className="py-1 text-right">{point.isCharger ? pct(point.departurePct) : "–"}</td>
               </tr>

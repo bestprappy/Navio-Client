@@ -22,7 +22,7 @@ const carAtom = {}, reserveAtom = {};
 const deps = {
   jotai:{ useAtomValue:atom => atom === carAtom ? car : 12, useSetAtom:() => () => {} },
   "@/lib/utils":{ cn:(...values) => values.filter(Boolean).join(" ") },
-  "../garage/garage.atoms":{ activeEvCarAtom:carAtom, arrivalReservePctAtom:reserveAtom },
+  "../garage/garage.atoms":{ activeEvCarAtom:carAtom, lowBatteryPctAtom:reserveAtom },
   "../garage/battery-gauge":{ BatteryGauge:({children}) => createElement("div", null, children) },
   "../garage/ev-calculator":calculation,
   "../garage/trip-energy-projection":projection,

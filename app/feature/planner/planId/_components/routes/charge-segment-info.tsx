@@ -5,7 +5,7 @@ import { useAtomValue } from "jotai";
 
 import { cn } from "@/lib/utils";
 
-import { arrivalReservePctAtom } from "../garage/garage.atoms";
+import { lowBatteryPctAtom } from "../garage/garage.atoms";
 import { BATTERY_CHANGE_TEXT, BATTERY_TONES, getBatteryTone } from "../garage/garage-formatters";
 
 function clampPct(value: number): number {
@@ -14,7 +14,7 @@ function clampPct(value: number): number {
 
 /** Battery bar for a charge: the part held on arrival is dimmed, the part added is lit in its level color. */
 export function ChargeBar({ from, to, className }: { from: number; to: number; className?: string }) {
-  const reservePct = useAtomValue(arrivalReservePctAtom);
+  const reservePct = useAtomValue(lowBatteryPctAtom);
   const start = clampPct(Math.min(from, to));
   const end = clampPct(Math.max(from, to));
 
@@ -37,7 +37,7 @@ type ChargeSegmentInfoProps = {
 };
 
 export function ChargeSegmentInfo({ batteryFrom, batteryTo }: ChargeSegmentInfoProps) {
-  const reservePct = useAtomValue(arrivalReservePctAtom);
+  const reservePct = useAtomValue(lowBatteryPctAtom);
   if (batteryFrom == null || batteryTo == null) return null;
 
   const from = clampPct(batteryFrom);
@@ -73,7 +73,7 @@ export function DischargeSegmentInfo({
   batteryFrom,
   batteryTo,
 }: DischargeSegmentInfoProps) {
-  const reservePct = useAtomValue(arrivalReservePctAtom);
+  const reservePct = useAtomValue(lowBatteryPctAtom);
   if (batteryFrom == null || batteryTo == null) return null;
 
   const from = clampPct(batteryFrom);

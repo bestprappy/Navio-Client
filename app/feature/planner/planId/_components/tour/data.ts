@@ -206,7 +206,7 @@ export const PLANNER_EV_TOUR: TourDefinition = {
 
 export const PLANNER_CHARGING_TOUR: TourDefinition = {
   id: "planner-charging",
-  version: 1,
+  version: 2,
   label: "Charging stops",
   summary: "Find chargers, set charging targets and plan stops.",
   steps: [
@@ -223,26 +223,20 @@ export const PLANNER_CHARGING_TOUR: TourDefinition = {
     },
     {
       target: "planner.ev-preferences",
-      title: "Charging preferences",
-      description: "Battery Threshold and Minimum Arrival Battery guide automatic insertion on the day you select.",
+      title: "Auto Add charging stops",
+      description: "Works on the day you opened the charger list from. New chargers charge to 100%, and your own stops stay as they are.",
       side: "left",
     },
     {
       target: "planner.ev-reserve",
-      title: "Arrive with at least",
-      description: "The lowest battery you are happy to arrive with. Plans keep you above it.",
-      side: "left",
-    },
-    {
-      target: "planner.ev-charge-target",
-      title: "Automatic charging targets",
-      description: "New automatic stops charge to 100%. Adjust individual stops in the itinerary.",
+      title: "Battery threshold",
+      description: "The one Auto Add setting. A charger goes in before any stop you would reach below it. The mark under the slider shows this day's lowest stop.",
       side: "left",
     },
     {
       target: "planner.ev-optimize",
-      title: "Plan charging stops",
-      description: "Auto Add inserts necessary chargers without changing existing stops. Optimize Route separately previews route improvements.",
+      title: "Add the stops",
+      description: "Navio checks the day as you change the threshold, then the button says how many chargers it will add. Undo it from the day in your itinerary.",
       side: "left",
     },
     {
