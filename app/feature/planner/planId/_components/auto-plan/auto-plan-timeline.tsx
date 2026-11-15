@@ -1,15 +1,16 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { ArrowRight, Car, Clock, Footprints, MapPin, Pin, TrainFront, TriangleAlert, UtensilsCrossed } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { getTripBlockColorById } from "../constants/trip-block-colors";
 
 import { formatOpeningWindows, formatPlanDuration, formatPlanMinute, formatPlanTravel } from "./auto-plan-format";
 import { useAutoPlanContext } from "./auto-plan-context";
-import type { AutoPlanMode, DayAutoPlan, PlannedStop } from "./day-auto-plan";
+import { splitAutoPlanSections, type AutoPlanMode, type DayAutoPlan, type PlannedStop } from "./day-auto-plan";
 
 const MODE_ICON: Record<AutoPlanMode, typeof Car> = { drive: Car, transit: TrainFront, walk: Footprints };
 
@@ -136,20 +137,32 @@ function AnchorRow({ time, label, isLast }: { time: number; label: string; isLas
 }
 
 export function AutoPlanTimeline() {
-  const { plan, anchors, dayNumber } = useAutoPlanContext();
+  const { plan, anchors, dayNumber, block } = useAutoPlanContext();
   if (!plan?.stops.length) return null;
   const { leave, finish } = dayRange(plan);
   const { mode } = plan.settings;
   const hasEnd = anchors.end !== null;
+  const plannedById = new Map(plan.stops.map((stop, index) => [stop.itemId, { stop, index }]));
+  const sections = splitAutoPlanSections(block.items);
   return (
     <ol aria-label={`Planned order for day ${dayNumber}`}>
       {anchors.start ? <li><AnchorRow time={leave} label={`Leave ${anchors.start.name}`} isLast={false} /></li> : null}
-      {plan.stops.map((stop, index) => (
-        <li key={stop.itemId}>
-          {index > 0 || anchors.start ? <TravelRow minutes={stop.travelMinutes} distanceKm={stop.distanceKm} mode={mode} /> : null}
-          <StopRow stop={stop} index={index} isLast={!hasEnd && index === plan.stops.length - 1} />
-        </li>
-      ))}
+      {sections.map(({ divider, items }, sectionIndex) => {
+        const stops = items.flatMap(item => plannedById.has(item.id) ? [plannedById.get(item.id)!] : []).toSorted((a, b) => a.index - b.index);
+        return <Fragment key={divider?.id ?? "day-start"}>
+          {divider ? <li className="mb-4 border-y border-border py-3">
+            <h4 className="flex items-start gap-2 break-words text-sm font-semibold">
+              <span className="mt-1 size-2 shrink-0 rounded-full" style={{ backgroundColor: getTripBlockColorById(divider.colorId ?? block.colorId).value }} aria-hidden="true" />
+              <span className="min-w-0">{divider.title.trim() || `Section ${sectionIndex}`}{divider.destination ? <span className="mt-1 block text-xs font-normal text-muted-foreground">{divider.destination.name}</span> : null}</span>
+            </h4>
+            {!stops.length ? <p className="mt-1 text-xs text-muted-foreground">No visits planned in this section.</p> : null}
+          </li> : null}
+          {stops.map(({ stop, index }) => <li key={stop.itemId}>
+            {index > 0 || anchors.start ? <TravelRow minutes={stop.travelMinutes} distanceKm={stop.distanceKm} mode={mode} /> : null}
+            <StopRow stop={stop} index={index} isLast={!hasEnd && index === plan.stops.length - 1} />
+          </li>)}
+        </Fragment>;
+      })}
       {anchors.end ? (
         <li>
           <TravelRow minutes={plan.returnMinutes} distanceKm={plan.returnDistanceKm} mode={mode} />

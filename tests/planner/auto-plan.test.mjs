@@ -31,6 +31,112 @@ function plan(items, details, extra = {}) {
   return buildDayAutoPlan({ items, date: DATE, details: new Map(details.map((value) => [value.id.replace("GOOGLE:", ""), value])), start: null, end: null, settings: settings(extra.settings), ...extra.input });
 }
 const order = (result) => result.stops.map((value) => value.itemId);
+const section = (id, extra = {}) => ({ id, type: "section", title: id, colorId: "violet", destination: null, ...extra });
+
+function sectionMembers(items) {
+  const members = new Map([[null, []]]);
+  let current = null;
+  for (const item of items) {
+    if (item.type === "section") { current = item.id; members.set(current, []); }
+    else members.get(current).push(item.id);
+  }
+  return members;
+}
+
+test("Auto plan keeps section order and membership while optimizing within each part of a day", () => {
+  const items = [
+    stop("morning-a", at(0)), stop("morning-b", at(8)), stop("morning-c", at(0.4)),
+    section("afternoon", { destination: { id: "osaka", name: "Osaka", lat: 34.69, lng: 135.5 } }),
+    { id: "section-note", type: "note", content: "Afternoon tickets" },
+    stop("afternoon-a", at(8.4)), stop("afternoon-b", at(0.6)), stop("afternoon-c", at(8.6)),
+    section("evening"), stop("evening-a", at(0.8)),
+    section("empty"), section("last-empty"),
+  ];
+  const result = plan(items, items.filter(item => item.type === "place").map(item => detail(item.id)));
+  const rank = new Map(items.filter(item => item.type === "place").map(item => [item.id, item.id.split("-")[0]]));
+  assert.deepEqual([...new Set(order(result).map(id => rank.get(id)))], ["morning", "afternoon", "evening"]);
+  const arranged = arrangeDayItems(items, result, true).items;
+  assert.deepEqual(arranged.filter(item => item.type === "section"), items.filter(item => item.type === "section"));
+  const original = sectionMembers(items);
+  for (const [id, members] of sectionMembers(arranged)) assert.deepEqual([...members].sort(), [...original.get(id)].sort());
+  assert.equal(arranged[arranged.findIndex(item => item.id === "afternoon") + 1].id, "section-note");
+  assert.ok(result.travelMinutes < result.currentTravelMinutes);
+  assert.ok(result.stops.every((stop, index) => !index || stop.start >= result.stops[index - 1].end + stop.travelMinutes));
+});
+
+test("unplanned stops stay in their section and moving them never moves a divider", () => {
+  const items = [stop("closed-first", at(0)), section("second"), stop("open-second", at(0.1)), section("third"), stop("closed-third", at(0.2)), section("empty")];
+  const result = plan(items, [detail("closed-first", "museum", hours("Closed")), detail("open-second"), detail("closed-third", "museum", hours("Closed"))]);
+  assert.deepEqual(sectionMembers(arrangeDayItems(items, result, true).items), sectionMembers(items));
+  const moved = arrangeDayItems(items, result, false);
+  assert.deepEqual(moved.moved.map(item => item.id).sort(), ["closed-first", "closed-third"]);
+  assert.deepEqual(moved.items.filter(item => item.type === "section").map(item => item.id), ["second", "third", "empty"]);
+});
+
+test("many one-stop and empty sections share a continuous day schedule and remain undoable", () => {
+  const items = Array.from({ length: 32 }, (_, index) => [section(`part-${index}`), ...(index % 4 ? [] : [stop(`stop-${index}`, at(index / 100), { time: undefined })])]).flat();
+  const result = plan(items, items.filter(item => item.type === "place").map(item => detail(item.id)));
+  assert.equal(result.stops.length, 8);
+  assert.equal(result.unplanned.length, 0);
+  const store = storeWithDay(items);
+  const untouched = store.get(atoms.tripBlocksAtom)[1];
+  assert.equal(store.set(applyDayAutoPlanAtom, { blockId: "day-1", sourceItems: items, plan: result, moveTo: null }), true);
+  assert.deepEqual(sectionMembers(store.get(atoms.tripBlocksAtom)[0].items), sectionMembers(items));
+  assert.equal(store.get(atoms.tripBlocksAtom)[1], untouched);
+  assert.equal(store.set(undoDayAutoPlanAtom, "day-1"), true);
+  assert.equal(store.get(atoms.tripBlocksAtom)[0].items, items);
+});
+
+test("fixed bookings in a later section constrain earlier visits without moving stops across sections", () => {
+  const items = [
+    section("morning"), stop("long-visit", at(0)),
+    section("booking"), stop("reservation", at(0.2), { time: "10:00", timeEnd: "11:00", timeSource: "fixed" }),
+    section("afternoon"), stop("later", at(0.4)),
+  ];
+  const result = plan(items, [detail("long-visit", "museum"), detail("reservation"), detail("later")]);
+  assert.ok(result.unplanned.some(stop => stop.itemId === "long-visit"));
+  const booking = result.stops.find(stop => stop.itemId === "reservation");
+  assert.equal(booking.start, 600);
+  assert.equal(booking.lateMinutes, 0);
+  assert.deepEqual(order(result), ["reservation", "later"]);
+  assert.deepEqual(sectionMembers(arrangeDayItems(items, result, true).items), sectionMembers(items));
+});
+
+test("a day with 16 populated sections and 48 visits plans without mixing or losing items", () => {
+  const items = Array.from({ length: 16 }, (_, part) => [section(`part-${part}`),
+    ...Array.from({ length: 3 }, (_, index) => stop(`visit-${part}-${index}`, at((part * 3 + index) / 10000), {
+      time: "09:00", timeEnd: "09:10", timeSource: "fixed",
+    })),
+  ]).flat();
+  const result = plan(items, items.filter(item => item.type === "place").map(item => detail(item.id)), { settings: { keepSetTimes: false } });
+  assert.equal(result.stops.length, 48);
+  assert.equal(result.unplanned.length, 0);
+  const arranged = arrangeDayItems(items, result, true).items;
+  assert.equal(arranged.length, items.length);
+  for (const [id, members] of sectionMembers(arranged)) assert.deepEqual([...members].sort(), [...sectionMembers(items).get(id)].sort());
+  assert.ok(result.stops.every((stop, index) => !index || stop.start >= result.stops[index - 1].end + stop.travelMinutes));
+});
+
+test("notes, chargers, hotels and chosen day edges keep their original section", () => {
+  const items = [
+    section("morning"), stop("start", at(0), { notes: "Leave luggage", time: "08:00" }),
+    stop("a", at(0.1)), { id: "a-note", type: "note", content: "Tickets" },
+    stop("charger", at(0.2), { placeId: "ev-charger:charger", evCharger: { targetBatteryPct: 65 } }),
+    stop("hotel", at(0.3)),
+    section("afternoon"), { id: "packing", type: "checklist", title: "Bring", items: [] },
+    stop("b", at(0.4)), stop("end", at(0.5), { notes: "Booking" }),
+    section("trailing-empty"),
+  ];
+  const edges = { startStopId: "start", endStopId: "end" };
+  const result = plan(items.filter(item => !["start", "end"].includes(item.id)), [detail("a"), detail("hotel", "hotel"), detail("b")]);
+  const arranged = arrangeDayItems(items, result, true, edges).items;
+  assert.deepEqual(sectionMembers(arranged), sectionMembers(items));
+  assert.equal(arranged.find(item => item.id === "start"), items.find(item => item.id === "start"));
+  assert.equal(arranged.find(item => item.id === "end"), items.find(item => item.id === "end"));
+  assert.equal(arranged.find(item => item.id === "charger"), items.find(item => item.id === "charger"));
+  assert.equal(arranged[arranged.findIndex(item => item.id === "a") + 1].id, "a-note");
+  assert.equal(arranged[arranged.findIndex(item => item.id === "a") + 2].id, "charger");
+});
 
 test("opening hours follow the travel date, tell closed from unknown and keep split windows", () => {
   assert.deepEqual(getOpeningWindows({ weekdayOpeningHours: hours("9:00 AM – 6:00 PM", { Wednesday: "Closed" }) }, DATE), []);

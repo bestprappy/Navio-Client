@@ -246,7 +246,8 @@ function TripBlockActions({
             type="button"
             variant="outline"
             size="lg"
-            className="h-11 min-w-0 w-full rounded-lg"
+            className="h-11 min-w-0 w-full rounded-lg border-[var(--section-action)]/30 bg-[var(--section-action)]/10 text-[var(--section-action)] hover:bg-[var(--section-action)]/20 hover:text-[var(--section-action)] dark:border-[var(--section-action)]/30 dark:bg-[var(--section-action)]/10 dark:text-[color-mix(in_oklab,var(--section-action),var(--foreground)_35%)] dark:hover:bg-[var(--section-action)]/20 dark:hover:text-[color-mix(in_oklab,var(--section-action),var(--foreground)_35%)]"
+            style={{ "--section-action": getTripBlockColorById("violet").value } as CSSProperties}
             title="Split a long day, or start the part of the day spent in another city"
             data-tour="planner.add-section"
             onClick={() => {

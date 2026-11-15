@@ -2,8 +2,10 @@ import { getDistanceKm } from "../constants/place.data";
 import {
   isEvChargerPlaceItem,
   isPlaceItem,
+  isSectionItem,
   type PlaceItem,
   type PlaceSearchResult,
+  type SectionItem,
   type TripBlockItem,
 } from "../constants/types";
 import { DEFAULT_DAY_START_MINUTE, formatClockMinute, isFixedTime, parseClockMinute } from "../itinerary/day-timing";
@@ -20,6 +22,16 @@ export type AutoPlanSettings = {
   keepSetTimes: boolean;
 };
 type Point = { lat: number; lng: number };
+
+/** Keep empty sections too: their titles, colours and destinations still belong to the day. */
+export function splitAutoPlanSections(items: readonly TripBlockItem[]) {
+  const sections: { divider: SectionItem | null; items: TripBlockItem[] }[] = [{ divider: null, items: [] }];
+  for (const item of items) {
+    if (isSectionItem(item)) sections.push({ divider: item, items: [] });
+    else sections.at(-1)!.items.push(item);
+  }
+  return sections;
+}
 
 /**
  * - `plan`: put in order and given a time.
@@ -157,6 +169,7 @@ type Context = {
   hasStart: boolean;
   hasEnd: boolean;
   fixedStart: ReadonlyMap<string, number>;
+  sectionByItemId: ReadonlyMap<string, number>;
   leg: (from: string | null, to: string) => Leg;
 };
 type Placement = { start: number; meal: PlannedStop["meal"]; penalty: number };
@@ -247,13 +260,16 @@ function nearestNeighbour(places: readonly AutoPlanPlace[], context: Context): A
   const order: AutoPlanPlace[] = [];
   let from: string | null = context.hasStart ? START : null;
   while (left.length) {
-    let best = 0;
+    // Finish the current section before travelling on to the next one.
+    const section = Math.min(...left.map(stop => context.sectionByItemId.get(stop.item.id)!));
+    const candidates = left.filter(stop => context.sectionByItemId.get(stop.item.id) === section);
+    let best = candidates[0];
     // Without a start, begin with the place farthest out so the day sweeps in one direction.
     const score = (candidate: AutoPlanPlace) => from === null
-      ? -left.reduce((sum, other) => sum + context.leg(candidate.item.id, other.item.id).distanceKm, 0)
+      ? -candidates.reduce((sum, other) => sum + context.leg(candidate.item.id, other.item.id).distanceKm, 0)
       : context.leg(from, candidate.item.id).distanceKm;
-    left.forEach((candidate, index) => { if (score(candidate) < score(left[best])) best = index; });
-    const [next] = left.splice(best, 1);
+    candidates.forEach(candidate => { if (score(candidate) < score(best)) best = candidate; });
+    const [next] = left.splice(left.indexOf(best), 1);
     order.push(next);
     from = next.item.id;
   }
@@ -266,6 +282,7 @@ function cheapestInsertion(seed: readonly AutoPlanPlace[], fixed: readonly AutoP
     let best: AutoPlanPlace[] | null = null;
     let bestCost = Infinity;
     for (let index = 0; index <= order.length; index++) {
+      if (!canInsertInSection(order, index, stop, context)) continue;
       const candidate = order.toSpliced(index, 0, stop);
       const { cost } = simulate(candidate, context);
       if (cost < bestCost - 1e-9) { best = candidate; bestCost = cost; }
@@ -273,6 +290,12 @@ function cheapestInsertion(seed: readonly AutoPlanPlace[], fixed: readonly AutoP
     order = best!;
   }
   return order;
+}
+
+function canInsertInSection(order: readonly AutoPlanPlace[], index: number, stop: AutoPlanPlace, context: Context): boolean {
+  const section = context.sectionByItemId.get(stop.item.id)!;
+  return (index === 0 || context.sectionByItemId.get(order[index - 1].item.id)! <= section)
+    && (index === order.length || context.sectionByItemId.get(order[index].item.id)! >= section);
 }
 
 /** Relocates single stops and reverses runs between set times until nothing improves. */
@@ -287,6 +310,7 @@ function improve(start: AutoPlanPlace[], context: Context): { order: AutoPlanPla
       const without = order.toSpliced(from, 1);
       for (let to = 0; to <= without.length; to++) {
         if (to === from) continue;
+        if (!canInsertInSection(without, to, order[from], context)) continue;
         const candidate = without.toSpliced(to, 0, order[from]);
         const next = simulate(candidate, context).cost;
         if (next < cost - 1e-9) { order = candidate; cost = next; improved = true; break; }
@@ -296,7 +320,7 @@ function improve(start: AutoPlanPlace[], context: Context): { order: AutoPlanPla
       for (let a = 0; a < order.length - 1; a++) {
         if (isFixed(order[a])) continue;
         for (let b = a + 1; b < order.length; b++) {
-          if (isFixed(order[b])) break;
+          if (isFixed(order[b]) || context.sectionByItemId.get(order[b].item.id) !== context.sectionByItemId.get(order[a].item.id)) break;
           const candidate = [...order.slice(0, a), ...order.slice(a, b + 1).reverse(), ...order.slice(b + 1)];
           const next = simulate(candidate, context).cost;
           if (next < cost - 1e-9) { order = candidate; cost = next; improved = true; }
@@ -341,6 +365,7 @@ export function classifyDayPlaces(items: readonly TripBlockItem[], details: DayA
 export function buildDayAutoPlan(input: DayAutoPlanInput): DayAutoPlan {
   const { settings } = input;
   const { plan: places, last, followCount } = classifyDayPlaces(input.items, input.details, input.date);
+  const sectionByItemId = new Map(splitAutoPlanSections(input.items).flatMap((section, index) => section.items.map(item => [item.id, index] as const)));
   const fixedStart = new Map<string, number>();
   if (settings.keepSetTimes) {
     for (const stop of places) if (isFixedTime(stop.item)) fixedStart.set(stop.item.id, parseClockMinute(stop.item.time)!);
@@ -354,6 +379,7 @@ export function buildDayAutoPlan(input: DayAutoPlanInput): DayAutoPlan {
     hasStart: input.start !== null,
     hasEnd: input.end !== null,
     fixedStart,
+    sectionByItemId,
     leg(from, to) {
       if (from === null) return { minutes: 0, distanceKm: 0 };
       const key = `${from}\u0001${to}`;
@@ -363,7 +389,8 @@ export function buildDayAutoPlan(input: DayAutoPlanInput): DayAutoPlan {
     },
   };
 
-  const fixed = places.filter((stop) => fixedStart.has(stop.item.id)).toSorted((a, b) => fixedStart.get(a.item.id)! - fixedStart.get(b.item.id)!);
+  const fixed = places.filter((stop) => fixedStart.has(stop.item.id)).toSorted((a, b) =>
+    sectionByItemId.get(a.item.id)! - sectionByItemId.get(b.item.id)! || fixedStart.get(a.item.id)! - fixedStart.get(b.item.id)!);
   const free = places.filter((stop) => !fixedStart.has(stop.item.id));
   const seeds = [nearestNeighbour(free, context), free, free.toSorted((a, b) => closingMinute(a) - closingMinute(b))];
   let best: { order: AutoPlanPlace[]; cost: number } | null = null;
@@ -420,8 +447,8 @@ export function buildDayAutoPlan(input: DayAutoPlanInput): DayAutoPlan {
 
 /**
  * The day's items in planned order. Notes, checklists, stations and chargers stay right after
- * the place they followed; hotels stay last. Places that did not fit lose their time and either
- * stay at the end of the day or come back in `moved` for another day.
+ * the place they followed; hotels stay last within their section. Places that did not fit lose
+ * their time and stay in their section or come back in `moved` for another day.
  */
 export function arrangeDayItems(
   items: readonly TripBlockItem[],
@@ -429,6 +456,22 @@ export function arrangeDayItems(
   keepUnplanned: boolean,
   /** The day's start and end stops: not planned, kept first and last with what follows them. */
   edges: { startStopId: string | null; endStopId: string | null } = { startStopId: null, endStopId: null },
+): { items: TripBlockItem[]; moved: TripBlockItem[] } {
+  const arranged = splitAutoPlanSections(items).map(section => ({
+    divider: section.divider,
+    result: arrangeSectionItems(section.items, plan, keepUnplanned, edges),
+  }));
+  return {
+    items: arranged.flatMap(({ divider, result }) => [...(divider ? [divider] : []), ...result.items]),
+    moved: arranged.flatMap(({ result }) => result.moved),
+  };
+}
+
+function arrangeSectionItems(
+  items: readonly TripBlockItem[],
+  plan: DayAutoPlan,
+  keepUnplanned: boolean,
+  edges: { startStopId: string | null; endStopId: string | null },
 ): { items: TripBlockItem[]; moved: TripBlockItem[] } {
   const stops = new Map(plan.stops.map((stop) => [stop.itemId, stop]));
   const unplanned = new Set(plan.unplanned.map((stop) => stop.itemId));
@@ -460,12 +503,12 @@ export function arrangeDayItems(
   };
   const groupOf = (id: string) => groups.get(id) ?? [];
 
-  const left = plan.unplanned.flatMap((stop) => untimed(groupOf(stop.itemId)));
+  const left = plan.unplanned.filter(stop => groups.has(stop.itemId)).flatMap((stop) => untimed(groupOf(stop.itemId)));
   return {
     items: [
       ...leading,
       ...(edges.startStopId ? groupOf(edges.startStopId) : []),
-      ...plan.stops.flatMap((stop) => timed(groupOf(stop.itemId))),
+      ...plan.stops.filter(stop => groups.has(stop.itemId)).flatMap((stop) => timed(groupOf(stop.itemId))),
       ...(keepUnplanned ? left : []),
       ...plan.lastIds.flatMap(groupOf),
       ...(edges.endStopId ? groupOf(edges.endStopId) : []),

@@ -11,6 +11,7 @@ const output = process.env.NAVIO_TEST_OUTPUT ?? "tests/planner/.output/auto-plan
 const planId = "a1000000-0000-4000-8000-000000000081";
 const theme = process.env.NAVIO_TEST_THEME ?? "light";
 const width = Number(process.env.NAVIO_TEST_WIDTH ?? 1440);
+const withSections = process.env.NAVIO_TEST_SECTIONS === "1";
 await mkdir(output, { recursive: true });
 
 const WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -29,10 +30,20 @@ const note = { id: "tower-note", type: "note", content: "Buy the top deck ticket
 const day = { id: "tokyo-day", kind: "itinerary", title: "Tokyo", date: "2026-10-14", colorId: "indigo", items: [
   item("sensoji"), item("tower"), note, item("ichiran"), item("skytree"), item("meiji"), item("museum"), item("sushi"),
 ] };
+if (withSections) {
+  const section = (id, title) => ({ id, type: "section", title, colorId: "violet", destination: null });
+  day.items = [
+    section("morning", "Morning sights"), item("sensoji"), item("skytree"), item("museum"),
+    section("afternoon", "Afternoon sights"), item("tower"), note, item("meiji"),
+    section("meals", "Evening meals"), item("ichiran"), item("sushi"),
+    ...Array.from({ length: 12 }, (_, index) => section(`empty-${index}`, `Later section ${index + 1}`)),
+  ];
+}
 const nextDay = { id: "tokyo-day-2", kind: "itinerary", title: "Tokyo", date: "2026-10-15", colorId: "rose", items: [] };
 const stamp = new Date().toISOString();
 let snapshot = { version: 1, savedAt: stamp, blocks: [day, nextDay], budget: { currency: "JPY", amount: 0, expenses: [] }, capabilities: ["leg-travel-mode-v1", "transit-route-choice-v1", "trip-energy-v1", "trip-garage-v1", "observed-soc-v1", "day-destinations", "day-anchors", "charge-targets", "precise-charging-v1", "time-source-v1"] };
-const trip = { id: planId, displayName: "Tokyo auto plan test", title: "Tokyo auto plan test", destinationId: "tokyo", destinationName: "Tokyo", destinationCountry: "Japan", destinationLat: 35.68, destinationLng: 139.76, startDate: "2026-10-14", endDate: "2026-10-15", visibility: "PRIVATE", createdAt: stamp, updatedAt: stamp };
+snapshot.capabilities.push("day-sections-v1");
+const trip = { id: planId, displayName: "Tokyo auto plan test", title: "Tokyo auto plan test", destinationId: "tokyo", destinationName: "Tokyo", destinationCity: "Tokyo", destinationRegion: null, destinationCountryCode: "JP", destinationCountry: "Japan", destinationLat: 35.68, destinationLng: 139.76, startDate: "2026-10-14", endDate: "2026-10-15", visibility: "PRIVATE", createdAt: stamp, updatedAt: stamp };
 
 nextEnv.loadEnvConfig(process.cwd(), true, { info() {}, error() {} });
 const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
@@ -43,6 +54,7 @@ context.setDefaultTimeout(20000);
 const cookie = await encode({ secret, salt: "authjs.session-token", token: { sub: "22222222-2222-4222-8222-222222222222", name: "Test traveller", accessToken: "synthetic-test-only", accessTokenExpiresAt: Math.floor(Date.now() / 1000) + 3600 } });
 await context.addCookies([{ name: "authjs.session-token", value: cookie, url: base, httpOnly: true, sameSite: "Lax" }]);
 await context.addInitScript((value) => { localStorage.setItem("theme", value); }, theme);
+await context.addInitScript(() => { localStorage.setItem("navio:tours:v1:22222222-2222-4222-8222-222222222222", JSON.stringify({ planner: { status: "completed", version: 1, at: new Date().toISOString() } })); });
 const page = await context.newPage();
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
@@ -51,6 +63,10 @@ await context.route(`${base}/api/**`, async (route) => {
   const request = route.request();
   const path = new URL(request.url()).pathname;
   if (path.startsWith("/api/auth/")) return route.continue();
+  if (path === "/api/notifications/unread-count") return route.fulfill({ json: { unreadCount: 0 } });
+  if (path === "/api/notifications/stream") return route.fulfill({ status: 204, body: "" });
+  if (path === "/api/guides" || path === "/api/traveler-guides") return route.fulfill({ json: { content: [], totalElements: 0, totalPages: 0, number: 0 } });
+  if (path === `/api/trips/${planId}/place-recommendations`) return route.fulfill({ json: { minimumTravelers: 5, items: [] } });
   if (path === `/api/trips/${planId}/planner`) {
     if (request.method() === "PUT") snapshot = { ...snapshot, ...request.postDataJSON(), version: snapshot.version + 1, savedAt: new Date().toISOString() };
     return route.fulfill({ json: snapshot });
@@ -97,10 +113,57 @@ async function openAutoPlan() {
   await autoPlan().click();
 }
 
+function sectionMembership(items) {
+  let section = null;
+  const membership = [];
+  for (const value of items) {
+    if (value.type === "section") section = value.id;
+    else membership.push([value.id, section]);
+  }
+  return membership.sort(([a], [b]) => a.localeCompare(b));
+}
+
+async function checkSections() {
+  const dayView = page.locator("#trip-block-tokyo-day");
+  const addSection = dayView.getByRole("button", { name: "New section", exact: true });
+  const colors = await addSection.evaluate(element => {
+    const style = getComputedStyle(element);
+    return { color: style.color, background: style.backgroundColor };
+  });
+  assert.notEqual(colors.background, "rgba(0, 0, 0, 0)");
+  assert.notEqual(colors.background, "rgb(255, 255, 255)");
+  await addSection.scrollIntoViewIfNeeded();
+  await addSection.screenshot({ path: `${output}/section-button-${theme}-${width}.png` });
+  await openAutoPlan();
+  await dialog().getByRole("list", { name: "Planned order for day 1" }).waitFor();
+  for (const title of ["Morning sights", "Afternoon sights", "Evening meals", "Later section 12"]) {
+    assert.equal(await dialog().getByRole("heading", { name: title, exact: true }).count(), 1);
+  }
+  await dialog().screenshot({ path: `${output}/sections-dialog-${theme}-${width}.png` });
+  await dialog().getByRole("button", { name: "Apply plan" }).click();
+  await dialog().waitFor({ state: "hidden" });
+  await waitFor(() => snapshot.blocks[0].items.some(value => value.type === "place" && value.time), "The section plan was not saved.");
+  const saved = snapshot.blocks[0].items;
+  assert.deepEqual(saved.filter(value => value.type === "section"), day.items.filter(value => value.type === "section"));
+  assert.deepEqual(sectionMembership(saved), sectionMembership(day.items));
+  assert.deepEqual(snapshot.blocks[1].items, []);
+  const ids = saved.map(value => value.id);
+  assert.equal(ids[ids.indexOf("tower") + 1], "tower-note");
+  await page.getByRole("button", { name: "Undo", exact: true }).first().click();
+  await waitFor(() => JSON.stringify(snapshot.blocks[0].items) === JSON.stringify(day.items), "Undo did not restore all sections and their items.");
+  assert.deepEqual(snapshot.blocks[1].items, []);
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth), false);
+  assert.deepEqual(errors, []);
+  console.log(`Multi-section auto plan passed (${theme}, ${width}px): 15 sections, apply/save/undo, purple button`, colors);
+}
+
 try {
   await page.goto(`${base}/planner/${planId}?destinationName=Tokyo&from=2026-10-14&to=2026-10-15&lat=35.68&lng=139.76`, { waitUntil: "domcontentloaded", timeout: 120000 });
   await page.getByRole("heading", { name: "Tokyo Skytree" }).first().waitFor({ timeout: 90000 });
   await menuTrigger().waitFor();
+  if (withSections) {
+    await checkSections();
+  } else {
   await menuTrigger().scrollIntoViewIfNeeded();
   assert.equal(await page.locator("#trip-block-tokyo-day").getByRole("button", { name: "Auto plan", exact: true }).count(), 0, "Auto plan is not in the day header");
   await page.screenshot({ path: `${output}/day-header-${theme}-${width}.png` });
@@ -163,6 +226,10 @@ try {
   assert.equal(overflow, false, "The page scrolls horizontally.");
   assert.deepEqual(errors, []);
   console.log(`Auto plan browser check passed (${theme}, ${width}px)`);
+  }
+} catch (error) {
+  await page.screenshot({ path: `${output}/failure-${theme}-${width}.png`, fullPage: true }).catch(() => {});
+  throw error;
 } finally {
   await browser.close();
 }

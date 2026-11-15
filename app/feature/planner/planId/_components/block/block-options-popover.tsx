@@ -55,7 +55,6 @@ export function BlockOptionsPopover({ block }: BlockOptionsPopoverProps) {
   const startsFromAnchor = useMemo(() => Boolean(resolveDayAnchors(blocks).get(block.id)?.start), [blocks, block.id]);
   const timing = useDayTimingActions(block, startsFromAnchor);
   const canAutoPlan = useCanAutoPlan(block);
-  // Auto plan reorders the whole day, which would scatter its sections.
   const hasSections = block.items.some(isSectionItem);
   const label = `Open options for ${block.title || "this block"}`;
 
@@ -112,10 +111,9 @@ export function BlockOptionsPopover({ block }: BlockOptionsPopoverProps) {
               icon={<Waypoints />}
               title="Auto plan"
               hint={hasSections
-                ? "Works on days without sections. Remove the section dividers to use it."
+                ? "Orders places within each section, keeping your sections in order."
                 : "Orders your places around meals and opening hours."}
               emphasis="primary"
-              disabled={hasSections}
               onClick={() => {
                 // Close the menu first so the dialog is not stacked on top of it.
                 setIsOpen(false);
