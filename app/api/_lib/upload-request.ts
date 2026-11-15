@@ -1,11 +1,20 @@
-const MAX_UPLOAD_REQUEST_BYTES = 6 * 1024 * 1024;
+export const MAX_UPLOAD_REQUEST_BYTES = 6 * 1024 * 1024;
 
-export class UploadTooLargeError extends Error {}
+export class UploadTooLargeError extends Error {
+  readonly limitBytes: number;
+  constructor(limitBytes: number) {
+    super("Upload request is too large.");
+    this.limitBytes = limitBytes;
+  }
+}
 
 /** Read a bounded stream: Content-Length alone is not trustworthy. */
-export async function readUploadBody(request: Request): Promise<Uint8Array<ArrayBuffer>> {
+export async function readUploadBody(
+  request: Request,
+  maxBytes: number = MAX_UPLOAD_REQUEST_BYTES,
+): Promise<Uint8Array<ArrayBuffer>> {
   const declared = Number(request.headers.get("content-length"));
-  if (declared > MAX_UPLOAD_REQUEST_BYTES) throw new UploadTooLargeError();
+  if (declared > maxBytes) throw new UploadTooLargeError(maxBytes);
   const reader = request.body?.getReader();
   if (!reader) return new Uint8Array(0);
   const chunks: Uint8Array[] = [];
@@ -15,9 +24,9 @@ export async function readUploadBody(request: Request): Promise<Uint8Array<Array
       const result = await reader.read();
       if (result.done) break;
       size += result.value.byteLength;
-      if (size > MAX_UPLOAD_REQUEST_BYTES) {
+      if (size > maxBytes) {
         await reader.cancel();
-        throw new UploadTooLargeError();
+        throw new UploadTooLargeError(maxBytes);
       }
       chunks.push(result.value);
     }

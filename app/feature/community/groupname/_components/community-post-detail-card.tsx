@@ -12,7 +12,7 @@ import {
   CommunityVotePill,
 } from "../../_components/community-post-actions";
 import { CommunityPostEditor } from "../../_components/community-post-editor";
-import { CommunityPostImage } from "../../_components/community-post-image";
+import { CommunityPostGallery, postImages } from "../../_components/community-post-gallery";
 import { linkHost } from "../../_components/community-post-card";
 import { CommunityIcon, communityHandle } from "../../_components/community-identity";
 import { useCommunityUserProfile } from "../../_components/community-user-label";
@@ -102,7 +102,7 @@ export function CommunityPostDetailCard({ post, group }: CommunityPostDetailCard
         <p className="whitespace-pre-line break-words text-[0.9375rem] leading-7 text-foreground">{post.body}</p>
       ) : null}
 
-      {post.imageUrl ? <CommunityPostImage src={post.imageUrl} alt={post.title} variant="detail" /> : null}
+      <CommunityPostGallery images={postImages(post)} alt={post.title} variant="detail" />
 
       {post.linkUrl ? (
         <a

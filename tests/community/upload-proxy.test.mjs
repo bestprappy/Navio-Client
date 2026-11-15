@@ -31,3 +31,13 @@ test("reverse proxies use a configured public origin instead of trusting forward
   const forged = new Request("http://client:3000/api/posts",{method:"POST",headers:{origin:"https://attacker.test","x-forwarded-host":"attacker.test"}});
   assert.equal(isCrossOriginMutation(forged,"https://navio.test"),true);
 });
+
+test("a route can raise the limit for multi-picture posts and still cap it",async () => {
+  const limit = 21*1024*1024;
+  const body = new Uint8Array(10*1024*1024);
+  assert.equal((await readUploadBody(new Request("http://navio.test/upload",{method:"POST",body}),limit)).byteLength,body.byteLength);
+  await assert.rejects(
+    () => readUploadBody(new Request("http://navio.test/upload",{method:"POST",headers:{"content-length":String(limit+1)},body:"x"}),limit),
+    (error) => error instanceof UploadTooLargeError && error.limitBytes === limit,
+  );
+});

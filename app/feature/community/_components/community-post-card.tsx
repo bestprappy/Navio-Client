@@ -13,7 +13,7 @@ import {
   CommunitySharePill,
 } from "./community-post-actions";
 import { CommunityPostEditor } from "./community-post-editor";
-import { CommunityPostImage } from "./community-post-image";
+import { CommunityPostGallery, postImages } from "./community-post-gallery";
 import { CommunityPlanAttachment } from "./community-plan-attachment";
 import { CommunityIcon, communityHandle } from "./community-identity";
 import { useCommunityIdentity } from "./community-group-queries";
@@ -51,6 +51,7 @@ export function CommunityPostCard({
   onSavedRemoved,
 }: CommunityPostCardProps) {
   const router = useRouter();
+  const images = postImages(post);
   const { identity, authenticated } = useCommunityIdentity();
   const author = useCommunityUserProfile(post.authorId);
 
@@ -154,14 +155,14 @@ export function CommunityPostCard({
         </div>
       ) : null}
 
-      {post.body && !post.imageUrl ? (
+      {post.body && images.length === 0 ? (
         <p className="mt-1.5 line-clamp-3 break-words text-sm leading-6 text-muted-foreground">
           {post.body}
         </p>
       ) : null}
 
-      {post.imageUrl ? (
-        <CommunityPostImage src={post.imageUrl} alt={post.title} variant="feed" className="mt-2.5" />
+      {images.length > 0 ? (
+        <CommunityPostGallery images={images} alt={post.title} variant="feed" className="mt-2.5" />
       ) : null}
 
       {post.linkUrl ? (

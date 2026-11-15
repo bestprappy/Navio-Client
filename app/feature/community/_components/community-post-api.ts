@@ -13,8 +13,13 @@ export const postSchema = z.object({
   sharedTripId: optionalText,
   linkUrl: z.string().regex(/^https?:\/\/[^\s]+$/).nullable().transform((value) => value ?? undefined),
   imageUrl: z.string().regex(/^\/v1\/posts\/[0-9a-f-]+\/image$/).nullable().transform((value) => value?.replace(/^\/v1\//, "/api/") ?? undefined),
-}).transform(({ groupIconMediaId, ...post }): CommunityPost => ({
+  // Absent from servers that predate galleries; the single imageUrl stands in for them.
+  imageUrls: z.array(z.string().regex(/^\/v1\/posts\/[0-9a-f-]+\/images\/\d{1,2}$/)).max(10).optional(),
+}).transform(({ groupIconMediaId, imageUrls, ...post }): CommunityPost => ({
   ...post, tags: [], place: "", country: "",
+  imageUrls: imageUrls?.length
+    ? imageUrls.map((url) => url.replace(/^\/v1\//, "/api/"))
+    : post.imageUrl ? [post.imageUrl] : [],
   groupIconUrl: communityPictureUrl(post.groupSlug, "icon", groupIconMediaId),
 }));
 
@@ -60,12 +65,13 @@ export function listPosts(query: string, sort: string, page: number, group?: str
   return postRequest(`?${params}`, pageSchema(postSchema), undefined, signal);
 }
 
-export function createPost(groupSlug: string, values: PostFormValues, flairId: string | null, sharedTripId: string | null, file: File | null, requestId?: string) {
+/** Pictures are sent as repeated "file" parts; the service keeps them in this order. */
+export function createPost(groupSlug: string, values: PostFormValues, flairId: string | null, sharedTripId: string | null, files: readonly File[], requestId?: string) {
   const valid = postFormSchema.parse(values);
   const body = { ...valid, groupSlug, linkUrl: valid.linkUrl || null, flairId, sharedTripId, requestId };
-  if (!file) return postRequest("", postSchema, { method: "POST", body });
+  if (files.length === 0) return postRequest("", postSchema, { method: "POST", body });
   const multipart = new FormData();
   multipart.append("post", new Blob([JSON.stringify(body)], { type: "application/json" }));
-  multipart.append("file", file);
+  for (const file of files) multipart.append("file", file);
   return postRequest("", postSchema, { method: "POST", body: multipart });
 }

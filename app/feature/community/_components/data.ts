@@ -82,7 +82,10 @@ export type CommunityPost = {
   country: string;
   sharedTripId?: string;
   flairId?: string;
+  /** The first picture; kept for code paths that show only one. */
   imageUrl?: string;
+  /** Every picture in gallery order. */
+  imageUrls?: string[];
 };
 
 export type CommunityComment = {

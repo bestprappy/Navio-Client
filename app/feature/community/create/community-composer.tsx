@@ -10,7 +10,8 @@ import { useRouter } from "next/navigation";
 import { useAtom } from "jotai";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CommunityIcon, communityHandle } from "../_components/community-identity";
-import { CommunityPictureInput } from "../_components/community-picture-input";
+import { CommunityPostPicturesInput } from "../_components/community-post-pictures-input";
+import type { PostPicture } from "../_components/post-picture-files";
 import {
   Check,
   ChevronDown,
@@ -78,14 +79,14 @@ export function CommunityComposer({
   const [communitySearch, setCommunitySearch] = useState("");
   const [flairDialogOpen, setFlairDialogOpen] = useState(false);
   const [selectedFlairId, setSelectedFlairId] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [pictures, setPictures] = useState<PostPicture[]>([]);
   const [fieldErrors, setFieldErrors] = useState<PostFieldErrors>({});
   const [draftSaved, setDraftSaved] = useState(false);
 
   const appliedPrefillKeyRef = useRef<string | null>(null);
   const publishAttempt = useRef<{
     signature: string;
-    file: File | null;
+    pictures: readonly PostPicture[];
     id: string;
   } | null>(null);
 
@@ -147,23 +148,23 @@ export function CommunityComposer({
       if (
         !publishAttempt.current ||
         publishAttempt.current.signature !== signature ||
-        publishAttempt.current.file !== file
+        publishAttempt.current.pictures !== pictures
       ) {
-        publishAttempt.current = { signature, file, id: crypto.randomUUID() };
+        publishAttempt.current = { signature, pictures, id: crypto.randomUUID() };
       }
       return createPost(
         selectedGroup.slug,
         values,
         selectedFlairId,
         postDraft.planToken,
-        file,
+        pictures.map((picture) => picture.file),
         publishAttempt.current.id,
       );
     },
     onSuccess: async (post) => {
       setPostDraft({ ...defaultCreatePostDraft });
       setSelectedFlairId(null);
-      setFile(null);
+      setPictures([]);
       await cache.invalidateQueries({ queryKey: ["community"] });
       router.push(
         getCommunityPostHref(
@@ -353,7 +354,7 @@ export function CommunityComposer({
           const selected = activeTab === tab.id;
           const hasContent =
             (tab.id === "text" && postDraft.body.trim().length > 0) ||
-            (tab.id === "media" && Boolean(file)) ||
+            (tab.id === "media" && pictures.length > 0) ||
             (tab.id === "link" && postDraft.linkUrl.trim().length > 0);
           return (
             <button
@@ -514,13 +515,10 @@ export function CommunityComposer({
 
       {activeTab === "media" ? (
         <div id="post-panel-media" role="tabpanel" aria-labelledby="post-tab-media">
-          <CommunityPictureInput
-            label="Picture"
-            hint="PNG or JPEG, up to 5 MB"
-            shape="post"
-            file={file}
+          <CommunityPostPicturesInput
+            pictures={pictures}
             disabled={mutation.isPending}
-            onFileChange={setFile}
+            onChange={setPictures}
           />
         </div>
       ) : null}
