@@ -66,3 +66,31 @@ export function decorateTourPopover(popover: PopoverDOM, progress: PopoverProgre
   // Driver.js hides "Back" with inline display; keep the footer layout stable either way.
   popover.footer.dataset.first = progress.index === 0 ? "true" : "false";
 }
+
+const OPT_OUT_CLASS = "navio-tour-optout";
+
+/**
+ * Adds "Don't show me again" under the step's buttons, for tours that opened
+ * by themselves. Choosing it stops tips opening on their own for this account;
+ * Show tips still lists every tour.
+ */
+export function addTourOptOut(popover: PopoverDOM, onChoose: () => void): void {
+  popover.wrapper.querySelector(`.${OPT_OUT_CLASS}`)?.remove();
+  const row = document.createElement("div");
+  row.className = OPT_OUT_CLASS;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `${OPT_OUT_CLASS}-btn`;
+  button.textContent = "Don't show me again";
+  button.setAttribute("aria-describedby", "navio-tour-optout-hint");
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onChoose();
+  });
+  const hint = document.createElement("span");
+  hint.id = "navio-tour-optout-hint";
+  hint.className = "sr-only";
+  hint.textContent = "Tips will stop opening by themselves. Show tips in the menu still has every tour.";
+  row.append(button, hint);
+  popover.footer.after(row);
+}

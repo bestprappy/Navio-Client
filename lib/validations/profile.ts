@@ -32,6 +32,14 @@ export const userPreferencesSchema = z.object({
     .transform((value) => (value === "mi" ? "mi" : "km")),
   notificationEmail: z.boolean().nullish().transform((value) => value ?? true),
   notificationPush: z.boolean().nullish().transform((value) => value ?? false),
+  /** "Don't show me again" for first-time tips. Older servers omit it. */
+  tipsHidden: z.boolean().nullish().catch(null).transform((value) => value ?? false),
+  /** Tour id -> version already shown to this account. Older servers omit it. */
+  seenTips: z
+    .record(z.string(), z.number().int().nonnegative())
+    .nullish()
+    .catch(null)
+    .transform((value) => value ?? {}),
 });
 
 /**

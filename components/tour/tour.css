@@ -246,6 +246,45 @@ body .navio-tour .driver-popover-footer-btn:focus-visible {
   outline-offset: 2px;
 }
 
+/* "Don't show me again": a quiet secondary row under the step's actions */
+
+body .navio-tour .navio-tour-optout {
+  display: flex;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+body .navio-tour .navio-tour-optout-btn {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  margin-left: -0.25rem;
+  padding: 0 0.25rem;
+  border-radius: 0.375rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.33;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+
+body .navio-tour .navio-tour-optout-btn:hover {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+body .navio-tour .navio-tour-optout-btn:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  color: var(--foreground);
+}
+
 /* Arrow: Driver.js draws it with borders; colour only the side that points. */
 
 body .navio-tour .driver-popover-arrow {

@@ -153,7 +153,7 @@ try {
     await context.close();
   });
 
-  await check("dashboard: leaving mid-tour records nothing so it is offered again", async () => {
+  await check("dashboard: leaving mid-tour still counts as seen, so it opens once per account", async () => {
     const { context, page } = await open(browser, { path: "/dashboard" });
     await title(page).waitFor({ timeout: 15000 });
     await page.locator(".driver-popover-next-btn").click();
@@ -161,7 +161,7 @@ try {
     await page.evaluate(() => document.querySelector("a[href='/explore']")?.click());
     await page.waitForURL("**/explore**");
     await page.waitForTimeout(500);
-    assert.equal((await records(page)).dashboard, undefined);
+    assert.equal((await records(page)).dashboard?.status, "dismissed");
     assert.equal(await popover(page).count(), 0, "dashboard tip survived navigation");
     await context.close();
   });

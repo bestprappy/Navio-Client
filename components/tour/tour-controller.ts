@@ -5,12 +5,14 @@ import { activeTourAtom } from "./tour.atoms";
 import {
   fallbackFocusTarget,
   findVisibleTourTarget,
+  findVisibleTourTargetNear,
   prefersReducedMotion,
+  revealTourElement,
   setTriggerOpen,
   waitForTourTarget,
 } from "./tour-dom";
 import { createLayoutTracker } from "./tour-layout-tracker";
-import { decorateTourPopover } from "./tour-popover";
+import { addTourOptOut, decorateTourPopover } from "./tour-popover";
 import {
   countTargets,
   countTeachingSteps,
@@ -52,6 +54,12 @@ export type StartTourOptions = {
    * a tour someone asked for runs as long as it has anything to teach.
    */
   minTargets?: number;
+  /**
+   * Offers "Don't show me again" on every step. Called when it is chosen,
+   * just before the tour ends as dismissed. Only tours that opened by
+   * themselves offer it; one someone asked for does not need it.
+   */
+  onHide?: () => void;
 };
 
 export type StartTourResult = "started" | "busy" | "too-few-targets" | "failed";
@@ -82,6 +90,7 @@ export async function startTour({
   opener,
   onEnd,
   minTargets = MIN_TOUR_TARGETS,
+  onHide,
 }: StartTourOptions): Promise<StartTourResult> {
   if (isTourRunning()) return "busy";
 
@@ -114,6 +123,9 @@ export async function startTour({
   let previousIndex = 0;
   let openedTrigger: Element | null = null;
   let openedKey: string | null = null;
+  // The last control shown outside a menu. Menus open from the trigger nearest it,
+  // so the Auto plan step opens the menu of the day the previous step was on.
+  let anchor: Element | null = null;
   let navigating = false;
   let finished = false;
   let forcedReason: TourEndReason | null = null;
@@ -123,7 +135,7 @@ export async function startTour({
     if (instance.isActive()) instance.refresh();
   });
 
-  function syncMenu(entry: ResolvedTourStep) {
+  async function syncMenu(entry: ResolvedTourStep) {
     const wanted = entry.mode === "deferred" || entry.mode === "target" ? entry.step.opens ?? null : null;
     if (openedTrigger && openedKey !== wanted) {
       setTriggerOpen(openedTrigger, false);
@@ -131,8 +143,15 @@ export async function startTour({
       openedKey = null;
     }
     if (!wanted) return;
-    const trigger = openedTrigger ?? findVisibleTourTarget(wanted);
+    if (openedTrigger?.isConnected) {
+      // Same menu as the last step: reopen it if the person closed it in between.
+      setTriggerOpen(openedTrigger, true);
+      return;
+    }
+    const trigger = findVisibleTourTargetNear(wanted, anchor);
     if (!trigger) return;
+    // A menu opened from a trigger scrolled out of view opens out of view as well.
+    await revealTourElement(trigger);
     setTriggerOpen(trigger, true);
     openedTrigger = trigger;
     openedKey = wanted;
@@ -142,7 +161,7 @@ export async function startTour({
   async function prepare(index: number): Promise<boolean> {
     const entry = steps[index];
     if (!entry) return false;
-    syncMenu(entry);
+    await syncMenu(entry);
     if (entry.mode !== "deferred" && !(entry.mode === "target" && !entry.element?.isConnected)) return true;
     // Long enough for a menu that just opened to render; short enough that a fallback doesn't feel stuck.
     const element = entry.step.target ? await waitForTourTarget(entry.step.target, 700) : null;
@@ -226,6 +245,7 @@ export async function startTour({
         popover.wrapper.classList.add(CENTRED_CLASS);
       }
       decorateTourPopover(popover, { index, total, previousIndex, reducedMotion });
+      if (onHide) addTourOptOut(popover, hideForGood);
       previousIndex = index;
       // Driver.js focuses the close button; start on the primary action so Enter moves on.
       requestAnimationFrame(() => {
@@ -233,9 +253,10 @@ export async function startTour({
       });
     },
     onHighlightStarted: () => layout.pause(),
-    onHighlighted: (element) => {
+    onHighlighted: (element, _step, { state }) => {
       const real = element && element.id !== DUMMY_ELEMENT_ID ? element : null;
       layout.track(real);
+      if (real && !steps[state.activeIndex ?? 0]?.step.opens) anchor = real;
       if (!real || reducedMotion) return;
       real.classList.remove(PULSE_CLASS);
       // Restart the one-shot ring even when the same element is highlighted again.
@@ -252,6 +273,16 @@ export async function startTour({
     },
     onDestroyed: (_element, _step, { reason }) => finish(reason),
   });
+
+  function hideForGood() {
+    if (finished) return;
+    try {
+      onHide?.();
+    } catch (error) {
+      console.error(`tour-controller: could not turn off tips from the ${tour.id} tour`, error);
+    }
+    endWith("close");
+  }
 
   function finish(reason: TourEndReason | undefined) {
     if (finished) return;

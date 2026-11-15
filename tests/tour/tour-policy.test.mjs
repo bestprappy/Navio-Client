@@ -11,7 +11,7 @@ import {
   resolveTourSteps,
   statusForEndReason,
 } from "../../components/tour/tour-policy.ts";
-import { readTourRecords, tourStorageKey, writeTourRecord } from "../../components/tour/tour-storage.ts";
+import { mergeAccountTourRecords, readToursHidden, readTourRecords, tourStorageKey, writeTourRecord, writeToursHidden } from "../../components/tour/tour-storage.ts";
 
 const FIXED_NOW = new Date("2026-11-13T09:00:00.000Z");
 
@@ -39,7 +39,7 @@ function memoryStorage(initial = {}) {
 
 const onScreen = (...targets) => (target) => (targets.includes(target) ? { target } : null);
 
-const baseAutoStart = { ready: true, eligible: true, record: undefined, version: 2, anotherTourActive: false, overlayOpen: false };
+const baseAutoStart = { ready: true, eligible: true, record: undefined, version: 2, anotherTourActive: false, overlayOpen: false, hidden: false };
 
 test("finishing a tour marks it completed and every deliberate dismissal marks it dismissed", () => {
   assert.equal(statusForEndReason("done"), "completed");
@@ -185,4 +185,33 @@ test("blocked storage never throws on read or write", () => {
   } finally {
     console.warn = originalWarn;
   }
+});
+
+test("choosing don't show me again stops every tour from opening by itself", () => {
+  assert.equal(canAutoStartTour({ ...baseAutoStart, hidden: true }), false);
+});
+
+test("don't show me again is remembered per account in this browser", () => {
+  const storage = memoryStorage();
+  assert.equal(readToursHidden(storage, "user-1"), false);
+  writeToursHidden(storage, "user-1");
+  assert.equal(readToursHidden(storage, "user-1"), true);
+  assert.equal(readToursHidden(storage, "user-2"), false);
+  // The hidden flag lives beside the records and never corrupts them.
+  writeTourRecord(storage, "user-1", "planner", { status: "completed", version: 2 }, FIXED_NOW);
+  assert.equal(readTourRecords(storage, "user-1").planner?.status, "completed");
+});
+
+test("a tour already shown to the account elsewhere does not open by itself in a new browser", () => {
+  const merged = mergeAccountTourRecords({}, { planner: 2 });
+  assert.deepEqual(merged.planner, { status: "dismissed", version: 2, at: "" });
+  assert.equal(canAutoStartTour({ ...baseAutoStart, record: merged.planner }), false);
+});
+
+test("this browser's own record wins unless the account has seen a newer version", () => {
+  const local = { planner: { status: "completed", version: 2, at: "x" }, dashboard: { status: "completed", version: 1, at: "x" } };
+  const merged = mergeAccountTourRecords(local, { planner: 1, dashboard: 3, "not-a-tour": 9 });
+  assert.equal(merged.planner?.status, "completed");
+  assert.deepEqual(merged.dashboard, { status: "dismissed", version: 3, at: "" });
+  assert.equal(Object.hasOwn(merged, "not-a-tour"), false);
 });

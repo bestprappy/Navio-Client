@@ -41,11 +41,12 @@ function upsert(list: readonly PageTourRegistration[], next: PageTourRegistratio
 
 /**
  * Registers a page's tour for the tips menu and, unless `autoStart` is off,
- * starts it once the first time this person opens the page in this browser.
+ * starts it once per account: the first time this person opens the page, on
+ * any browser, unless they chose "Don't show me again".
  */
 export function PageTour({ tour, ready, eligible = true, autoStart = true, prepare }: PageTourProps) {
   const setPageTours = useSetAtom(pageToursAtom);
-  const { activeTourId, isSessionLoading, readRecord, start } = useTour();
+  const { activeTourId, isHidden, isProgressLoading, readRecord, start } = useTour();
   // One automatic attempt per visit; leaving and coming back allows another.
   const attemptedRef = useRef(false);
 
@@ -62,12 +63,13 @@ export function PageTour({ tour, ready, eligible = true, autoStart = true, prepa
   useEffect(() => () => stopTour(tour.id), [tour.id]);
 
   useEffect(() => {
-    if (!autoStart || attemptedRef.current || isSessionLoading) return;
+    if (!autoStart || attemptedRef.current || isProgressLoading) return;
     const preconditions = {
       ready,
       eligible,
       version: tour.version,
       anotherTourActive: activeTourId !== null,
+      hidden: isHidden(),
     };
     if (!canAutoStartTour({ ...preconditions, record: readRecord(tour), overlayOpen: false })) return;
 
@@ -75,10 +77,10 @@ export function PageTour({ tour, ready, eligible = true, autoStart = true, prepa
       // Re-check what may have changed while the page settled.
       if (!canAutoStartTour({ ...preconditions, record: readRecord(tour), overlayOpen: isOverlayOpen() })) return;
       attemptedRef.current = true;
-      void start(tour).catch((error: unknown) => console.error(`PageTour: the ${tour.id} tour failed to start`, error));
+      void start(tour, { automatic: true }).catch((error: unknown) => console.error(`PageTour: the ${tour.id} tour failed to start`, error));
     }, SETTLE_MS);
     return () => window.clearTimeout(timer);
-  }, [activeTourId, autoStart, eligible, isSessionLoading, readRecord, ready, start, tour]);
+  }, [activeTourId, autoStart, eligible, isHidden, isProgressLoading, readRecord, ready, start, tour]);
 
   return null;
 }
