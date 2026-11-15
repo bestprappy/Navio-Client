@@ -26,6 +26,7 @@ import {
 } from "./trip-dashboard.utils";
 import { useTripPlanStats } from "./use-trip-plan-stats";
 import { TripNameEditor } from "../../planId/_components/overview/trip-name-editor";
+import { tripCoverUrl } from "../trip-cover-api";
 import { TripScenery } from "./scenery";
 import { TripDestinationLabel } from "./trip-destination-label";
 
@@ -57,7 +58,7 @@ export function TripHeroCard({ trip, className }: TripHeroCardProps) {
     >
       <div className="relative flex flex-col">
         <header className="relative isolate flex min-h-60 flex-col justify-center gap-4 overflow-hidden border-b border-border p-5 sm:p-7">
-          <TripScenery placeId={isPending ? "" : getTripSceneryPlaceId(trip, stats?.destinationPlaces)} sizes="(max-width: 800px) 100vw, 65vw" />
+          <TripScenery coverUrl={tripCoverUrl(trip.id, trip.coverMediaId)} placeId={isPending ? "" : getTripSceneryPlaceId(trip, stats?.destinationPlaces)} sizes="(max-width: 800px) 100vw, 65vw" />
           <div className="relative z-10 flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2">
             <TripStatusBadge status={status} />
