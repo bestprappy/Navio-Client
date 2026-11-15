@@ -2,12 +2,12 @@
 
 import { useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
-import {catalogueDetail,type CataloguePlaceDetail} from "@/app/feature/explore/places/catalogue";
+import {canonicalCatalogueId,isCatalogueId,catalogueDetail,type CataloguePlaceDetail} from "@/app/feature/explore/places/catalogue";
 import { fetchPlaceDetail } from "./place-api";
 import type { PlaceProvider, PlaceSearchResult } from "../constants/types";
 
 export function getPlaceReference(placeId: string) {
-  if (placeId.startsWith("NAVIO:")) return {provider:"CATALOGUE" as const,providerPlaceId:placeId};
+  if (isCatalogueId(placeId)) return {provider:"CATALOGUE" as const,providerPlaceId:canonicalCatalogueId(placeId)};
   const match = /^(GOOGLE|MAPBOX):(.+)$/.exec(placeId);
   if (match) {
     return { provider: match[1] as PlaceProvider, providerPlaceId: match[2] };

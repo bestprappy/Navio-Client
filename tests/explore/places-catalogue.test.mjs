@@ -8,3 +8,5 @@ test('season applies to each collection, pagination has no duplicate cards',()=>
 test('suggestions are catalogue-only and reflect query and country',()=>{assert.ok(suggestCatalogue('art','TH').items.length);assert.equal(suggestCatalogue('art','JP').items.length,0);assert.equal(suggestCatalogue('zzzz','').items.length,0);});
 
 test('every bundled image has venue-specific author, licence and source, without live ratings',async()=>{const {existsSync}=await import('node:fs');for(const p of cataloguePlaces){assert.ok(existsSync(new URL('../../public'+p.photo.path,import.meta.url)));assert.match(p.photo.sourceUrl,/commons.wikimedia.org/);assert.ok(p.photo.author);}});
+
+test('encoded route identities resolve to canonical local records',()=>{for(const p of cataloguePlaces){assert.equal(findCataloguePlace(encodeURIComponent(p.id)).id,p.id);assert.equal(catalogueDetail(encodeURIComponent(encodeURIComponent(p.id))).providerPlaceId,p.id);}});
