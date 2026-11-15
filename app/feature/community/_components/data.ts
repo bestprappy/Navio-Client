@@ -37,8 +37,9 @@ export type CommunityRule = {
 export type CommunityFlair = {
   id: string;
   label: string;
-  /** An admin palette color id; the palette also decides white or black text. */
-  colorId: string;
+  /** Any #rrggbb the moderator picked. */
+  color: string;
+  textColor: "white" | "black";
 };
 
 export type CommunityBookmark = {

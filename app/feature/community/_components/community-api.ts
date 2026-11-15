@@ -1,23 +1,12 @@
 import { z } from "zod";
 
 import {
-  DEFAULT_PALETTE_COLOR_ID,
-  PALETTE_COLOR_ID_PATTERN,
-} from "@/lib/palette/palette-colors";
-
+  DEFAULT_FLAIR_COLOR,
+  flairHexSchema,
+  flairTextColorSchema,
+} from "./flair-colors";
 import type { CommunityGroup } from "./data";
 
-/** The palette color each retired flair tone stood for. Mirrors the server's migration V11. */
-const TONE_COLORS: Record<string, string> = {
-  reliable: "emerald",
-  question: "blue",
-  unsourced: "graphite",
-  speculation: "amber",
-  itinerary: "teal",
-  food: "coral",
-  ev: "lime",
-};
-const flairColorIdSchema = z.string().regex(PALETTE_COLOR_ID_PATTERN);
 const roleSchema = z.enum(["member", "moderator", "admin"]).nullable();
 const optionalMediaId = z
   .string()
@@ -30,20 +19,22 @@ export const ruleInputSchema = z.object({
 });
 export const flairInputSchema = z.object({
   label: z.string().trim().min(1).max(80),
-  colorId: flairColorIdSchema,
+  color: flairHexSchema,
+  textColor: flairTextColorSchema,
 });
-/** Servers from before palette colors send only a tone; it maps onto its old color. */
+/** Older servers send no free color; those flairs draw in the default color. */
 const flairSchema = z
   .object({
     id: z.string().uuid(),
     displayOrder: z.number().int(),
     label: z.string(),
-    colorId: flairColorIdSchema.nullish().catch(null),
-    tone: z.string().nullish(),
+    color: flairHexSchema.nullish().catch(null),
+    textColor: flairTextColorSchema.nullish().catch(null),
   })
-  .transform(({ colorId, tone, ...flair }) => ({
+  .transform(({ color, textColor, ...flair }) => ({
     ...flair,
-    colorId: colorId ?? TONE_COLORS[tone ?? ""] ?? DEFAULT_PALETTE_COLOR_ID,
+    color: color ?? DEFAULT_FLAIR_COLOR,
+    textColor: textColor ?? "white",
   }));
 export const resourceInputSchema = z.object({
   label: z.string().trim().min(1).max(120),

@@ -5,23 +5,20 @@ import type { CSSProperties } from "react";
 import type { CommunityFlair } from "./data";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { getTripBlockColorById } from "../../planner/planId/_components/constants/trip-block-colors";
+import { flairTextHex } from "./flair-colors";
 
-/**
- * A flair drawn in its admin palette color. The palette's foreground variable
- * carries the administrator's white, black or automatic text choice per theme.
- * Deleted or unknown colors fall back to the palette default.
- */
-export function flairColorStyle(colorId: string): CSSProperties {
-  const color = getTripBlockColorById(colorId);
-  return { backgroundColor: color.value, color: color.foreground };
+export function flairColorStyle(
+  flair: Pick<CommunityFlair, "color" | "textColor">,
+): CSSProperties {
+  return { backgroundColor: flair.color, color: flairTextHex(flair.textColor) };
 }
 
 type CommunityFlairBadgeProps = {
-  flair: Pick<CommunityFlair, "label" | "colorId">;
+  flair: Pick<CommunityFlair, "label" | "color" | "textColor">;
   className?: string;
 };
 
+/** A flair in the color and text color its moderators chose. */
 export function CommunityFlairBadge({
   flair,
   className,
@@ -29,7 +26,7 @@ export function CommunityFlairBadge({
   return (
     <Badge
       className={cn("max-w-full font-semibold", className)}
-      style={flairColorStyle(flair.colorId)}
+      style={flairColorStyle(flair)}
     >
       <span className="truncate">{flair.label}</span>
     </Badge>

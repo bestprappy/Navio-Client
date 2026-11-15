@@ -9,10 +9,17 @@ import { CommunityFormField } from "../../_components/community-form-field";
 import { CommunityQueryError } from "../../_components/community-query-state";
 import { useUpdateCommunityGroup } from "../../_components/community-group-queries";
 import type { GroupDetail } from "../../_components/community-api";
-import { getTripBlockColorByIndex } from "../../../planner/planId/_components/constants/trip-block-colors";
+import {
+  flairHexSchema,
+  flairTextColorSchema,
+  readableFlairText,
+  starterFlairColor,
+} from "../../_components/flair-colors";
 import {
   CommunityFlairColorField,
+  CommunityFlairContrastNote,
   CommunityFlairPreview,
+  CommunityFlairTextField,
 } from "./community-flair-fields";
 
 type Section = "rules" | "flairs" | "resources";
@@ -20,7 +27,8 @@ const itemSchema = z.object({
   label: z.string().trim().min(1, "Enter a title or label.").max(120),
   description: z.string().trim(),
   url: z.string().trim(),
-  colorId: z.string(),
+  color: flairHexSchema,
+  textColor: flairTextColorSchema,
 });
 const schema = z.object({ items: z.array(itemSchema) });
 type Values = z.infer<typeof schema>;
@@ -28,7 +36,8 @@ const emptyItem: Values["items"][number] = {
   label: "",
   description: "",
   url: "",
-  colorId: getTripBlockColorByIndex(0),
+  color: starterFlairColor(0),
+  textColor: readableFlairText(starterFlairColor(0)),
 };
 
 function initialValues(group: GroupDetail, section: Section): Values {
@@ -52,7 +61,8 @@ function initialValues(group: GroupDetail, section: Section): Values {
     items: group.postFlairs.map((flair) => ({
       ...emptyItem,
       label: flair.label,
-      colorId: flair.colorId,
+      color: flair.color,
+      textColor: flair.textColor,
     })),
   };
 }
@@ -116,13 +126,11 @@ export function CommunityContentForm({
               })),
             }
           : {
-              // flairType and tone keep servers from before palette colors
-              // accepting the save; newer servers keep colorId.
               flairs: values.items.map((item) => ({
                 flairType: "post",
                 label: item.label,
-                tone: "reliable",
-                colorId: item.colorId,
+                color: item.color,
+                textColor: item.textColor,
               })),
             };
     mutation.mutate({ section, body }, { onSuccess: () => form.reset(values) });
@@ -131,7 +139,7 @@ export function CommunityContentForm({
     <form className="space-y-4" onSubmit={form.handleSubmit(submit)}>
       <p className="text-sm text-muted-foreground">
         {section === "flairs"
-          ? "Members tag their posts with one of these flairs. Colors come from the admin palette."
+          ? "Members tag their posts with one of these flairs. Pick any color and white or black text."
           : `Add, remove, or reorder ${section}, then save your changes.`}
       </p>
       {fields.length === 0 ? (
@@ -151,7 +159,7 @@ export function CommunityContentForm({
             </legend>
           )}
           {section === "flairs" ? (
-            <div className="flex flex-wrap items-start gap-3">
+            <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
               <div className="min-w-48 flex-1">
                 <CommunityFormField
                   control={form.control}
@@ -160,6 +168,10 @@ export function CommunityContentForm({
                 />
               </div>
               <CommunityFlairColorField control={form.control} index={index} />
+              <CommunityFlairTextField control={form.control} index={index} />
+              <div className="basis-full empty:hidden">
+                <CommunityFlairContrastNote control={form.control} index={index} />
+              </div>
             </div>
           ) : (
             <CommunityFormField
@@ -230,7 +242,8 @@ export function CommunityContentForm({
           onClick={() =>
             append({
               ...emptyItem,
-              colorId: getTripBlockColorByIndex(fields.length),
+              color: starterFlairColor(fields.length),
+              textColor: readableFlairText(starterFlairColor(fields.length)),
             })
           }
         >
