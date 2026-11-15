@@ -13,6 +13,9 @@ export function energyModelForCar(car: EvCar): EnergyModel {
   };
 }
 const DC = new Set(["CCS1", "CCS2", "CHADEMO", "NACS", "GB_T"]);
+/** Conservative speeds for a car whose limits were never entered; matches Mobility's optimizer. */
+export const UNKNOWN_CAR_AC_KW = 7;
+export const UNKNOWN_CAR_DC_KW = 50;
 export function isStationReportedClosed(details: Pick<PlaceItemEvChargerDetails, "stationStatus">): boolean {
   return details.stationStatus === "temporarily_closed" || details.stationStatus === "permanently_closed";
 }
@@ -24,7 +27,9 @@ export function chargingEventForCar(details: PlaceItemEvChargerDetails, car: EvC
   const perPlug = details.connectorPowerKw ?? {};
   const onlyOneType = Object.keys(perPlug).length === 0 && new Set(details.connectorTypes.filter(c => c !== "OTHER")).size === 1;
   const powers = matching.flatMap(c => {
-    const carLimit = DC.has(c) ? limits.dcKw : limits.acKw;
+    const declared = DC.has(c) ? limits.dcKw : limits.acKw;
+    // Unknown (null) uses a conservative speed; 0 means the car cannot charge on that plug.
+    const carLimit = declared ?? (DC.has(c) ? UNKNOWN_CAR_DC_KW : UNKNOWN_CAR_AC_KW);
     const plug = perPlug[c] ?? (onlyOneType ? details.maxKw : null);
     return positive(carLimit) && positive(plug) ? [Math.min(carLimit, plug)] : [];
   });

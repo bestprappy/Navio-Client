@@ -15,7 +15,7 @@ test("partial routes and unknown capacity explain unavailable results", () => {
 test("rated range label never invents consumption and preserves its standard", () => {
   const car = { consumptionKwhPer100km: 18, energyProfile: { modelKind: "RATED_RANGE", selectionMode: "CATALOG_DEFAULT", ratedRangeKm: 480, ratedRangeStandard: "NEDC" } };
   assert.match(energyBasisLabel(car), /480 km NEDC/);
-  assert.match(energyBasisLabel(car), /Provisional/);
+  assert.match(energyBasisLabel(car), /NAVIO Estimate/);
   assert.doesNotMatch(energyBasisLabel(car), /kWh/);
 });
 test("custom observations do not acquire manufacturer provenance", () => {

@@ -1,4 +1,5 @@
 import { tripEnergyStateAtom } from "./trip-energy-state";
+import { withCalculationCapacity } from "./energy-selection";
 import { atom } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 
@@ -18,17 +19,23 @@ export const activeVehicleAtom = atom((get) =>
 );
 export const startingBatteryPctAtom = atom((get) => get(tripEnergyStateAtom)?.initialSocPct ?? get(activeVehicleAtom)?.startingBatteryPct ?? 80);
 export const activeEvCarAtom = atom<EvCar | null>((get) => {
-  const snapshot = get(tripEnergyStateAtom)?.vehicleSnapshot;
-  if (snapshot) return {
-    id: snapshot.vehicleId, make: "", model: snapshot.label, year: null,
-    batteryKwh: snapshot.profile.usableBatteryCapacityKwh ?? 0,
-    rangeKm: snapshot.profile.ratedRangeKm ?? 0,
-    consumptionKwhPer100km: snapshot.profile.consumptionKwhPer100km ?? 0,
-    maxAcKw: snapshot.maxAcKw ?? 0, maxDcKw: snapshot.maxDcKw ?? 0,
-    chargingCapabilities: { acKw: snapshot.maxAcKw, dcKw: snapshot.maxDcKw },
-    connectorTypes: snapshot.connectorTypes, energyProfile: snapshot.profile,
-    legacyConsumptionConfirmed: snapshot.legacyConsumptionConfirmed,
-  };
+  const state = get(tripEnergyStateAtom);
+  const snapshot = state?.vehicleSnapshot;
+  if (snapshot) {
+    // Trips saved before the capacity fallback keep a snapshot without one; the trip's vehicle has it.
+    const declared = state?.vehicles?.find(entry => entry.vehicle.id === snapshot.vehicleId)?.vehicle.batteryCapacityKwh;
+    const profile = withCalculationCapacity(snapshot.profile, declared);
+    return {
+      id: snapshot.vehicleId, make: "", model: snapshot.label, year: null,
+      batteryKwh: profile.usableBatteryCapacityKwh ?? 0,
+      rangeKm: snapshot.profile.ratedRangeKm ?? 0,
+      consumptionKwhPer100km: snapshot.profile.consumptionKwhPer100km ?? 0,
+      maxAcKw: snapshot.maxAcKw ?? 0, maxDcKw: snapshot.maxDcKw ?? 0,
+      chargingCapabilities: { acKw: snapshot.maxAcKw, dcKw: snapshot.maxDcKw },
+      connectorTypes: snapshot.connectorTypes, energyProfile: profile,
+      legacyConsumptionConfirmed: snapshot.legacyConsumptionConfirmed,
+    };
+  }
   const vehicle = get(activeVehicleAtom);
   return vehicle ? getVehicleCar(vehicle) : null;
 });

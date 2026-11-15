@@ -22,25 +22,33 @@ export function defaultEnergyProfile(catalog: CatalogVehicle | null, rangeKm: nu
   };
 }
 
+/**
+ * Without a usable capacity a charge time cannot be computed, so the vehicle's declared battery size
+ * stands in. The trip service applies the same fallback, keeping planner estimates and Auto Add aligned.
+ */
+export function withCalculationCapacity(profile: VehicleEnergyProfile, declaredBatteryKwh: number | null | undefined): VehicleEnergyProfile {
+  return positive(profile.usableBatteryCapacityKwh) || !positive(declaredBatteryKwh) ? profile
+    : { ...profile, usableBatteryCapacityKwh: declaredBatteryKwh };
+}
+
 export function energySelectionDescription(profile: VehicleEnergyProfile): string {
-  if (profile.selectionMode === "LEGACY_UNCONFIRMED") return "Legacy estimate: source unknown. Automatic charger application requires explicit confirmation of the existing value. You can also choose a default or your own average.";
-  if (profile.modelKind === "RATED_RANGE") return `Rated-range preview: ${profile.ratedRangeKm} km${profile.ratedRangeStandard === "NONE" ? "" : ` (${profile.ratedRangeStandard})`}. No consumption value is derived. Automatic charger application is unavailable.`;
+  if (profile.selectionMode === "LEGACY_UNCONFIRMED") return "Legacy estimate: source unknown. Choose a default, NAVIO Estimate or your own average to confirm it.";
+  if (profile.modelKind === "RATED_RANGE") return `NAVIO Estimate: based on ${profile.ratedRangeKm} km${profile.ratedRangeStandard === "NONE" ? "" : ` (${profile.ratedRangeStandard})`}. Real use varies with speed, load and weather.`;
   if (profile.modelKind === "UNAVAILABLE") return "Energy model unavailable. Enter your observed average or a reference range.";
   return `${profile.consumptionSource === "USER_OBSERVED" ? "Your average" : "Catalogue consumption"}: ${profile.consumptionKwhPer100km} kWh/100 km. Measurement basis: ${profile.consumptionMeasurementBasis.toLowerCase().replaceAll("_", " ")}.`;
 }
 
+/**
+ * Auto Add and Optimize Route work with any model that can predict the battery: the traveller's own
+ * average, the catalogue figure, or the NAVIO Estimate from rated range. Each needs a battery size so
+ * charging time can be computed.
+ */
 export function canAutomaticallyPlan(car: EvCar | null): boolean {
-  if (!car || !positive(car.consumptionKwhPer100km)) return false;
-  const profile = car.energyProfile;
-  if (!profile || profile.modelKind !== "CONSUMPTION" || !positive(profile.consumptionKwhPer100km)
-    || !positive(profile.usableBatteryCapacityKwh)) return false;
-  switch (profile.selectionMode) {
-    case "LEGACY_UNCONFIRMED": return car.legacyConsumptionConfirmed === true;
-    case "USER_OVERRIDE": return profile.consumptionSource === "USER_OBSERVED";
-    case "CATALOG_DEFAULT": return ["MANUFACTURER_REPORTED", "REGULATORY_REPORTED"].includes(profile.consumptionSource)
-      && profile.consumptionMeasurementBasis === "BATTERY_SIDE" && profile.sourceUrl?.startsWith("https://") === true;
-    default: return false;
-  }
+  const profile = car?.energyProfile;
+  if (!car || !profile) return false;
+  if (!positive(profile.usableBatteryCapacityKwh) && !positive(car.batteryKwh)) return false;
+  return (profile.modelKind === "CONSUMPTION" && positive(profile.consumptionKwhPer100km))
+    || (profile.modelKind === "RATED_RANGE" && positive(profile.ratedRangeKm));
 }
 
 export function isLegacyVehicle(vehicle: SavedVehicle): boolean {

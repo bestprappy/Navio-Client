@@ -1,6 +1,7 @@
 import { atom } from "jotai";
 import { z } from "zod";
 import { legacyEnergyProfile, savedVehicleSchema, vehicleEnergyProfileSchema, type SavedVehicle } from "./vehicle-api";
+import { withCalculationCapacity } from "./energy-selection";
 
 export const tripEnergySnapshotSchema = z.object({
   version: z.literal(1),
@@ -45,7 +46,7 @@ export function removeTripVehicle(state: TripEnergyState | null | undefined, id:
 export function snapshotTripVehicle(vehicle: SavedVehicle): TripEnergySnapshot {
   return tripEnergySnapshotSchema.parse({
     version: 1, vehicleId: vehicle.id, label: vehicle.nickname || `${vehicle.make} ${vehicle.model}`,
-    profile: vehicle.energyProfile ?? legacyEnergyProfile(vehicle),
+    profile: withCalculationCapacity(vehicle.energyProfile ?? legacyEnergyProfile(vehicle), vehicle.batteryCapacityKwh),
     maxAcKw: vehicle.settings.maxAcKw, maxDcKw: vehicle.settings.maxDcKw,
     connectorTypes: vehicle.connectorTypes, legacyConsumptionConfirmed: vehicle.legacyConsumptionConfirmed === true,
   });

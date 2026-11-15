@@ -1,6 +1,7 @@
 import type { EvCar, UserVehicle } from "../constants/vehicle.types";
 import type { CatalogVehicle, SavedVehicle } from "./vehicle-api";
 import { legacyEnergyProfile } from "./vehicle-api";
+import { withCalculationCapacity } from "./energy-selection";
 
 export function catalogVehicleCar(vehicle: CatalogVehicle): EvCar {
   return {
@@ -25,7 +26,7 @@ export function savedVehicleForPlanner(vehicle: SavedVehicle): UserVehicle {
     sourceUrl: vehicle.catalog?.sourceUrl, verifiedAt: vehicle.catalog?.verifiedAt,
     chargingLimitsKnown: vehicle.settings.maxAcKw !== null && vehicle.settings.maxDcKw !== null,
     chargingCapabilities: { acKw: vehicle.settings.maxAcKw, dcKw: vehicle.settings.maxDcKw },
-    energyProfile: vehicle.energyProfile ?? legacyEnergyProfile(vehicle),
+    energyProfile: withCalculationCapacity(vehicle.energyProfile ?? legacyEnergyProfile(vehicle), vehicle.batteryCapacityKwh),
     legacyConsumptionConfirmed: vehicle.legacyConsumptionConfirmed,
   };
   const base = { id: vehicle.id, nickname: vehicle.nickname ?? undefined, startingBatteryPct: vehicle.settings.startingBatteryPct };

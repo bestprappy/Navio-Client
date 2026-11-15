@@ -23,7 +23,8 @@ test("legacy data carries unknown provenance without changing calculation inputs
   assert.equal(mapped.energyProfile.consumptionStandard, "NONE");
   assert.equal(mapped.energyProfile.ratedRangeStandard, "NEDC");
   assert.equal(mapped.energyProfile.sourceUrl, null);
-  assert.equal(mapped.energyProfile.usableBatteryCapacityKwh, null);
+  // Calculations use the declared battery when usable capacity is unknown; the saved record is unchanged.
+  assert.equal(mapped.energyProfile.usableBatteryCapacityKwh, 60.48);
   assert.equal(saved.energyProfile, undefined);
 });
 
@@ -47,6 +48,7 @@ test("observed metadata passes through API serialization and planner mapping", a
   const saved = await executeVehicleCommand({ kind: "update", id: savedVehicleFixture.id, patch: {
     consumptionKwhPer100km: 17.5, consumptionProvenance: userObservedConsumption,
   } });
-  assert.deepEqual(savedVehicleForPlanner(saved).car.energyProfile, energyProfile);
+  assert.deepEqual(savedVehicleForPlanner(saved).car.energyProfile, { ...energyProfile, usableBatteryCapacityKwh: savedVehicleFixture.batteryCapacityKwh });
+  assert.equal(saved.energyProfile.usableBatteryCapacityKwh, null);
   assert.equal(saved.energyProfile.consumptionMeasurementBasis, "UNKNOWN");
 });

@@ -47,6 +47,7 @@ function harness() {
     "./day-automation-history": { dayAutomationHistoryAtom: {} },
     "./charging-preferences": { ChargingPreferences: "Preferences" },
     "./day-route-optimizer": { DayRouteOptimizer: "Optimizer" },
+    "./auto-add-guidance": { AutoAddGuidance: "Guidance" },
     "../garage/use-trip-charging": { useTripCharging: () => null },
     "@/components/ui/button": { Button:"Button" },
   };
