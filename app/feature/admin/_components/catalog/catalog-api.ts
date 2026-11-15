@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { uploadWithProgress } from "@/lib/api-client";
 
 export const CONNECTORS = ["CCS1", "CCS2", "TYPE2", "J1772", "CHADEMO", "NACS", "GB_T"] as const;
 export const CATALOG_STATUSES = ["DRAFT", "PUBLISHED", "ARCHIVED"] as const;
@@ -54,6 +55,10 @@ export function listAdminCatalog(term: string, status: CatalogStatus | null, pag
   if (status) params.set("status", status);
   return request(`?${params}`, catalogPageSchema);
 }
+const catalogImageSchema = z.object({ id: z.string(), imageUrl: z.string() });
+/** Uploads a PNG or JPEG photo and returns the path to save as the vehicle's image. */
+export const uploadCatalogImage = (file: File, onProgress: (percent: number) => void) =>
+  uploadWithProgress("/api/admin/vehicle-models/images", file, { schema: catalogImageSchema, operation: "uploadCatalogImage", onProgress });
 export const getAdminCatalogEntry = (id: string) => request(`/${encodeURIComponent(id)}`, catalogEntrySchema);
 export const saveCatalogEntry = (entry: CatalogEntry | null, specification: CatalogFields) => request(entry ? `/${encodeURIComponent(entry.id)}` : "", catalogEntrySchema, entry ? "PUT" : "POST", { specification, expectedVersion: entry?.version ?? null });
 export const transitionCatalogEntry = (entry: CatalogEntry, action: "publish" | "archive") => request(`/${encodeURIComponent(entry.id)}/${action}`, catalogEntrySchema, "POST", { expectedVersion: entry.version });
