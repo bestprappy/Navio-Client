@@ -14,7 +14,7 @@ import { userObservedConsumption } from "./vehicle-api";
 import { tripEnergyStateAtom } from "./trip-energy-state";
 import { ENERGY_SELECTION_ID } from "./focus-vehicle-settings";
 
-import { arrivalReservePctAtom } from "./garage.atoms";
+import { lowBatteryPctAtom } from "./garage.atoms";
 
 type EnergySelection = "RESET_DEFAULT" | "USE_RATED_RANGE" | "USER_OVERRIDE";
 type Selection = EnergySelection | "";
@@ -26,7 +26,7 @@ const energyOptions: readonly { value: EnergySelection; label: string }[] = [
 ];
 
 export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle; car?: EvCar | null }) {
-  const reservePct = useAtomValue(arrivalReservePctAtom);
+  const reservePct = useAtomValue(lowBatteryPctAtom);
   const [tripEnergy, setTripEnergy] = useAtom(tripEnergyStateAtom);
   const battery = tripEnergy?.initialSocPct ?? vehicle.settings.startingBatteryPct;
   const [nickname, setNickname] = useState(vehicle.nickname ?? "");

@@ -31,9 +31,7 @@ function harness() {
     "../garage/trip-energy-projection": { energyModelForCar: () => ({modelKind:"CONSUMPTION"}) },
     "../garage/energy-selection": { canAutomaticallyPlan:() => true },
     "../garage/trip-energy-state": { tripEnergyStateAtom:energyAtom },
-    "../garage/garage.atoms": { batteryThresholdPctAtom:reserveAtom, minimumArrivalPctAtom:reserveAtom },
-    "../garage/garage-formatters": { formatMinutes:minutes => `${minutes} min` },
-    "./ev-optimization-format": { describeOperation:operation => operation.type, operationKey:(_operation, index) => String(index) },
+    "../garage/garage.atoms": { batteryThresholdPctAtom:reserveAtom },
     "../overview/trip-builder.atoms": atoms,
     "@/app/feature/planner/_components/optimization-state": {
       optimizationStateKey:(...parts) => JSON.stringify(parts),
@@ -45,10 +43,10 @@ function harness() {
       applyTripEvOptimization:async (_id,payload) => { calls.push(["apply",payload]); return {version:8}; },
     },
     "./day-automation-history": { dayAutomationHistoryAtom: {} },
-    "./charging-preferences": { ChargingPreferences: "Preferences" },
-    "./day-route-optimizer": { DayRouteOptimizer: "Optimizer" },
+    "./auto-add-threshold": { AutoAddThreshold: "Threshold" },
+    "./auto-add-preview": { AutoAddPreview: "Preview" },
     "./auto-add-guidance": { AutoAddGuidance: "Guidance" },
-    "./day-charging-need": { dayHasNoAutoAddSlot: () => false },
+    "./day-charging-need": { dayHasNoAutoAddSlot: () => false, lowestStopArrivalPct: () => null },
     "../garage/use-trip-charging": { useTripCharging: () => null },
     "@/components/ui/button": { Button:"Button" },
   };
@@ -69,6 +67,7 @@ test("optimization callbacks flush before preview/apply and send the persisted v
   assert.equal(h.calls[0],"flush/read");
   assert.equal(h.calls[1][0],"preview");
   assert.equal(h.calls[1][1].expectedVersion,7);
+  assert.equal("minimumArrivalSocPct" in h.calls[1][1],false);
   const snapshot=await h.mutations[1].mutationFn(h.preview);
   h.mutations[1].onSuccess(snapshot,h.preview);
   assert.equal(h.calls[2],"flush/read");

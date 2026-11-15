@@ -17,9 +17,9 @@ const projection = await import("../../app/feature/planner/planId/_components/ga
 const optimizationFormat = await import("../../app/feature/planner/planId/_components/charger/ev-optimization-format.ts");
 
 const deps = {
-  jotai:{ useAtomValue:() => 12 },
+  jotai:{ useAtomValue:() => 10 },
   "@/lib/utils":{ cn:(...values) => values.filter(Boolean).join(" ") },
-  "./garage.atoms":{ arrivalReservePctAtom:{} },
+  "./garage.atoms":{ lowBatteryPctAtom:{} },
   "./battery-route-chart":{ BatteryRouteChart:() => createElement("div", null, "chart") },
   "./garage-formatters":formatters,
   "./energy-display":display,
@@ -45,11 +45,13 @@ test("missing data still reads as unavailable rather than as an empty battery", 
   assert.doesNotMatch(html, /runs out/i);
 });
 
-test("an arrival below reserve is flagged even when a charge at that stop lifts the end of day", () => {
-  assert.match(render({ predictedBelowReserve:true, endBatteryPct:70 }), /below your 12% reserve/);
+test("a very low arrival is flagged even when a charge at that stop lifts the end of day", () => {
+  const html = render({ predictedBelowReserve:true, endBatteryPct:70 });
+  assert.match(html, /under 10% battery/);
+  assert.doesNotMatch(html, /reserve/i);
 });
 
-test("a below-reserve end of day is not flagged a second time", () => {
+test("a very low end of day is not flagged a second time", () => {
   assert.doesNotMatch(render({ predictedBelowReserve:true, endBatteryPct:8 }), /role="alert"/);
 });
 

@@ -10,7 +10,7 @@ export function TripEnergyDetails({ blocks, days }: {
   return (
     <details className="border-t border-border p-4">
       <summary className="cursor-pointer rounded-sm text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring">Daily energy details</summary>
-      <p className="mt-2 text-xs text-muted-foreground">Nominal predictions carry forward across days. Observed battery levels update subsequent predictions; they do not imply charging. Reserve is a planning threshold, not an uncertainty allowance.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Nominal predictions carry forward across days. Observed battery levels update subsequent predictions; they do not imply charging.</p>
       <ol className="mt-3 space-y-3">
         {blocks.toSorted((a, b) => a.date.localeCompare(b.date)).map((block, index) => {
           const day = days?.get(block.id);
@@ -25,7 +25,7 @@ export function TripEnergyDetails({ blocks, days }: {
               <div><dt className="text-muted-foreground">Charging duration</dt><dd>{energyDisplayNumber(day?.chargeMinutes, " min")}</dd></div>
               <div><dt className="text-muted-foreground">Energy added</dt><dd>{energyDisplayNumber(day?.chargeEnergyKwh, " kWh")}</dd></div>
             </dl>
-            {day?.predictedBelowReserve && <p className="mt-2 text-destructive">Predicted arrival below reserve.</p>}
+            {day?.predictedBelowReserve && <p className="mt-2 text-destructive">A stop is reached with very low battery.</p>}
             {day?.infeasible && <p className="mt-2 text-destructive">At least one leg is predicted to exceed available battery.</p>}
             {observations.map(([id, state]) => {
               const item = block.items.find(item => item.id === id);

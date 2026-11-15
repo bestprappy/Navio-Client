@@ -5,7 +5,7 @@ import { useAtom, useAtomValue, useSetAtom, useStore } from "jotai";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { tripBlocksAtom, plannerReadOnlyAtom, evChargerToPlaceItem } from "../overview/trip-builder.atoms";
-import { activeEvCarAtom, startingBatteryPctAtom, batteryThresholdPctAtom, minimumArrivalPctAtom } from "../garage/garage.atoms";
+import { activeEvCarAtom, startingBatteryPctAtom, batteryThresholdPctAtom, lowBatteryPctAtom } from "../garage/garage.atoms";
 import { projectCanonicalTrip, chargingEventForCar } from "../garage/trip-energy-projection";
 import { canAutomaticallyPlan } from "../garage/energy-selection";
 import { getTripRouteGroups } from "../routes/trip-route.helpers";
@@ -20,7 +20,7 @@ type Proposal = { day: TripBlockData; key: string; before: RouteMetrics; after: 
 export function DayRouteOptimizer({ blockId }: { blockId: string | null }) {
   const blocks = useAtomValue(tripBlocksAtom), setBlocks = useSetAtom(tripBlocksAtom), store = useStore();
   const car = useAtomValue(activeEvCarAtom), initial = useAtomValue(startingBatteryPctAtom);
-  const threshold = useAtomValue(batteryThresholdPctAtom), arrival = useAtomValue(minimumArrivalPctAtom);
+  const threshold = useAtomValue(batteryThresholdPctAtom), lowBatteryPct = useAtomValue(lowBatteryPctAtom);
   const readOnly = useAtomValue(plannerReadOnlyAtom);
   const routes = useTripRoutes();
   const controller = useRef<AbortController | null>(null);
@@ -31,7 +31,7 @@ export function DayRouteOptimizer({ blockId }: { blockId: string | null }) {
   const [message, setMessage] = useState("");
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const setHistory = useSetAtom(dayAutomationHistoryAtom);
-  const key = JSON.stringify([blocks, car, initial, threshold, arrival, strategy, flexible]);
+  const key = JSON.stringify([blocks, car, initial, threshold, strategy, flexible]);
   const current = proposal?.key === key ? proposal : null;
   const day = blocks.find(b => b.id === blockId);
 
@@ -45,7 +45,7 @@ export function DayRouteOptimizer({ blockId }: { blockId: string | null }) {
       const baseSegments = (await fetchTripRoutes({ profile: "driving-traffic", groups: getTripRouteGroups(blocks).filter(g => g.blockId === day.id) }, signal)).segments;
       const before = routeMetrics(baseSegments);
       if (!before) throw new Error("Road distance and travel time are required. Mixed travel modes cannot be optimized automatically.");
-      const originalProjection = projectCanonicalTrip(blocks, [...routes.data.segments.filter(s => s.blockId !== day.id), ...baseSegments], car, initial, threshold);
+      const originalProjection = projectCanonicalTrip(blocks, [...routes.data.segments.filter(s => s.blockId !== day.id), ...baseSegments], car, initial, lowBatteryPct);
       const candidates = dayOrderCandidates(day, flexible);
       if (flexible) {
         const existing = new Set(day.items.filter(isPlaceItem).map(item => item.placeId));
@@ -69,14 +69,13 @@ export function DayRouteOptimizer({ blockId }: { blockId: string | null }) {
         const result = await fetchTripRoutes({ profile: "driving-traffic", groups: getTripRouteGroups(next).filter(g => g.blockId === day.id) }, signal);
         const metrics = routeMetrics(result.segments);
         if (!metrics || !meaningfulImprovement(before, metrics, strategy) || (best && routeScore(metrics, strategy) >= routeScore(best.after, strategy))) continue;
-        const proposedTrip = projectCanonicalTrip(next, [...routes.data.segments.filter(s => s.blockId !== day.id), ...result.segments], car, initial, threshold);
+        const proposedTrip = projectCanonicalTrip(next, [...routes.data.segments.filter(s => s.blockId !== day.id), ...result.segments], car, initial, lowBatteryPct);
         const projection = proposedTrip.days.get(day.id);
         if ([...proposedTrip.days].some(([id, state]) => id !== day.id && state.infeasible && !originalProjection.days.get(id)?.infeasible)) continue;
         const states = projection ? [...projection.batteryByItemId.values()] : [];
-        const prefs = { batteryThresholdPct: threshold, minimumArrivalPct: arrival };
-        if (!projection || projection.infeasible || projection.startDisconnected || states.length < 2
+                if (!projection || projection.infeasible || projection.startDisconnected || states.length < 2
           || states.some(s => s.rawPredictedArrivalSocPct == null || s.departureSocPct == null)
-          || !dayHasNoAutoAddSlot(projection, candidate, prefs)) continue;
+          || !dayHasNoAutoAddSlot(projection, candidate, threshold)) continue;
         const changes = candidate.items.flatMap((item, index) => {
           const original = day.items.find(i => i.id === item.id)!;
           if (isPlaceItem(item) && isPlaceItem(original) && item.placeId !== original.placeId) return [`Replace ${original.name} with ${item.name}; keep its charging target.`];

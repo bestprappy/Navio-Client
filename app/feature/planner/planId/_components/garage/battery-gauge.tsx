@@ -27,7 +27,7 @@ type BatteryGaugeProps = {
   children?: ReactNode;
 };
 
-/** A horizontal battery: ten cells, a terminal nub, level-colored fill and a dashed reserve mark. */
+/** A horizontal battery: ten cells, a terminal nub, and a level-colored fill. */
 export function BatteryGauge({ value, previousValue, chargeTo, markerPct, reservePct, className, children }: BatteryGaugeProps) {
   const pct = clampPct(value);
   const tone = BATTERY_TONES[getBatteryTone(pct, reservePct)];
@@ -57,10 +57,6 @@ export function BatteryGauge({ value, previousValue, chargeTo, markerPct, reserv
           {CELL_DIVIDERS.map((divider) => (
             <span key={divider} className="absolute inset-y-0 w-0.5 -translate-x-1/2 bg-card/70" style={{ left: `${divider}%` }} />
           ))}
-          <span
-            className="absolute -inset-y-1 border-l-2 border-dashed border-destructive"
-            style={{ left: `${clampPct(reservePct)}%` }}
-          />
         </div>
         {markerPct !== undefined && (
           <span

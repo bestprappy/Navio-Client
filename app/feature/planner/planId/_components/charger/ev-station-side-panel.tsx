@@ -148,7 +148,7 @@ export function EvStationSidePanel({
             />
           </div>
 
-          <div className="mt-3 rounded-sm border border-primary/25 bg-primary/5 p-3" data-tour="planner.ev-preferences">
+          <div className="mt-3 rounded-md bg-primary/5 p-4 ring-1 ring-primary/15" data-tour="planner.ev-preferences">
             <EvRouteOptimizationPanel
               blockId={panelBlockId}
               vehicle={activeEvCar}
