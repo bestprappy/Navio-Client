@@ -62,7 +62,7 @@ export function AddVehicleDialog({ onClose }: { onClose: () => void }) {
             </p>
             <p className="text-sm">{defaultEnergyProfile(selected, selected.rangeKm).modelKind === "CONSUMPTION"
               ? `Vehicle consumption: ${selected.energyProfile?.consumptionKwhPer100km} kWh/100 km`
-              : `NAVIO Estimate: based on ${selected.rangeKm} km ${selected.rangeStandard}. Provisional; no consumption value is derived.`}</p>
+              : `Factory range: ${selected.rangeKm} km ${selected.rangeStandard}. Navio uses a 20% road-trip range allowance for planning; battery capacity is unchanged.`}</p>
           </div>}
           <p className="text-xs text-muted-foreground">Images may be illustrations. Appearance and equipment may vary by trim.</p>
           <div className="flex justify-end gap-2">

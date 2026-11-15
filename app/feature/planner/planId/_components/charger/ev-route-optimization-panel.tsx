@@ -7,6 +7,7 @@ import { dayHasNoAutoAddSlot, lowestStopArrivalPct } from "./day-charging-need";
 import { useTripCharging } from "../garage/use-trip-charging";
 import { energyModelForCar } from "../garage/trip-energy-projection";
 import { canAutomaticallyPlan } from "../garage/energy-selection";
+import { rangeReductionPct, REAL_WORLD_ENERGY_CAPABILITY } from "../garage/energy-policy";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 
 import { useEffect, useMemo, useState } from "react";
@@ -117,6 +118,10 @@ export function EvRouteOptimizationPanel({
         throw new PlannerApiError("The trip changed while preparing optimization. Preview again.", 409);
       }
       if (!snapshot.capabilities?.includes("day-auto-add-v1")) throw new PlannerApiError("Auto Add needs the day charging server update before it can preserve all your stops.", 409);
+      if (request.vehicle?.energyModel && rangeReductionPct(request.vehicle.energyModel) > 0
+        && !snapshot.capabilities?.includes(REAL_WORLD_ENERGY_CAPABILITY)) {
+        throw new PlannerApiError("Charging planning needs the real-world energy update. Your itinerary can still be edited.", 409);
+      }
       const needsTargets = blocks.some((block) => block.items.some((item) => item.type === "place" && item.evCharger?.targetBatteryPct != null));
       const needsDestinations = blocks.some((block) => block.destination);
       if ((needsTargets && !snapshot.capabilities?.includes("charge-targets")) || (needsDestinations && !snapshot.capabilities?.includes("day-destinations"))) {

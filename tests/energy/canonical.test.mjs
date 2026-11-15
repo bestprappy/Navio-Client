@@ -30,11 +30,11 @@ test("observations, removal, multiple days, zero and recovery preserve predictio
   const stop = (id, dayId, distanceKm, observedSocPct = null) => ({ id, dayId, distanceKm, observedSocPct, distanceQuality: "ROUTED" });
   const stops = [stop("a", "day1", 28, 68), stop("b", "day2", 10, 50), stop("c", "day2", 10)];
   const result = projectEnergyTrip(model, 100, stops);
-  assert.equal(result[0].rawPredictedArrivalSocPct, 72);
+  assert.equal(result[0].rawPredictedArrivalSocPct, 65);
   assert.equal(result[0].departureSocPct, 68);
   assert.equal(result[1].startingSocPct, 68);
-  assert.equal(result[2].departureSocPct, 40);
-  assert.equal(projectEnergyTrip(model, 100, [{ ...stops[0], observedSocPct: null }, ...stops.slice(1)])[1].rawPredictedArrivalSocPct, 62);
+  assert.equal(result[2].departureSocPct, 37.5);
+  assert.equal(projectEnergyTrip(model, 100, [{ ...stops[0], observedSocPct: null }, ...stops.slice(1)])[1].rawPredictedArrivalSocPct, 52.5);
   const recovered = projectEnergyTrip(model, 73, [stop("a", "d1", 80), stop("b", "d2", 10, 0), stop("c", "d3", 0)]);
   assert.equal(recovered[0].predictedLegFeasibility, "INFEASIBLE");
   assert.equal(recovered[1].rawPredictedArrivalSocPct, null);

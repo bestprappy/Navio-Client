@@ -102,7 +102,7 @@ export function VehicleUsageOverview({
           note={plannedDays > 1 && distanceKm !== null ? `${formatDistanceKm(distanceKm / plannedDays)} km a day` : undefined}
         />
         <Stat
-          label="Nominal energy"
+          label="Planning energy"
           value={energyKwh?.toFixed(1) ?? "Unavailable"}
           unit="kWh"
           note="Driving energy; charging is reported separately"

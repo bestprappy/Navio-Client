@@ -94,7 +94,7 @@ test("a disconnected day is marked unchecked and no battery crosses the gap", ()
 });
 
 test("the unchecked mark derives from the itinerary, so connecting the day rechecks the earlier plan", () => {
-  // 80% less 60 km leaves 20%; connected, the next 30 km arrives at -10%, which only shows once the gap is gone.
+  // 80% less the adjusted 75 points leaves 5%; connecting the next leg reveals its deficit.
   const day = projection.projectCanonicalTrip(gapDays(101), gapSegments, gapCar, 80).days.get("d2");
   assert.equal(day.startDisconnected, false);
   assert.equal(day.infeasible, true);
@@ -103,7 +103,7 @@ test("the unchecked mark derives from the itinerary, so connecting the day reche
 test("a reading at the first stop gives a disconnected day its own starting charge", () => {
   const day = projection.projectCanonicalTrip(gapDays(105, { socPct:50 }), gapSegments, gapCar, 80).days.get("d2");
   assert.equal(day.startDisconnected, false);
-  assert.equal(day.finalBatteryPct, 20);
+  assert.equal(day.finalBatteryPct, 12.5);
 });
 
 test("the route estimate names the unchecked day and never reports it as checked or merely unavailable", () => {

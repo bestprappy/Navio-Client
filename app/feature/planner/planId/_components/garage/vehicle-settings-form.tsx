@@ -13,6 +13,7 @@ import { defaultEnergyProfile, isLegacyVehicle } from "./energy-selection";
 import { userObservedConsumption } from "./vehicle-api";
 import { tripEnergyStateAtom } from "./trip-energy-state";
 import { ENERGY_SELECTION_ID } from "./focus-vehicle-settings";
+import { planningRangeKm, ROAD_RANGE_REDUCTION_PCT } from "./energy-policy";
 
 import { lowBatteryPctAtom } from "./garage.atoms";
 
@@ -80,13 +81,13 @@ export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle; car?: 
             <button type="button" aria-label="About NAVIO Estimate" aria-describedby={showInfo ? infoId : undefined}
               className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border font-semibold focus-visible:outline-2 focus-visible:outline-ring"
               onFocus={() => setShowInfo(true)} onBlur={() => setShowInfo(false)} onClick={() => setShowInfo(true)} onKeyDown={(event) => { if (event.key === "Escape") setShowInfo(false); }}>i</button>
-            {showInfo && <p id={infoId} role="tooltip" className="absolute right-0 top-full z-20 mt-1 w-64 max-w-full rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md">A provisional NAVIO planning estimate based on the vehicle?s rated range. Real-world driving may differ. It does not provide a measured consumption value or enable automatic charger planning.</p>}
+            {showInfo && <p id={infoId} role="tooltip" className="absolute right-0 top-full z-20 mt-1 w-64 max-w-full rounded-md border border-border bg-popover p-3 text-popover-foreground shadow-md">Uses the rated range with a 20% road-trip planning allowance. Battery capacity is unchanged. Actual range varies. Auto Add uses the same adjusted estimate when the charging service is up to date.</p>}
           </div>
           {selection === "RESET_DEFAULT" && direct.modelKind === "CONSUMPTION" && <>
             <label htmlFor="default-consumption" className="text-sm">Vehicle consumption (kWh/100 km)</label>
             <Input id="default-consumption" readOnly value={direct.consumptionKwhPer100km ?? ""} />
           </>}
-          {selection === "USE_RATED_RANGE" && <p role="status" className="text-sm">Based on {range.ratedRangeKm} km{range.ratedRangeStandard === "NONE" ? "" : ` ${range.ratedRangeStandard}`}</p>}
+          {selection === "USE_RATED_RANGE" && <p role="status" className="text-sm">Factory/reference: {range.ratedRangeKm} km{range.ratedRangeStandard === "NONE" ? "" : ` ${range.ratedRangeStandard}`}. Navio planning range: {planningRangeKm(range) === null ? "unavailable" : Number(planningRangeKm(range)?.toFixed(1))} km ({ROAD_RANGE_REDUCTION_PCT}% allowance).</p>}
           {selection === "USER_OVERRIDE" && <>
             <label htmlFor="saved-vehicle-consumption" className="text-sm font-medium">Your average (kWh/100 km)</label>
             <Input id="saved-vehicle-consumption" type="number" min="0.001" max="99999.999" step="0.001" required value={consumption} onChange={(event) => setConsumption(event.target.value)} disabled={mutation.isPending} />

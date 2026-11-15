@@ -101,6 +101,7 @@ export function GarageSection() {
           <VehicleCard
             vehicle={featuredVehicle}
             car={featuredCar}
+            planningCar={activeEvCar ?? featuredCar}
             disabled={controlsDisabled}
             onRemove={() => mutation.mutate({ kind: "delete", id: featuredVehicle.id })}
             onRename={(nickname) => mutation.mutate({ kind: "update", id: featuredVehicle.id, patch: { nickname } })}
