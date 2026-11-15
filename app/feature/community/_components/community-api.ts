@@ -1,16 +1,23 @@
 import { z } from "zod";
 
+import {
+  DEFAULT_PALETTE_COLOR_ID,
+  PALETTE_COLOR_ID_PATTERN,
+} from "@/lib/palette/palette-colors";
+
 import type { CommunityGroup } from "./data";
 
-export const flairToneSchema = z.enum([
-  "reliable",
-  "question",
-  "unsourced",
-  "speculation",
-  "itinerary",
-  "food",
-  "ev",
-]);
+/** The palette color each retired flair tone stood for. Mirrors the server's migration V11. */
+const TONE_COLORS: Record<string, string> = {
+  reliable: "emerald",
+  question: "blue",
+  unsourced: "graphite",
+  speculation: "amber",
+  itinerary: "teal",
+  food: "coral",
+  ev: "lime",
+};
+const flairColorIdSchema = z.string().regex(PALETTE_COLOR_ID_PATTERN);
 const roleSchema = z.enum(["member", "moderator", "admin"]).nullable();
 const optionalMediaId = z
   .string()
@@ -23,9 +30,21 @@ export const ruleInputSchema = z.object({
 });
 export const flairInputSchema = z.object({
   label: z.string().trim().min(1).max(80),
-  tone: flairToneSchema,
-  flairType: z.enum(["post", "user"]),
+  colorId: flairColorIdSchema,
 });
+/** Servers from before palette colors send only a tone; it maps onto its old color. */
+const flairSchema = z
+  .object({
+    id: z.string().uuid(),
+    displayOrder: z.number().int(),
+    label: z.string(),
+    colorId: flairColorIdSchema.nullish().catch(null),
+    tone: z.string().nullish(),
+  })
+  .transform(({ colorId, tone, ...flair }) => ({
+    ...flair,
+    colorId: colorId ?? TONE_COLORS[tone ?? ""] ?? DEFAULT_PALETTE_COLOR_ID,
+  }));
 export const resourceInputSchema = z.object({
   label: z.string().trim().min(1).max(120),
   url: z
@@ -67,16 +86,8 @@ export const groupDetailSchema = groupSchema.extend({
       displayOrder: z.number().int(),
     }),
   ),
-  postFlairs: z.array(
-    flairInputSchema
-      .omit({ flairType: true })
-      .extend({ id: z.string().uuid(), displayOrder: z.number().int() }),
-  ),
-  userFlairs: z.array(
-    flairInputSchema
-      .omit({ flairType: true })
-      .extend({ id: z.string().uuid(), displayOrder: z.number().int() }),
-  ),
+  postFlairs: z.array(flairSchema),
+  userFlairs: z.array(flairSchema),
   resources: z.array(
     resourceInputSchema.extend({
       id: z.string().uuid(),
