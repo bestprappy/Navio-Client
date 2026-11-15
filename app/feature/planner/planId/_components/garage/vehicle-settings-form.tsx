@@ -12,6 +12,7 @@ import type { SavedVehicle } from "./vehicle-api";
 import { defaultEnergyProfile, isLegacyVehicle } from "./energy-selection";
 import { userObservedConsumption } from "./vehicle-api";
 import { tripEnergyStateAtom } from "./trip-energy-state";
+import { ENERGY_SELECTION_ID } from "./focus-vehicle-settings";
 
 import { arrivalReservePctAtom } from "./garage.atoms";
 
@@ -62,10 +63,10 @@ export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle; car?: 
       <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
         <div className="grid min-w-0 gap-2 content-start"><label htmlFor="saved-vehicle-nickname" className="text-sm font-medium">Nickname (Optional)</label><Input id="saved-vehicle-nickname" maxLength={100} value={nickname} onChange={(event) => setNickname(event.target.value)} disabled={mutation.isPending} /></div>
         <div className="grid min-w-0 gap-2">
-          <label htmlFor="energy-selection" className="text-sm font-medium">Energy Consumption</label>
+          <label htmlFor={ENERGY_SELECTION_ID}className="text-sm font-medium">Energy Consumption</label>
           <Select<EnergySelection> value={selection || null} items={energyOptions} disabled={mutation.isPending}
             onValueChange={(next) => { if (next === null) return; setSelection(next); setSelectionChanged(true); }}>
-            <SelectTrigger id="energy-selection" className="h-10 w-full min-w-0 bg-background data-[size=default]:h-10">
+            <SelectTrigger id={ENERGY_SELECTION_ID}className="h-10 w-full min-w-0 bg-background data-[size=default]:h-10">
               <SelectValue placeholder="Choose an energy model" />
             </SelectTrigger>
             <SelectContent>
@@ -94,7 +95,7 @@ export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle; car?: 
         </div>
       </div>
       {isLegacyVehicle(vehicle) && <p className="text-xs text-muted-foreground">Existing estimate: {vehicle.consumptionKwhPer100km ?? "unavailable"}{vehicle.consumptionKwhPer100km !== null ? " kWh/100 km" : ""}. Its source is unknown. It stays unchanged until you choose an energy model and save. Automatic charger application remains unavailable for an unconfirmed legacy estimate.</p>}
-      <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">{dirty ? "Save to apply nickname and consumption changes." : "Vehicle settings saved to your account."}</p><Button type="submit" disabled={!authenticated || !dirty || !valid || mutation.isPending || query.isError}>{mutation.isPending ? "Saving?" : "Save settings"}</Button></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-muted-foreground">{dirty ? "Save to apply nickname and consumption changes." : "Vehicle settings saved to your account."}</p><Button type="submit" disabled={!authenticated || !dirty || !valid || mutation.isPending || query.isError}>{mutation.isPending ? "Saving…" : "Save settings"}</Button></div>
     </form>
   );
 }

@@ -33,7 +33,7 @@ export function DayAutomationActions({ blockId, dayNumber }: { blockId: string; 
       <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
         <DialogTitle>{action === "optimize" ? "Optimize Route" : "Auto Add"} · Day {dayNumber}</DialogTitle>
         <DialogDescription>{action === "optimize" ? "Review route improvements before applying them to this day." : "Insert necessary compatible charging stops while preserving your itinerary."}</DialogDescription>
-        {action === "auto" && <EvRouteOptimizationPanel blockId={blockId} vehicle={car} startingSocPct={day?.startBatteryPct ?? initial} showOptimizer={false} />}
+        {action === "auto" && <EvRouteOptimizationPanel blockId={blockId} vehicle={car} startingSocPct={day?.startBatteryPct ?? initial} showOptimizer={false} onOpenVehicleSettings={() => setAction(null)} />}
         {action === "optimize" && <DayRouteOptimizer blockId={blockId} />}
       </DialogContent>
     </Dialog>

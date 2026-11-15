@@ -2,6 +2,7 @@
 import { dayAutomationHistoryAtom } from "./day-automation-history";
 import { ChargingPreferences } from "./charging-preferences";
 import { DayRouteOptimizer } from "./day-route-optimizer";
+import { AutoAddGuidance, type AutoAddBlocker } from "./auto-add-guidance";
 import { useTripCharging } from "../garage/use-trip-charging";
 import { energyModelForCar } from "../garage/trip-energy-projection";
 import { canAutomaticallyPlan } from "../garage/energy-selection";
@@ -40,6 +41,8 @@ type EvRouteOptimizationPanelProps = {
   vehicle: EvCar | null;
   startingSocPct: number;
   showOptimizer?: boolean;
+  /** Runs before the planner scrolls to vehicle settings, for example to close a dialog. */
+  onOpenVehicleSettings?: () => void;
 };
 
 type PreviewState = {
@@ -66,6 +69,7 @@ export function EvRouteOptimizationPanel({
   vehicle,
   startingSocPct,
   showOptimizer = true,
+  onOpenVehicleSettings,
 }: EvRouteOptimizationPanelProps) {
   const params = useParams<{ planId: string }>();
   const { isAuthenticated, isAuthenticationLoading, requireAuth } = useRequireAuth();
@@ -178,6 +182,20 @@ export function EvRouteOptimizationPanel({
     canAutomaticallyPlan(vehicle) && currentPreview?.data.feasible && operations.length > 0,
   );
   const error = previewMutation.error ?? applyMutation.error;
+  const energyConfirmed = canAutomaticallyPlan(vehicle);
+  const blocker: AutoAddBlocker | null = !vehicle
+    ? "no-vehicle"
+    : !tripId
+      ? "unsaved-trip"
+      : !energyConfirmed
+        ? "energy-unconfirmed"
+        : !isAuthenticated && !isAuthenticationLoading
+          ? "sign-in"
+          : satisfied
+            ? "satisfied"
+            : currentPreview && !currentPreview.data.feasible
+              ? "infeasible"
+              : null;
 
   const { mutate: checkCharging } = previewMutation;
   useEffect(() => {
@@ -227,18 +245,7 @@ export function EvRouteOptimizationPanel({
         {previewMutation.isPending ? "Checking charging needs…" : "Auto Add"}
       </Button>
 
-      {satisfied && <p role="status" className="mt-2 text-xs text-muted-foreground">No additional charging stops are needed for this day.</p>}
-      {showOptimizer && <DayRouteOptimizer blockId={blockId} />}
-      {vehicle && !canAutomaticallyPlan(vehicle) && <p className="mt-2 text-xs text-muted-foreground">Automatic charging requires known usable battery capacity and a confirmed consumption model. Rated-range previews cannot apply chargers. Review the energy selection in vehicle settings.</p>}
-      {!vehicle ? (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Select an EV from your garage first.
-        </p>
-      ) : !tripId ? (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Sign in and open a saved trip to plan charging stops.
-        </p>
-      ) : null}
+      <AutoAddGuidance blocker={blocker} onOpenVehicleSettings={onOpenVehicleSettings} />
 
       {error ? (
         <p className="mt-2 text-xs text-destructive" role="alert">
@@ -285,6 +292,7 @@ export function EvRouteOptimizationPanel({
 
         </div>
       ) : null}
+      {showOptimizer && <DayRouteOptimizer blockId={blockId} />}
     </div>
   );
 }
