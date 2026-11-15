@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { useAtom, useAtomValue } from "jotai";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BatteryInput } from "./battery-gauge";
 import type { EvCar } from "../constants/vehicle.types";
 import { useGarage } from "./garage-provider";
@@ -14,7 +15,14 @@ import { tripEnergyStateAtom } from "./trip-energy-state";
 
 import { arrivalReservePctAtom } from "./garage.atoms";
 
-type Selection = "RESET_DEFAULT" | "USE_RATED_RANGE" | "USER_OVERRIDE" | "";
+type EnergySelection = "RESET_DEFAULT" | "USE_RATED_RANGE" | "USER_OVERRIDE";
+type Selection = EnergySelection | "";
+
+const energyOptions: readonly { value: EnergySelection; label: string }[] = [
+  { value: "RESET_DEFAULT", label: "Vehicle Default" },
+  { value: "USE_RATED_RANGE", label: "NAVIO Estimate" },
+  { value: "USER_OVERRIDE", label: "Custom" },
+];
 
 export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle; car?: EvCar | null }) {
   const reservePct = useAtomValue(arrivalReservePctAtom);
@@ -55,13 +63,17 @@ export function VehicleSettingsForm({ vehicle }: { vehicle: SavedVehicle; car?: 
         <div className="grid min-w-0 gap-2 content-start"><label htmlFor="saved-vehicle-nickname" className="text-sm font-medium">Nickname (Optional)</label><Input id="saved-vehicle-nickname" maxLength={100} value={nickname} onChange={(event) => setNickname(event.target.value)} disabled={mutation.isPending} /></div>
         <div className="grid min-w-0 gap-2">
           <label htmlFor="energy-selection" className="text-sm font-medium">Energy Consumption</label>
-          <select id="energy-selection" className="w-full min-w-0 rounded-md border border-input bg-background p-2 text-sm" value={selection}
-            disabled={mutation.isPending} onChange={(event) => { setSelection(event.target.value as Selection); setSelectionChanged(true); }}>
-            {!initialSelection && <option value="" disabled hidden>Choose an energy model</option>}
-            <option value="RESET_DEFAULT" disabled={direct.modelKind !== "CONSUMPTION"}>Vehicle Default</option>
-            <option value="USE_RATED_RANGE" disabled={range.modelKind !== "RATED_RANGE"}>NAVIO Estimate</option>
-            <option value="USER_OVERRIDE">Custom</option>
-          </select>
+          <Select<EnergySelection> value={selection || null} items={energyOptions} disabled={mutation.isPending}
+            onValueChange={(next) => { if (next === null) return; setSelection(next); setSelectionChanged(true); }}>
+            <SelectTrigger id="energy-selection" className="h-10 w-full min-w-0 bg-background data-[size=default]:h-10">
+              <SelectValue placeholder="Choose an energy model" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="RESET_DEFAULT" disabled={direct.modelKind !== "CONSUMPTION"}>Vehicle Default</SelectItem>
+              <SelectItem value="USE_RATED_RANGE" disabled={range.modelKind !== "RATED_RANGE"}>NAVIO Estimate</SelectItem>
+              <SelectItem value="USER_OVERRIDE">Custom</SelectItem>
+            </SelectContent>
+          </Select>
           <div className="relative flex items-center gap-2 text-xs text-muted-foreground" onMouseEnter={() => setShowInfo(true)} onMouseLeave={() => setShowInfo(false)}>
             <span>NAVIO Estimate</span>
             <button type="button" aria-label="About NAVIO Estimate" aria-describedby={showInfo ? infoId : undefined}
