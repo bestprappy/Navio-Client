@@ -48,8 +48,8 @@ async function request<T>(path: string, schema: z.ZodType<T>, method = "GET", bo
   if (!parsed.success) throw new CatalogApiError("Navio returned an unreadable catalog response. Reload before trying again.", 502);
   return parsed.data;
 }
-export function listAdminCatalog(term: string, status: CatalogStatus | null, page: number) {
-  const params = new URLSearchParams({ page: String(page), size: "20" });
+export function listAdminCatalog(term: string, status: CatalogStatus | null, page: number, size = 20) {
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (term.trim()) params.set("term", term.trim());
   if (status) params.set("status", status);
   return request(`?${params}`, catalogPageSchema);
