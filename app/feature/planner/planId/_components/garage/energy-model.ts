@@ -1,10 +1,10 @@
-import type { VehicleEnergyProfile } from "./vehicle-api";
+import { rangeReductionPct, rangeRetention, type PlanningEnergyModel } from "./energy-policy";
 
-export const ENERGY_POLICY_VERSION = "navio-energy-v1" as const;
+export const ENERGY_POLICY_VERSION = "navio-energy-v2" as const;
 export const ARRIVAL_RESERVE_PCT = 12;
 export const ENERGY_EPSILON = 1e-9;
 export type DistanceQuality = "ROUTED" | "FALLBACK" | "UNAVAILABLE";
-export type EnergyModel = Pick<VehicleEnergyProfile, "modelKind" | "consumptionKwhPer100km" | "usableBatteryCapacityKwh" | "ratedRangeKm">;
+export type EnergyModel = PlanningEnergyModel;
 export type ChargingEvent = {
   targetSocPct: number | null;
   durationMinutes: number | null;
@@ -31,6 +31,9 @@ export type EnergyResult = {
   distanceQuality: DistanceQuality;
   nominalEnergyKwh: number | null;
   nominalSocUsePct: number | null;
+  planningEnergyKwh: number | null;
+  planningSocUsePct: number | null;
+  rangeReductionPct: number;
   rawPredictedArrivalSocPct: number | null;
   displayArrivalSocPct: number | null;
   observedSocPct: number | null;
@@ -45,7 +48,7 @@ export const positive = (value: number | null | undefined): value is number => t
 export const validSoc = (value: number | null | undefined): value is number => typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100;
 export const displaySoc = (value: number | null) => value === null ? null : Math.max(0, Math.min(100, value));
 
-/** Pure nominal calculation. Observations replace forward state, never predicted history. */
+/** Preserve factory inputs; apply the stated road-trip allowance only to planning. */
 export function calculateEnergy(input: EnergyInput): EnergyResult {
   const { model } = input;
   const reasons: string[] = [];
@@ -65,7 +68,10 @@ export function calculateEnergy(input: EnergyInput): EnergyResult {
   } else reasons.push("ENERGY_MODEL_UNAVAILABLE");
   // A stationary event consumes no driving energy, including at the first stop.
   if (distance === 0) { energy = 0; depletion = 0; }
-  const arrival = validSoc(input.departureSocPct) && depletion !== null ? input.departureSocPct - depletion : null;
+  const retention = rangeRetention(model);
+  const planningEnergy = energy === null ? null : energy / retention;
+  const planningDepletion = depletion === null ? null : depletion / retention;
+  const arrival = validSoc(input.departureSocPct) && planningDepletion !== null ? input.departureSocPct - planningDepletion : null;
   if (!validSoc(input.departureSocPct)) reasons.push("UPSTREAM_SOC_UNAVAILABLE");
   const observed = input.observedSocPct == null ? null : input.observedSocPct;
   if (observed !== null && !validSoc(observed)) throw new Error("Observed SoC must be between 0 and 100.");
@@ -108,6 +114,7 @@ export function calculateEnergy(input: EnergyInput): EnergyResult {
     availability: energy === null && depletion === null ? "UNAVAILABLE" : reasons.some(reason => reason.endsWith("UNAVAILABLE")) ? "PARTIAL" : "AVAILABLE",
     reasons, distanceQuality: distance === null ? "UNAVAILABLE" : input.distanceQuality,
     nominalEnergyKwh: energy, nominalSocUsePct: depletion, rawPredictedArrivalSocPct: arrival,
+    planningEnergyKwh: planningEnergy, planningSocUsePct: planningDepletion, rangeReductionPct: rangeReductionPct(model),
     displayArrivalSocPct: displaySoc(arrival), observedSocPct: observed, departureSocPct: departure,
     predictedArrivalReserveStatus: arrival === null ? "UNKNOWN" : arrival + ENERGY_EPSILON >= reserve ? "AT_OR_ABOVE_RESERVE" : "BELOW_RESERVE",
     predictedLegFeasibility: arrival === null ? "UNKNOWN" : infeasible ? "INFEASIBLE" : "FEASIBLE",

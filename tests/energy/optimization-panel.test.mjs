@@ -4,10 +4,11 @@ import { createRequire } from "node:module";
 import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
+import { rangeReductionPct, REAL_WORLD_ENERGY_CAPABILITY } from "../../app/feature/planner/planId/_components/garage/energy-policy.ts";
 
 const require = createRequire(import.meta.url);
 // Exercise the actual mutation callbacks with an isolated store and controlled network promises.
-function harness() {
+function harness(energyModel) {
   const atoms = { tripBlocksAtom: {}, tripBudgetAtom: {}, tripCurrencyAtom: {}, tripExpensesAtom: {}, applyPlannerServerSnapshotAtom: {} };
   const energyAtom = {}, reserveAtom = {};
   const values = new Map([
@@ -30,6 +31,7 @@ function harness() {
     "@/hooks/use-require-auth": { useRequireAuth:() => ({isAuthenticated:true}) },
     "../garage/trip-energy-projection": { energyModelForCar: () => ({modelKind:"CONSUMPTION"}) },
     "../garage/energy-selection": { canAutomaticallyPlan:() => true },
+    "../garage/energy-policy": { rangeReductionPct, REAL_WORLD_ENERGY_CAPABILITY },
     "../garage/trip-energy-state": { tripEnergyStateAtom:energyAtom },
     "../garage/garage.atoms": { batteryThresholdPctAtom:reserveAtom },
     "../overview/trip-builder.atoms": atoms,
@@ -55,7 +57,7 @@ function harness() {
   const exports={};
   vm.runInNewContext(code,{exports,require:name => deps[name] ?? require(name)});
   exports.EvRouteOptimizationPanel({blockId:"day",vehicle:{},startingSocPct:80,targetSocPct:70});
-  const payload={blockId:"day",reserveSocPct:12};
+  const payload={blockId:"day",reserveSocPct:12,...(energyModel ? {vehicle:{energyModel}} : {})};
   const key=JSON.stringify([payload,get(atoms.tripBlocksAtom),get(energyAtom),{amount:1000,currency:"THB",expenses:[]}]);
   const preview={payload,key,data:{baseVersion:7}};
   return { mutations, applied, calls, values, atoms, energyAtom, preview, setReady:fn => {ready=fn;} };
@@ -84,6 +86,15 @@ test("edits during flush and stale server versions prevent optimization requests
   stale.setReady(async () => ({version:8}));
   await assert.rejects(stale.mutations[1].mutationFn(stale.preview),/trip changed/);
   assert.equal(stale.calls.length,1);
+});
+
+test("factory previews require an updated charging server before any calculation request",async () => {
+  const h=harness({modelKind:"RATED_RANGE",ratedRangeKm:480});
+  await assert.rejects(h.mutations[0].mutationFn({request:h.preview.payload,key:h.preview.key}),/real-world energy update/);
+  assert.equal(h.calls.length,1);
+  h.setReady(async()=>({version:7,capabilities:["day-auto-add-v1",REAL_WORLD_ENERGY_CAPABILITY]}));
+  await h.mutations[0].mutationFn({request:h.preview.payload,key:h.preview.key});
+  assert.equal(h.calls.at(-1)[0],"preview");
 });
 
 test("a successful delayed apply never overwrites newer local itinerary, energy or budget edits",async () => {

@@ -10,7 +10,7 @@ export function TripEnergyDetails({ blocks, days }: {
   return (
     <details className="border-t border-border p-4">
       <summary className="cursor-pointer rounded-sm text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring">Daily energy details</summary>
-      <p className="mt-2 text-xs text-muted-foreground">Nominal predictions carry forward across days. Observed battery levels update subsequent predictions; they do not imply charging.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Planning estimates carry forward across days, including the allowance shown above. Observed battery levels update subsequent predictions; they do not imply charging.</p>
       <ol className="mt-3 space-y-3">
         {blocks.toSorted((a, b) => a.date.localeCompare(b.date)).map((block, index) => {
           const day = days?.get(block.id);

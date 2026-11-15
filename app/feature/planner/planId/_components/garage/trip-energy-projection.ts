@@ -119,12 +119,12 @@ export function projectCanonicalTrip(blocks: TripBlockData[], segments: RouteSeg
     projections.set(day.id,{profile,startBatteryPct:start,finalBatteryPct:forward,
       predictedBelowReserve:states.some(r=>r.predictedArrivalReserveStatus==="BELOW_RESERVE"),infeasible:states.some(r=>r.predictedLegFeasibility==="INFEASIBLE"),
       startDisconnected:disconnectedDayIds.has(day.id),
-      distanceKm:sum(dayEvents.map(e=>e.distanceKm)),energyKwh:sum(states.map(r=>r.nominalEnergyKwh)),
+      distanceKm:sum(dayEvents.map(e=>e.distanceKm)),energyKwh:sum(states.map(r=>r.planningEnergyKwh)),
       chargeEnergyKwh:sum(states.map(r=>r.chargeEnergyKwh)),chargeMinutes:sum(states.map(r=>r.nominalChargeMinutes)),
       compatibleStops:dayEvents.filter(e=>e.charging?.compatible===true).length,incompatibleStops:dayEvents.filter(e=>e.charging?.compatible===false).length,
       batteryByItemId:new Map(states.map(r=>[r.id,{...r,arrivalPct:r.rawPredictedArrivalSocPct,departurePct:r.departureSocPct,chargeMinutes:r.nominalChargeMinutes,compatible:dayEvents.find(e=>e.id===r.id)?.charging?.compatible===true}])),
     });
   }
-  const summary:CanonicalTripSummary={totalDistanceKm:sum(events.map(e=>e.distanceKm)),totalEnergyKwh:sum(results.map(r=>r.nominalEnergyKwh)),totalChargeMinutes:sum(results.map(r=>r.nominalChargeMinutes)),finalBatteryPct:forward,batteryByDay:[...projections.values()].map(d=>d.finalBatteryPct),infeasible:results.some(r=>r.predictedLegFeasibility==="INFEASIBLE"),provisional:car.energyProfile?.modelKind==="RATED_RANGE",reasons:[...new Set(results.flatMap(r=>r.reasons))]};
+  const summary:CanonicalTripSummary={totalDistanceKm:sum(events.map(e=>e.distanceKm)),totalEnergyKwh:sum(results.map(r=>r.planningEnergyKwh)),totalChargeMinutes:sum(results.map(r=>r.nominalChargeMinutes)),finalBatteryPct:forward,batteryByDay:[...projections.values()].map(d=>d.finalBatteryPct),infeasible:results.some(r=>r.predictedLegFeasibility==="INFEASIBLE"),provisional:car.energyProfile?.modelKind==="RATED_RANGE",reasons:[...new Set(results.flatMap(r=>r.reasons))]};
   return {days:projections,summary,results};
 }

@@ -171,7 +171,7 @@ export function RouteEstimate({
           How this is estimated
         </summary>
         <p className="mt-1.5 max-w-prose leading-relaxed text-muted-foreground">
-          Nominal predictions use the selected vehicle energy model and available road distance. Rated-range predictions are provisional. Charging time requires known usable capacity and compatible power.
+          Estimates include the planning allowance shown in My garage. Your observed consumption is used directly. Charging time uses the available battery-capacity estimate and compatible power.
         </p>
       </details>
     </section>

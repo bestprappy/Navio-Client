@@ -56,9 +56,9 @@ test("trip garage membership remains local on an older server instead of being s
 });
 test("canonical itinerary adapter carries observed state across days and exposes missing/fallback distance", () => {
   const result=projectCanonicalTrip(blocks,segments,car,100);
-  assert.equal(result.days.get("d1").batteryByItemId.get("b").arrivalPct,72);
+  assert.equal(result.days.get("d1").batteryByItemId.get("b").arrivalPct,65);
   assert.equal(result.days.get("d2").startBatteryPct,68);
-  assert.equal(result.summary.finalBatteryPct,58);
+  assert.equal(result.summary.finalBatteryPct,55.5);
   assert.equal(result.summary.totalEnergyKwh,null);
   assert.equal(result.results.at(-1).distanceQuality,"FALLBACK");
   assert.equal(projectCanonicalTrip(blocks,[],car,100).summary.finalBatteryPct,null);

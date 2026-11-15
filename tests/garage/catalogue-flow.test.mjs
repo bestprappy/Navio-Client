@@ -5,6 +5,7 @@ import { test } from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 import * as energySelection from "../../app/feature/planner/planId/_components/garage/energy-selection.ts";
+import * as energyPolicy from "../../app/feature/planner/planId/_components/garage/energy-policy.ts";
 import { catalogFixture, savedVehicleFixture } from "./data.ts";
 import { legacyEnergyProfile, userObservedConsumption } from "../../app/feature/planner/planId/_components/garage/vehicle-api.ts";
 
@@ -111,6 +112,8 @@ test("signed-in settings use one save action for reset and override", () => {
     react: state.react, "./battery-gauge": { BatteryInput: "BatteryInput" }, "./garage.atoms": { arrivalReservePctAtom: {} },
     jotai: { useAtomValue: () => 12, useAtom: () => state.react.useState({}) },
     "./trip-energy-state": { tripEnergyStateAtom: {} },
+    "./focus-vehicle-settings": { ENERGY_SELECTION_ID: "energy-selection" },
+    "./energy-policy": energyPolicy,
     "./energy-selection": energySelection,
     "./vehicle-api": { legacyEnergyProfile, userObservedConsumption },
     "./garage-provider": { useGarage: () => ({ authenticated: true, query: {}, mutation: { mutate: command => commands.push(command) } }) },
@@ -118,21 +121,21 @@ test("signed-in settings use one save action for reset and override", () => {
   const render = () => { state.reset(); return elements(VehicleSettingsForm({ vehicle: savedVehicleFixture })); };
   let tree = render();
   assert.equal(tree.some(node => node.props?.children === "Confirm existing estimate for automatic planning"), false);
-  assert.equal(tree.find(node => node.type === "option" && node.props.value === "RESET_DEFAULT").props.disabled, true);
+  assert.equal(tree.find(node => node.type === "SelectItem" && node.props.value === "RESET_DEFAULT").props.disabled, true);
   assert.ok(tree.find(node => node.props?.children === "Nickname (Optional)"));
   tree.find(node => node.type === "BatteryInput").props.onChange(62);
   tree = render();
   assert.equal(tree.find(node => node.type === "BatteryInput").props.value, 62);
   assert.equal(commands.length, 0);
   assert.equal(tree.find(node => node.type === "Button" && node.props.type === "submit").props.disabled, true);
-  tree.find(node => node.type === "select").props.onChange({ target: { value: "USE_RATED_RANGE" } });
+  tree.find(node => node.type === "Select").props.onValueChange("USE_RATED_RANGE");
   tree = render();
   tree.find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
   const reset = commands.pop().patch;
   assert.equal(reset.energySelection, "USE_RATED_RANGE");
   assert.equal("consumptionKwhPer100km" in reset, false);
   assert.equal("settings" in reset, false);
-  tree.find(node => node.type === "select").props.onChange({ target: { value: "USER_OVERRIDE" } });
+  tree.find(node => node.type === "Select").props.onValueChange("USER_OVERRIDE");
   tree = render();
   tree.find(node => node.type === "form").props.onSubmit({ preventDefault() {} });
   const override = commands.pop().patch;

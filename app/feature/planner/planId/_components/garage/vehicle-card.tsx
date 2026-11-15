@@ -12,10 +12,12 @@ import { formatCheckedDate } from "./garage-formatters";
 import { SpecTile } from "./spec-tile";
 import { VehicleMedia } from "./vehicle-media";
 import { VehicleNameEditor } from "./vehicle-name-editor";
+import { VehicleRangeComparison } from "./vehicle-range-comparison";
 
 type VehicleCardProps = {
   vehicle: UserVehicle;
   car: EvCar;
+  planningCar?: EvCar;
   onRemove: () => void;
   onRename: (nickname: string) => void;
   disabled?: boolean;
@@ -24,7 +26,7 @@ type VehicleCardProps = {
 };
 
 /** The vehicle used for this trip: photo, specs and its trip settings in one card. */
-export function VehicleCard({ vehicle, car, onRemove, onRename, disabled = false, children }: VehicleCardProps) {
+export function VehicleCard({ vehicle, car, planningCar, onRemove, onRename, disabled = false, children }: VehicleCardProps) {
   const carName = `${car.make} ${car.model}`;
   const nickname = vehicle.nickname?.trim();
   const titleId = `vehicle-${vehicle.id}-title`;
@@ -102,12 +104,13 @@ export function VehicleCard({ vehicle, car, onRemove, onRename, disabled = false
         </p>
       )}
 
+      <VehicleRangeComparison car={car} planningCar={planningCar} />
       {children ? <div className="border-t border-border p-4">{children}</div> : null}
     </article>
   );
 }
 
-/** Leads with the range used for planning (battery ÷ consumption); the official test figure is the secondary line. */
+/** Preserve the official specification; the comparison below explains the planning adjustment. */
 function rangeTile(car: EvCar): { label: string; value: string; unit: string; detail?: string } {
   const official = `${car.rangeStandard && car.rangeStandard !== "User supplied" ? car.rangeStandard : "Declared"} ${car.rangeKm} km`;
   return { label: "Rated range", value: String(car.rangeKm), unit: "km", detail: official };

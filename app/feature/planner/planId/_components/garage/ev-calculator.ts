@@ -1,4 +1,5 @@
 import { getDistanceKm } from "../constants/place.data";
+import { planningRangeKm } from "./energy-policy";
 import {
   isEvChargerPlaceItem,
   isPlaceItem,
@@ -677,11 +678,8 @@ export function normalizeChargeTargetPct(value?: number): number {
 }
 
 export function calcRangeKmForBatteryPct(batteryPct: number, car: EvCar): number {
-  const profile = car.energyProfile;
-  if (profile?.modelKind === "RATED_RANGE" && profile.ratedRangeKm !== null) return clampPct(batteryPct) / 100 * profile.ratedRangeKm;
-  const usable = profile?.usableBatteryCapacityKwh;
-  if (!usable || !(car.consumptionKwhPer100km > 0)) return Number.NaN;
-  return clampPct(batteryPct) / 100 * usable / car.consumptionKwhPer100km * 100;
+  const range = car.energyProfile ? planningRangeKm(car.energyProfile) : null;
+  return range === null ? Number.NaN : clampPct(batteryPct) / 100 * range;
 }
 
 function getRouteProjection(

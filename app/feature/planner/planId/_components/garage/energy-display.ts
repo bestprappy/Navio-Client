@@ -1,4 +1,5 @@
 import type { EvCar } from "../constants/vehicle.types";
+import { rangeReductionPct } from "./energy-policy";
 
 /** Display provenance only; never derive consumption from capacity and range. */
 export function energyBasisLabel(car: EvCar): string {
@@ -7,13 +8,13 @@ export function energyBasisLabel(car: EvCar): string {
   if (p.modelKind === "RATED_RANGE") {
     const standard = p.ratedRangeStandard === "NONE" ? "" : ` ${p.ratedRangeStandard}`;
     return p.ratedRangeKm == null ? "Rated-range basis unavailable"
-      : `NAVIO Estimate: based on ${p.ratedRangeKm} km${standard}. Real use varies with speed, load and weather.`;
+      : `NAVIO Estimate: based on ${p.ratedRangeKm} km${standard}, with a ${rangeReductionPct(p)}% road-trip range allowance. Real use varies with speed, load and weather.`;
   }
   if (p.modelKind !== "CONSUMPTION" || p.consumptionKwhPer100km == null) return "Consumption unavailable";
   const source = p.consumptionSource === "USER_OBSERVED" ? "User-observed average"
     : p.consumptionSource === "MANUFACTURER_REPORTED" ? "Manufacturer-reported consumption"
     : p.consumptionSource === "REGULATORY_REPORTED" ? "Regulatory-reported consumption" : "Consumption; source unknown";
-  return `${source}: ${p.consumptionKwhPer100km} kWh/100 km`;
+  return `${source}: ${p.consumptionKwhPer100km} kWh/100 km${rangeReductionPct(p) > 0 ? `; ${rangeReductionPct(p)}% road-trip range allowance` : ""}`;
 }
 
 export function energyDisplayNumber(value: number | null | undefined, unit: string): string {
