@@ -168,8 +168,9 @@ export function EvRouteOptimizationPanel({
 
   const charging = useTripCharging();
   const day = blockId ? charging?.days.get(blockId) : null;
-  const dayIndex = blocks.findIndex(block => block.id === blockId);
-  const dayBlock = dayIndex >= 0 ? blocks[dayIndex] : undefined;
+  const dayBlock = blocks.find(block => block.id === blockId);
+  // Lists sit in the same block array; number only itinerary days, as the itinerary does.
+  const dayIndex = blocks.filter(block => block.kind === "itinerary").findIndex(block => block.id === blockId);
   const satisfied = dayHasNoAutoAddSlot(day, dayBlock, reserveSocPct);
   const lowestStopPct = lowestStopArrivalPct(day, dayBlock);
   const canPreview = Boolean(tripId && payload && !satisfied);
