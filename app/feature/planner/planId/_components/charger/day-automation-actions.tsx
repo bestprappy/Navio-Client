@@ -9,6 +9,7 @@ import { activeEvCarAtom, startingBatteryPctAtom, batteryThresholdPctAtom, minim
 import { useTripCharging } from "../garage/use-trip-charging";
 import { EvRouteOptimizationPanel } from "./ev-route-optimization-panel";
 import { DayRouteOptimizer } from "./day-route-optimizer";
+import { dayHasNoAutoAddSlot } from "./day-charging-need";
 
 export function DayAutomationActions({ blockId, dayNumber }: { blockId: string; dayNumber: number }) {
   const [action, setAction] = useState<"auto" | "optimize" | null>(null);
@@ -19,8 +20,7 @@ export function DayAutomationActions({ blockId, dayNumber }: { blockId: string; 
   const blocks = useAtomValue(tripBlocksAtom), setBlocks = useSetAtom(tripBlocksAtom);
   const undo = history[blockId];
   const day = charging?.days.get(blockId);
-  const states = day ? [...day.batteryByItemId.values()] : [];
-  const satisfied = states.length > 1 && states.every(s => s.distanceQuality === "ROUTED" && s.rawPredictedArrivalSocPct !== null) && states.slice(1).every(s => s.rawPredictedArrivalSocPct! >= threshold) && states.at(-1)!.rawPredictedArrivalSocPct! >= minimum;
+  const satisfied = dayHasNoAutoAddSlot(day, blocks.find(b => b.id === blockId), { batteryThresholdPct: threshold, minimumArrivalPct: minimum });
   return <div className="px-3 py-2">
     <div className="flex flex-wrap gap-2">
       <Button variant="outline" size="sm" disabled={!car || satisfied} onClick={() => setAction("auto")}>Auto Add</Button>

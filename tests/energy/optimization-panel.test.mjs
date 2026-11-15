@@ -48,6 +48,7 @@ function harness() {
     "./charging-preferences": { ChargingPreferences: "Preferences" },
     "./day-route-optimizer": { DayRouteOptimizer: "Optimizer" },
     "./auto-add-guidance": { AutoAddGuidance: "Guidance" },
+    "./day-charging-need": { dayHasNoAutoAddSlot: () => false },
     "../garage/use-trip-charging": { useTripCharging: () => null },
     "@/components/ui/button": { Button:"Button" },
   };
