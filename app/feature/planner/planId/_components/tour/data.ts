@@ -224,7 +224,7 @@ export const PLANNER_CHARGING_TOUR: TourDefinition = {
     {
       target: "planner.ev-preferences",
       title: "Charging preferences",
-      description: "These settings apply to every charging stop on this trip.",
+      description: "Battery Threshold and Minimum Arrival Battery guide automatic insertion on the day you select.",
       side: "left",
     },
     {
@@ -235,14 +235,14 @@ export const PLANNER_CHARGING_TOUR: TourDefinition = {
     },
     {
       target: "planner.ev-charge-target",
-      title: "Charge each stop to",
-      description: "Each planned stop charges to at least this level, more if the next leg needs it.",
+      title: "Automatic charging targets",
+      description: "New automatic stops charge to 100%. Adjust individual stops in the itinerary.",
       side: "left",
     },
     {
       target: "planner.ev-optimize",
       title: "Plan charging stops",
-      description: "Checks live chargers on the road route and may add, remove or replace stops you have not locked. You review the plan before applying it.",
+      description: "Auto Add inserts necessary chargers without changing existing stops. Optimize Route separately previews route improvements.",
       side: "left",
     },
     {

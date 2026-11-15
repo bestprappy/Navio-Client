@@ -1,4 +1,5 @@
 "use client";
+import { DayAutomationActions } from "../charger/day-automation-actions";
 
 import { type ReactNode, useState } from "react";
 import { PlannerSectionTips } from "../tour/planner-section-tips";
@@ -322,6 +323,7 @@ export function ItinerarySection({
                           blockId={block.id}
                           blockIndex={index}
                         />
+                        {!readOnly && <DayAutomationActions blockId={block.id} dayNumber={index + 1} />}
                         {!readOnly && <TripBlock.Actions
                           evSearchAnchor={{
                             id: `destination-${block.id}`,

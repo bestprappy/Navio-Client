@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { HelpCircle, Search } from "lucide-react";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { Search } from "lucide-react";
+import { useAtom, useAtomValue } from "jotai";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import { Input } from "@/components/ui/input";
@@ -19,17 +19,11 @@ import {
 import {
   activeEvCarAtom,
   activeVehicleAtom,
-  chargeStopTargetPctAtom,
-  setChargeStopTargetPctAtom,
   startingBatteryPctAtom,
 } from "../garage/garage.atoms";
 import {
-  AUTO_CHARGE_TARGET_MAX_PCT,
-  AUTO_CHARGE_TARGET_MIN_PCT,
   isCompatible,
 } from "../garage/ev-calculator";
-import { ArrivalReserveControl } from "../garage/arrival-reserve-control";
-import { BatterySlider } from "../garage/battery-slider";
 import { useTripCharging } from "../garage/use-trip-charging";
 
 import { EvStationListCard } from "./ev-station-list-card";
@@ -57,7 +51,7 @@ function getPanelBlockId(
   results: EvChargerMapResult[],
 ): string | null {
   return (
-    selectedResult?.targetBlockId ?? results[0]?.targetBlockId ?? activeBlockId
+    activeBlockId ?? selectedResult?.targetBlockId ?? results[0]?.targetBlockId
   );
 }
 
@@ -78,8 +72,6 @@ export function EvStationSidePanel({
   const blocks = useAtomValue(tripBlocksAtom);
   const insertion = useAtomValue(selectedEvChargerInsertionAtom);
   const startingBatteryPct = useAtomValue(startingBatteryPctAtom);
-  const chargeStopTargetPct = useAtomValue(chargeStopTargetPctAtom);
-  const setChargeStopTargetPct = useSetAtom(setChargeStopTargetPctAtom);
   const panelBlockId = getPanelBlockId(activeBlockId, selectedResult, results);
   const tripCharging = useTripCharging();
   // Later days start with whatever the earlier days left in the battery.
@@ -116,9 +108,7 @@ export function EvStationSidePanel({
     }
   }
 
-  function updateChargeStopTarget(nextPct: number) {
-    setChargeStopTargetPct(nextPct);
-  }
+
 
   function addCharger(result: EvChargerMapResult) {
     onAddCharger(result.targetBlockId, result.charger, result.beforeItemId);
@@ -159,54 +149,10 @@ export function EvStationSidePanel({
           </div>
 
           <div className="mt-3 rounded-sm border border-primary/25 bg-primary/5 p-3" data-tour="planner.ev-preferences">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Charging preferences
-            </p>
-            <div data-tour="planner.ev-reserve">
-              <ArrivalReserveControl className="mt-2" disabled={!activeEvCar} />
-            </div>
-            <div className="mt-4" data-tour="planner.ev-charge-target">
-              <div className="flex items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <label
-                    htmlFor="charge-stop-target"
-                    className="flex items-center gap-1.5 text-sm font-medium text-foreground"
-                  >
-                    Charge each stop to
-                    <HelpCircle
-                      className="size-3.5 text-muted-foreground"
-                      aria-hidden="true"
-                    >
-                      <title>
-                        Each planned stop charges to at least this level, more if the next leg needs it.
-                      </title>
-                    </HelpCircle>
-                  </label>
-                </div>
-                <span className="text-lg font-bold tabular-nums text-foreground">
-                  {chargeStopTargetPct}%
-                </span>
-              </div>
-              <div className="mt-2">
-                <BatterySlider
-                  id="charge-stop-target"
-                  value={chargeStopTargetPct}
-                  onChange={updateChargeStopTarget}
-                  min={AUTO_CHARGE_TARGET_MIN_PCT}
-                  max={AUTO_CHARGE_TARGET_MAX_PCT}
-                  step={1}
-                  ariaLabel="Set how full each planned charging stop charges"
-                  color="var(--primary)"
-                  disabled={!activeEvCar}
-                  showLabels={false}
-                />
-              </div>
-            </div>
             <EvRouteOptimizationPanel
               blockId={panelBlockId}
               vehicle={activeEvCar}
               startingSocPct={dayStartBatteryPct}
-              targetSocPct={chargeStopTargetPct}
             />
           </div>
         </div>

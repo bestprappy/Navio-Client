@@ -17,10 +17,10 @@ function harness() {
   const get = atom => atom.read ? atom.read(get) : values.get(atom);
   const mutations = [], applied = [], calls = [];
   const state = [];
-  let cursor = 0, ready = async () => ({version:7,capabilities:[]});
+  let cursor = 0, ready = async () => ({version:7,capabilities:["day-auto-add-v1"]});
   class PlannerApiError extends Error { constructor(message,status) { super(message); this.status=status; } }
   const deps = {
-    react: { useMemo: fn => fn(), useState: initial => {
+    react: { useEffect: () => {}, useMemo: fn => fn(), useState: initial => {
       const i=cursor++; if (!(i in state)) state[i]=initial;
       return [state[i],next => {state[i]=next;}];
     } },
@@ -31,7 +31,7 @@ function harness() {
     "../garage/trip-energy-projection": { energyModelForCar: () => ({modelKind:"CONSUMPTION"}) },
     "../garage/energy-selection": { canAutomaticallyPlan:() => true },
     "../garage/trip-energy-state": { tripEnergyStateAtom:energyAtom },
-    "../garage/garage.atoms": { arrivalReservePctAtom:reserveAtom },
+    "../garage/garage.atoms": { batteryThresholdPctAtom:reserveAtom, minimumArrivalPctAtom:reserveAtom },
     "../garage/garage-formatters": { formatMinutes:minutes => `${minutes} min` },
     "./ev-optimization-format": { describeOperation:operation => operation.type, operationKey:(_operation, index) => String(index) },
     "../overview/trip-builder.atoms": atoms,
@@ -44,6 +44,10 @@ function harness() {
       previewTripEvOptimization:async (_id,payload) => { calls.push(["preview",payload]); return {baseVersion:7}; },
       applyTripEvOptimization:async (_id,payload) => { calls.push(["apply",payload]); return {version:8}; },
     },
+    "./day-automation-history": { dayAutomationHistoryAtom: {} },
+    "./charging-preferences": { ChargingPreferences: "Preferences" },
+    "./day-route-optimizer": { DayRouteOptimizer: "Optimizer" },
+    "../garage/use-trip-charging": { useTripCharging: () => null },
     "@/components/ui/button": { Button:"Button" },
   };
   const source=readFileSync(new URL("../../app/feature/planner/planId/_components/charger/ev-route-optimization-panel.tsx",import.meta.url),"utf8");

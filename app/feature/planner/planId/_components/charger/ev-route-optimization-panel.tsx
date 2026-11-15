@@ -1,9 +1,13 @@
 "use client";
+import { dayAutomationHistoryAtom } from "./day-automation-history";
+import { ChargingPreferences } from "./charging-preferences";
+import { DayRouteOptimizer } from "./day-route-optimizer";
+import { useTripCharging } from "../garage/use-trip-charging";
 import { energyModelForCar } from "../garage/trip-energy-projection";
 import { canAutomaticallyPlan } from "../garage/energy-selection";
 import { useRequireAuth } from "@/hooks/use-require-auth";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, Loader2, Route, Sparkles } from "lucide-react";
 import { atom, useAtomValue, useSetAtom, useStore } from "jotai";
 import { optimizationStateKey, prepareOptimizationSnapshot } from "@/app/feature/planner/_components/optimization-state";
@@ -22,7 +26,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 import type { EvCar } from "../constants/vehicle.types";
-import { arrivalReservePctAtom } from "../garage/garage.atoms";
+import { batteryThresholdPctAtom, minimumArrivalPctAtom } from "../garage/garage.atoms";
 import { formatMinutes } from "../garage/garage-formatters";
 import { describeOperation, operationKey } from "./ev-optimization-format";
 import { applyPlannerServerSnapshotAtom, tripBlocksAtom, tripBudgetAtom, tripCurrencyAtom, tripExpensesAtom } from "../overview/trip-builder.atoms";
@@ -35,7 +39,7 @@ type EvRouteOptimizationPanelProps = {
   blockId: string | null;
   vehicle: EvCar | null;
   startingSocPct: number;
-  targetSocPct: number;
+  showOptimizer?: boolean;
 };
 
 type PreviewState = {
@@ -61,7 +65,7 @@ export function EvRouteOptimizationPanel({
   blockId,
   vehicle,
   startingSocPct,
-  targetSocPct,
+  showOptimizer = true,
 }: EvRouteOptimizationPanelProps) {
   const params = useParams<{ planId: string }>();
   const { isAuthenticated, isAuthenticationLoading, requireAuth } = useRequireAuth();
@@ -71,7 +75,9 @@ export function EvRouteOptimizationPanel({
   const energyState = useAtomValue(tripEnergyStateAtom);
   const budget = useAtomValue(optimizationBudgetAtom);
   const store = useStore();
-  const reserveSocPct = useAtomValue(arrivalReservePctAtom);
+  const reserveSocPct = useAtomValue(batteryThresholdPctAtom);
+  const minimumArrivalSocPct = useAtomValue(minimumArrivalPctAtom);
+  const setHistory = useSetAtom(dayAutomationHistoryAtom);
   const [previewState, setPreviewState] = useState<PreviewState | null>(null);
   const [appliedMessage, setAppliedMessage] = useState<string | null>(null);
 
@@ -89,10 +95,12 @@ export function EvRouteOptimizationPanel({
       },
       startingSocPct,
       reserveSocPct,
-      targetSocPct,
+      targetSocPct: 100,
+      insertionOnly: true,
+      minimumArrivalSocPct,
       maximumDetourKm: 20,
     };
-  }, [blockId, reserveSocPct, startingSocPct, targetSocPct, vehicle]);
+  }, [blockId, reserveSocPct, startingSocPct, minimumArrivalSocPct, vehicle]);
   const requestKey = payload ? optimizationStateKey(payload, blocks, energyState, budget) : null;
   const currentPreview =
     previewState && previewState.key === requestKey ? previewState : null;
@@ -109,6 +117,7 @@ export function EvRouteOptimizationPanel({
       if (key !== optimizationStateKey(request, store.get(tripBlocksAtom), store.get(tripEnergyStateAtom), store.get(optimizationBudgetAtom))) {
         throw new PlannerApiError("The trip changed while preparing optimization. Preview again.", 409);
       }
+      if (!snapshot.capabilities?.includes("day-auto-add-v1")) throw new PlannerApiError("Auto Add needs the day charging server update before it can preserve all your stops.", 409);
       const needsTargets = blocks.some((block) => block.items.some((item) => item.type === "place" && item.evCharger?.targetBatteryPct != null));
       const needsDestinations = blocks.some((block) => block.destination);
       if ((needsTargets && !snapshot.capabilities?.includes("charge-targets")) || (needsDestinations && !snapshot.capabilities?.includes("day-destinations"))) {
@@ -148,18 +157,34 @@ export function EvRouteOptimizationPanel({
         setPreviewState(null);
         throw new PlannerApiError("Charging changes were saved, but newer local edits were kept on this device. Reconcile the saved trip before retrying.", 409);
       }
+      const before = store.get(tripBlocksAtom);
       applyServerSnapshot({ tripId, ...snapshot });
+      const previousDay = before.find(day => day.id === state.payload.blockId);
+      const nextDay = store.get(tripBlocksAtom).find(day => day.id === state.payload.blockId);
+      if (previousDay && nextDay) setHistory(history => ({ ...history, [previousDay.id]: { before: previousDay, after: JSON.stringify(nextDay) } }));
       setPreviewState(null);
       setAppliedMessage("Charging stops were applied to this day.");
     },
   });
 
-  const canPreview = Boolean(tripId && payload);
+  const charging = useTripCharging();
+  const day = blockId ? charging?.days.get(blockId) : null;
+  const states = day ? [...day.batteryByItemId.values()] : [];
+  const known = states.length > 1 && states.every(state => state.rawPredictedArrivalSocPct != null && state.distanceQuality === "ROUTED");
+  const satisfied = known && states.slice(1).every(state => state.rawPredictedArrivalSocPct! >= reserveSocPct) && states.at(-1)!.rawPredictedArrivalSocPct! >= minimumArrivalSocPct;
+  const canPreview = Boolean(tripId && payload && !satisfied);
   const operations = currentPreview?.data.operations ?? [];
   const canApply = Boolean(
     canAutomaticallyPlan(vehicle) && currentPreview?.data.feasible && operations.length > 0,
   );
   const error = previewMutation.error ?? applyMutation.error;
+
+  const { mutate: checkCharging } = previewMutation;
+  useEffect(() => {
+    if (!payload || !requestKey || !canPreview || !isAuthenticated || !canAutomaticallyPlan(vehicle)) return;
+    const timer = setTimeout(() => checkCharging({ request: payload, key: requestKey }), 800);
+    return () => clearTimeout(timer);
+  }, [payload, requestKey, canPreview, isAuthenticated, vehicle, checkCharging]);
 
   function previewRoute() {
     if (!payload || !tripId) return;
@@ -178,29 +203,32 @@ export function EvRouteOptimizationPanel({
         <Route className="size-4 text-primary" aria-hidden="true" />
         <div>
           <p className="text-sm font-semibold text-foreground">
-            Plan charging stops
+            Auto Add
           </p>
           <p className="text-xs text-muted-foreground">
-            Checks live chargers on the road route and may add, remove, or replace unlocked stops.
+            Adds only necessary charging stops to this day. Existing stops and charging targets are preserved.
           </p>
         </div>
       </div>
 
+      <ChargingPreferences disabled={!vehicle} />
       <Button
         type="button"
         size="lg"
         className="mt-3 h-10 w-full rounded-sm"
-        disabled={isAuthenticationLoading || (isAuthenticated && !canPreview) || previewMutation.isPending || applyMutation.isPending}
-        onClick={() => requireAuth(previewRoute)}
+        disabled={isAuthenticationLoading || !canApply || satisfied || previewMutation.isPending || applyMutation.isPending}
+        onClick={() => requireAuth(applyPreview)}
       >
         {previewMutation.isPending ? (
           <Loader2 className="size-4 animate-spin" aria-hidden="true" />
         ) : (
           <Sparkles className="size-4" aria-hidden="true" />
         )}
-        {previewMutation.isPending ? "Checking the route..." : isAuthenticated ? "Plan charging stops" : "Sign in to plan charging stops"}
+        {previewMutation.isPending ? "Checking charging needs…" : "Auto Add"}
       </Button>
 
+      {satisfied && <p role="status" className="mt-2 text-xs text-muted-foreground">No additional charging stops are needed for this day.</p>}
+      {showOptimizer && <DayRouteOptimizer blockId={blockId} />}
       {vehicle && !canAutomaticallyPlan(vehicle) && <p className="mt-2 text-xs text-muted-foreground">Automatic charging requires known usable battery capacity and a confirmed consumption model. Rated-range previews cannot apply chargers. Review the energy selection in vehicle settings.</p>}
       {!vehicle ? (
         <p className="mt-2 text-xs text-muted-foreground">
@@ -215,6 +243,7 @@ export function EvRouteOptimizationPanel({
       {error ? (
         <p className="mt-2 text-xs text-destructive" role="alert">
           {getMutationError(error)}
+          <Button variant="ghost" size="sm" onClick={previewRoute}>Retry</Button>
         </p>
       ) : null}
 
@@ -253,20 +282,7 @@ export function EvRouteOptimizationPanel({
               {warning}
             </p>
           ))}
-          {canApply ? (
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-3 w-full rounded-sm border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
-              disabled={applyMutation.isPending}
-              onClick={applyPreview}
-            >
-              {applyMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              ) : null}
-              {applyMutation.isPending ? "Applying changes..." : "Apply charging plan"}
-            </Button>
-          ) : null}
+
         </div>
       ) : null}
     </div>

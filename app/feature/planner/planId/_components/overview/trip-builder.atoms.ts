@@ -333,7 +333,7 @@ function getEstimatedChargeMinutes(maxKw: number): number {
   return 150;
 }
 
-function evChargerToPlaceItem(
+export function evChargerToPlaceItem(
   charger: EvCharger,
   placeId: string,
   estimatedChargeMinutes = getEstimatedChargeMinutes(charger.maxKw),

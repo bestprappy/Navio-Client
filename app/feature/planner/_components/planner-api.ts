@@ -100,6 +100,8 @@ export type EvOptimizationVehiclePayload = {
 };
 
 export type EvOptimizationRequestPayload = {
+  insertionOnly?: boolean;
+  minimumArrivalSocPct?: number;
   blockId: string;
   vehicle: EvOptimizationVehiclePayload;
   startingSocPct: number;
