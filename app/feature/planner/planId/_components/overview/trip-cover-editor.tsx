@@ -132,7 +132,7 @@ export function TripCoverEditor({ tripId, hasCustomCover, hasDestinationPhoto }:
         aspect={BANNER_ASPECT}
         mask="frame"
         title="Position your trip cover"
-        description="Drag the photo or use the arrow keys to move it. Zoom to choose what fills the banner."
+        description="Drag the photo or use the arrow keys to choose what fills the banner."
         saveLabel="Save cover"
         savingLabel="Uploading cover…"
         progress={progress}
