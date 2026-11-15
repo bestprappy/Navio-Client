@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isBundledVehicleImage, isUploadedVehicleImage } from "./vehicle-image-url";
 
 const positiveNumber = z.number().finite().positive();
 const energySelectionSchema = z.enum(["USE_DEFAULT", "USER_OVERRIDE", "RESET_DEFAULT", "USE_RATED_RANGE", "CONFIRM_LEGACY"]);
@@ -29,7 +30,7 @@ export const userObservedConsumption: ConsumptionProvenance = {
 };
 const connectorSchema = z.enum(["CCS1", "CCS2", "TYPE2", "J1772", "CHADEMO", "NACS", "GB_T"]);
 const imageUrlSchema = z.string().max(2048).refine(
-  (value) => value === "" || /^\/images\/vehicles\/[a-z0-9-]+\.(png|webp)$/.test(value) ||
+  (value) => value === "" || isBundledVehicleImage(value) || isUploadedVehicleImage(value) ||
     z.url({ protocol: /^https$/ }).safeParse(value).success,
   "Use an HTTPS image URL.",
 );
