@@ -90,6 +90,8 @@ export type AutoStartInput = {
   version: number;
   anotherTourActive: boolean;
   overlayOpen: boolean;
+  /** The person chose "Don't show me again": tips open only when asked for. */
+  hidden: boolean;
 };
 
 /** Every condition that must hold before a tour may start on its own. */
@@ -97,6 +99,7 @@ export function canAutoStartTour(input: AutoStartInput): boolean {
   return (
     input.ready &&
     input.eligible &&
+    !input.hidden &&
     !input.anotherTourActive &&
     !input.overlayOpen &&
     !hasSeenTour(input.record, input.version)

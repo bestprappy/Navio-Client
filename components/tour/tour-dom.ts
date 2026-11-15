@@ -26,6 +26,39 @@ export function findVisibleTourTarget(target: string): Element | null {
 }
 
 /**
+ * The on-screen copy of `target` that belongs with `anchor`: the one containing
+ * it, or else the nearest one before it in the page. A day's menu button sits
+ * in the day's header, above everything the tour showed in that day, so this
+ * opens the menu of the day the tour was just on instead of the first day.
+ */
+export function findVisibleTourTargetNear(target: string, anchor: Element | null): Element | null {
+  const visible = Array.from(document.querySelectorAll(tourTargetSelector(target))).filter(isElementVisible);
+  if (!anchor?.isConnected) return visible[0] ?? null;
+  let nearestBefore: Element | null = null;
+  for (const candidate of visible) {
+    if (candidate.contains(anchor) || anchor.contains(candidate)) return candidate;
+    // DOCUMENT_POSITION_FOLLOWING: the anchor comes after this candidate.
+    if (candidate.compareDocumentPosition(anchor) & Node.DOCUMENT_POSITION_FOLLOWING) nearestBefore = candidate;
+  }
+  return nearestBefore ?? visible[0] ?? null;
+}
+
+/** Room kept clear above and below a control the tour is about to open. */
+const REVEAL_MARGIN_PX = 96;
+
+/**
+ * Scrolls a menu trigger to the middle of its scroll area when it is off screen
+ * or near an edge, then waits for layout. A menu opened from a trigger out of
+ * view is positioned out of view too, and the spotlight would point at nothing.
+ */
+export async function revealTourElement(element: Element): Promise<void> {
+  const rect = element.getBoundingClientRect();
+  if (rect.top >= REVEAL_MARGIN_PX && rect.bottom <= window.innerHeight - REVEAL_MARGIN_PX) return;
+  element.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" });
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+}
+
+/**
  * True while a dialog, menu or popover the person opened is on screen. A tour
  * must never start on top of something they are in the middle of.
  */

@@ -122,6 +122,19 @@ export function getMyProfile(): Promise<UserProfile> {
   return requestProfile("/api/users/me", "getMyProfile");
 }
 
+/**
+ * What first-time tips record on the account. The server merges `seenTips`
+ * per tour, so each call sends only the tour that changed.
+ */
+export type TipPreferencesUpdate = {
+  tipsHidden?: true;
+  seenTips?: Readonly<Record<string, number>>;
+};
+
+export function updateTipPreferences(update: TipPreferencesUpdate): Promise<UserProfile> {
+  return requestProfile("/api/users/me/preferences", "updateTipPreferences", { method: "PATCH", body: update });
+}
+
 export function uploadProfilePicture(file: File): Promise<UserProfile> {
   const body = new FormData(); body.append("file", file);
   return requestProfile("/api/users/me/picture", "uploadProfilePicture", { method: "POST", body });

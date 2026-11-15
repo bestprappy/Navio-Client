@@ -59,6 +59,47 @@ export function writeTourRecord(
   }
 }
 
+function tourHiddenKey(userId: string | null | undefined): string {
+  return `${tourStorageKey(userId)}:hidden`;
+}
+
+/** True once this person chose "Don't show me again" in this browser. */
+export function readToursHidden(storage: TourStorage | null, userId: string | null | undefined): boolean {
+  if (!storage) return false;
+  try {
+    return storage.getItem(tourHiddenKey(userId)) === "true";
+  } catch (error) {
+    console.warn("tour-storage: could not read the tips setting; tips stay on", error);
+    return false;
+  }
+}
+
+export function writeToursHidden(storage: TourStorage | null, userId: string | null | undefined): void {
+  if (!storage) return;
+  try {
+    storage.setItem(tourHiddenKey(userId), "true");
+  } catch (error) {
+    console.warn("tour-storage: could not save the tips setting in this browser", error);
+  }
+}
+
+/**
+ * Adds the tours this account has already been shown (saved on the account,
+ * so on any browser) to this browser's own records. A tour seen elsewhere
+ * reads as dismissed: it will not open by itself again, and it only gets a
+ * tick once it is finished here.
+ */
+export function mergeAccountTourRecords(local: TourRecords, seenOnAccount: Readonly<Record<string, number>>): TourRecords {
+  const merged: TourRecords = { ...local };
+  for (const id of TOUR_IDS) {
+    const version = seenOnAccount[id];
+    if (typeof version !== "number" || !Number.isFinite(version)) continue;
+    const record = merged[id];
+    if (!record || record.version < version) merged[id] = { status: "dismissed", version, at: "" };
+  }
+  return merged;
+}
+
 /** The browser's localStorage, or null where it is unavailable (server, blocked, sandboxed). */
 export function browserTourStorage(): TourStorage | null {
   try {

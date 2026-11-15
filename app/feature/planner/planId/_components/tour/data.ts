@@ -123,7 +123,7 @@ export const PLANNER_AUTO_PLAN_TOUR: TourDefinition = {
       target: "planner.auto-plan-action",
       opens: "planner.day-options",
       title: "Choose Auto plan",
-      description: "It orders the day's places around meals and opening hours. It works on days without sections.",
+      description: "It orders the day's places around meals and opening hours. If the day has sections, each section keeps its own places.",
       side: "left",
     },
     {
