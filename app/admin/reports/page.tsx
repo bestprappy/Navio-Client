@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Reports - Navio" };
 
 export default function ReportsPage() {
   return (
-    <AdminPageHeader title="Reports" description="Review profiles, posts and comments that travellers reported.">
+    <AdminPageHeader title="Reports" description="Review profiles, posts and comments travellers reported, including comments on Shared Plans and Guides.">
       <ReportsWorkspace />
     </AdminPageHeader>
   );

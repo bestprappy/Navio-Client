@@ -156,6 +156,23 @@ test("control characters pasted into notes cannot break the Excel XML", () => {
   assert.ok(sheet.includes("Gate B &lt;left&gt;"));
 });
 
+test("formatted notes reach CSV and Excel as plain lines, without markdown or formatting tags", () => {
+  const notes = "## Dress code\n- [ ] Cover <u>shoulders</u>\n- Bring <span data-color=\"red\">cash</span>\n\n<br>\n\n<details>\n<summary>More</summary>\n\nNo **shorts**\n\n</details>";
+  const formatted = { ...dayTwo, items: [{ ...dayTwo.items[0], notes }] };
+  const table = build({ blocks: [formatted] });
+  const expected = "Dress code\n[ ] Cover shoulders\n• Bring cash\nMore\nNo shorts";
+  const stop = toSheetRows(table).find((row) => row.cells[4] === dayTwo.items[0].name);
+  assert.equal(stop.cells[6], expected);
+
+  const csv = toCsv(toSheetRows(table));
+  assert.ok(csv.includes(`"${expected}"`));
+  assert.doesNotMatch(csv, /<\/?(?:u|span|mark|details|summary|br)\b|##|\*\*/);
+
+  const sheet = readZip(createItineraryWorkbook(table)).get("xl/worksheets/sheet1.xml");
+  assert.ok(sheet.includes(expected));
+  assert.doesNotMatch(sheet, /&lt;|##|\*\*/);
+});
+
 test("column letters and day tints are computed exactly", () => {
   assert.deepEqual([0, 8, 25, 26, 27].map(columnLetter), ["A", "I", "Z", "AA", "AB"]);
   assert.equal(tintHex("#00AE84"), "D6F2EB");

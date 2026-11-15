@@ -1,3 +1,5 @@
+import { getNoteExportText } from "@/components/block-editor/note-plain-text";
+
 import { formatMoney } from "../../budget/budget.utils";
 import type { TripBlockColorId } from "../../constants/types";
 import {
@@ -59,7 +61,8 @@ export function toSheetRows(table: ItineraryTable): SheetRow[] {
           STOP_KIND_LABELS[row.kind],
           row.name,
           row.address,
-          [row.chargeDetail, row.notes].filter(Boolean).join("\n"),
+          // Notes are stored as markdown; files get the words, not the syntax or tags.
+          [row.chargeDetail, getNoteExportText(row.notes)].filter(Boolean).join("\n"),
           row.expenses.map((expense) => describeExpense(expense, table)).join("\n"),
           row.total,
         ],

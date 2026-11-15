@@ -13,7 +13,8 @@ registerHooks({ resolve(specifier, context, next) {
 const itineraryDir = "../../app/feature/planner/planId/_components/itinerary";
 const { getArrivalLegs, summarizeDayTravel, getLateArrivals, getStayMinutes, formatMinutes } = await import(`${itineraryDir}/table/itinerary-table-legs.ts`);
 const { normalizeHandoutOptions, DEFAULT_HANDOUT_OPTIONS } = await import(`${itineraryDir}/handout/handout-options.ts`);
-const { getNotePlainText } = await import("../../components/block-editor/note-plain-text.ts");
+const { getNotePlainText, getNoteExportText } = await import("../../components/block-editor/note-plain-text.ts");
+const { stripNoteFormatTags } = await import("../../components/block-editor/note-document.ts");
 
 const line = { type: "LineString", coordinates: [[0, 0], [1, 1]] };
 const segment = (toItemId, overrides = {}) => ({
@@ -122,6 +123,68 @@ test("note markdown becomes one line of sentences for the table", () => {
   assert.equal(getNotePlainText("Line one\nline two"), "Line one line two");
   assert.equal(getNotePlainText("7:30 AM เอากระเป๋า"), "7:30 AM เอากระเป๋า");
   assert.equal(getNotePlainText("   "), "");
+});
+
+// Every formatting tag the note serializer writes, plus a link, callout, toggle and code.
+const formattedNote = [
+  "## Before you go",
+  "Bring <u>cash</u> and <span data-color=\"red\">ID</span>",
+  "",
+  "- [ ] Book tickets",
+  "- [x] Pack **sunscreen**",
+  "",
+  "<br>",
+  "",
+  "> [!TIP]",
+  "> Arrive <mark data-color=\"yellow\">early</mark>",
+  "",
+  "<details>",
+  "<summary>Dress code</summary>",
+  "",
+  "Cover shoulders",
+  "",
+  "</details>",
+  "",
+  "1. First",
+  "2. [Map](https://maps.example.test)",
+  "   - nested *idea*",
+  "",
+  "Email [us](mailto:hi@example.test) or https://example.test",
+  "",
+  "```",
+  "Gate B",
+  "```",
+].join("\n");
+
+test("note markdown becomes readable lines for files, with list markers and no syntax or tags", () => {
+  assert.equal(getNoteExportText(formattedNote), [
+    "Before you go",
+    "Bring cash and ID",
+    "[ ] Book tickets",
+    "[x] Pack sunscreen",
+    "Tip: Arrive early",
+    "Dress code",
+    "Cover shoulders",
+    "1. First",
+    "2. Map (https://maps.example.test)",
+    "   • nested idea",
+    "Email us (hi@example.test) or https://example.test",
+    "Gate B",
+  ].join("\n"));
+  assert.equal(getNoteExportText("Line one\nline two"), "Line one\nline two");
+  assert.equal(getNoteExportText("7:30 AM เอากระเป๋า"), "7:30 AM เอากระเป๋า");
+  assert.equal(getNoteExportText("   "), "");
+});
+
+test("tags the author typed themselves stay as text in exports", () => {
+  assert.equal(getNoteExportText("Gate B <left>"), "Gate B <left>");
+});
+
+test("the plain-text fallback drops Navio's formatting tags but keeps the author's own", () => {
+  assert.equal(
+    stripNoteFormatTags("Bring <u>cash</u> <span data-color=\"red\">now</span>\n\n<br>\n\n<details open>\n<summary>More</summary>\n\nHi\n\n</details> <b>x</b>"),
+    "Bring cash now\n\nMore\n\nHi\n\n <b>x</b>",
+  );
 });
 
 test("stored handout options fall back to defaults for anything missing or malformed", () => {

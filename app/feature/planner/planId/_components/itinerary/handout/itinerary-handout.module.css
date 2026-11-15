@@ -285,6 +285,22 @@
   line-height: 1.45;
 }
 
+/* Paper cannot expand a toggle, so its contents always print and the
+   disclosure arrow is hidden. */
+.notes [data-type="details"] [data-type="detailsContent"] {
+  display: block !important;
+}
+
+.notes [data-details-toggle] {
+  display: none !important;
+}
+
+.notes [data-summary] {
+  font-size: 9pt !important;
+  line-height: 1.45;
+  font-weight: 600;
+}
+
 .moments {
   display: grid;
   grid-template-columns: max-content 1fr;
