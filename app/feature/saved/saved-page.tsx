@@ -20,7 +20,7 @@ import {PlanCover} from '@/app/feature/explore/_components/shared-plans/plan-cov
 import {CopySharedPlanButton} from '@/app/feature/explore/_components/shared-plans/copy-shared-plan-button';
 import {GuideCoverPhoto} from '../admin/_components/guides/guide-cover-photo';
 import {SavedContentError,savedPlanReference,suggestSaved,checkSource,libraryKey,listSaved,openSaved,purgeSaved,recentlyOpened,removeSaved,restoreSaved,type SavedItem} from './library-api';
-import {savedGuidePath,clampSavedPage,parseSavedSearch,savedSearchParams,type SavedSearch} from './library-model';
+import {savedGuidePath,savedPlaceDestination,clampSavedPage,parseSavedSearch,savedSearchParams,type SavedSearch} from './library-model';
 
 const field='h-10 w-full min-w-0 rounded-xl border border-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 const labels={recents:'Recents',all:'All',plans:'Plans',guides:'Guides',places:'Places',trash:'Recently Deleted'};
@@ -46,8 +46,7 @@ function SavedExplorePage(){
    await openSaved(item.id);setUnavailable(previous=>previous.filter(id=>id!==item.id));
    if(item.type==='GUIDE')router.push(savedGuidePath(item.identity));
    else if(item.type==='PLAN')router.push(`/share/plans/${encodeURIComponent(item.identity.slice(5))}`);
-   else if(item.providerPlaceId&&!item.providerPlaceId.startsWith('MAPBOX:')&&!item.providerPlaceId.startsWith('ev-charger:'))router.push(`/explore/places/${encodeURIComponent(item.providerPlaceId.replace(/^GOOGLE:/i,''))}`);
-   else window.location.assign(`https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`);
+   else{const target=savedPlaceDestination(item);if(target.external)window.location.assign(target.href);else router.push(target.href);}
    return '';
  },onSuccess:async message=>{setNotice(message);await Promise.all([client.invalidateQueries({queryKey:libraryKey(user)}),client.invalidateQueries({queryKey:favoritesKey})]);},onError:(e,args)=>{setNotice(e.message);if(args.kind==='open'&&args.item.type==='GUIDE'&&e instanceof SavedContentError&&e.status===404)setUnavailable(previous=>[...previous,args.item.id]);}});
  const rows=query.data?.items??[];

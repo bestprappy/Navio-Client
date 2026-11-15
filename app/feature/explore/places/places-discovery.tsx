@@ -29,6 +29,8 @@ import {
   type PlaceSearchState,
 } from "./search-state";
 import { PlaceSearchControls, usePlaceColumns } from "./search-controls";
+import { ProviderSearch } from "./provider-search";
+import { canSearchProvider, providerSearchEnabled } from "./provider-search-api";
 
 export function PhotoCredit({ item }: { item: DiscoveryItem }) {
   return (
@@ -190,7 +192,7 @@ function LoadingGrid() {
     </div>
   );
 }
-function EmptyPlaces({ retry, error }: { retry?: () => void; error?: string }) {
+function EmptyPlaces({ retry, error, hint }: { retry?: () => void; error?: string; hint?: string }) {
   return (
     <div
       role={error ? "alert" : undefined}
@@ -203,7 +205,7 @@ function EmptyPlaces({ retry, error }: { retry?: () => void; error?: string }) {
       <p className="max-w-md text-xs leading-5 text-muted-foreground">
         {error
           ? "Your selections are saved. You can try again."
-          : "Try another country, fewer filters, or a broader search."}
+          : hint || "Try another country, fewer filters, or a broader search."}
       </p>
       {retry && (
         <Button size="sm" variant="outline" onClick={retry}>
@@ -456,7 +458,13 @@ export function PlaceFeed({
                 All matches on this page are in Recommendations above.
               </p>
             ) : (
-              <EmptyPlaces />
+              <EmptyPlaces
+                hint={
+                  results && providerSearchEnabled && canSearchProvider(state.query)
+                    ? "Try fewer filters, or search Google Maps below."
+                    : undefined
+                }
+              />
             )}
           </div>
           {(results || expanded || !items.length) && query.hasNextPage && (
@@ -577,7 +585,11 @@ export function PlacesDiscovery() {
   return (
     <div className="space-y-8 sm:space-y-10">
       <DiscoveryPlanBanner />
-      <p className="rounded-xl border border-border/60 bg-card px-4 py-3 text-sm text-muted-foreground">Exhibition collection: Bangkok. Browse prepared places without live Places searches. Other countries will show no matches.</p>
+      <p className="rounded-xl border border-border/60 bg-card px-4 py-3 text-sm text-muted-foreground">
+        {providerSearchEnabled
+          ? "Navio's catalogue covers a small, hand-picked set of Bangkok places. Search for anywhere else and you can look it up on Google Maps from the results."
+          : "Exhibition collection: Bangkok. Browse prepared places without live Places searches. Other countries will show no matches."}
+      </p>
       <PlaceSearchControls
         state={state}
         onChange={change}
@@ -603,13 +615,26 @@ export function PlacesDiscovery() {
       </div>
       <div className="space-y-10 sm:space-y-12">
         {results ? (
-          <PlaceFeed
-            key={`results-${params}`}
-            state={state}
-            collection=""
-            destination=""
-            context={context.toString()}
-          />
+          <>
+            <PlaceFeed
+              key={`results-${params}`}
+              state={state}
+              collection=""
+              destination=""
+              context={context.toString()}
+            />
+            {providerSearchEnabled && (
+              <ProviderSearch
+                key={`provider-${state.query.trim()}-${state.country}`}
+                query={state.query}
+                country={state.country}
+                countryName={country}
+              >
+                <ProviderSearch.Prompt />
+                <ProviderSearch.Results />
+              </ProviderSearch>
+            )}
+          </>
         ) : (
           <>
             {state.time !== "any" && !state.interests.length && !active && (
@@ -638,8 +663,10 @@ export function PlacesDiscovery() {
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-5 text-[11px] leading-5 text-muted-foreground">
         <span>
-          Place information from Google Maps. Selections are a starting point,
-          not an exhaustive directory.
+          Catalogue places are researched independently by Navio and are a
+          starting point, not a complete directory.
+          {providerSearchEnabled &&
+            " Results from Google Maps are labelled where they appear."}
         </span>
         <GoogleAttribution catalogue />
       </footer>
