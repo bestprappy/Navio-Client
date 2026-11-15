@@ -323,7 +323,7 @@ export function ItinerarySection({
                           blockId={block.id}
                           blockIndex={index}
                         />
-                        {!readOnly && <DayAutomationActions blockId={block.id} dayNumber={index + 1} />}
+                        {!readOnly && <DayAutomationActions blockId={block.id} />}
                         {!readOnly && <TripBlock.Actions
                           evSearchAnchor={{
                             id: `destination-${block.id}`,

@@ -39,7 +39,7 @@ export function energySelectionDescription(profile: VehicleEnergyProfile): strin
 }
 
 /**
- * Auto Add and Optimize Route work with any model that can predict the battery: the traveller's own
+ * Auto Add works with any model that can predict the battery: the traveller's own
  * average, the catalogue figure, or the NAVIO Estimate from rated range. Each needs a battery size so
  * charging time can be computed.
  */
