@@ -3,19 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { X, Search } from "lucide-react";
 
-import type { CommunityFlair, CommunityGroup } from "../_components/data";
+import type { CommunityGroup } from "../_components/data";
+import { CommunityFlairBadge } from "../_components/community-flair-badge";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
-const FLAIR_SOLID_CLASSES: Record<CommunityFlair["tone"], string> = {
-  reliable: "bg-success text-success-foreground",
-  question: "bg-info text-info-foreground",
-  unsourced: "bg-destructive text-destructive-foreground",
-  speculation: "bg-warning text-warning-foreground",
-  itinerary: "bg-primary text-primary-foreground",
-  food: "bg-warning text-warning-foreground",
-  ev: "bg-success text-success-foreground",
-};
 
 type CommunityFlairDialogProps = {
   group: CommunityGroup;
@@ -131,14 +121,7 @@ export function CommunityFlairDialog({
                 onChange={() => setLocalFlairId(flair.id)}
                 className="accent-primary"
               />
-              <span
-                className={cn(
-                  "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
-                  FLAIR_SOLID_CLASSES[flair.tone],
-                )}
-              >
-                {flair.label}
-              </span>
+              <CommunityFlairBadge flair={flair} className="h-auto px-3 py-1" />
             </label>
           ))}
         </fieldset>

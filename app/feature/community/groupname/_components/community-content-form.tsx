@@ -1,33 +1,26 @@
 "use client";
 
 import { z } from "zod";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Field, FieldLabel } from "@/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { CommunityFormField } from "../../_components/community-form-field";
 import { CommunityQueryError } from "../../_components/community-query-state";
 import { useUpdateCommunityGroup } from "../../_components/community-group-queries";
+import type { GroupDetail } from "../../_components/community-api";
+import { getTripBlockColorByIndex } from "../../../planner/planId/_components/constants/trip-block-colors";
 import {
-  flairToneSchema,
-  type GroupDetail,
-} from "../../_components/community-api";
+  CommunityFlairColorField,
+  CommunityFlairPreview,
+} from "./community-flair-fields";
 
 type Section = "rules" | "flairs" | "resources";
 const itemSchema = z.object({
   label: z.string().trim().min(1, "Enter a title or label.").max(120),
   description: z.string().trim(),
   url: z.string().trim(),
-  tone: flairToneSchema,
-  flairType: z.enum(["post", "user"]),
+  colorId: z.string(),
 });
 const schema = z.object({ items: z.array(itemSchema) });
 type Values = z.infer<typeof schema>;
@@ -35,8 +28,7 @@ const emptyItem: Values["items"][number] = {
   label: "",
   description: "",
   url: "",
-  tone: "question",
-  flairType: "post",
+  colorId: getTripBlockColorByIndex(0),
 };
 
 function initialValues(group: GroupDetail, section: Section): Values {
@@ -57,19 +49,11 @@ function initialValues(group: GroupDetail, section: Section): Values {
       })),
     };
   return {
-    items: [
-      ...group.postFlairs.map((flair) => ({
-        ...emptyItem,
-        label: flair.label,
-        tone: flair.tone,
-      })),
-      ...group.userFlairs.map((flair) => ({
-        ...emptyItem,
-        label: flair.label,
-        tone: flair.tone,
-        flairType: "user" as const,
-      })),
-    ],
+    items: group.postFlairs.map((flair) => ({
+      ...emptyItem,
+      label: flair.label,
+      colorId: flair.colorId,
+    })),
   };
 }
 
@@ -132,10 +116,13 @@ export function CommunityContentForm({
               })),
             }
           : {
+              // flairType and tone keep servers from before palette colors
+              // accepting the save; newer servers keep colorId.
               flairs: values.items.map((item) => ({
+                flairType: "post",
                 label: item.label,
-                tone: item.tone,
-                flairType: item.flairType,
+                tone: "reliable",
+                colorId: item.colorId,
               })),
             };
     mutation.mutate({ section, body }, { onSuccess: () => form.reset(values) });
@@ -143,7 +130,9 @@ export function CommunityContentForm({
   return (
     <form className="space-y-4" onSubmit={form.handleSubmit(submit)}>
       <p className="text-sm text-muted-foreground">
-        Add, remove, or reorder {section}, then save your changes.
+        {section === "flairs"
+          ? "Members tag their posts with one of these flairs. Colors come from the admin palette."
+          : `Add, remove, or reorder ${section}, then save your changes.`}
       </p>
       {fields.length === 0 ? (
         <p className="text-sm">No {section} configured.</p>
@@ -154,12 +143,31 @@ export function CommunityContentForm({
           disabled={mutation.isPending}
           className="space-y-3 rounded-lg border border-border p-4"
         >
-          <legend className="px-1 text-sm font-medium">Item {index + 1}</legend>
-          <CommunityFormField
-            control={form.control}
-            name={`items.${index}.label`}
-            label={section === "rules" ? "Title" : "Label"}
-          />
+          {section === "flairs" ? (
+            <CommunityFlairPreview control={form.control} index={index} />
+          ) : (
+            <legend className="px-1 text-sm font-medium">
+              Item {index + 1}
+            </legend>
+          )}
+          {section === "flairs" ? (
+            <div className="flex flex-wrap items-start gap-3">
+              <div className="min-w-48 flex-1">
+                <CommunityFormField
+                  control={form.control}
+                  name={`items.${index}.label`}
+                  label="Label"
+                />
+              </div>
+              <CommunityFlairColorField control={form.control} index={index} />
+            </div>
+          ) : (
+            <CommunityFormField
+              control={form.control}
+              name={`items.${index}.label`}
+              label={section === "rules" ? "Title" : "Label"}
+            />
+          )}
           {section === "rules" ? (
             <CommunityFormField
               control={form.control}
@@ -174,51 +182,6 @@ export function CommunityContentForm({
               name={`items.${index}.url`}
               label="Link URL (optional)"
             />
-          ) : null}
-          {section === "flairs" ? (
-            <div className="flex flex-wrap gap-4">
-              <Controller
-                control={form.control}
-                name={`items.${index}.flairType`}
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel htmlFor={`${item.id}-type`}>
-                      Flair type
-                    </FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id={`${item.id}-type`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="post">Post</SelectItem>
-                        <SelectItem value="user">User</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                )}
-              />
-              <Controller
-                control={form.control}
-                name={`items.${index}.tone`}
-                render={({ field }) => (
-                  <Field>
-                    <FieldLabel htmlFor={`${item.id}-tone`}>Tone</FieldLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger id={`${item.id}-tone`}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {flairToneSchema.options.map((tone) => (
-                          <SelectItem key={tone} value={tone}>
-                            {tone}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </Field>
-                )}
-              />
-            </div>
           ) : null}
           <div className="flex justify-end gap-2">
             <Button
@@ -264,10 +227,15 @@ export function CommunityContentForm({
           type="button"
           variant="outline"
           disabled={mutation.isPending}
-          onClick={() => append({ ...emptyItem })}
+          onClick={() =>
+            append({
+              ...emptyItem,
+              colorId: getTripBlockColorByIndex(fields.length),
+            })
+          }
         >
           <Plus />
-          Add item
+          {section === "flairs" ? "Add flair" : "Add item"}
         </Button>
         <Button
           type="submit"

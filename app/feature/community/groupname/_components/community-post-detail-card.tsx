@@ -33,7 +33,7 @@ type CommunityPostDetailCardProps = {
 
 export function CommunityPostDetailCard({ post, group }: CommunityPostDetailCardProps) {
   useRecordCommunityVisit(post.id);
-  const { identity } = useCommunityIdentity();
+  const { identity, authenticated } = useCommunityIdentity();
   const author = useCommunityUserProfile(post.authorId);
   const flair = post.flairId
     ? (group.postFlairs.find((item) => item.id === post.flairId) ?? null)
@@ -44,6 +44,7 @@ export function CommunityPostDetailCard({ post, group }: CommunityPostDetailCard
   const isAuthor = identity === post.authorId;
   const isModerator = group.role === "admin" || group.role === "moderator";
   const canWrite = Boolean(group.joined) && !archived;
+  const canReport = authenticated && !isAuthor;
 
   return (
     <article aria-labelledby="post-title" className="flex flex-col gap-3">
@@ -79,9 +80,12 @@ export function CommunityPostDetailCard({ post, group }: CommunityPostDetailCard
             </ProfileLink>
           </p>
         </div>
-        {canWrite ? (
-          <CommunityPostEditor post={post} canEdit={isAuthor} canDelete={isAuthor || isModerator} />
-        ) : null}
+        <CommunityPostEditor
+          post={post}
+          canEdit={canWrite && isAuthor}
+          canDelete={canWrite && (isAuthor || isModerator)}
+          canReport={canReport}
+        />
       </div>
 
       <h1 id="post-title" className="break-words text-2xl font-extrabold leading-tight tracking-tight text-foreground">

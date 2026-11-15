@@ -51,7 +51,7 @@ export function CommunityPostCard({
   onSavedRemoved,
 }: CommunityPostCardProps) {
   const router = useRouter();
-  const { identity } = useCommunityIdentity();
+  const { identity, authenticated } = useCommunityIdentity();
   const author = useCommunityUserProfile(post.authorId);
 
   const groupName = post.groupName ?? group?.name ?? "Community";
@@ -69,6 +69,7 @@ export function CommunityPostCard({
   // Authors still get their controls; the service rejects them if they are no longer a member.
   const canWrite = group ? Boolean(group.joined) && !archived : isAuthor;
   const isModerator = group?.role === "admin" || group?.role === "moderator";
+  const canReport = authenticated && !isAuthor;
   const showGroup = metaVariant === "group";
 
   function openPost() {
@@ -120,14 +121,13 @@ export function CommunityPostCard({
           {group && showJoinAction && !archived && !group.joined ? (
             <CommunityMembershipButton group={group} compact />
           ) : null}
-          {canWrite ? (
-            <CommunityPostEditor
-              post={post}
-              canEdit={isAuthor}
-              canDelete={isAuthor || isModerator}
-              redirectOnDelete={false}
-            />
-          ) : null}
+          <CommunityPostEditor
+            post={post}
+            canEdit={canWrite && isAuthor}
+            canDelete={canWrite && (isAuthor || isModerator)}
+            canReport={canReport}
+            redirectOnDelete={false}
+          />
         </div>
       </div>
 

@@ -1,21 +1,24 @@
 "use client";
 
+import type { CSSProperties } from "react";
+
 import type { CommunityFlair } from "./data";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getTripBlockColorById } from "../../planner/planId/_components/constants/trip-block-colors";
 
-const FLAIR_TONE_CLASSES: Record<CommunityFlair["tone"], string> = {
-  reliable: "bg-success/15 text-success ring-1 ring-success/20",
-  question: "bg-info/15 text-info ring-1 ring-info/20",
-  unsourced: "bg-muted text-muted-foreground ring-1 ring-border",
-  speculation: "bg-warning/15 text-warning ring-1 ring-warning/20",
-  itinerary: "bg-primary/15 text-primary ring-1 ring-primary/20",
-  food: "bg-warning/15 text-warning ring-1 ring-warning/20",
-  ev: "bg-success/15 text-success ring-1 ring-success/20",
-};
+/**
+ * A flair drawn in its admin palette color. The palette's foreground variable
+ * carries the administrator's white, black or automatic text choice per theme.
+ * Deleted or unknown colors fall back to the palette default.
+ */
+export function flairColorStyle(colorId: string): CSSProperties {
+  const color = getTripBlockColorById(colorId);
+  return { backgroundColor: color.value, color: color.foreground };
+}
 
 type CommunityFlairBadgeProps = {
-  flair: CommunityFlair;
+  flair: Pick<CommunityFlair, "label" | "colorId">;
   className?: string;
 };
 
@@ -25,14 +28,10 @@ export function CommunityFlairBadge({
 }: CommunityFlairBadgeProps) {
   return (
     <Badge
-      variant="outline"
-      className={cn(
-        "border-transparent font-semibold",
-        FLAIR_TONE_CLASSES[flair.tone],
-        className,
-      )}
+      className={cn("max-w-full font-semibold", className)}
+      style={flairColorStyle(flair.colorId)}
     >
-      {flair.label}
+      <span className="truncate">{flair.label}</span>
     </Badge>
   );
 }

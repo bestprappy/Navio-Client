@@ -37,14 +37,8 @@ export type CommunityRule = {
 export type CommunityFlair = {
   id: string;
   label: string;
-  tone:
-    | "reliable"
-    | "question"
-    | "unsourced"
-    | "speculation"
-    | "itinerary"
-    | "food"
-    | "ev";
+  /** An admin palette color id; the palette also decides white or black text. */
+  colorId: string;
 };
 
 export type CommunityBookmark = {
